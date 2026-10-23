@@ -137,12 +137,20 @@ V=~/Downloads/master-bed-v9-2block-laundry.dxf
 ```
 
 Shifted Bedroom (v12) moves the master bathroom to the west end, centres the bed on its partition, puts the
-wardrobe on the kitchen wall and a desk on the south wall. It also moves and widens the north-façade windows
-(bedroom 2.18 m, bathroom 0.90 m), which **needs façade approval**. Its DXF is the Main DXF with the suite zone
-(DWG x 190.6 to 196.78, y -117.25 to -112.15, plus the corridor's north face line) swapped for v12's, so it keeps
-Main's 2-block laundry and client edits. v12 itself differs from Main outside the suite (laundry, guest WC, kitchen,
-entrance, coffee corner): those parts were not taken. v12's "MM" note (MTEXT on `2furni`) was left out, since it
-would become a room label.
+wardrobe on the kitchen wall and a desk on the south wall. Unlike the other versions it also changes rooms outside
+the master suite, at the user's request (2026-10-23), so it builds from the whole of `master-v12.dwg`:
+- laundry / guest WC partition 0.166 m east of Main's (laundry 1.88 x 2.30 m, guest WC 2.34 x 2.30 m), guest bath
+  0.90 m deep, guest WC door 0.175 m and WC 0.151 m west, laundry washer and counter moved with the partition;
+- kitchen: fridge block 0.286 m south, dishwasher in the east run beside it (no room left for Main's oven tower:
+  the 3D shows a narrow larder there);
+- entrance: one 1.20 x 0.42 m shoe unit (no bench niche) and a 1.20 x 0.40 m bench facing the door.
+
+The north-façade windows also move (bedroom 2.18 m, master bathroom 0.90 m, laundry 0.176 m west), which **needs
+façade approval**. Two drafting fixes went into `master-v12-shifted-bedroom.dxf`: v12's "MM" note (MTEXT on `2furni`)
+was dropped, since it would become a room label, and line `801` (corridor wall face under the guest bath) was snapped
+2 cm onto the bath end wall. `build_geometry.py` ignores a sliver under 5 cm inside a wall at least 0.5 m long when
+squaring corners (v12's guest WC door jamb tucks 2 cm under the bath end wall, which pushed 37 cm of wall into the
+doorway). Main and v9 rebuild byte-identical with it.
 
 ```sh
 S=~/Downloads/master-v12-shifted-bedroom.dxf

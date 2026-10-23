@@ -111,6 +111,13 @@ def pair_walls(segs):
                 ends = lambda s: sorted([strip_point(s, s["t0"], s["d"] / 2), strip_point(s, s["t1"], s["d"] / 2)])
                 if all(math.dist(p, q) < 0.02 for p, q in zip(ends(si), ends(sj))):
                     continue
+                # A sliver (under 5 cm) inside a real wall's span (0.5 m or more), e.g. a door jamb tucked
+                # 2 cm under a wall's end in master-v12, is part of that wall: squares off its ends would
+                # push wall into the doorway. (Jamb pieces inside short frame strips keep their squares.)
+                span = lambda s: sorted(strip_point(s, t, 0)[0] * ui[0] + strip_point(s, t, 0)[1] * ui[1] for t in (s["t0"], s["t1"]))
+                inside = lambda a, b: b[0] - 0.002 <= a[0] and a[1] <= b[1] + 0.002 and a[1] - a[0] < 0.05 <= 0.5 <= b[1] - b[0]
+                if inside(span(si), span(sj)) or inside(span(sj), span(si)):
+                    continue
             if body[i].distance(body[j]) > 0.02:
                 continue
             for ei in strip_ends(si, abs(sj["d"])):

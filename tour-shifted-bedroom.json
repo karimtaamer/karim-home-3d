@@ -1,5 +1,5 @@
 {
-  "_comment": "The Shifted Bedroom version (master-v12.dwg): tour.json with these seeds / stops swapped in by name / room. The master bathroom moves to the west end of the suite, the bed is centred on its partition and the wardrobe runs along the kitchen wall, so the bathroom's seed moves west and the bedroom's moves out of the old suite lobby (now the wardrobe end of the bedroom). The passage to the bedroom door is open to the entrance and stays ENTRANCE. 'doorsAsDrawn': the bathroom and bedroom doors open inwards, as the DWG swings them.",
+  "_comment": "The Shifted Bedroom version (master-v12.dwg; every version shares v12 outside the master suite, see README section 4): tour.json with these seeds / stops swapped in by name / room. The master bathroom moves to the west end of the suite, the bed is centred on its partition and the wardrobe runs along the kitchen wall, so the bathroom's seed moves west and the bedroom's moves out of the old suite lobby (now the wardrobe end of the bedroom). The passage to the bedroom door is open to the entrance and stays ENTRANCE. 'doorsAsDrawn': the bathroom and bedroom doors open inwards, as the DWG swings them.",
   "extends": "tour.json",
   "seeds": [
     {"name": "MASTER BEDROOM", "at": [195.5, -115.5]},

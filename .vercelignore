@@ -10,3 +10,4 @@ renders/
 .vercel
 publish_renders.sh
 __pycache__/
+dwgtool.py

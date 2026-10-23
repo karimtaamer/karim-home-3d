@@ -29,6 +29,7 @@ a 2D drawing view, a tape measure, the designer's renders as "photo spots", and 
 | `api/photospot.py`, `photogen_blob.py` | The same backend as a Vercel function, storing files in Vercel Blob | Yes |
 | `publish_renders.sh` | Uploads renders, reference copies and the material board to Blob | Yes |
 | `build_geometry.py`, `build_drawing.py` | DXF → `model.js` / `drawing.json` | Yes |
+| `dwgtool.py` | Inspect a DWG/DXF and render cropped, marked-up PNGs (see `DWG_EDITING.md` §1) | Yes |
 | `*-bigger-bedroom.*` | The "Bigger Master Bedroom" plan version (see §4) | Same rules as the main files |
 | `models/*.glb` | Fixtures made from the renders with Meshy (image-to-3D) | Replace only |
 | `textures/` | Poly Haven PBR scans (CC0, see `CREDITS.txt`) | Add only |
@@ -121,6 +122,9 @@ coffee corner (to 18.9-20.1). It now skips same-span pairs, so piers are as wide
 |---|---|---|---|
 | Main | *(none)* / `main` | `~/Downloads/master-bed186-v6-shoes2.dwg`, built from `master-bed186-v6-shoes2-2block-laundry.dxf` | `model.js`, `drawing.json`, `tour.json`, `spots.json` |
 | Bigger Master Bedroom | `bigger-bedroom` | `~/Downloads/master-bed-v9.dwg`, built from `master-bed-v9-2block-laundry.dxf` | `model-bigger-bedroom.js`, `drawing-bigger-bedroom.json`, `tour-bigger-bedroom.json`, `spots-bigger-bedroom.json` |
+
+Bigger Master Bedroom (v9) folds the passage into the master toilet, which **needs façade approval**. Never present it
+as settled.
 
 Build the Bigger Master Bedroom version. v9 is missing the bathroom/kitchen wall face line, so `--wall` adds it:
 

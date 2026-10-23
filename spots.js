@@ -1,4 +1,5 @@
-// Photo spots: stand on a marked spot in Walk, keep still, and the designer's render of that view fades in.
+// Photo spots: stand on a marked spot in Walk and an Enter photo spot button offers the designer's render of
+// that view; nothing switches until it is pressed (or the spot is picked in the Photo spots panel).
 // Spots live in spots.json (cam = x,y,h,lookX,lookY,lookH,fov in plan metres, the model camera closest
 // to the render's angle; a render without one yet is only listed under Renders). The renders in renders/
 // are kept out of git; on the live site vercel.json serves renders/ from Vercel Blob (publish_renders.sh).
@@ -10,7 +11,6 @@ import { byRoom, shortLabel } from "./renders.js";
 
 const NEAR = 0.4;      // metres from the spot that count as "on it"
 const FACING = 20;     // degrees of heading either way that count as facing the view
-const STILL = 0.4;     // seconds to keep still before the photo appears
 
 // A spots file as one list, a version's resolved against the file it extends.
 export async function loadSpots(url) {
@@ -48,13 +48,33 @@ export async function photoSpots({ file, THREE, gsap, camera, scene, toWorld, go
     #photo { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0; background: #1c1814; }
     #photo img { width: 100%; height: 100%; object-fit: contain; }
     #photo .tag { position: absolute; right: 14px; bottom: 14px; font-size: 11px; color: #fff; background: #1c181499;
-      padding: 6px 10px; border-radius: 999px; letter-spacing: .04em; }`;
+      padding: 6px 10px; border-radius: 999px; letter-spacing: .04em; }
+    :is(#photo .exit, #spot-enter) { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); pointer-events: auto; cursor: pointer;
+      border: 0; border-radius: 999px; padding: 16px 30px; font: inherit; font-size: 16px; font-weight: 600; letter-spacing: .02em; white-space: nowrap;
+      background: #fffaf3; color: #2b2622; box-shadow: 0 4px 18px #0006; }
+    :is(#photo .exit, #spot-enter):hover { background: #fff; }
+    #spot-enter { position: fixed; z-index: 2; }
+    #spot-enter .key { font-weight: 400; opacity: .55; margin-left: 6px; }
+    @media (max-width: 760px) { :is(#photo .exit, #spot-enter) { bottom: 132px; } #spot-enter .key { display: none; } }`;
   document.head.appendChild(style);
   const overlay = document.createElement("div");
   overlay.id = "photo";
-  overlay.innerHTML = `<img alt=""><div class="tag"></div>`;
+  overlay.innerHTML = `<img alt=""><div class="tag"></div><button class="exit" hidden>✕ Exit photo spot</button>`;
   document.body.appendChild(overlay);
-  const img = overlay.querySelector("img"), tag = overlay.querySelector(".tag");
+  const img = overlay.querySelector("img"), tag = overlay.querySelector(".tag"), exit = overlay.querySelector(".exit");
+  // Standing on a spot only offers it; Enter works too, as a captured mouse can't reach the button.
+  const enter = document.createElement("button");
+  enter.id = "spot-enter";
+  enter.hidden = true;
+  enter.innerHTML = `Enter photo spot<span class="key">⏎</span>`;
+  document.body.appendChild(enter);
+  enter.onclick = () => offer && settle(offer);
+  // Moving leaves the photo too, but a spot against a wall or a mouse not yet captured can leave nowhere to move.
+  exit.onclick = () => shown && leave();
+  addEventListener("keydown", e => {
+    if (e.code === "Escape" && shown) leave();
+    if (e.code === "Enter" && offer && !shown && !settling) settle(offer);
+  });
 
   // Floor markers: a ring to stand in and a dot on the side you should face.
   const markers = new THREE.Group();
@@ -87,6 +107,7 @@ export async function photoSpots({ file, THREE, gsap, camera, scene, toWorld, go
         b.title = s.caption;
         b.onclick = () => {
           delete bar.dataset.open;
+          picked = s;
           goRoom({ room: s.room, caption: s.caption, eye: toWorld(s.cam, EYE), look: toWorld(s.cam.slice(3), EYE - 0.15) });
         };
         line.appendChild(b);
@@ -97,7 +118,7 @@ export async function photoSpots({ file, THREE, gsap, camera, scene, toWorld, go
   }
   fillPanel();
 
-  let shown = null, settling = false, armed = true, stillFor = 0;
+  let shown = null, settling = false, offer = null, picked = null;
   const last = { pos: camera.position.clone(), dir: new THREE.Vector3() };
   const dir = new THREE.Vector3();
   const heading = () => { camera.getWorldDirection(dir); return Math.atan2(dir.x, -dir.z); };
@@ -107,6 +128,8 @@ export async function photoSpots({ file, THREE, gsap, camera, scene, toWorld, go
   function settle(s) {
     // Step into the render's camera (height, aim, lens), then fade the render in.
     settling = true;
+    offerHere(null);
+    gsap.killTweensOf([camera, camera.position, overlay]);  // re-entering before leave() has finished
     img.src = s.src;
     tag.textContent = `${s.ai ? "Generated from the model" : "Designer render · not drawn to the DWG"} · move to go back`;
     const from = { pos: camera.position.clone(), aim: camera.position.clone().add(camera.getWorldDirection(new THREE.Vector3())), fov: camera.fov };
@@ -121,34 +144,39 @@ export async function photoSpots({ file, THREE, gsap, camera, scene, toWorld, go
         camera.updateProjectionMatrix();
       },
       onComplete: () => {
-        settling = false; shown = s; markers.visible = false;
+        settling = false; shown = s; markers.visible = false; exit.hidden = false;
         last.pos.copy(camera.position); camera.getWorldDirection(last.dir);
         gsap.to(overlay, { opacity: 1, duration: 0.8, ease: "power1.out" });
       },
     });
   }
   function leave() {
-    shown = null; armed = false;
+    shown = null; exit.hidden = true;
     gsap.to(overlay, { opacity: 0, duration: 0.3 });
     gsap.to(camera.position, { y: EYE, duration: 0.5 });
     gsap.to(camera, { fov: FOV.walk, duration: 0.5, onUpdate: () => camera.updateProjectionMatrix() });
   }
 
-  const clock = new THREE.Clock();
+  function offerHere(s) {
+    offer = s;
+    enter.hidden = !s;
+    if (s) enter.title = s.caption;
+  }
+
   (function tick() {
     requestAnimationFrame(tick);
-    const dt = Math.min(clock.getDelta(), 0.05);
     markers.visible = isWalking() && !shown;
     if (settling) return;
-    if (!isWalking() || isBusy()) { if (shown) leave(); stillFor = 0; return; }
+    if (!isWalking() || isBusy()) { if (shown) leave(); return offerHere(null); }
     camera.getWorldDirection(dir);
     const moved = camera.position.distanceTo(last.pos) > 0.005 || dir.angleTo(last.dir) > 0.003;
     last.pos.copy(camera.position); last.dir.copy(dir);
     if (shown) { if (moved) leave(); return; }
-    const s = spots.find(s => planDist(s) < NEAR && angleTo(s.heading) < FACING);
-    if (!s) { armed = true; stillFor = 0; return; }
-    stillFor = moved ? 0 : stillFor + dt;
-    if (armed && stillFor > STILL) settle(s);
+    // A spot picked in the panel opens once the glide there ends; one you walk onto is only offered.
+    const p = picked;
+    picked = null;
+    if (p && planDist(p) < NEAR) return settle(p);
+    offerHere(spots.find(s => planDist(s) < NEAR && angleTo(s.heading) < FACING) || null);
   })();
   // A spot approved just now: on the floor, in the panel and under Renders straight away.
   function add(raw) {

@@ -477,16 +477,14 @@ export function furnish(scene, M, mat, version = "main") {
   }
 
   // --- Guest bathroom: bath-shower west, vanity east, WC under the window (renders 08, 09) -----
-  // master-v12 (Shifted Bedroom) moves the laundry / guest WC partition 0.164 m east (bath 0.90 m
-  // deep instead of 0.81), the WC 0.151 m west, and changes the kitchen and entrance joinery too.
-  const v12 = version === "shifted-bedroom";
+  // Outside the master suite every version follows master-v12.dwg (bath 0.90 m deep, wall to end wall).
   const travertine = mat.stoneTable.clone();
   travertine.color.setRGB(0.8, 0.77, 0.73);
   travertine.clippingPlanes = mat.stoneTable.clippingPlanes;
   const charcoal = mat.greige.clone();
   charcoal.color.setRGB(0.24, 0.23, 0.22);
   charcoal.clippingPlanes = mat.greige.clippingPlanes;
-  const bath = item(v12 ? 12.324 : 12.16, 8.05, "E", p => {  // wood-look plank wall, stone-clad bath, framed screen over the door end
+  const bath = item(12.324, 8.05, "E", p => {  // wood-look plank wall, stone-clad bath, framed screen over the door end
     p.box(-1.08, 1.08, 0, M.ceiling, 0, 0.02, mat.woodTile);
     p.box(-0.85, 0.85, 0, 0.55, 0.02, 0.75, mat.stoneWall);
     p.box(-0.78, 0.78, 0.52, 0.56, 0.08, 0.7, mat.ceramic);
@@ -505,7 +503,7 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(x - 0.012, x + 0.012, 1.84, 1.9, z + 0.02, z + 0.05, mat.blackSteel);
     }
   });
-  if (v12) bath.scale.z = 0.9 / 0.812;  // DWG bath depth, wall to end wall
+  bath.scale.z = 0.9 / 0.812;  // modelled 0.81 m deep; the DWG bath is 0.90
   item(14.66, 7.75, "W", p => {  // battened oak wall, thick stone slab, open shelf over walnut drawers, rounded mirror
     p.box(-0.8, 0.8, 0, M.ceiling, 0, 0.03, mat.oakBattens);
     p.box(-0.78, 0.78, 0.2, 0.5, 0.03, 0.48, mat.walnut);  // floating drawer unit, its top an open shelf
@@ -528,18 +526,18 @@ export function furnish(scene, M, mat, version = "main") {
     p.cyl(0.55, 0.3, 0.05, 0.85, 1.05, mat.planter, 16, 0.04);  // styling: vase, bottles
     for (const [x, h] of [[-0.45, 0.16], [-0.52, 0.12], [-0.6, 0.18]]) p.cyl(x, 0.3, 0.025, 0.85, 0.85 + h, mat.ceramic, 12);
   });
-  item(v12 ? 13.8 : 13.95, 9.18, "S", p => {  // wall-hung WC, brass bidet spray left, roll holder right
+  item(13.8, 9.18, "S", p => {  // wall-hung WC, brass bidet spray left, roll holder right
     p.model("models/wc-wallhung.glb", mat.ceramic, 0, 0.1, 0.02);
     p.box(-0.32, -0.26, 0.42, 0.5, 0, 0.04, mat.brass, 0.01);
     p.cyl(-0.29, 0.05, 0.02, 0.2, 0.42, mat.brass, 12);
     p.box(0.33, 0.47, 0.6, 0.72, 0, 0.1, mat.brass, 0.03);
     p.cyl(0.4, 0.07, 0.055, 0.58, 0.7, mat.whiteLacquer, 20).rotation.z = Math.PI / 2;
   });
-  item(v12 ? 13.32 : 13.14, 9.18, "S", p => {  // walnut flush panel with a brass plate, beside the niches
+  item(13.32, 9.18, "S", p => {  // walnut flush panel with a brass plate, beside the niches
     p.box(-0.12, 0.12, 1.05, 1.21, 0, 0.015, mat.walnut, 0.005);
     p.box(-0.06, 0.06, 1.11, 1.15, 0.015, 0.025, mat.brass, 0.005);
   });
-  item(v12 ? 12.767 : 12.58, 9.18, "S", p => {  // stone build-out at the bath end with two recessed walnut-lined niches
+  item(12.767, 9.18, "S", p => {  // stone build-out at the bath end with two recessed walnut-lined niches
     const H = M.ceiling, D = 0.28, niches = [[-0.18, 0.02], [0.1, 0.3]], y0 = 0.9, y1 = 2.1;
     const face = new THREE.Shape([new THREE.Vector2(-0.42, 0), new THREE.Vector2(0.42, 0), new THREE.Vector2(0.42, H), new THREE.Vector2(-0.42, H)]);
     for (const [a, b] of niches) face.holes.push(new THREE.Path([new THREE.Vector2(a, y0), new THREE.Vector2(b, y0), new THREE.Vector2(b, y1), new THREE.Vector2(a, y1)]));
@@ -553,7 +551,7 @@ export function furnish(scene, M, mat, version = "main") {
     }
   });
 
-  // --- Kitchen: U of white flat-panel units, oak uppers, tall oven tower and black fridge -------
+  // --- Kitchen: U of white flat-panel units, oak uppers, tall larder and black fridge -----------
   const K = { x0: 6.48, x1: 10.21, y0: 5.67, y1: 9.09, front: 0.6 };
   function run(x, y, facing, len, { sink = -1, hob = -1, uppers = true, window } = {}) {
     item(x, y, facing, p => {
@@ -593,30 +591,17 @@ export function furnish(scene, M, mat, version = "main") {
     for (const x of [-0.3, 0.3]) p.box(x - 0.002, x + 0.002, 0.12, 0.86, K.front, K.front + 0.003, shadowGap);
     p.box(-0.28, 0.28, 0.8, 0.84, K.front, K.front + 0.006, mat.blackSteel);
   };
-  if (v12) {
-    // master-v12: the fridge block moves 0.286 m south (DWG 6.85 to 7.82: narrow larder, then the
-    // fridge) and the dishwasher joins the east run north of it, under a counter to the corner.
-    run(K.x1, (7.815 + K.y1) / 2, "W", K.y1 - 7.815);
-    item(K.x1, 8.127, "W", dishwasher);
-    item(K.x1, 7.33, "W", p => {
-      p.box(0.165, 0.485, 0, M.ceiling, 0, 0.6, mat.whiteLacquer);              // tall larder
-      p.box(0.18, 0.2, 0.9, 1.5, 0.6, 0.62, mat.chrome);
-      p.box(-0.485, 0.165, 0, 1.9, 0.02, 0.6, mat.blackSteel, 0.01);           // fridge
-      p.box(0.12, 0.14, 0.9, 1.4, 0.6, 0.62, mat.chrome);
-      p.box(-0.485, 0.165, 1.9, M.ceiling, 0, 0.6, mat.whiteLacquer);
-    });
-  } else {
-    item(9.27, K.y1, "S", dishwasher);  // at the end of the north run, beside the fridge tower
-    item(K.x1, 8.12, "W", p => {  // DWG tall units 0.61 x 1.94: oven tower then the fridge
-      p.box(0.25, 0.97, 0, M.ceiling, 0, 0.6, mat.whiteLacquer);
-      p.box(0.33, 0.89, 0.85, 1.45, 0.6, 0.62, mat.blackGlass);
-      p.box(0.36, 0.86, 1.5, 1.88, 0.6, 0.62, mat.blackGlass);
-      p.box(-0.67, 0.25, 0, 1.9, 0.02, 0.6, mat.blackSteel, 0.01);
-      p.box(-0.22, -0.2, 0.9, 1.4, 0.6, 0.62, mat.chrome);
-      p.box(-0.67, 0.25, 1.9, M.ceiling, 0, 0.6, mat.whiteLacquer);
-      p.box(-0.97, -0.67, 0, M.ceiling, 0, 0.6, mat.whiteLacquer);
-    });
-  }
+  // East run per the DWG: tall block (6.85 to 7.82: narrow larder, then the fridge), then the
+  // dishwasher under a counter running on to the corner.
+  run(K.x1, (7.815 + K.y1) / 2, "W", K.y1 - 7.815);
+  item(K.x1, 8.127, "W", dishwasher);
+  item(K.x1, 7.33, "W", p => {
+    p.box(0.165, 0.485, 0, M.ceiling, 0, 0.6, mat.whiteLacquer);              // tall larder
+    p.box(0.18, 0.2, 0.9, 1.5, 0.6, 0.62, mat.chrome);
+    p.box(-0.485, 0.165, 0, 1.9, 0.02, 0.6, mat.blackSteel, 0.01);           // fridge
+    p.box(0.12, 0.14, 0.9, 1.4, 0.6, 0.62, mat.chrome);
+    p.box(-0.485, 0.165, 1.9, M.ceiling, 0, 0.6, mat.whiteLacquer);
+  });
 
   // --- Laundry: full-height oak joinery on the left, counter and stacked machines ahead ---------
   item(10.33, 8.03, "E", p => {
@@ -627,7 +612,7 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(x - 0.2, x + 0.2, 0.12, 0.42, 0.6, 0.78, mat.applianceWhite, 0.02);
     }
   });
-  const cw = v12 ? 0.2975 : 0.245;  // counter between the joinery and the machines (v12: 0.165 m wider)
+  const cw = 0.2975;  // counter between the joinery and the machines (half-width)
   item(10.93 + cw, 9.18, "S", p => {
     p.box(-cw, cw, 0.1, 0.88, 0, 0.6, mat.oakVeneer);
     for (const y of [0.36, 0.62]) p.box(-cw + 0.01, cw - 0.01, y - 0.002, y + 0.002, 0.6, 0.603, mat.walnut);
@@ -635,7 +620,7 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-cw, cw, 1.6, 2.5, 0, 0.35, mat.oakVeneer);
     p.box(-cw, cw, 1.58, 1.6, 0.05, 0.3, mat.ledStrip);
   });
-  item(v12 ? 11.885 : 11.72, 9.18, "S", p => {
+  item(11.885, 9.18, "S", p => {
     p.box(-0.3, 0.3, 0, 0.42, 0, 0.6, mat.oakVeneer);
     p.box(-0.25, 0.25, 0.1, 0.36, 0.45, 0.62, mat.applianceWhite, 0.02);
     for (const y0 of [0.45]) {
@@ -648,10 +633,8 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-0.3, 0.3, 1.6, 2.5, 0, 0.6, mat.oakVeneer);
   });
 
-  // --- Entrance: lit bench niche + shoe unit beside the front door, oval mirror, gallery ---------
-  // Joinery per the DWG: x 9.82 to the return wall (11.35), front at y 4.21, built out over the pier.
-  // The shoe unit is exactly the pier's width (9.82 to 10.26), so both its sides line up with the column.
-  if (v12) item(10.419, 3.6, "N", p => {  // master-v12: one 1.20 x 0.42 shoe unit (x 9.82 to 11.02), lit niche above
+  // --- Entrance: shoe unit beside the front door, bench and oval mirror facing it, gallery ----------
+  item(10.419, 3.6, "N", p => {  // DWG shoe unit 1.20 x 0.42 (x 9.82 to 11.02), lit niche above
     p.box(-0.6, 0.6, 0, 1.0, 0, 0.42, mat.whiteLacquer);
     for (const x of [-0.2, 0.2]) p.box(x - 0.002, x + 0.002, 0.02, 0.98, 0.42, 0.423, shadowGap);
     p.box(-0.6, 0.6, 1.0, 1.03, 0, 0.42, mat.oakVeneer);
@@ -661,52 +644,19 @@ export function furnish(scene, M, mat, version = "main") {
     for (let k = 0; k < 9; k++) p.box(0.2 + k * 0.035, 0.22 + k * 0.035, 1.03, 2.1, 0.02, 0.06, mat.walnut);
     p.box(-0.58, 0.58, 2.08, 2.1, 0.05, 0.4, mat.ledStrip);
   });
-  else {
-    item(10.039, 3.76, "N", p => {  // shoe cabinet, lit open niche with oak slats above
-      p.box(-0.22, 0.22, 0, 1.0, -0.16, 0.45, mat.whiteLacquer);
-      p.box(-0.22, 0.22, 1.0, 1.03, -0.16, 0.45, mat.oakVeneer);
-      p.box(-0.22, 0.22, 1.03, 2.4, -0.16, 0.02, mat.limewash);
-      for (const s of [-1, 1]) p.box(s * 0.22 - 0.02, s * 0.22 + 0.02, 1.03, 2.4, -0.16, 0.45, mat.oakVeneer);
-      p.box(-0.22, 0.22, 2.1, 2.4, -0.16, 0.45, mat.oakVeneer);
-      for (let k = 0; k < 5; k++) p.box(0.02 + k * 0.035, 0.04 + k * 0.035, 1.03, 2.1, 0.02, 0.06, mat.walnut);
-      p.box(-0.2, 0.2, 2.08, 2.1, 0.05, 0.4, mat.ledStrip);
-    });
-    item(10.804, 3.76, "N", p => {  // bench niche: oak surround, glowing back, hooks
-      const W = 0.545, I = W - 0.1;  // outer and inner half-widths
-      p.box(-W, W, 0, 2.4, -0.16, 0, mat.oakVeneer);
-      p.box(-W, W, 0, 2.4, 0, 0.04, mat.oakVeneer);
-      p.box(-I, I, 0.42, 2.1, 0.04, 0.05, mat.limewash);
-      for (const s of [-1, 1]) p.box(s * I - 0.012, s * I + 0.012, 0.5, 2.08, 0.05, 0.07, mat.ledStrip);
-      p.box(-I + 0.02, I - 0.02, 2.08, 2.09, 0.05, 0.08, mat.ledStrip);
-      p.box(-0.02, 0.38, 0.85, 1.85, 0.05, 0.07, mat.ledStrip, 0.18);
-      p.box(0.0, 0.36, 0.87, 1.83, 0.06, 0.08, mat.mirror, 0.17);
-      p.box(-I, I, 0.42, 0.5, 0, 0.45, mat.boucle, 0.04);
-      p.box(-I, I, 0.2, 0.42, 0, 0.42, mat.whiteLacquer);
-      for (const x of [-0.17, 0.17]) p.box(x - 0.002, x + 0.002, 0.21, 0.41, 0.42, 0.423, shadowGap);
-      p.box(-I, I, 0.05, 0.07, 0, 0.42, mat.oakVeneer);
-      p.box(-I, I, 0.19, 0.2, 0.05, 0.38, mat.ledStrip);
-      p.box(-I, I, 2.1, 2.4, 0, 0.45, mat.oakVeneer);
-      for (const s of [-1, 1]) p.box(s * (W - 0.05) - 0.05, s * (W - 0.05) + 0.05, 0, 2.1, 0, 0.45, mat.oakVeneer);
-      for (let k = 0; k < 4; k++) p.box(-0.35 + k * 0.12, -0.33 + k * 0.12, 1.6, 1.62, 0.05, 0.1, mat.brass);
-      p.box(-0.3, -0.05, 0.5, 0.75, 0.08, 0.2, mat.linenBlush, 0.08);
-    });
-  }
-  const bx = v12 ? 8.512 : 8.48;  // v12: 1.20 x 0.40 bench, 0.70 m mirror, 0.40 x 0.18 shelf
-  item(bx, 5.55, "S", p => {  // facing the front door: organic backlit mirror over a bench, floating oak shelf
-    p.oval(0, 1.35, v12 ? 0.35 : 0.42, 0.78, 0.015, mat.mirror, true);
-    if (v12) p.box(-0.6, 0.6, 0.05, 0.45, 0.02, 0.4, mat.boucle, 0.12);
-    else p.box(-0.5, 0.5, 0.05, 0.45, 0.02, 0.35, mat.boucle, 0.12);
-    if (v12) p.box(0.65, 1.05, 0.98, 1.03, 0, 0.18, mat.oakVeneer);
-    else p.box(0.67, 1.12, 0.98, 1.03, 0, 0.2, mat.oakVeneer);
+  item(8.512, 5.55, "S", p => {  // facing the front door: DWG bench 1.20 x 0.40, backlit 0.70 m mirror, 0.40 x 0.18 shelf
+    p.oval(0, 1.35, 0.35, 0.78, 0.015, mat.mirror, true);
+    p.box(-0.6, 0.6, 0.05, 0.45, 0.02, 0.4, mat.boucle, 0.12);
+    p.box(0.65, 1.05, 0.98, 1.03, 0, 0.18, mat.oakVeneer);
   });
-  for (const x of [bx - 0.9, bx + 0.9]) sconce(x, 5.55, "S", 1.55);  // a pair either side of the mirror
+  for (const x of [7.612, 9.412]) sconce(x, 5.55, "S", 1.55);  // a pair either side of the mirror
   sconce(7.63, 3.6, "N", 1.75); sconce(9.33, 3.6, "N", 1.75);
   item(8.48, 3.72, "N", p => {  // front door per render 29: walnut leaf with rounded top corners, deep surround, long brass pull
     p.roundTop(-0.56, 0.56, 0, 2.25, 0.3, -0.02, 0.06, mat.walnut);
     p.roundTop(-0.46, 0.46, 0, 2.14, 0.22, 0.04, 0.02, mat.oakVeneer);
     p.box(0.3, 0.33, 0.7, 1.5, 0.06, 0.09, mat.brass);
   });
-  plant(11.1, 4.5, 1.6, 0.24); plant(v12 ? 7.66 : 7.7, 5.3, 1.3, 0.22);  // v12: clear of the wider bench
+  plant(11.1, 4.5, 1.6, 0.24); plant(7.66, 5.3, 1.3, 0.22);
   art(7.0, 3.6, "N", 0.75, 1.05, 1.45, 0); art(6.72, 3.62, "N", 0.5, 0.5, 1.3, 1, false);
   [[3.85, 0.36, 0.48, 1.75], [4.3, 0.36, 0.36, 1.45], [3.95, 0.3, 0.3, 1.2]].forEach(([y, w, h, z], k) => art(6.51, y, "E", w, h, z, k));
   rug(7.1, 4.3, 10.9, 5.1, mat.art[1]);

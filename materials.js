@@ -84,18 +84,34 @@ function stoneTileTexture() {
   return t;
 }
 
-// Slatted timber: 4 cm boards with dark grooves, as a bump map (boards run horizontally).
-function slatBump() {
+// Slatted timber: `pitch` m boards with dark grooves, as a bump map (boards run horizontally).
+function slatBump(pitch = 0.04, groove = 3) {
   const c = document.createElement("canvas");
-  c.width = 8; c.height = 256;  // 0.32 m: 8 slats
+  c.width = 8; c.height = 256;  // 8 slats
   const g = c.getContext("2d");
   g.fillStyle = "#fff";
   g.fillRect(0, 0, 8, 256);
   g.fillStyle = "#000";
-  for (let k = 0; k < 8; k++) g.fillRect(0, k * 32, 8, 3);
+  for (let k = 0; k < 8; k++) g.fillRect(0, k * 32, 8, groove);
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.repeat.set(1 / 0.32, 1 / 0.32);
+  t.repeat.set(1 / (8 * pitch), 1 / (8 * pitch));
+  return t;
+}
+
+// Wood-look porcelain planks: 12 cm boards with hairline joints, panel ends every 1.2 m.
+function plankBump() {
+  const c = document.createElement("canvas");
+  c.width = 256; c.height = 128;  // 1.2 x 0.24 m: two boards
+  const g = c.getContext("2d");
+  g.fillStyle = "#fff";
+  g.fillRect(0, 0, 256, 128);
+  g.fillStyle = "#777";
+  for (const y of [0, 64]) g.fillRect(0, y, 256, 1);
+  g.fillRect(0, 0, 1, 128);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(1 / 1.2, 1 / 0.24);
   return t;
 }
 
@@ -136,6 +152,8 @@ export function makeMaterials(clip) {
     // Joinery and surfaces
     oakVeneer: scanned("laminate_floor_02", 1.7, { tint: 0xffdcb4, roughness: 0.55, rotate: Math.PI / 2, normal: 0.3 }),
     oakSlats: std({ color: 0xf2d6b8, map: map("oak_veneer_01_diff.jpg", 1.2, true, Math.PI / 2), bumpMap: slatBump(), bumpScale: 6, roughness: 0.6 }),
+    oakBattens: std({ color: 0xf0cfa8, map: map("oak_veneer_01_diff.jpg", 1.2, true, Math.PI / 2), bumpMap: slatBump(0.05, 5), bumpScale: 9, roughness: 0.6 }),
+    woodTile: std({ color: 0xf3cf9e, map: map("oak_veneer_01_diff.jpg", 1.2, true, Math.PI / 2), bumpMap: plankBump(), bumpScale: 1.5, roughness: 0.5 }),
     walnut: scanned("laminate_floor_02", 1.7, { tint: 0x9c8070, roughness: 0.5, rotate: Math.PI / 2, normal: 0.3 }),
     whiteLacquer: std({ color: 0xf2eee8, roughness: 0.35 }),
     greyLacquer: std({ color: 0x968d84, roughness: 0.4 }),

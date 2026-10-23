@@ -432,36 +432,77 @@ export function furnish(scene, M, mat, version = "main") {
   });
   ac(1.6, 4.55, "N");
 
-  // --- Guest bathroom: bath-shower west, vanity east, WC under the window ----------------------
-  item(12.16, 8.05, "E", p => {
-    p.box(-1.08, 1.08, 0, M.ceiling, 0, 0.02, mat.oakSlats);
+  // --- Guest bathroom: bath-shower west, vanity east, WC under the window (renders 08, 09) -----
+  const travertine = mat.stoneTable.clone();
+  travertine.color.setRGB(0.8, 0.77, 0.73);
+  travertine.clippingPlanes = mat.stoneTable.clippingPlanes;
+  const charcoal = mat.greige.clone();
+  charcoal.color.setRGB(0.24, 0.23, 0.22);
+  charcoal.clippingPlanes = mat.greige.clippingPlanes;
+  item(12.16, 8.05, "E", p => {  // wood-look plank wall, stone-clad bath, framed screen over the door end
+    p.box(-1.08, 1.08, 0, M.ceiling, 0, 0.02, mat.woodTile);
     p.box(-0.85, 0.85, 0, 0.55, 0.02, 0.75, mat.stoneWall);
     p.box(-0.78, 0.78, 0.52, 0.56, 0.08, 0.7, mat.ceramic);
-    p.box(-0.02, 0.85, 0.56, 2.0, 0.75, 0.76, mat.clearGlass);
-    p.box(-0.03, 0.86, 1.98, 2.0, 0.74, 0.77, mat.blackSteel);
-    p.box(-0.03, -0.01, 0.56, 2.0, 0.74, 0.77, mat.blackSteel);
-    p.box(-0.2, 0.2, 2.15, 2.17, 0.15, 0.55, mat.chrome);
+    const g0 = -0.85, g1 = 0.05, z = 0.73;  // fixed screen on the rim, black frame all round
+    p.box(g0, g1, 0.56, 2.3, z, z + 0.01, mat.clearGlass);
+    for (const [a, b, c, d] of [[g0, g1, 2.28, 2.31], [g0, g1, 0.55, 0.58], [g0, g0 + 0.025, 0.55, 2.31], [g1 - 0.025, g1, 0.55, 2.31]])
+      p.box(a, b, c, d, z - 0.012, z + 0.022, mat.blackSteel);
+    p.cyl(-0.4, 0.38, 0.008, 2.44, M.ceiling, mat.chrome, 8);  // ceiling rain head inside the screen
+    p.box(-0.55, -0.25, 2.42, 2.44, 0.23, 0.53, mat.chrome, 0.005);
+    p.box(0.22, 0.3, 0.92, 1.06, 0.02, 0.045, mat.brass, 0.01);  // brass mixer and hand shower, right of the screen
+    p.box(0.245, 0.275, 1.04, 1.12, 0.045, 0.06, mat.brass, 0.005);
+    p.cyl(0.38, 0.05, 0.016, 0.98, 1.22, mat.brass, 12, 0.012);
+    for (const [x, t] of [[0.35, 0.09], [0.41, -0.09]]) p.cyl(x, 0.05, 0.005, 0.58, 0.98, mat.brass, 6).rotation.z = t;
+    for (const x of [-0.62, -0.32]) {  // towels hung on the screen
+      p.box(x - 0.1, x + 0.1, 1.2, 1.85, z + 0.025, z + 0.05, mat.boucle, 0.01);
+      p.box(x - 0.012, x + 0.012, 1.84, 1.9, z + 0.02, z + 0.05, mat.blackSteel);
+    }
   });
-  item(14.66, 7.75, "W", p => {  // floating stone vanity, vessel basin (DWG circle), rounded mirror
-    p.box(-0.8, 0.8, 0, M.ceiling, 0, 0.02, mat.oakSlats);
-    vanityDrawers(p, -0.75, 0.75, 0.32, 0.5, 0.45);
-    p.box(-0.8, 0.8, 0.68, 0.8, 0, 0.5, greyStone, 0.01);
-    p.box(-0.75, 0.75, 0.3, 0.32, 0.05, 0.42, mat.ledStrip);
-    p.cyl(0, 0.27, 0.17, 0.8, 0.92, mat.ceramic, 40, 0.13).scale.x = 1.5;
-    p.box(-0.06, 0.06, 1.0, 1.08, 0.02, 0.03, mat.bronze); p.box(-0.015, 0.015, 1.02, 1.045, 0.03, 0.17, mat.bronze);
-    p.box(-0.48, 0.48, 1.15, 2.0, 0.02, 0.05, mat.walnut, 0.13);
-    p.box(-0.455, 0.455, 1.175, 1.975, 0.04, 0.06, mat.mirror, 0.11);
+  item(14.66, 7.75, "W", p => {  // battened oak wall, thick stone slab, open shelf over walnut drawers, rounded mirror
+    p.box(-0.8, 0.8, 0, M.ceiling, 0, 0.03, mat.oakBattens);
+    p.box(-0.78, 0.78, 0.2, 0.5, 0.03, 0.48, mat.walnut);  // floating drawer unit, its top an open shelf
+    for (const x of [-0.39, 0, 0.39]) p.box(x - 0.003, x + 0.003, 0.215, 0.44, 0.48, 0.483, shadowGap);
+    p.box(-0.76, 0.76, 0.44, 0.445, 0.48, 0.483, shadowGap);
+    p.box(-0.74, 0.74, 0.18, 0.2, 0.06, 0.44, mat.ledStrip);
+    p.box(-0.8, 0.8, 0.72, 0.85, 0.03, 0.53, travertine, 0.01);
+    p.box(-0.76, 0.76, 0.705, 0.72, 0.05, 0.1, mat.ledStrip);
+    p.box(-0.6, -0.3, 0.5, 0.6, 0.1, 0.38, charcoal, 0.02); p.box(-0.15, 0.15, 0.5, 0.58, 0.1, 0.38, charcoal, 0.02);
+    for (const x of [0.38, 0.47, 0.56]) { const r = p.cyl(x, 0.24, 0.04, 0.46, 0.74, mat.oatmeal, 16); r.rotation.x = Math.PI / 2; r.position.y = 0.545; }
+    const basin = p.cyl(0, 0.3, 0.2, 0.85, 0.96, mat.ceramic, 48, 0.15); basin.scale.x = 1.5;  // wide low vessel
+    p.box(-0.02, 0.02, 1.02, 1.05, 0.03, 0.18, mat.brass, 0.008);  // wall spout and two handles
+    for (const x of [-0.11, 0.11]) { const k = p.cyl(x, 0.07, 0.022, 1.0, 1.06, mat.brass, 16); k.rotation.x = Math.PI / 2; k.position.y = 1.035; }
+    const rr = (x0, x1, y0, y1, r, z0, d, m) => {
+      const o = mesh(new THREE.ExtrudeGeometry(roundRect(new THREE.Shape(), x0, x1, y0, y1, r), { depth: d, bevelEnabled: false, curveSegments: 16 }), m, p.g);
+      o.position.z = z0;
+    };
+    rr(-0.52, 0.52, 1.12, 2.0, 0.14, 0.03, 0.025, mat.bronze);  // rounded mirror, thin dark frame
+    rr(-0.5, 0.5, 1.14, 1.98, 0.12, 0.04, 0.02, mat.mirror);
+    p.cyl(0.55, 0.3, 0.05, 0.85, 1.05, mat.planter, 16, 0.04);  // styling: vase, bottles
+    for (const [x, h] of [[-0.45, 0.16], [-0.52, 0.12], [-0.6, 0.18]]) p.cyl(x, 0.3, 0.025, 0.85, 0.85 + h, mat.ceramic, 12);
   });
-  item(13.95, 9.18, "S", p => {
+  item(13.95, 9.18, "S", p => {  // wall-hung WC, brass bidet spray left, roll holder right
     p.model("models/wc-wallhung.glb", mat.ceramic, 0, 0.1, 0.02);
-    p.box(-0.12, 0.12, 1.0, 1.08, 0, 0.02, mat.brass);
+    p.box(-0.32, -0.26, 0.42, 0.5, 0, 0.04, mat.brass, 0.01);
+    p.cyl(-0.29, 0.05, 0.02, 0.2, 0.42, mat.brass, 12);
+    p.box(0.33, 0.47, 0.6, 0.72, 0, 0.1, mat.brass, 0.03);
+    p.cyl(0.4, 0.07, 0.055, 0.58, 0.7, mat.whiteLacquer, 20).rotation.z = Math.PI / 2;
   });
-  for (const x of [12.66, 12.91]) item(x, 9.18, "S", p => {  // two tall lit niches between bath and window
-    for (const s of [-1, 1]) p.box(s * 0.11 - 0.02, s * 0.11 + 0.02, 0.9, 2.1, 0, 0.2, mat.stoneWall);
-    p.box(-0.13, 0.13, 0.86, 0.9, 0, 0.2, mat.stoneWall); p.box(-0.13, 0.13, 2.1, 2.14, 0, 0.2, mat.stoneWall);
-    p.box(-0.09, 0.09, 0.9, 2.1, 0, 0.01, mat.walnut);
-    for (let k = 0; k < 6; k++) p.box(-0.09, 0.09, 1.07 + k * 0.17, 1.085 + k * 0.17, 0, 0.19, mat.walnut);
-    p.box(-0.09, 0.09, 2.08, 2.09, 0.02, 0.17, mat.ledStrip);
+  item(13.14, 9.18, "S", p => {  // walnut flush panel with a brass plate, beside the niches
+    p.box(-0.12, 0.12, 1.05, 1.21, 0, 0.015, mat.walnut, 0.005);
+    p.box(-0.06, 0.06, 1.11, 1.15, 0.015, 0.025, mat.brass, 0.005);
+  });
+  item(12.58, 9.18, "S", p => {  // stone build-out at the bath end with two recessed walnut-lined niches
+    const H = M.ceiling, D = 0.28, niches = [[-0.18, 0.02], [0.1, 0.3]], y0 = 0.9, y1 = 2.1;
+    const face = new THREE.Shape([new THREE.Vector2(-0.42, 0), new THREE.Vector2(0.42, 0), new THREE.Vector2(0.42, H), new THREE.Vector2(-0.42, H)]);
+    for (const [a, b] of niches) face.holes.push(new THREE.Path([new THREE.Vector2(a, y0), new THREE.Vector2(b, y0), new THREE.Vector2(b, y1), new THREE.Vector2(a, y1)]));
+    mesh(new THREE.ExtrudeGeometry(face, { depth: D, bevelEnabled: false }), mat.stoneWall, p.g);
+    for (const [a, b] of niches) {
+      p.box(a, b, y0, y1, 0, D - 0.2, mat.walnut);
+      for (const s of [a, b - 0.012]) p.box(s, s + 0.012, y0, y1, D - 0.2, D, mat.walnut);
+      p.box(a, b, y0, y0 + 0.012, D - 0.2, D, mat.walnut); p.box(a, b, y1 - 0.012, y1, D - 0.2, D, mat.walnut);
+      for (let k = 1; k < 6; k++) p.box(a, b, y0 + k * 0.2, y0 + k * 0.2 + 0.015, D - 0.2, D - 0.01, mat.walnut);
+      p.box(a + 0.02, b - 0.02, y1 - 0.025, y1 - 0.015, D - 0.18, D - 0.03, mat.ledStrip);
+    }
   });
 
   // --- Kitchen: U of white flat-panel units, oak uppers, tall oven tower and black fridge -------
@@ -674,7 +715,7 @@ export function furnish(scene, M, mat, version = "main") {
   for (const [y0, y1] of [[1.94, 4.665], [5.915, 8.505]]) item(21.222, (y0 + y1) / 2, "W", p => p.box(-(y1 - y0) / 2, (y1 - y0) / 2, 2.3, M.ceiling, 0, 0.3, mat.limewash));
   item(20.922, 3.51, "W", p => p.box(-0.45, 0.45, 2.27, 2.56, 0, 0.22, mat.applianceWhite, 0.04));
 
-  // --- Dining: walnut table for six, tub chairs, lantern pendants; coffee bar and desk ---------
+  // --- Dining: walnut table for six, tub chairs, lantern pendants; buffet wall and coffee bar ----
   item(18.4, 7.6, "S", p => {
     p.box(-1.2, 1.2, 0.72, 0.76, -0.5, 0.5, mat.walnut, 0.01);
     for (const x of [-0.75, 0.75]) p.box(x - 0.05, x + 0.05, 0, 0.72, -0.3, 0.3, mat.walnut);
@@ -690,13 +731,43 @@ export function furnish(scene, M, mat, version = "main") {
     for (const x of [16.2, 17.71]) item(x, y, "S", p => { const m = mesh(curtainGeometry(0.4, 2.5), mat.curtain, p.g); m.position.set(0, 1.3, 0.1); });
     item(16.95, y, "S", p => { const m = mesh(curtainGeometry(1.15, 2.45), mat.sheer, p.g); m.position.set(0, 1.25, 0.18); });
   }
-  item(14.78, 8.2, "E", p => {  // DWG unit: walnut sideboard under an organic backlit mirror
-    p.box(-1.0, 1.0, 0.12, 0.8, 0, 0.44, mat.walnut);
-    fronts(p, -1.0, 1.0, 0.12, 0.8, 0.44, 0.5);
-    p.box(-1.0, 1.0, 0.8, 0.83, 0, 0.45, mat.stoneTable);
-    p.oval(0, 1.55, 0.42, 0.55, 0.02, mat.mirror, true);
+  // Buffet wall per the DWG and the dining render (15): a plaster mass with a tall lit oak niche (south),
+  // splayed back into the wall like the TV wall, then a walnut sideboard under a backlit pebble mirror.
+  item(14.79, 8.0, "E", p => {  // local x = plan y - 8, z = plan x - 14.79
+    const H = M.ceiling, F = 0.462, P = 0.062;  // mass front (x 15.25), wall panel face (x 14.85)
+    const S = -1.213, C = -1.013, E = -0.347, K = 0.4, N = 1.477;  // y 6.79, corner, 7.65, 8.40, 9.48
+    const niche = [-0.883, -0.474, 0.45, 2.25, 0.13], deep = 0.25;
+    const face = new THREE.Shape([new THREE.Vector2(C, 0), new THREE.Vector2(E, 0), new THREE.Vector2(E, H), new THREE.Vector2(C, H)]);
+    face.holes.push(roundRect(new THREE.Path(), ...niche));
+    mesh(new THREE.ExtrudeGeometry(face, { depth: F, bevelEnabled: false, curveSegments: 12 }), mat.limewash, p.g);
+    p.box(S, C, 0, H, 0, F - 0.2, mat.limewash);
+    p.cyl(C, F - 0.2, 0.2, 0, H, mat.limewash, 32);  // the DWG's rounded front corner
+    const plan = new THREE.Shape([[E, 0], [E, -F], [K, -P], [N, -P], [N, 0]].map(([x, v]) => new THREE.Vector2(x, v)));
+    const splay = new THREE.ExtrudeGeometry(plan, { depth: H, bevelEnabled: false });
+    splay.rotateX(-Math.PI / 2);  // shape v = -z, extruded up the wall
+    mesh(splay, mat.limewash, p.g);
+    const [x0, x1, y0, y1, r] = niche;  // oak lining, back and lit shelves
+    const ring = roundRect(new THREE.Shape(), x0, x1, y0, y1, r);
+    ring.holes.push(roundRect(new THREE.Path(), x0 + 0.018, x1 - 0.018, y0 + 0.018, y1 - 0.018, r - 0.018));
+    mesh(new THREE.ExtrudeGeometry(ring, { depth: F, bevelEnabled: false, curveSegments: 12 }), honeyOak, p.g);
+    mesh(new THREE.ExtrudeGeometry(roundRect(new THREE.Shape(), x0, x1, y0, y1, r), { depth: F - deep, bevelEnabled: false, curveSegments: 12 }), honeyOak, p.g);
+    for (const y of [0.85, 1.25, 1.65, 1.95]) {
+      p.box(x0 + 0.015, x1 - 0.015, y, y + 0.025, F - deep, F - 0.01, honeyOak);
+      p.box(x0 + 0.03, x1 - 0.03, y - 0.012, y, F - deep + 0.03, F - 0.03, mat.ledStrip);
+    }
+    p.box(x0 + 0.06, x1 - 0.06, 2.14, 2.152, F - deep + 0.03, F - 0.03, mat.ledStrip);
+    p.cyl(-0.76, F - 0.12, 0.05, 0.875, 1.08, mat.linenSage, 16, 0.065); p.cyl(-0.6, F - 0.12, 0.04, 1.275, 1.42, mat.planter, 16);
+    for (let k = 0; k < 4; k++) p.box(-0.8 + k * 0.03, -0.775 + k * 0.03, 1.675, 1.86 - (k % 2) * 0.03, F - 0.2, F - 0.04, k % 2 ? mat.linenBlush : mat.walnut);
+    // Walnut sideboard from the mass to the corner, front in line with the mass (DWG x 15.25).
+    p.box(E, N - 0.02, 0.12, 0.8, P, F, mat.walnut);
+    fronts(p, E, N - 0.02, 0.12, 0.8, F, 0.45);
+    p.box(E + 0.03, N - 0.05, 0, 0.12, P, F - 0.06, mat.darkTop);
+    p.box(E, N - 0.02, 0.8, 0.83, P, F + 0.01, mat.walnut);
+    p.pebble((K + N) / 2, 1.6, 0.92, 0.8, P + 0.012, mat.mirror, true);
+    p.cyl(0.15, 0.3, 0.07, 0.83, 1.02, mat.planter, 16, 0.05); p.cyl(1.3, 0.28, 0.06, 0.83, 1.0, mat.stoneTable, 16, 0.045);
+    p.cyl(1.05, 0.3, 0.045, 0.83, 0.88, mat.blackSteel, 16);
   });
-  plant(14.85 + 0.25, 9.2, 1.0, 0.16);
+  plant(15.04, 8.15, 0.5, 0.06, 0.83);
   item(20.474, 9.5, "S", p => {  // coffee corner (DWG, 0.60 deep), column to wall: walnut base, white top, lit shelves
     p.box(-0.75, 0.75, 0.1, 0.88, 0, 0.58, mat.walnut);
     fronts(p, -0.75, 0.75, 0.1, 0.88, 0.58, 0.5);
@@ -718,7 +789,6 @@ export function furnish(scene, M, mat, version = "main") {
     for (const x of [-0.6, -0.48]) p.box(x - 0.02, x + 0.02, 1.13, 1.2, 0.41, 0.45, mat.chrome);
     p.box(-0.68, -0.39, 0.93, 0.95, 0.3, 0.44, mat.chrome);
   });
-  art(19.4, 9.38, "S", 0.55, 1.1, 1.55, 2);
   item(16.95, 9.5, "S", p => p.box(-1.0, 1.0, 2.5, 2.52, 0.02, 0.22, mat.ledStrip));
   plant(21.0, 5.9, 1.7, 0.25);
 

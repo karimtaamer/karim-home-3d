@@ -295,22 +295,25 @@ export function furnish(scene, M, mat, version = "main") {
   for (const y of [2.05, 3.54]) item(2.94, y, "E", p => { const m = mesh(curtainGeometry(0.45, 2.45), mat.curtain, p.g); m.position.set(0, 1.27, 0.06); });
 
   // --- Master bedroom and bathroom: the same pieces in both plan versions, placed per version -----
-  const bed = p => {  // king bed, built against its headboard wall
-    for (const k of [-1, 0, 1]) p.box(k * 0.92 - 0.45, k * 0.92 + 0.45, 0.25, 1.25, 0, 0.1, mat.boucle, 0.04);
-    p.box(-0.95, 0.95, 0.06, 0.32, 0.08, 2.15, mat.oakVeneer, 0.02);
-    p.box(-0.92, 0.92, 0.32, 0.56, 0.12, 2.1, mat.sheet, 0.06);
-    p.box(-0.94, 0.94, 0.5, 0.6, 0.85, 2.13, mat.linenSage, 0.04);
-    p.box(-0.95, 0.95, 0.54, 0.62, 1.55, 1.9, mat.boucle, 0.03);
+  // King bed, built against its headboard wall: w wide, l long from the wall (headboard included),
+  // headboard panels head wide in all (wider than the bed in Main and v9, inside the outline in v12).
+  const bed = (w = 1.9, l = 2.15, head = 2.76) => p => {
+    const h = w / 2, pitch = head / 3;
+    for (const k of [-1, 0, 1]) p.box(k * pitch - pitch / 2 + 0.01, k * pitch + pitch / 2 - 0.01, 0.25, 1.25, 0, 0.1, mat.boucle, 0.04);
+    p.box(-h, h, 0.06, 0.32, 0.08, l, mat.oakVeneer, 0.02);
+    p.box(-h + 0.03, h - 0.03, 0.32, 0.56, 0.12, l - 0.05, mat.sheet, 0.06);
+    p.box(-h + 0.01, h - 0.01, 0.5, 0.6, 0.85, l - 0.02, mat.linenSage, 0.04);
+    p.box(-h, h, 0.54, 0.62, l - 0.6, l - 0.25, mat.boucle, 0.03);
     for (const [x, c, z, w] of [[-0.48, mat.sheet, 0.14, 0.3], [0.48, mat.sheet, 0.14, 0.3], [-0.45, mat.linenBlush, 0.3, 0.27], [0.45, mat.linenBlush, 0.3, 0.27], [0, mat.boucle, 0.42, 0.22]]) {
       const m = p.box(x - w, x + w, 0.56, 0.86 - (z > 0.4 ? 0.1 : 0), z, z + 0.16, c, 0.07);
       m.rotation.x = -0.25;
     }
-    p.box(-0.96, 0.96, 0.6, 0.63, 1.3, 1.65, mat.boucle, 0.01);
+    p.box(-h, h, 0.6, 0.63, l - 0.85, l - 0.5, mat.boucle, 0.01);
   };
-  const nightstand = p => {
-    p.box(-0.24, 0.24, 0.22, 0.55, 0, 0.42, mat.walnut);
-    p.box(-0.22, 0.22, 0.37, 0.374, 0.42, 0.423, mat.grille);
-    for (const [lx, lz] of [[-0.2, 0.05], [0.2, 0.05], [-0.2, 0.37], [0.2, 0.37]]) p.cyl(lx, lz, 0.014, 0, 0.22, mat.walnut, 6);
+  const nightstand = (w = 0.48, d = 0.42) => p => {  // w across, d deep
+    p.box(-w / 2, w / 2, 0.22, 0.55, 0, d, mat.walnut);
+    p.box(-w / 2 + 0.02, w / 2 - 0.02, 0.37, 0.374, d, d + 0.003, mat.grille);
+    for (const [lx, lz] of [[-w / 2 + 0.04, 0.05], [w / 2 - 0.04, 0.05], [-w / 2 + 0.04, d - 0.05], [w / 2 - 0.04, d - 0.05]]) p.cyl(lx, lz, 0.014, 0, 0.22, mat.walnut, 6);
   };
   const vanity = (w = 1.4) => p => {  // DWG vanity 0.51 deep, w long (1.40 in Main and v9), round basin
     const h = w / 2;
@@ -365,9 +368,9 @@ export function furnish(scene, M, mat, version = "main") {
   if (version === "bigger-bedroom") {
     // Bigger Master Bedroom (master-bed-v9.dwg): the bathroom wall moves 0.8 m east, the bed turns to
     // the window wall, and the suite lobby becomes the bathroom's vanity end, entered from the bedroom.
-    item(3.185, 9.015, "S", bed);  // DWG bed outline, headboard on the north wall
+    item(3.185, 9.015, "S", bed());  // DWG bed outline, headboard on the north wall
     for (const x of [2.02, 4.35]) {  // DWG bedside tables
-      item(x, 9.015, "S", nightstand);
+      item(x, 9.015, "S", nightstand());
       pendant(x, 8.83, 1.15);
     }
     rug(1.905, 6.453, 4.465, 8.503);  // DWG rug
@@ -382,9 +385,9 @@ export function furnish(scene, M, mat, version = "main") {
   } else if (version === "shifted-bedroom") {
     // Shifted Bedroom (master-v12.dwg): the bathroom moves to the west end, the bed's headboard goes on
     // its partition, the wardrobe runs along the kitchen wall and a desk sits on the south wall.
-    item(2.162, 7.511, "E", bed);  // DWG bed outline, centred on the bathroom partition
-    for (const y of [6.231, 8.79]) {  // DWG bedside tables
-      item(2.162, y, "E", nightstand);
+    item(2.159, 7.511, "E", bed(2.101, 1.991, 2.101));  // DWG bed outline 2.10 wide x 1.99 long, headboard inside it
+    for (const y of [6.231, 8.79]) {  // DWG bedside tables 0.47 x 0.52 deep
+      item(2.159, y, "E", nightstand(0.466, 0.516));
       pendant(2.34, y, 1.15);
     }
     art(2.162, 7.511, "E", 1.6, 0.95, 1.85, 0);
@@ -393,7 +396,7 @@ export function furnish(scene, M, mat, version = "main") {
     });
     item(6.367, 7.336, "W", wardrobe(3.36));  // DWG wardrobe on the kitchen wall
     item(1.665, 4.55, "N", wardrobe(2.1));    // DWG wardrobe on the south wall
-    item(0.556, 5.591, "E", wardrobe(0.81));  // DWG cupboard by the bathroom door, from the south wardrobe front
+    item(0.556, 5.561, "E", wardrobe(0.872));  // DWG cupboard by the bathroom door (0.87 long, its end overlaps the south wardrobe front as drawn)
     item(3.617, 4.55, "N", p => {  // DWG desk 1.80 x 0.62: drawer pedestals, knee space, backlit mirror
       p.box(-0.9, 0.9, 0.72, 0.76, 0, 0.6, mat.walnut);
       for (const [x0, x1] of [[-0.9, -0.45], [0.45, 0.9]]) {
@@ -416,9 +419,9 @@ export function furnish(scene, M, mat, version = "main") {
     item(1.3, 9.02, "S", rainHead);
     item(1.66, 8.056, "S", p => p.box(-0.39, 0.39, 0, 2.0, -0.005, 0.005, mat.clearGlass));  // dashed screen in the DWG
   } else {
-    item(4.13, 7.62, "W", bed);  // headboard on the bathroom wall (DWG bed outline)
+    item(4.13, 7.62, "W", bed());  // headboard on the bathroom wall (DWG bed outline)
     for (const y of [8.8, 6.45]) {
-      item(4.13, y, "W", nightstand);
+      item(4.13, y, "W", nightstand());
       pendant(3.95, y, 1.15);
     }
     art(4.13, 7.62, "W", 1.6, 0.95, 1.85, 0);
@@ -551,9 +554,10 @@ export function furnish(scene, M, mat, version = "main") {
     }
   });
 
-  // --- Kitchen: U of white flat-panel units, oak uppers, tall larder and black fridge -----------
+  // --- Kitchen: U of white flat-panel units, oak uppers, wide black fridge ---------------------
   const K = { x0: 6.48, x1: 10.21, y0: 5.67, y1: 9.09, front: 0.6 };
-  function run(x, y, facing, len, { sink = -1, hob = -1, uppers = true, window } = {}) {
+  // sink / hob: centre along the run (null = none), sinkW / hobW: their widths (the hood matches the hob).
+  function run(x, y, facing, len, { sink = null, sinkW = 0.7, hob = null, hobW = 0.9, uppers = true, window } = {}) {
     item(x, y, facing, p => {
       p.box(-len / 2, len / 2, 0, 0.1, 0.06, K.front - 0.06, mat.darkTop);
       p.box(-len / 2, len / 2, 0.02, 0.04, K.front - 0.08, K.front - 0.06, mat.ledStrip);
@@ -566,13 +570,13 @@ export function furnish(scene, M, mat, version = "main") {
       if (window) for (let k = 0; k < 24; k++) p.box(window[0] + 0.05, window[1] - 0.05, 1.0 + k * 0.045, 1.012 + k * 0.045, -0.06, -0.03, mat.planter);
       const spans = window ? [[-len / 2, window[0]], [window[1], len / 2]] : [[-len / 2, len / 2]];
       for (const [a, b] of spans) if (b - a > 0.05) p.box(a, b, 0.92, 1.58, 0, 0.015, greyStone);
-      if (sink >= 0) {
-        p.box(sink - 0.35, sink + 0.35, 0.921, 0.925, 0.12, 0.5, mat.blackSteel);
-        p.cyl(sink, 0.08, 0.015, 0.92, 1.25, mat.chrome, 8);
+      if (sink !== null) {
+        p.box(sink - sinkW / 2, sink + sinkW / 2, 0.921, 0.925, 0.09, 0.55, mat.blackSteel);
+        p.cyl(sink, 0.06, 0.015, 0.92, 1.25, mat.chrome, 8);
       }
-      if (hob >= 0) {
-        p.box(hob - 0.38, hob + 0.38, 0.921, 0.93, 0.06, 0.56, mat.blackGlass);
-        p.box(hob - 0.45, hob + 0.45, 1.5, 1.62, 0, 0.5, mat.chrome);
+      if (hob !== null) {
+        p.box(hob - hobW / 2, hob + hobW / 2, 0.921, 0.93, 0.06, 0.56, mat.blackGlass);
+        p.box(hob - hobW / 2, hob + hobW / 2, 1.5, 1.62, 0, 0.5, mat.chrome);
       }
       if (uppers) {
         for (const [a, b] of spans) {
@@ -584,43 +588,42 @@ export function furnish(scene, M, mat, version = "main") {
       }
     });
   }
-  run(K.x0, (6.27 + K.y1 - K.front) / 2, "E", K.y1 - K.front - 6.27, { hob: 0.1 });  // west run, hob
-  run((K.x0 + 9.6) / 2, K.y1, "S", 9.6 - K.x0, { sink: 8.1 - (K.x0 + 9.6) / 2, window: [7.45 - (K.x0 + 9.6) / 2, 8.75 - (K.x0 + 9.6) / 2] });
+  // West run, hob: DWG hob block 0.924 wide centred at y 7.376. North run, sink: DWG sink block 0.877 wide at x 8.193.
+  run(K.x0, (6.27 + K.y1 - K.front) / 2, "E", K.y1 - K.front - 6.27, { hob: 7.376 - (6.27 + K.y1 - K.front) / 2, hobW: 0.924 });
+  run((K.x0 + 9.6) / 2, K.y1, "S", 9.6 - K.x0, { sink: 8.193 - (K.x0 + 9.6) / 2, sinkW: 0.877, window: [7.45 - (K.x0 + 9.6) / 2, 8.75 - (K.x0 + 9.6) / 2] });
   run((K.x0 + 8.6) / 2, K.y0, "N", 8.6 - K.x0, { uppers: false });                   // south run
   const dishwasher = p => {  // integrated dishwasher (DWG): panel joints and a black pull
     for (const x of [-0.3, 0.3]) p.box(x - 0.002, x + 0.002, 0.12, 0.86, K.front, K.front + 0.003, shadowGap);
     p.box(-0.28, 0.28, 0.8, 0.84, K.front, K.front + 0.006, mat.blackSteel);
   };
-  // East run per the DWG: tall block (6.85 to 7.82: narrow larder, then the fridge), then the
-  // dishwasher under a counter running on to the corner.
+  // East run per the DWG: the fridge fills the 0.991 m fridge block (y 6.828 to 7.819), then the
+  // dishwasher (0.62) and a filler under a counter running on to the corner.
   run(K.x1, (7.815 + K.y1) / 2, "W", K.y1 - 7.815);
   item(K.x1, 8.127, "W", dishwasher);
-  item(K.x1, 7.33, "W", p => {
-    p.box(0.165, 0.485, 0, M.ceiling, 0, 0.6, mat.whiteLacquer);              // tall larder
-    p.box(0.18, 0.2, 0.9, 1.5, 0.6, 0.62, mat.chrome);
-    p.box(-0.485, 0.165, 0, 1.9, 0.02, 0.6, mat.blackSteel, 0.01);           // fridge
-    p.box(0.12, 0.14, 0.9, 1.4, 0.6, 0.62, mat.chrome);
-    p.box(-0.485, 0.165, 1.9, M.ceiling, 0, 0.6, mat.whiteLacquer);
+  item(K.x1, 7.3235, "W", p => {
+    p.box(-0.4955, 0.4955, 0, 1.9, 0.02, 0.6, mat.blackSteel, 0.01);         // fridge
+    for (const x of [-0.03, 0.01]) p.box(x, x + 0.02, 0.9, 1.4, 0.6, 0.62, mat.chrome);  // pulls of the two doors
+    p.box(-0.4955, 0.4955, 1.9, M.ceiling, 0, 0.6, mat.whiteLacquer);        // cupboard over it
   });
 
   // --- Laundry: full-height oak joinery on the left, counter and stacked machines ahead ---------
-  item(10.33, 8.03, "E", p => {
-    p.box(-1.1, 1.1, 0, M.ceiling - 0.05, 0, 0.6, mat.oakVeneer);
-    fronts(p, -1.1, 1.1, 0.05, 2.5, 0.6, 0.55);
+  item(10.32, 7.9215, "E", p => {  // DWG joinery 2.069 long x 0.617 deep (y 6.887 to 8.956)
+    p.box(-1.0345, 1.0345, 0, M.ceiling - 0.05, 0, 0.617, mat.oakVeneer);
+    fronts(p, -1.0345, 1.0345, 0.05, 2.5, 0.617, 0.55);
     for (const x of [-0.6, -0.05, 0.5]) {
       p.box(x - 0.24, x + 0.24, 0.08, 0.45, 0.78, 0.8, mat.oakVeneer);
       p.box(x - 0.2, x + 0.2, 0.12, 0.42, 0.6, 0.78, mat.applianceWhite, 0.02);
     }
   });
-  const cw = 0.2975;  // counter between the joinery and the machines (half-width)
-  item(10.93 + cw, 9.18, "S", p => {
+  const cw = 0.299;  // counter between the joinery and the machines (half-width): x 10.937 to 11.535
+  item(10.937 + cw, 9.18, "S", p => {
     p.box(-cw, cw, 0.1, 0.88, 0, 0.6, mat.oakVeneer);
     for (const y of [0.36, 0.62]) p.box(-cw + 0.01, cw - 0.01, y - 0.002, y + 0.002, 0.6, 0.603, mat.walnut);
     p.box(-cw, cw, 0.88, 0.92, 0, 0.62, mat.marbleTop);
     p.box(-cw, cw, 1.6, 2.5, 0, 0.35, mat.oakVeneer);
     p.box(-cw, cw, 1.58, 1.6, 0.05, 0.3, mat.ledStrip);
   });
-  item(11.885, 9.18, "S", p => {
+  item(11.835, 9.18, "S", p => {  // DWG stacked washer and dryer 0.60 x 0.60 (x 11.535 to 12.135)
     p.box(-0.3, 0.3, 0, 0.42, 0, 0.6, mat.oakVeneer);
     p.box(-0.25, 0.25, 0.1, 0.36, 0.45, 0.62, mat.applianceWhite, 0.02);
     for (const y0 of [0.45]) {
@@ -646,7 +649,7 @@ export function furnish(scene, M, mat, version = "main") {
   });
   item(8.512, 5.55, "S", p => {  // facing the front door: DWG bench 1.20 x 0.40, backlit 0.70 m mirror, 0.40 x 0.18 shelf
     p.oval(0, 1.35, 0.35, 0.78, 0.015, mat.mirror, true);
-    p.box(-0.6, 0.6, 0.05, 0.45, 0.02, 0.4, mat.boucle, 0.12);
+    p.box(-0.6, 0.6, 0.05, 0.45, 0, 0.4, mat.boucle, 0.12);
     p.box(0.65, 1.05, 0.98, 1.03, 0, 0.18, mat.oakVeneer);
   });
   for (const x of [7.612, 9.412]) sconce(x, 5.55, "S", 1.55);  // a pair either side of the mirror

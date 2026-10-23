@@ -32,6 +32,7 @@ a 2D drawing view, a tape measure, the designer's renders as "photo spots", and 
 | `dwgtool.py` | Inspect a DWG/DXF and render cropped, marked-up PNGs (see `DWG_EDITING.md` §1) | Yes |
 | `dwg/main.dxf`, `dwg/bigger-bedroom.dxf`, `dwg/shifted-bedroom.dxf` | The plan drawing for each version: the only build sources (§3) | Yes, see `DWG_EDITING.md` |
 | `suite_merge.py` | One plan everywhere except the master suite, taken from another; `--check` compares the versions (§3) | Yes |
+| `check_furnish.py` | Runs `furnish.js` in node and compares its key pieces (kitchen appliances, laundry, entrance, coffee corner, guest WC counter, v12 bed/nightstands/cupboard) with the version's DXF; flags > 2 cm (§3) | Yes |
 | `*-bigger-bedroom.*`, `*-shifted-bedroom.*` | The other plan versions (see §4) | Same rules as the main files |
 | `models/*.glb` | Fixtures made from the renders with Meshy (image-to-3D) | Replace only |
 | `textures/` | Poly Haven PBR scans (CC0, see `CREDITS.txt`) | Add only |
@@ -90,7 +91,15 @@ place and commit them. They are identical outside the master suite and differ on
 3. Rebuild that version's `model*.js` and `drawing*.json` (commands below and in §4). The viewer reads these, not
    the DXF, so a drawing edit doesn't show until it's rebuilt. Rebuilding needs the `~/.dwg-tools` venv and libredwg
    (above). Without them, push the DXF and ask someone who has them to rebuild.
-4. Commit the DXF and the rebuilt files together, and push.
+4. Run `check_furnish.py` after any drawing or `furnish.js` edit, for every version the edit touches (it needs
+   node). It exits non-zero when a key piece of furniture is more than 2 cm off the DXF: move the piece in
+   `furnish.js` (or fix the drawing), don't loosen the check.
+   ```sh
+   ~/.dwg-tools/bin/python check_furnish.py dwg/main.dxf --version main
+   ~/.dwg-tools/bin/python check_furnish.py dwg/bigger-bedroom.dxf --version bigger-bedroom
+   ~/.dwg-tools/bin/python check_furnish.py dwg/shifted-bedroom.dxf --version shifted-bedroom
+   ```
+5. Commit the DXF and the rebuilt files together, and push.
 
 A new DWG from the designer arrives in `~/Downloads`: convert it, compare it with the matching `dwg/` file and copy
 its changes into `dwg/` (see `DWG_EDITING.md` §1). Nothing builds from `~/Downloads`.
@@ -103,12 +112,25 @@ older Main DXF (`master-bed186-v6-shoes2-2block-laundry.dxf`, in `~/Downloads` o
   guest bath 0.90 m deep, guest WC door 0.175 m and WC 0.151 m west, washer and counter moved with the partition,
   laundry window 0.176 m west;
 - kitchen: fridge block 0.286 m south, dishwasher in the east run beside it (no room for the old oven tower: the
-  3D shows a narrow larder there);
+  3D fridge fills the whole 0.99 m block, see the 2026-10-24 note);
 - entrance: one 1.20 x 0.42 m shoe unit (no bench niche) and a 1.20 x 0.40 m bench facing the front door;
 - the coffee corner is as before.
 
 Client edit since (2026-10-23, all three files): the guest WC vanity counter `A4A` is 0.60 m deep (front edge moved from
 x 204.63 to 204.472, 2.6 cm clear of the door frame) instead of v12's 0.455 m.
+
+**`furnish.js` synced with the DXFs (2026-10-24)**, checked with `check_furnish.py` (all three versions pass). No
+drawing change, so no rebuild (`build_geometry.py` on `dwg/shifted-bedroom.dxf` gives the same model geometry).
+- Kitchen (all versions): one 0.991 m fridge filling block `wgsfd` (was a 0.65 m fridge plus a 0.32 m tall larder);
+  hob and hood 0.924 m wide centred on block `yrtds` (were 0.76 / 0.90 m, 10 cm north); sink 0.877 m wide centred
+  on block `wrewwer` (was 0.70 m, 9 cm west). `run()` takes `sinkW` / `hobW`.
+- Laundry (all versions): joinery `B02` 2.069 x 0.617 m, y 6.887 to 8.956 (was 2.20 m, to 9.13); counter x 10.937
+  to 11.535; stacked washer/dryer x 11.535 to 12.135 (was 5 cm east).
+- Entrance bench cushion back on the wall (0.40 m deep, was 0.38).
+- Shifted Bedroom suite: bed 2.10 wide x 1.99 long with the headboard inside the DWG outline (was 1.90 x 2.15
+  plus a 2.76 m headboard); nightstands 0.47 x 0.52 deep (were 0.48 x 0.42); bathroom-door cupboard 0.87 m (was
+  0.81). `bed()` and `nightstand()` take sizes; Main and v9 keep the old ones (only the bed's
+  foot rest is 1 cm narrower, to stay inside the bed's width).
 
 **Editing a room outside the suite:** edit it in one file (say `dwg/main.dxf`), copy it into the other two with
 `suite_merge.py` (BASE = the edited file, SUITE = OUT = the version to update; each keeps its own suite), check,

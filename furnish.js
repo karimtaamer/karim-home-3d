@@ -592,18 +592,40 @@ export function furnish(scene, M, mat, version = "main") {
   run(K.x0, (6.27 + K.y1 - K.front) / 2, "E", K.y1 - K.front - 6.27, { hob: 7.376 - (6.27 + K.y1 - K.front) / 2, hobW: 0.924 });
   run((K.x0 + 9.6) / 2, K.y1, "S", 9.6 - K.x0, { sink: 8.193 - (K.x0 + 9.6) / 2, sinkW: 0.877, window: [7.45 - (K.x0 + 9.6) / 2, 8.75 - (K.x0 + 9.6) / 2] });
   run((K.x0 + 8.6) / 2, K.y0, "N", 8.6 - K.x0, { uppers: false });                   // south run
-  const dishwasher = p => {  // integrated dishwasher (DWG): panel joints and a black pull
-    for (const x of [-0.3, 0.3]) p.box(x - 0.002, x + 0.002, 0.12, 0.86, K.front, K.front + 0.003, shadowGap);
-    p.box(-0.28, 0.28, 0.8, 0.84, K.front, K.front + 0.006, mat.blackSteel);
+  // Tall column in the DWG dishwasher block (0.623 wide, y 7.815 to 8.438), floor to ceiling, as in
+  // the designer's render: recessed plinth, base front to 0.6, raised dishwasher 0.6-1.42, open
+  // dish-rack niche 1.42-1.82, flush cupboards to the ceiling. Fronts at F, flush with the fridge surround.
+  const dishwasher = p => {
+    const H = M.ceiling, F = K.front + 0.02, hw = 0.3115, t = 0.018, w = hw - t;  // w: inside the carcass sides
+    for (const s of [-1, 1]) p.box(s > 0 ? w : -hw, s > 0 ? hw : -w, 0, H, 0, F, mat.whiteLacquer);  // carcass sides
+    p.box(-w, w, 0.1, H, 0, 0.02, mat.whiteLacquer);                              // back (seen in the niche)
+    p.box(-w, w, 0, 0.1, 0.06, K.front - 0.06, mat.darkTop);                       // plinth, in line with the runs'
+    p.box(-w, w, 0.02, 0.04, K.front - 0.08, K.front - 0.06, mat.ledStrip);
+    p.box(-w, w, 0.1, 0.6, 0.02, F, mat.whiteLacquer);                             // base cupboard
+    p.box(-w, w, 0.6, 1.42, 0.02, F - 0.01, mat.blackSteel);                       // dishwasher body
+    p.box(-w + 0.002, w - 0.002, 0.602, 1.418, F - 0.01, F, mat.blackGlass);      // dark glass front
+    p.box(-w + 0.002, w - 0.002, 1.37, 1.418, F, F + 0.002, mat.blackSteel);      // control strip
+    p.box(-0.05, 0.05, 1.388, 1.4, F + 0.002, F + 0.003, mat.ledStrip);           // its display
+    p.box(-0.2, 0.2, 1.335, 1.347, F, F + 0.018, mat.chrome);                     // slim pull
+    p.box(-w, w, 1.42, 1.438, 0.02, F, mat.whiteLacquer);                          // niche floor
+    p.box(-w + 0.03, w - 0.03, 1.44, 1.45, 0.08, F - 0.06, mat.chrome);           // wire rack: tray and rails
+    for (const [y, z] of [[1.52, 0.1], [1.52, F - 0.08], [1.6, 0.1]]) p.box(-w + 0.03, w - 0.03, y, y + 0.008, z, z + 0.008, mat.chrome);
+    for (let k = 0; k < 7; k++) p.cyl(-0.18 + k * 0.035, 0.3, 0.11, 1.554, 1.566, mat.ceramic, 20).rotation.z = Math.PI / 2;  // plates on edge
+    for (const x of [0.12, 0.2]) p.cyl(x, 0.45, 0.04, 1.45, 1.55, mat.ceramic, 12);  // cups
+    p.box(-w, w, 1.82, H, 0.02, F, mat.whiteLacquer);                              // cupboards to the ceiling
+    p.box(-w, w, 2.248, 2.252, F, F + 0.003, shadowGap);                          // joint in line with the oak uppers
   };
   // East run per the DWG: the fridge fills the 0.991 m fridge block (y 6.828 to 7.819), then the
-  // dishwasher (0.62) and a filler under a counter running on to the corner.
-  run(K.x1, (7.815 + K.y1) / 2, "W", K.y1 - 7.815);
-  item(K.x1, 8.127, "W", dishwasher);
+  // dishwasher column (0.623), then the counter only from the column to the corner: past the north
+  // run's front (y 8.49) just a 0.05 m filler shows, closed by the column's side panel.
+  run(K.x1, (8.438 + K.y1) / 2, "W", K.y1 - 8.438);
+  item(K.x1, 8.1265, "W", dishwasher);
   item(K.x1, 7.3235, "W", p => {
     p.box(-0.4955, 0.4955, 0, 1.9, 0.02, 0.6, mat.blackSteel, 0.01);         // fridge
     for (const x of [-0.03, 0.01]) p.box(x, x + 0.02, 0.9, 1.4, 0.6, 0.62, mat.chrome);  // pulls of the two doors
-    p.box(-0.4955, 0.4955, 1.9, M.ceiling, 0, 0.6, mat.whiteLacquer);        // cupboard over it
+    p.box(0.4775, 0.4975, 0, M.ceiling, 0, K.front + 0.02, mat.whiteLacquer);  // tall surround (the column's side on the other)
+    p.box(-0.4915, 0.4775, 1.9, M.ceiling, 0, K.front + 0.02, mat.whiteLacquer);  // cupboards over it
+    p.box(-0.009, -0.005, 1.92, M.ceiling - 0.02, K.front + 0.02, K.front + 0.023, shadowGap);  // between the two doors
   });
 
   // --- Laundry: full-height oak joinery on the left, counter and stacked machines ahead ---------

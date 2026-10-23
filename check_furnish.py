@@ -28,7 +28,7 @@ MODELS = {'main': 'model.js', 'bigger-bedroom': 'model-bigger-bedroom.js', 'shif
 # Source: ('block', name) or ('outline', seed x, seed y, width cm, depth cm) for a closed 2furni polyline (plan m).
 ITEMS = [
     ('kitchen fridge', None, ('block', 'wgsfd'), 'y', {'blackSteel'}, 0.05),
-    ('kitchen dishwasher', None, ('block', 'dfs'), 'y', {'greyLacquer*'}, (0.05, -0.005)),  # its front joints
+    ('kitchen dishwasher', None, ('block', 'dfs'), 'y', {'whiteLacquer'}, (0.05, -0.005)),  # its tall column's carcass
     ('kitchen hob', None, ('block', 'yrtds'), 'y', {'blackGlass'}, 0.05),
     ('kitchen hood', None, ('block', 'yrtds'), 'y', {'chrome'}, 0.05),
     ('kitchen sink', None, ('block', 'wrewwer'), 'x', {'blackSteel'}, 0.05),

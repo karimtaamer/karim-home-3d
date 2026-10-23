@@ -106,6 +106,11 @@ def pair_walls(segs):
                 ci, cj = strip_point(si, 0, si["d"] / 2), strip_point(sj, 0, sj["d"] / 2)
                 if abs((cj[0] - ci[0]) * -ui[1] + (cj[1] - ci[1]) * ui[0]) > 0.02:
                     continue
+                # The same span paired twice (a pier face matched to two back lines) is one wall, not
+                # two pieces meeting end to end: squares off its ends would widen it.
+                ends = lambda s: sorted([strip_point(s, s["t0"], s["d"] / 2), strip_point(s, s["t1"], s["d"] / 2)])
+                if all(math.dist(p, q) < 0.02 for p, q in zip(ends(si), ends(sj))):
+                    continue
             if body[i].distance(body[j]) > 0.02:
                 continue
             for ei in strip_ends(si, abs(sj["d"])):

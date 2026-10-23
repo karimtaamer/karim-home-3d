@@ -85,7 +85,7 @@ washer. Nothing else was taken from the proposal (its kitchen and master toilet 
 **Client edits in the Main DXF (2026-10-23, Main only).** Drawn straight into
 `master-bed186-v6-shoes2-2block-laundry.dxf` (state before them: `*-2block-laundry.before-comments.dxf`):
 dishwasher block `dfs` moved to the end of the kitchen's north run beside the fridge tower; entrance joinery
-(shoe unit + bench niche, x 9.76-11.35, front y 4.21, boxing in the pier) and a mirror bench, mirror and shelf
+(shoe unit + bench niche, x 9.82-11.35, front y 4.21, boxing in the pier; the shoe unit is exactly the pier's width, 9.82-10.26) and a mirror bench, mirror and shelf
 centred on the front door; the dining "desk" block `wwwrf` replaced by a 0.60 m coffee corner (x 19.72-21.22)
 with a mini water dispenser at the column end. v9 doesn't have these yet.
 
@@ -99,6 +99,11 @@ What the scripts rely on in the DWG:
 - **Layers:** `1wall` = walls, `Windows`, `3door`, `2furni` / `2 furni` = furniture. Room names come from the drawing's text labels (English or Arabic).
 - **Heights are fixed in `build_geometry.py`:** ceiling 2.6 m, door head 2.1 m, window sill 0.9 m, slider head 2.4 m, parapet 1.1 m.
 - **Wet rooms** (kitchen, bath, WC, laundry) get tile floors; **outdoor rooms** (terrace, balcony) get decking. Matching is by room name.
+
+**Piers drawn with several back lines** (2026-10-23 fix in `build_geometry.py`): a pier face paired with two
+back lines gives two strips with the same span. The corner-square step used to treat them as two pieces meeting
+end to end and add a block off each end, widening the entrance pier (to 8.9-10.7) and the dining pier by the
+coffee corner (to 18.9-20.1). It now skips same-span pairs, so piers are as wide as the DWG draws them.
 
 > **Main `model.js` rebuilds byte-identical from the patched v6 DXF (`drawing.json` to within 0.1 mm). Don't
 > regenerate them unless the drawing changed.** Diff the output (`git diff --stat`) after any rebuild.
@@ -164,6 +169,7 @@ To add a version:
 **Client decisions that override the designer's renders** (don't "fix" these to match a render):
 - The kitchen door stays on the east wall, as in the DWG.
 - The terrace counter has **no sink** (render 34 still shows one).
+- The terrace has **no pergola** (the terrace renders still show one).
 - The 2.5 × 4.2 m X-box left of the living room is a void, not part of the flat.
 - The shoe cabinet is the unit beside the front door. Nothing goes in the master-suite corridor.
 - No scroll-driven tour. Keep the button UI with smooth animated transitions.

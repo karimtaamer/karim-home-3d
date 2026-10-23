@@ -8,7 +8,8 @@ Generate Photo Spot (Walk view) sends a screenshot of the model from where you s
 drawn from the DWG and the view's numbers. This turns them into an OpenAI image edit that keeps the
 screenshot's angle and objects and only re-surfaces them, using a material board cropped from the
 designer's renders, a few of the renders themselves and the finishes written out in photogen-brief.json;
-comments re-run it on the attempt shown.
+the earlier renders (designer's and approved AI spots) that show the furniture of the rooms in shot go too, so
+the pieces keep their real design. Comments re-run it on the attempt shown.
 Approving copies the image into renders/ and adds the spot to spots.json, like a designer render (or to
 the plan version's spots file the page is showing, e.g. spots-bigger-bedroom.json).
 
@@ -35,6 +36,7 @@ MODEL = os.environ.get("OPENAI_IMAGE_MODEL", "gpt-image-2")
 SIZE = "1536x1024"  # 3:2 landscape, the shape the viewer crops its screenshot to
 DRY = "--dry-run" in sys.argv
 SAME_ROOM, MAX_REFS = 2, 4  # whole designer renders sent for colour and light (more invites copying their layout)
+MAX_FURNITURE, MAX_IMAGES = 6, 16  # extra renders sent for their furniture; OpenAI edits take at most 16 images
 SOFT = {"LIVING ROOM", "RECEPTION", "MASTER BEDROOM", "DINING"}  # the rooms that show the fabrics and art best
 REF_PX = 1024  # long side of a whole render as sent; the board carries the close-up detail
 TILE, LABEL, COLS = 384, 46, 4  # material board: square swatches with a caption strip, four across
@@ -160,6 +162,38 @@ def references(room, seen, name):
     return refs
 
 
+def furniture(room, seen, name):
+    """Earlier renders that show the real pieces of this room and the rooms in shot: the designer's ones named in
+    photogen-brief.json's furniture list (this room's first, most pieces first), then the approved AI spots of
+    those rooms, newest first. -> [(spot, [where, ..])]"""
+    items = json.loads(BRIEF.read_text()).get("furniture", []) if BRIEF.exists() else []
+    rooms = list(dict.fromkeys(x for r in [room, *seen] for x in (r, STAND_IN.get(r, r))))
+    try:
+        later = blob_spots(name)
+    except Exception as e:  # without them the designer's renders still go
+        print(f"[photogen] no approved spots from Blob: {e}", flush=True)
+        later = []
+    have = {s["photo"]: s for s in spots(name) + later}  # every previous render of this plan version
+    rank = lambda s: rooms.index(s["room"]) if s["room"] in rooms else len(rooms)
+    shown = {}
+    for f in items:
+        p = "renders/" + f["render"]
+        if p in have and (f["room"] in rooms or set(f.get("rooms", [])) & set(rooms)) and (BLOB or (ROOT / p).exists()):
+            shown.setdefault(p, []).append(f["where"])
+    out = sorted(((have[p], w) for p, w in shown.items()), key=lambda x: (rank(x[0]), -len(x[1])))
+    ai = [s for s in reversed(list(have.values())) if s.get("ai") and s["room"] in rooms]
+    return out + [(s, []) for s in sorted(ai, key=rank)]
+
+
+def picture(s):
+    """A render as sent: a designer render's 1024 px copy; an approved AI spot as it is (fetched from Blob on
+    Vercel, where it has no reference copy). None if it can't be had."""
+    if s.get("ai") and BLOB:
+        return fetched(s["photo"])
+    p = small(ROOT / s["photo"])
+    return p if p.exists() else None
+
+
 def brief(rooms):
     b = json.loads(BRIEF.read_text()) if BRIEF.exists() else {"all": [], "rooms": {}}
     return b["all"], [(r, b["rooms"][r]) for r in rooms if r in b["rooms"]]
@@ -203,21 +237,27 @@ def board():
 
 
 def prompt(ctx, refs, comments, revising, has_board):
-    """The images go in this order: PREVIOUS (revisions only), VIEW, PLAN, BOARD, then whole renders. The
-    image model holds closest to the first one, so that is the model screenshot for a first attempt and the
-    last attempt for a revision: the angle and every object stay, and only their surfaces change."""
+    """The images go in this order: PREVIOUS (revisions only), VIEW, PLAN, BOARD, then whole renders, each
+    (spot, None) for colour and light or (spot, [where, ..]) for its furniture too. The image model holds
+    closest to the first one, so that is the model screenshot for a first attempt and the last attempt for a
+    revision: the angle and every object stay, and only their surfaces change."""
     v, r, seen = ctx["view"], ctx["room"], ctx.get("seen", [])
     allrooms, rooms = brief([r["name"]] + [s["name"] for s in seen])
     n = iter(range(1, 99))
     first = "PREVIOUS" if revising else "VIEW"
+    furn = any(w is not None for _, w in refs)
     lines = [
         f"Edit image 1 ({first}) into a photorealistic interior photograph, as if it were one more render in "
         "the interior designer's set for this apartment. This is a re-surfacing job, not a new design: keep "
         "exactly the same camera, angle, lens, framing and composition, and keep every wall, opening, door, "
-        "window, piece of furniture, light and object in the same place, with the same shape and size. Do "
-        "not add, remove, move or redesign anything, and do not borrow the layout or objects of any other "
-        "image. Change only the materials, colours, textures and light so they match the designer's finishes. "
-        "No text, no labels, no people.",
+        "window, piece of furniture, light and object in the same place, with the same shape and size. "
+        + ("Do not add, remove or move anything, and do not borrow the layout of any other image or any object "
+           "that is not in image 1. Change only the materials, colours, textures and light so they match the "
+           "designer's finishes, and give each piece of furniture its real design from the FURNITURE images. "
+           if furn else
+           "Do not add, remove, move or redesign anything, and do not borrow the layout or objects of any other "
+           "image. Change only the materials, colours, textures and light so they match the designer's finishes. ")
+        + "No text, no labels, no people.",
         "",
         "Images, in order:",
     ]
@@ -239,11 +279,25 @@ def prompt(ctx, refs, comments, revising, has_board):
                      "flush honey oak, the headboard the cream boucle, bedding, rugs and cushions their fabrics, "
                      "bathroom walls the oak slats and stone, corridor walls and trim the corridor finishes. Copy "
                      "their colour, grain, weave, texture and sheen closely.")
-    for s in refs:
+    for s, w in refs:
         here = " (this room)" if s["room"] == r["name"] else " (a room in shot)" if s["room"] in [x["name"] for x in seen] else ""
-        lines.append(f"{next(n)}. RENDER - the designer's render \"{s['caption']}\"{here}, from another angle. "
-                     "Use it only for the colour palette, the warmth and softness of the light and the render "
-                     "quality; ignore its layout and objects.")
+        if w is None:
+            lines.append(f"{next(n)}. RENDER - the designer's render \"{s['caption']}\"{here}, from another angle. "
+                         "Use it only for the colour palette, the warmth and softness of the light and the render "
+                         "quality; ignore its layout and objects.")
+        elif s.get("ai"):
+            lines.append(f"{next(n)}. FURNITURE - render \"{s['caption']}\"{here}, an approved earlier photo of this "
+                         "apartment from another angle, shows its furniture as already chosen. Keep those pieces' "
+                         "designs and the render quality; do not copy its layout or camera.")
+        else:
+            lines.append(f"{next(n)}. FURNITURE - the designer's render \"{s['caption']}\"{here}, from another angle, "
+                         f"shows {'; '.join(w)}. Keep those pieces' designs, and use it for the colour palette, the "
+                         "light and the render quality; do not copy its layout or camera.")
+    if furn:
+        lines += ["", "Use the EXACT furniture shown in the FURNITURE reference images (same design, shape, fabric, "
+                  "colour, wood and details) for the pieces standing where the VIEW's blocks are; do not substitute "
+                  "other designs. Do not copy those images' layout or camera: positions and sizes come from the VIEW, "
+                  "and a piece that is not in the VIEW stays out."]
     lines += [
         "",
         f"Room: {r['caption']} (DWG label {r['name']}), about {r['width']:.2f} m east-west by {r['depth']:.2f} m "
@@ -303,6 +357,28 @@ def data_url(s):
     return base64.b64decode(body), mime, "jpg" if mime == "image/jpeg" else "png"
 
 
+def request(ctx, view, vmime, vext, plan, comments, prev, name):
+    """The edit to send: (prompt, [(filename, bytes, mime)], [(spot, None or [where, ..])] for the renders, board)."""
+    room, seen = ctx["room"]["name"], [s["name"] for s in ctx.get("seen", [])]
+    refs = references(room, seen, name)
+    mats = board()
+    images = [("previous.png", load(f"renders/drafts/{prev}.png"), "image/png")] if prev else []
+    images += [(f"view.{vext}", view, vmime), ("plan.png", plan, "image/png")]
+    if mats:
+        images.append((mats.name, mats.read_bytes(), "image/jpeg"))
+    furn = furniture(room, seen, name)
+    shows = {s["photo"]: w for s, w in furn}
+    sent = [(s, shows.get(s["photo"])) for s in refs]  # a whole render that shows furniture serves both
+    sent += [(s, w) for s, w in furn if s["photo"] not in {x["photo"] for x in refs}][:max(0, min(MAX_FURNITURE, MAX_IMAGES - len(images) - len(refs)))]
+    used = []
+    for s, w in sent:
+        p = picture(s)
+        if p:
+            images.append((p.name, p.read_bytes(), "image/jpeg" if p.suffix.lower() in (".jpg", ".jpeg") else "image/png"))
+            used.append((s, w))
+    return prompt(ctx, used, comments, bool(prev), bool(mats)), images, used, mats
+
+
 def generate(req):
     """{view, plan: data URLs, ctx, comments: [..], previous: draft id?} -> {draft, src}"""
     prev = req.get("previous")
@@ -316,22 +392,14 @@ def generate(req):
     (view, vmime, vext), (plan, _, _) = data_url(req["view"]), data_url(req["plan"])
     save(f"renders/drafts/{draft}-view.{vext}", view, vmime)
     save(f"renders/drafts/{draft}-plan.png", plan, "image/png")
-    refs = references(ctx["room"]["name"], [s["name"] for s in ctx.get("seen", [])], req.get("spots", "spots.json"))
-    mats = board()
-    text = prompt(ctx, refs, comments, bool(prev), bool(mats))
-    images = [("previous.png", load(f"renders/drafts/{prev}.png"), "image/png")] if prev else []
-    images += [(f"view.{vext}", view, vmime), ("plan.png", plan, "image/png")]
-    if mats:
-        images.append((mats.name, mats.read_bytes(), "image/jpeg"))
-    for s in refs:
-        p = small(ROOT / s["photo"])
-        images.append((p.name, p.read_bytes(), "image/jpeg" if p.suffix.lower() in (".jpg", ".jpeg") else "image/png"))
+    text, images, refs, mats = request(ctx, view, vmime, vext, plan, comments, prev, req.get("spots", "spots.json"))
     print(f"[photogen] {draft}: {ctx['room']['caption']}, {len(images)} images{' (revision)' if prev else ''}", flush=True)
     out = view if DRY else edit(images, text)
     save(f"renders/drafts/{draft}.png", out, vmime if DRY else "image/png")
     save(f"renders/drafts/{draft}.json", json.dumps({"previous": prev, "comments": comments, "ctx": ctx, "cam": req.get("cam"),
-                                                    "references": [s["photo"] for s in refs], "board": mats and mats.name,
-                                                    "prompt": text}, indent=1).encode(), "application/json")
+                                                    "references": [s["photo"] for s, _ in refs],
+                                                    "furniture": [s["photo"] for s, w in refs if w is not None],
+                                                    "board": mats and mats.name, "prompt": text}, indent=1).encode(), "application/json")
     return {"draft": draft, "src": f"renders/drafts/{draft}.png"}
 
 

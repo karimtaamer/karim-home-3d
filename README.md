@@ -279,7 +279,7 @@ that view replaces the model.
   - the camera numbers.
 - **The OpenAI call.** `photogen.py` calls OpenAI image edit (`gpt-image-2`, 1536×1024). Along with the screenshot it sends:
   - the **material board**: the `swatches` in `photogen-brief.json`, each a crop of a render (`box` = left, top, right, bottom as fractions), laid out as one labelled image;
-  - a few designer renders of the room as style references;
+  - a few designer renders of the room as style references, and the earlier renders that show its furniture (see below);
   - the finishes text: `all`, plus `rooms[<ROOM>]` for each room in shot.
 - **Revise or approve.**
   - Comment to re-run on the attempt shown.
@@ -287,8 +287,14 @@ that view replaces the model.
   - Drafts are kept in `renders/drafts/`.
 - **Golden rule:** a generated spot **re-surfaces** the model screenshot and never redesigns it.
   - The screenshot stays image 1, so the angle and every object stay put.
-  - Finishes come only from the board and the finish text. Don't add furniture lists or layout instructions.
+  - Finishes come only from the board and the finish text; furniture designs only from the FURNITURE references below. Don't add layout instructions.
   - Asking it to "draw the designer's version" made it copy a render's layout, with bad results.
+- **Furniture references (2026-10-24).** Generations used to invent furniture (e.g. a sofa that isn't Karim's). Now the real pieces come from earlier renders:
+  - `furniture` in `photogen-brief.json` lists each piece: `item`, `room` (where it stands), `render` (a file in `renders/` that shows it), `where` (a short description) and optional `rooms` (other rooms it is seen from).
+  - For the room and each room in shot, `photogen.py` sends the renders that show their pieces, labelled `FURNITURE - ... shows <where>`, plus that plan version's approved AI spots of those rooms (on Vercel fetched from Blob as they are).
+  - A render already sent as a style reference serves both roles. At most `MAX_FURNITURE` (6) extra images, and never more than 16 in all (OpenAI's limit).
+  - The geometry lock stays: the VIEW decides what stands where; only the pieces' designs come from the references.
+  - **To add a piece:** add a `furniture` entry naming a render already in a `spots*.json` file. Nothing to publish: the whole 1024 px renders are already in Blob.
 - `photogen-brief.json` is re-read on every run, so edits to finishes and swatches apply immediately. After changing swatches, run `sh publish_renders.sh` so the live site gets the new board.
 - Test UI changes with `--dry-run`. Real runs cost OpenAI credits.
 

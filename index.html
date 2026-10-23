@@ -63,19 +63,25 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 import { CSS2DRenderer, CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import gsap from "gsap";
+import { makeMaterials } from "./materials.js";
+import { furnish } from "./furnish.js";
 
 // --- The flat, built from window.MODEL (all geometry comes from the DWG via build_geometry.py) ---
 
 const PAPER = 0xf3eee5;
 const INK = 0x2b2622;
 
-const FINISH = {
-  wood: { color: 0xc39a6b, roughness: 0.7 },
-  tile: { color: 0xdcd3c6, roughness: 0.45 },
-  decking: { color: 0x8c5b3d, roughness: 0.85 },
-};
+// Floor finishes (keys used by tour.json "finishes") and the library material each one uses.
+const FINISH = { wood: "oak", tile: "stone", decking: "deck" };
 const DEFAULT_FINISH = { dry: "wood", wet: "tile", outdoor: "decking" };
+const STONE_WALLS = /toilet|bath|wc|shower/i;  // rooms lined in stone to the ceiling (per renders)
+const SKIRTING = 0.08;
 
 // Plan (x, y) metres -> world (x, 0, -y); shapes are extruded upwards.
 function shape(ring, holes = []) {
@@ -120,11 +126,13 @@ function buildFlat(M, scene) {
   // Everything above the cut plane is clipped: 1.2 m reads as a floor plan, 1000 shows full walls.
   const cutPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 1000);
   const clip = [cutPlane];
+  const lib = makeMaterials(clip);
   const mat = {
-    wall: new THREE.MeshStandardMaterial({ color: 0xf1ebe2, roughness: 0.92, clippingPlanes: clip }),
+    wall: lib.limewash,
     // The inside of a clipped wall, seen from above, is the solid ink of a drawn plan.
     wallCut: new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide, clippingPlanes: clip, toneMapped: false }),
-    glass: new THREE.MeshPhysicalMaterial({ color: 0xcfe2ea, transparent: true, opacity: 0.22, roughness: 0.05, clippingPlanes: clip }),
+    glass: new THREE.MeshPhysicalMaterial({ color: 0xcfe2ea, transparent: true, opacity: 0.16, roughness: 0.05, clippingPlanes: clip }),
+    frame: lib.blackSteel,
     // Ceilings face down only, so they vanish from above and close the room from inside.
     ceiling: new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x58564f, roughness: 1, side: THREE.BackSide, clippingPlanes: clip }),
     paper: new THREE.MeshBasicMaterial({ color: PAPER, toneMapped: false }),
@@ -147,18 +155,50 @@ function buildFlat(M, scene) {
     return face;
   }
 
-  for (const w of M.walls) prism(w.outer, w.holes, 0, w.height);
+  for (const w of M.walls) prism(w.outer, w.holes, 0, w.height, w.height < M.ceiling ? lib.render : mat.wall);
   for (const o of M.openings) {
     if (o.kind === "door") {
       prism(o.outer, [], M.doorHead, M.ceiling);
     } else if (o.kind === "slider") {
       prism(o.outer, [], M.sliderHead, M.ceiling);
       prism(o.outer, [], 0, M.sliderHead, mat.glass);
+      frame(o.outer, 0, M.sliderHead, 2);
     } else {
       prism(o.outer, [], 0, M.sill);
       prism(o.outer, [], M.winHead, M.ceiling);
       prism(o.outer, [], M.sill, M.winHead, mat.glass);
+      frame(o.outer, M.sill, M.winHead, 1);
     }
+  }
+
+  // Slim black frames round the glazing (as in the renders), in the middle of the wall.
+  function frame(ring, z0, z1, panes) {
+    const [a, b, c] = ring;
+    const long = Math.hypot(b[0] - a[0], b[1] - a[1]) >= Math.hypot(c[0] - b[0], c[1] - b[1]);
+    const [p, q] = long ? [a, b] : [b, c];
+    const off = long ? [(c[0] - b[0]) / 2, (c[1] - b[1]) / 2] : [(a[0] - b[0]) / 2, (a[1] - b[1]) / 2];
+    const L = Math.hypot(q[0] - p[0], q[1] - p[1]), ang = Math.atan2(q[1] - p[1], q[0] - p[0]);
+    const at = t => [p[0] + off[0] + (q[0] - p[0]) * t, p[1] + off[1] + (q[1] - p[1]) * t];
+    const bar = (t0, t1, h0, h1) => {
+      const [x0, y0] = at(t0), [x1, y1] = at(t1);
+      const m = new THREE.Mesh(new THREE.BoxGeometry(Math.max(0.04, Math.hypot(x1 - x0, y1 - y0)), h1 - h0, 0.05), mat.frame);
+      m.position.set((x0 + x1) / 2, (h0 + h1) / 2, -(y0 + y1) / 2);
+      m.rotation.y = ang;
+      scene.add(m);
+    };
+    const e = 0.02 / L;
+    bar(0, 1, z0, z0 + 0.05); bar(0, 1, z1 - 0.05, z1);
+    for (let k = 0; k <= panes; k++) bar(k / panes - (k ? e : -e), k / panes - (k ? e : -e), z0, z1);
+  }
+
+  // Room linings from the DWG skins: stone to the ceiling in bathrooms, oak skirting elsewhere.
+  for (const s of M.skins || []) {
+    const stone = STONE_WALLS.test(s.room);
+    const g = new THREE.ExtrudeGeometry(shape(s.outer, s.holes), { depth: stone ? M.ceiling - 0.002 : SKIRTING, bevelEnabled: false });
+    g.rotateX(-Math.PI / 2);
+    const m = new THREE.Mesh(g, stone ? lib.stoneWall : lib.oakVeneer);
+    m.receiveShadow = true;
+    scene.add(m);
   }
 
   // Rooms: a paper floor (the drawing) under a finished floor that fades in, plus the room's
@@ -178,8 +218,10 @@ function buildFlat(M, scene) {
     const paper = flatMesh(f.outer, f.holes, mat.paper, 0);
     paper.receiveShadow = true;
     scene.add(paper);
-    const finish = FINISH[finishes[f.room] || DEFAULT_FINISH[f.kind]] || FINISH.wood;
-    const fm = new THREE.MeshStandardMaterial({ ...finish, transparent: true, opacity: 0 });
+    const fm = lib[FINISH[finishes[f.room] || DEFAULT_FINISH[f.kind]] || FINISH.wood].clone();
+    fm.clippingPlanes = null;
+    fm.transparent = true;
+    fm.opacity = 0;
     const floorMesh = flatMesh(f.outer, f.holes, fm, 0.002);
     floorMesh.receiveShadow = true;
     scene.add(floorMesh);
@@ -194,7 +236,7 @@ function buildFlat(M, scene) {
     const [cx, cy] = ringCentroid(r.rings.reduce((a, b) => (ringArea(b) > ringArea(a) ? b : a)));
     r.centre.set(cx, 0, -cy);
     if (r.kind !== "outdoor") {
-      r.light = new THREE.PointLight(0xffd2a1, 0, 7, 1.6);
+      r.light = new THREE.PointLight(0xffc68a, 0, 7, 1.4);
       r.light.position.set(cx, M.ceiling - 0.35, -cy);
       scene.add(r.light);
     }
@@ -204,6 +246,7 @@ function buildFlat(M, scene) {
   // Plan linework, grouped by the room it sits in (walls and windows stay as permanent ink).
   // Door swings are redrawn cleanly from the detected doors: a quarter arc and the open leaf.
   const lines = [...M.lines];
+  const leaves = [];
   for (const s of M.swings || []) {
     const [hx, hy] = s.hinge;
     const a0 = Math.atan2(s.closed[1] - hy, s.closed[0] - hx);
@@ -213,6 +256,15 @@ function buildFlat(M, scene) {
     const arc = [];
     for (let k = 0; k <= 24; k++) arc.push([hx + Math.cos(a0 + (sweep.d * k) / 24) * s.r, hy + Math.sin(a0 + (sweep.d * k) / 24) * s.r]);
     lines.push({ kind: "door", pts: arc }, { kind: "door", pts: [[hx, hy], arc[arc.length - 1]] });
+    // The leaf itself, standing open where the drawing swings it (the front door is shown shut).
+    const front = M.tour?.start && Math.hypot(hx - M.tour.start[0], hy - M.tour.start[1]) < 2.2;
+    const [ex, ey] = front ? s.closed : arc[arc.length - 1];
+    const leaf = new THREE.Mesh(new THREE.BoxGeometry(s.r - 0.02, M.doorHead - 0.01, 0.04), lib.oakVeneer);
+    leaf.position.set((hx + ex) / 2, (M.doorHead - 0.01) / 2, -(hy + ey) / 2);
+    leaf.rotation.y = Math.atan2(ey - hy, ex - hx);
+    leaf.castShadow = leaf.receiveShadow = true;
+    scene.add(leaf);
+    leaves.push(leaf);
   }
   const groups = new Map();
   const shared = new THREE.LineBasicMaterial({ color: INK, toneMapped: false });
@@ -241,10 +293,11 @@ function buildFlat(M, scene) {
     }
     r.lineMat.opacity = 1 - t;
     r.lineMat.visible = t < 0.999;
-    if (r.light) r.light.intensity = 2.2 * t;
+    if (r.light) r.light.intensity = 2 * t;
   }
 
-  return { cutPlane, solids, rooms, roomAt, setReveal, materials: mat };
+  const furniture = furnish(scene, M, lib);
+  return { cutPlane, solids, rooms, roomAt, setReveal, materials: mat, lib, furniture, leaves };
 }
 
 
@@ -268,7 +321,7 @@ renderer.localClippingEnabled = true;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 0.85;
 const labelRenderer = new CSS2DRenderer();
 labelRenderer.setSize(innerWidth, innerHeight);
 Object.assign(labelRenderer.domElement.style, { position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1 });
@@ -280,9 +333,14 @@ const camera = new THREE.PerspectiveCamera(FOV.dollhouse, innerWidth / innerHeig
 const [W, D] = M.bounds;
 const centre = new THREE.Vector3(W / 2, 0, -D / 2);
 
-scene.add(new THREE.HemisphereLight(0xfffaf2, 0xd8cbb4, 1.6));
-const sun = new THREE.DirectionalLight(0xffe7c7, 1.5);
-sun.position.set(centre.x - 9, 22, centre.z + 12);
+// Soft reflections from a neutral studio environment, a warm sky/bounce fill and a low
+// golden-hour sun from the south-west (the renders' warm glow).
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.3;
+scene.add(new THREE.HemisphereLight(0xfff4e6, 0xc9a77f, 0.8));
+const sun = new THREE.DirectionalLight(0xffd29a, 2.0);
+sun.position.set(centre.x - 14, 16, centre.z + 12);
 sun.target.position.copy(centre);
 sun.castShadow = true;
 sun.shadow.mapSize.set(4096, 4096);
@@ -291,6 +349,24 @@ sun.shadow.bias = -0.0004;
 scene.add(sun, sun.target);
 
 const flat = buildFlat(M, scene);
+const paper = new THREE.Color(PAPER);
+const sky = (() => {  // a soft evening sky for walking (seen through windows and on the terrace)
+  const c = document.createElement("canvas");
+  c.width = 4; c.height = 256;
+  const g = c.getContext("2d"), grad = g.createLinearGradient(0, 0, 0, 256);
+  grad.addColorStop(0, "#5f93cc"); grad.addColorStop(0.38, "#a9c8e4"); grad.addColorStop(0.49, "#f1dcc4"); grad.addColorStop(0.5, "#e9d2b4"); grad.addColorStop(1, "#cdb79c");
+  g.fillStyle = grad; g.fillRect(0, 0, 4, 256);
+  const t = new THREE.CanvasTexture(c);
+  t.mapping = THREE.EquirectangularReflectionMapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+})();
+// Post-processing: a gentle bloom so LED strips, downlights and lamp shades glow like the renders.
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.35, 1.5);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
 const rooms = flat.rooms;
 const viewpoints = M.tour.stops.map(s => ({ ...s, eye: toWorld(s.eye, EYE), look: toWorld(s.look, EYE - 0.15) }));
 
@@ -301,8 +377,12 @@ function applyLook() {
   flat.cutPlane.constant = look.cut >= FULL ? 1000 : look.cut;
   flat.materials.wallCut.visible = look.cut < FULL;
   for (const r of Object.values(rooms)) flat.setReveal(r, look.finish);
+  flat.furniture.setReveal(look.finish);
+  flat.leaves.forEach(l => (l.visible = look.finish > 0.01));
   const ceilings = mode === "walk" || ceilingWanted;
   for (const r of Object.values(rooms)) r.ceilings.forEach(c => (c.visible = ceilings));
+  flat.furniture.ceilingBits.visible = ceilings && look.finish > 0.01;
+  scene.background = mode === "walk" ? sky : paper;
 }
 
 // --- Room labels (top + dollhouse) ------------------------------------------------------------
@@ -590,7 +670,14 @@ document.getElementById("ceil").onclick = e => {
 // --- Start: the drawing first, then the walls rise into the dollhouse ---------------------------
 const params = new URLSearchParams(location.search);
 const startRoom = params.get("room") && viewpoints.find(v => v.caption.toLowerCase().startsWith(params.get("room").toLowerCase()));
-if (startRoom) {
+// ?cam=x,y,h,lookX,lookY,lookH[,fov] (plan metres): stand anywhere, e.g. to match a render's angle.
+const cam = params.get("cam")?.split(",").map(Number);
+if (params.has("clean")) document.querySelectorAll(".ui").forEach(e => (e.style.display = "none"));
+if (cam?.length >= 6) {
+  setMode("walk");
+  look.cut = FULL; look.finish = 1; applyLook();
+  setPose({ pos: toWorld(cam, cam[2]), target: toWorld(cam.slice(3), cam[5]), fov: cam[6] || FOV.walk, up: UP });
+} else if (startRoom) {
   setMode("walk");
   look.cut = FULL; look.finish = 1; applyLook();
   setPose({ pos: startRoom.eye, target: startRoom.look, fov: FOV.walk, up: UP });
@@ -624,7 +711,7 @@ renderer.setAnimationLoop(() => {
   if (orbit.enabled) orbit.update();
   if (orbitTop.enabled) orbitTop.update();
   if (orbit.enabled || orbitTop.enabled) fitNear();
-  renderer.render(scene, camera);
+  composer.render();
   labelRenderer.render(scene, camera);
 });
 
@@ -633,12 +720,13 @@ loader.firstElementChild.innerHTML = [..."LOTUS"].map(c => `<span>${c}</span>`).
 gsap.timeline()
   .to("#loader span", { opacity: 1, y: 0, duration: 0.45, stagger: 0.07, ease: "power2.out", startAt: { y: 14 } })
   .to(loader, { opacity: 0, duration: 0.5, delay: 0.15, onComplete: () => loader.remove() });
-if (params.has("view") || startRoom) loader.remove();
+if (params.has("view") || startRoom || cam) loader.remove();
 
 addEventListener("resize", () => {
   camera.aspect = aspect();
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
   labelRenderer.setSize(innerWidth, innerHeight);
 });
 </script>

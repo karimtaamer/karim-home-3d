@@ -3,3 +3,4 @@ __pycache__/
 .sc/
 dist/
 .claude/settings.local.json
+notes/compare/

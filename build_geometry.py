@@ -24,6 +24,7 @@ LINE_LAYERS = {WALL_LAYER: "wall", WINDOW_LAYER: "window", DOOR_LAYER: "door", "
 TOUR = Path(__file__).with_name("tour.json")
 MIN_T, MAX_T = 0.04, 0.5  # wall thickness range (m)
 BRIDGE = 0.75  # closes gaps up to 1.5 m (doors / windows)
+SKIN = 0.01  # room lining thickness (m): wall tiles / skirting sit on this, the walls stay as drawn
 
 
 def as_polys(g):
@@ -517,6 +518,14 @@ def main():
              if on_flat.contains(LineString(pts).interpolate(0.5, normalized=True))
              and not (c in ("wall", "door") and is_swing(pts))]
 
+    # Room skins: a 1 cm lining inside each room's walls (stone in bathrooms, skirting elsewhere),
+    # kept out of doorways and window reveals (and off open-plan room boundaries, which have no wall).
+    gaps_all = unary_union([g for _, g in openings]).buffer(0.12, join_style=2)
+    wall_face = walls.buffer(0.03, join_style=2)
+    skins = [(n, k, p) for n, k, g in rooms if k != "outdoor"
+             for p in as_polys(g.difference(g.buffer(-SKIN, join_style=2)).intersection(wall_face).difference(gaps_all))
+             if p.area > 0.0005]
+
     ox, oy = B.bounds[0], B.bounds[1]
     ring = lambda p: [[round(x - ox, 4), round(y - oy, 4)] for x, y in p.exterior.coords[:-1]]
     holes = lambda p: [[[round(x - ox, 4), round(y - oy, 4)] for x, y in h.coords[:-1]] for h in p.interiors]
@@ -526,6 +535,7 @@ def main():
         "walls": [{"outer": ring(p), "holes": holes(p), "height": CEILING} for p in as_polys(full) if p.area > 0.002]
                  + [{"outer": ring(p), "holes": holes(p), "height": PARAPET} for p in as_polys(parapet) if p.area > 0.002],
         "floor": [{"outer": ring(p), "holes": holes(p), "kind": k, "room": n} for n, k, g in rooms for p in as_polys(g)],
+        "skins": [{"outer": ring(p), "holes": holes(p), "kind": k, "room": n} for n, k, p in skins],
         "lines": [{"kind": c, "pts": [[round(x - ox, 3), round(y - oy, 3)] for x, y in pts]} for c, pts in drawn],
         "swings": [{"hinge": [round(c[0] - ox, 3), round(c[1] - oy, 3)], "r": round(r, 3),
                     "closed": [round(e[0] - ox, 3), round(e[1] - oy, 3)]} for c, r, e in door_swings],

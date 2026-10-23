@@ -30,7 +30,8 @@ a 2D drawing view, a tape measure, the designer's renders as "photo spots", and 
 | `publish_renders.sh` | Uploads renders, reference copies and the material board to Blob | Yes |
 | `build_geometry.py`, `build_drawing.py` | DXF → `model.js` / `drawing.json` | Yes |
 | `dwgtool.py` | Inspect a DWG/DXF and render cropped, marked-up PNGs (see `DWG_EDITING.md` §1) | Yes |
-| `*-bigger-bedroom.*` | The "Bigger Master Bedroom" plan version (see §4) | Same rules as the main files |
+| `suite_merge.py` | One plan everywhere except the master suite, taken from another (§3) | Yes |
+| `*-bigger-bedroom.*`, `*-shifted-bedroom.*` | The other plan versions (see §4) | Same rules as the main files |
 | `models/*.glb` | Fixtures made from the renders with Meshy (image-to-3D) | Replace only |
 | `textures/` | Poly Haven PBR scans (CC0, see `CREDITS.txt`) | Add only |
 | `renders/` | Designer renders and approved AI renders (**git-ignored**, served from Blob live) | Add files |
@@ -70,25 +71,33 @@ The build scripts need the Python venv at `~/.dwg-tools` (ezdxf, shapely, numpy)
 libredwg (`brew install libredwg`).
 
 ```sh
-P=~/Downloads/master-bed186-v6-shoes2-2block-laundry.dxf
+P=~/Downloads/master-bed186-v6-on-v12.dxf
 ~/.dwg-tools/bin/python build_geometry.py $P                  # → model.js (+ reads tour.json)
 ~/.dwg-tools/bin/python build_drawing.py  $P                  # → drawing.json (needs model.js first)
 ~/.dwg-tools/bin/python build_geometry.py $P --debug debug.png  # plan image for checking walls
 ```
 
-**Laundry / guest bathroom from the "2 block" proposal (2026-10-23).** Both versions build from a DXF, not
-straight from their DWG: the v6 / v9 DWG converted with `dwg2dxf`, with the laundry + guest toilet zone
-(DWG x 200.74 to 205.08, y -114.86 to -112.30) swapped for `~/Downloads/2 block-karim.dwg`'s. The proposal
-sits +20.694, +40.481 m from our frame. Its partition is 0.34 m further west: laundry 1.71 x 2.30 m, guest
-toilet 2.51 x 2.30 m. The toilet door, the bath and the bath's end wall moved with it, and so did the laundry
-washer. Nothing else was taken from the proposal (its kitchen and master toilet also differ).
+**Everything outside the master suite follows `~/Downloads/master-v12.dwg` (2026-10-23, all versions).** Each
+version's DXF is v12 (as `master-v12-shifted-bedroom.dxf`, with the drafting fixes in §4) with the master suite
+zone swapped for the version's own: DWG x 190.6 to 196.78, y -117.25 to -112.15, plus the wall faces that run out
+of it (`CE0`, the north inner face, and `99`, the corridor's north face). v12 outside the suite, compared with the
+older Main DXF (`master-bed186-v6-shoes2-2block-laundry.dxf`, kept for reference):
+- laundry / guest WC partition 0.166 m east of the 2-block one (laundry 1.88 x 2.30 m, guest WC 2.34 x 2.30 m),
+  guest bath 0.90 m deep, guest WC door 0.175 m and WC 0.151 m west, washer and counter moved with the partition,
+  laundry window 0.176 m west;
+- kitchen: fridge block 0.286 m south, dishwasher in the east run beside it (no room for the old oven tower: the
+  3D shows a narrow larder there);
+- entrance: one 1.20 x 0.42 m shoe unit (no bench niche) and a 1.20 x 0.40 m bench facing the front door;
+- the coffee corner is as before.
 
-**Client edits in the Main DXF (2026-10-23, Main only).** Drawn straight into
-`master-bed186-v6-shoes2-2block-laundry.dxf` (state before them: `*-2block-laundry.before-comments.dxf`):
-dishwasher block `dfs` moved to the end of the kitchen's north run beside the fridge tower; entrance joinery
-(shoe unit + bench niche, x 9.82-11.35, front y 4.21, boxing in the pier; the shoe unit is exactly the pier's width, 9.82-10.26) and a mirror bench, mirror and shelf
-centred on the front door; the dining "desk" block `wwwrf` replaced by a 0.60 m coffee corner (x 19.72-21.22)
-with a mini water dispenser at the column end. v9 doesn't have these yet.
+Rebuild a version's DXF with `suite_merge.py` (then run §3 / §4's build commands):
+
+```sh
+~/.dwg-tools/bin/python suite_merge.py ~/Downloads/master-v12-shifted-bedroom.dxf \
+    ~/Downloads/master-bed186-v6-shoes2-2block-laundry.dxf ~/Downloads/master-bed186-v6-on-v12.dxf   # Main
+~/.dwg-tools/bin/python suite_merge.py ~/Downloads/master-v12-shifted-bedroom.dxf \
+    ~/Downloads/master-bed-v9-2block-laundry.dxf ~/Downloads/master-bed-v9-on-v12.dxf                # Bigger Master Bedroom
+```
 
 `build_geometry.py` flags:
 - `--out FILE`: model file to write (default `model.js`).
@@ -104,10 +113,12 @@ What the scripts rely on in the DWG:
 **Piers drawn with several back lines** (2026-10-23 fix in `build_geometry.py`): a pier face paired with two
 back lines gives two strips with the same span. The corner-square step used to treat them as two pieces meeting
 end to end and add a block off each end, widening the entrance pier (to 8.9-10.7) and the dining pier by the
-coffee corner (to 18.9-20.1). It now skips same-span pairs, so piers are as wide as the DWG draws them.
+coffee corner (to 18.9-20.1). It now skips same-span pairs, so piers are as wide as the DWG draws them. It also
+skips a sliver under 5 cm lying inside a wall at least 0.5 m long: v12's guest WC door jamb tucks 2 cm under the
+bath end wall, which used to push 37 cm of wall into the doorway.
 
-> **Main `model.js` rebuilds byte-identical from the patched v6 DXF (`drawing.json` to within 0.1 mm). Don't
-> regenerate them unless the drawing changed.** Diff the output (`git diff --stat`) after any rebuild.
+> **Don't regenerate `model.js` / `drawing.json` unless the drawing changed.** Diff the output (`git diff --stat`)
+> after any rebuild.
 
 **Coordinate frames** (easy to mix up):
 - **`tour.json`** uses DWG model-space metres, e.g. `[198.9, -117.75]`.
@@ -120,9 +131,9 @@ coffee corner (to 18.9-20.1). It now skips same-span pairs, so piers are as wide
 
 | Version | `?v=` | DWG | Files |
 |---|---|---|---|
-| Main | *(none)* / `main` | `~/Downloads/master-bed186-v6-shoes2.dwg`, built from `master-bed186-v6-shoes2-2block-laundry.dxf` | `model.js`, `drawing.json`, `tour.json`, `spots.json` |
-| Bigger Master Bedroom | `bigger-bedroom` | `~/Downloads/master-bed-v9.dwg`, built from `master-bed-v9-2block-laundry.dxf` | `model-bigger-bedroom.js`, `drawing-bigger-bedroom.json`, `tour-bigger-bedroom.json`, `spots-bigger-bedroom.json` |
-| Shifted Bedroom | `shifted-bedroom` | `~/Downloads/master-v12.dwg` (suite only), built from `master-v12-shifted-bedroom.dxf` | `model-shifted-bedroom.js`, `drawing-shifted-bedroom.json`, `tour-shifted-bedroom.json`, `spots-shifted-bedroom.json` |
+| Main | *(none)* / `main` | suite from `~/Downloads/master-bed186-v6-shoes2.dwg`, rest from `master-v12.dwg`; built from `master-bed186-v6-on-v12.dxf` | `model.js`, `drawing.json`, `tour.json`, `spots.json` |
+| Bigger Master Bedroom | `bigger-bedroom` | suite from `~/Downloads/master-bed-v9.dwg`, rest from `master-v12.dwg`; built from `master-bed-v9-on-v12.dxf` | `model-bigger-bedroom.js`, `drawing-bigger-bedroom.json`, `tour-bigger-bedroom.json`, `spots-bigger-bedroom.json` |
+| Shifted Bedroom | `shifted-bedroom` | `~/Downloads/master-v12.dwg`, built from `master-v12-shifted-bedroom.dxf` | `model-shifted-bedroom.js`, `drawing-shifted-bedroom.json`, `tour-shifted-bedroom.json`, `spots-shifted-bedroom.json` |
 
 Bigger Master Bedroom (v9) folds the passage into the master toilet, which **needs façade approval**. Never present it
 as settled.
@@ -130,27 +141,18 @@ as settled.
 Build the Bigger Master Bedroom version. v9 is missing the bathroom/kitchen wall face line, so `--wall` adds it:
 
 ```sh
-V=~/Downloads/master-bed-v9-2block-laundry.dxf
+V=~/Downloads/master-bed-v9-on-v12.dxf
 ~/.dwg-tools/bin/python build_geometry.py $V --out model-bigger-bedroom.js \
     --tour tour-bigger-bedroom.json --wall 196.65,-112.594,196.65,-115.017
 ~/.dwg-tools/bin/python build_drawing.py $V --model model-bigger-bedroom.js --out drawing-bigger-bedroom.json
 ```
 
 Shifted Bedroom (v12) moves the master bathroom to the west end, centres the bed on its partition, puts the
-wardrobe on the kitchen wall and a desk on the south wall. Unlike the other versions it also changes rooms outside
-the master suite, at the user's request (2026-10-23), so it builds from the whole of `master-v12.dwg`:
-- laundry / guest WC partition 0.166 m east of Main's (laundry 1.88 x 2.30 m, guest WC 2.34 x 2.30 m), guest bath
-  0.90 m deep, guest WC door 0.175 m and WC 0.151 m west, laundry washer and counter moved with the partition;
-- kitchen: fridge block 0.286 m south, dishwasher in the east run beside it (no room left for Main's oven tower:
-  the 3D shows a narrow larder there);
-- entrance: one 1.20 x 0.42 m shoe unit (no bench niche) and a 1.20 x 0.40 m bench facing the door.
-
-The north-façade windows also move (bedroom 2.18 m, master bathroom 0.90 m, laundry 0.176 m west), which **needs
-façade approval**. Two drafting fixes went into `master-v12-shifted-bedroom.dxf`: v12's "MM" note (MTEXT on `2furni`)
-was dropped, since it would become a room label, and line `801` (corridor wall face under the guest bath) was snapped
-2 cm onto the bath end wall. `build_geometry.py` ignores a sliver under 5 cm inside a wall at least 0.5 m long when
-squaring corners (v12's guest WC door jamb tucks 2 cm under the bath end wall, which pushed 37 cm of wall into the
-doorway). Main and v9 rebuild byte-identical with it.
+wardrobe on the kitchen wall and a desk on the south wall. It also moves the north-façade windows (bedroom 2.18 m,
+master bathroom 0.90 m), which **needs façade approval**. Two drafting fixes went into
+`master-v12-shifted-bedroom.dxf` (and so into every version): v12's "MM" note (MTEXT on `2furni`) was dropped,
+since it would become a room label, and line `801` (corridor wall face under the guest bath) was snapped 2 cm onto
+the bath end wall.
 
 ```sh
 S=~/Downloads/master-v12-shifted-bedroom.dxf
@@ -158,8 +160,9 @@ S=~/Downloads/master-v12-shifted-bedroom.dxf
 ~/.dwg-tools/bin/python build_drawing.py $S --model model-shifted-bedroom.js --out drawing-shifted-bedroom.json
 ```
 
-**Rule: a version may differ from Main only in the rooms it changes.** Any other DWG difference is a
-mistake to flag, not to build.
+**Rule: a version may differ from Main only in the master suite.** Any other DWG difference is a mistake to
+flag, not to build. When a new DWG changes rooms outside the suite, ask whether it should become the shared base
+for every version (as v12 did).
 
 To add a version:
 1. Diff its DWG against the main one and confirm only the intended rooms changed.

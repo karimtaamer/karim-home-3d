@@ -4,9 +4,10 @@ Rules for changing the floor plan itself. Read this before any edit to a plan DX
 
 ## 1. Files and tools
 
-- **Edit the DXF, not the DWG.** Main builds from `~/Downloads/master-bed186-v6-shoes2-2block-laundry.dxf`, Bigger
-  Master Bedroom from `~/Downloads/master-bed-v9-2block-laundry.dxf`. Back the file up first
-  (`cp -n plan.dxf plan.before-<what>.dxf`).
+- **Edit the DXF, not the DWG.** Main builds from `~/Downloads/master-bed186-v6-on-v12.dxf`, Bigger Master
+  Bedroom from `master-bed-v9-on-v12.dxf`, Shifted Bedroom from `master-v12-shifted-bedroom.dxf`. Outside the master
+  suite all three are v12: change a shared room in `master-v12-shifted-bedroom.dxf`, then re-run `suite_merge.py`
+  for the other two (README §3). Back the file up first (`cp -n plan.dxf plan.before-<what>.dxf`).
 - **Python:** `~/.dwg-tools/bin/python` with ezdxf. Open files with `ezdxf.recover.readfile` (libredwg output has
   small structural faults), and run `doc.audit()` before saving.
 - **Reading a DWG:** `dwg2dxf -y -o out.dxf in.dwg` (libredwg) is fine for reading.

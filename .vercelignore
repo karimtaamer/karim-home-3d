@@ -11,3 +11,4 @@ renders/
 publish_renders.sh
 __pycache__/
 dwgtool.py
+suite_merge.py

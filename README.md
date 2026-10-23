@@ -82,6 +82,19 @@ P=dwg/main.dxf
 place and commit them. They are identical outside the master suite and differ only inside it.
 `~/.dwg-tools/bin/python suite_merge.py --check dwg/*.dxf` must print `outside the suite: identical` after any edit.
 
+**Changing the plan, step by step** (anyone with repo access):
+1. Pull, then edit the version's file in `dwg/` (AutoCAD, DraftSight, LibreCAD or ezdxf). Save it back **as DXF,
+   under the same name**: a DWG, or a file with another name, is not picked up by the build.
+2. Master bedroom or master bathroom: edit that version's file only. Any other room: edit one file, copy the change to
+   the other two with `suite_merge.py` (below), then run `--check`.
+3. Rebuild that version's `model*.js` and `drawing*.json` (commands below and in §4). The viewer reads these, not
+   the DXF, so a drawing edit doesn't show until it's rebuilt. Rebuilding needs the `~/.dwg-tools` venv and libredwg
+   (above). Without them, push the DXF and ask someone who has them to rebuild.
+4. Commit the DXF and the rebuilt files together, and push.
+
+A new DWG from the designer arrives in `~/Downloads`: convert it, compare it with the matching `dwg/` file and copy
+its changes into `dwg/` (see `DWG_EDITING.md` §1). Nothing builds from `~/Downloads`.
+
 **Everything outside the master suite follows the designer's `master-v12.dwg` (all versions).** Each version's DXF is
 v12 (with the drafting fixes in §4) with the master suite zone swapped for the version's own: DWG x 190.6 to 196.78, y -117.25 to -112.15, plus the wall faces that run out
 of it (`CE0`, the north inner face, and `99`, the corridor's north face). v12 outside the suite, compared with the

@@ -4,10 +4,12 @@ Rules for changing the floor plan itself. Read this before any edit to a plan DX
 
 ## 1. Files and tools
 
-- **Edit the DXF, not the DWG.** Main builds from `~/Downloads/master-bed186-v6-on-v12.dxf`, Bigger Master
-  Bedroom from `master-bed-v9-on-v12.dxf`, Shifted Bedroom from `master-v12-shifted-bedroom.dxf`. Outside the master
-  suite all three are v12: change a shared room in `master-v12-shifted-bedroom.dxf`, then re-run `suite_merge.py`
-  for the other two (README §3). Back the file up first (`cp -n plan.dxf plan.before-<what>.dxf`).
+- **Edit the DXF in `dwg/`, not a DWG.** One file per version: `dwg/main.dxf`, `dwg/bigger-bedroom.dxf`,
+  `dwg/shifted-bedroom.dxf`. Outside the master suite all three are identical (v12): change a shared room in one,
+  copy it to the other two with `suite_merge.py`, and run `suite_merge.py --check dwg/*.dxf` (README §3). A suite
+  change goes in that version's file only. Git is the backup: don't leave `.before-*` copies in `dwg/`.
+- **A new DWG from the designer:** convert it (below), diff it against the matching `dwg/` file, and bring the
+  changes into `dwg/`. Don't build from `~/Downloads`.
 - **Python:** `~/.dwg-tools/bin/python` with ezdxf. Open files with `ezdxf.recover.readfile` (libredwg output has
   small structural faults), and run `doc.audit()` before saving.
 - **Reading a DWG:** `dwg2dxf -y -o out.dxf in.dwg` (libredwg) is fine for reading.

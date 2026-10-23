@@ -30,7 +30,8 @@ a 2D drawing view, a tape measure, the designer's renders as "photo spots", and 
 | `publish_renders.sh` | Uploads renders, reference copies and the material board to Blob | Yes |
 | `build_geometry.py`, `build_drawing.py` | DXF → `model.js` / `drawing.json` | Yes |
 | `dwgtool.py` | Inspect a DWG/DXF and render cropped, marked-up PNGs (see `DWG_EDITING.md` §1) | Yes |
-| `suite_merge.py` | One plan everywhere except the master suite, taken from another (§3) | Yes |
+| `dwg/main.dxf`, `dwg/bigger-bedroom.dxf`, `dwg/shifted-bedroom.dxf` | The plan drawing for each version: the only build sources (§3) | Yes, see `DWG_EDITING.md` |
+| `suite_merge.py` | One plan everywhere except the master suite, taken from another; `--check` compares the versions (§3) | Yes |
 | `*-bigger-bedroom.*`, `*-shifted-bedroom.*` | The other plan versions (see §4) | Same rules as the main files |
 | `models/*.glb` | Fixtures made from the renders with Meshy (image-to-3D) | Replace only |
 | `textures/` | Poly Haven PBR scans (CC0, see `CREDITS.txt`) | Add only |
@@ -71,17 +72,20 @@ The build scripts need the Python venv at `~/.dwg-tools` (ezdxf, shapely, numpy)
 libredwg (`brew install libredwg`).
 
 ```sh
-P=~/Downloads/master-bed186-v6-on-v12.dxf
+P=dwg/main.dxf
 ~/.dwg-tools/bin/python build_geometry.py $P                  # → model.js (+ reads tour.json)
 ~/.dwg-tools/bin/python build_drawing.py  $P                  # → drawing.json (needs model.js first)
 ~/.dwg-tools/bin/python build_geometry.py $P --debug debug.png  # plan image for checking walls
 ```
 
-**Everything outside the master suite follows `~/Downloads/master-v12.dwg` (2026-10-23, all versions).** Each
-version's DXF is v12 (as `master-v12-shifted-bedroom.dxf`, with the drafting fixes in §4) with the master suite
-zone swapped for the version's own: DWG x 190.6 to 196.78, y -117.25 to -112.15, plus the wall faces that run out
+**One drawing per version, in `dwg/` (2026-10-23).** These three DXFs are the only build sources: edit them in
+place and commit them. They are identical outside the master suite and differ only inside it.
+`~/.dwg-tools/bin/python suite_merge.py --check dwg/*.dxf` must print `outside the suite: identical` after any edit.
+
+**Everything outside the master suite follows the designer's `master-v12.dwg` (all versions).** Each version's DXF is
+v12 (with the drafting fixes in §4) with the master suite zone swapped for the version's own: DWG x 190.6 to 196.78, y -117.25 to -112.15, plus the wall faces that run out
 of it (`CE0`, the north inner face, and `99`, the corridor's north face). v12 outside the suite, compared with the
-older Main DXF (`master-bed186-v6-shoes2-2block-laundry.dxf`, kept for reference):
+older Main DXF (`master-bed186-v6-shoes2-2block-laundry.dxf`, in `~/Downloads` only):
 - laundry / guest WC partition 0.166 m east of the 2-block one (laundry 1.88 x 2.30 m, guest WC 2.34 x 2.30 m),
   guest bath 0.90 m deep, guest WC door 0.175 m and WC 0.151 m west, washer and counter moved with the partition,
   laundry window 0.176 m west;
@@ -90,14 +94,19 @@ older Main DXF (`master-bed186-v6-shoes2-2block-laundry.dxf`, kept for reference
 - entrance: one 1.20 x 0.42 m shoe unit (no bench niche) and a 1.20 x 0.40 m bench facing the front door;
 - the coffee corner is as before.
 
-Rebuild a version's DXF with `suite_merge.py` (then run §3 / §4's build commands):
+**Editing a room outside the suite:** edit it in one file (say `dwg/main.dxf`), copy it into the other two with
+`suite_merge.py` (BASE = the edited file, SUITE = OUT = the version to update; each keeps its own suite), check,
+then rebuild all three (§3 / §4):
 
 ```sh
-~/.dwg-tools/bin/python suite_merge.py ~/Downloads/master-v12-shifted-bedroom.dxf \
-    ~/Downloads/master-bed186-v6-shoes2-2block-laundry.dxf ~/Downloads/master-bed186-v6-on-v12.dxf   # Main
-~/.dwg-tools/bin/python suite_merge.py ~/Downloads/master-v12-shifted-bedroom.dxf \
-    ~/Downloads/master-bed-v9-2block-laundry.dxf ~/Downloads/master-bed-v9-on-v12.dxf                # Bigger Master Bedroom
+PY=~/.dwg-tools/bin/python
+$PY suite_merge.py dwg/main.dxf dwg/bigger-bedroom.dxf  dwg/bigger-bedroom.dxf
+$PY suite_merge.py dwg/main.dxf dwg/shifted-bedroom.dxf dwg/shifted-bedroom.dxf
+$PY suite_merge.py --check dwg/*.dxf
 ```
+
+A merge can reorder the lines in the built model file without changing the geometry. **Editing the suite:** edit
+that version's file only.
 
 `build_geometry.py` flags:
 - `--out FILE`: model file to write (default `model.js`).
@@ -131,9 +140,9 @@ bath end wall, which used to push 37 cm of wall into the doorway.
 
 | Version | `?v=` | DWG | Files |
 |---|---|---|---|
-| Main | *(none)* / `main` | suite from `~/Downloads/master-bed186-v6-shoes2.dwg`, rest from `master-v12.dwg`; built from `master-bed186-v6-on-v12.dxf` | `model.js`, `drawing.json`, `tour.json`, `spots.json` |
-| Bigger Master Bedroom | `bigger-bedroom` | suite from `~/Downloads/master-bed-v9.dwg`, rest from `master-v12.dwg`; built from `master-bed-v9-on-v12.dxf` | `model-bigger-bedroom.js`, `drawing-bigger-bedroom.json`, `tour-bigger-bedroom.json`, `spots-bigger-bedroom.json` |
-| Shifted Bedroom | `shifted-bedroom` | `~/Downloads/master-v12.dwg`, built from `master-v12-shifted-bedroom.dxf` | `model-shifted-bedroom.js`, `drawing-shifted-bedroom.json`, `tour-shifted-bedroom.json`, `spots-shifted-bedroom.json` |
+| Main | *(none)* / `main` | `dwg/main.dxf` (suite from the designer's `master-bed186-v6-shoes2.dwg`, rest from `master-v12.dwg`) | `model.js`, `drawing.json`, `tour.json`, `spots.json` |
+| Bigger Master Bedroom | `bigger-bedroom` | `dwg/bigger-bedroom.dxf` (suite from `master-bed-v9.dwg`, rest from `master-v12.dwg`) | `model-bigger-bedroom.js`, `drawing-bigger-bedroom.json`, `tour-bigger-bedroom.json`, `spots-bigger-bedroom.json` |
+| Shifted Bedroom | `shifted-bedroom` | `dwg/shifted-bedroom.dxf` (all from `master-v12.dwg`) | `model-shifted-bedroom.js`, `drawing-shifted-bedroom.json`, `tour-shifted-bedroom.json`, `spots-shifted-bedroom.json` |
 
 Bigger Master Bedroom (v9) folds the passage into the master toilet, which **needs façade approval**. Never present it
 as settled.
@@ -141,7 +150,7 @@ as settled.
 Build the Bigger Master Bedroom version. v9 is missing the bathroom/kitchen wall face line, so `--wall` adds it:
 
 ```sh
-V=~/Downloads/master-bed-v9-on-v12.dxf
+V=dwg/bigger-bedroom.dxf
 ~/.dwg-tools/bin/python build_geometry.py $V --out model-bigger-bedroom.js \
     --tour tour-bigger-bedroom.json --wall 196.65,-112.594,196.65,-115.017
 ~/.dwg-tools/bin/python build_drawing.py $V --model model-bigger-bedroom.js --out drawing-bigger-bedroom.json
@@ -150,12 +159,12 @@ V=~/Downloads/master-bed-v9-on-v12.dxf
 Shifted Bedroom (v12) moves the master bathroom to the west end, centres the bed on its partition, puts the
 wardrobe on the kitchen wall and a desk on the south wall. It also moves the north-façade windows (bedroom 2.18 m,
 master bathroom 0.90 m), which **needs façade approval**. Two drafting fixes went into
-`master-v12-shifted-bedroom.dxf` (and so into every version): v12's "MM" note (MTEXT on `2furni`) was dropped,
+the v12 drawing (and so into every version): v12's "MM" note (MTEXT on `2furni`) was dropped,
 since it would become a room label, and line `801` (corridor wall face under the guest bath) was snapped 2 cm onto
 the bath end wall.
 
 ```sh
-S=~/Downloads/master-v12-shifted-bedroom.dxf
+S=dwg/shifted-bedroom.dxf
 ~/.dwg-tools/bin/python build_geometry.py $S --out model-shifted-bedroom.js --tour tour-shifted-bedroom.json
 ~/.dwg-tools/bin/python build_drawing.py $S --model model-shifted-bedroom.js --out drawing-shifted-bedroom.json
 ```

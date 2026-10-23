@@ -2,7 +2,8 @@
 """suite_merge: BASE plan everywhere except the master suite, which comes from SUITE.
 
 Run with the DWG venv: ~/.dwg-tools/bin/python suite_merge.py BASE.dxf SUITE.dxf OUT.dxf [--dry]
-  e.g. BASE = master-v12-shifted-bedroom.dxf, SUITE = a version's own DXF (v6, v9), OUT = its build DXF.
+  e.g. after a shared-room edit in dwg/main.dxf: BASE = dwg/main.dxf, SUITE = OUT = dwg/bigger-bedroom.dxf.
+       suite_merge.py --check dwg/*.dxf   lists entities that differ between the files outside the suite.
 
 Inside the suite zone (DWG x 190.6 to 196.78, y -117.25 to -112.15) SUITE's entities replace BASE's. Entities
 touching the zone edge that differ between the two files (wall faces running out of the suite) are swapped too
@@ -56,7 +57,26 @@ def touches(b):
         and max(b[2] - b[0], b[3] - b[1]) < 30  # skip door-block clutter hundreds of metres long
 
 
+def outside(doc):
+    """Signatures of the entities clear of the suite zone and its edge."""
+    return Counter(sig(e) for e in doc.modelspace() if not inside(b := box(e)) and not touches(b))
+
+
+def check(paths):
+    ref = outside(recover.readfile(paths[0])[0])
+    bad = 0
+    for p in paths[1:]:
+        o = outside(recover.readfile(p)[0])
+        for k, n in sorted(((ref - o) + (o - ref)).items(), key=str):
+            print(f'  {p}: {k[0]} {k[1]} {k[2]} x{n} ({"missing" if ref[k] > o[k] else "extra"} vs {paths[0]})')
+            bad += 1
+    print('outside the suite:', 'identical' if not bad else f'{bad} differences')
+    return 1 if bad else 0
+
+
 def main():
+    if sys.argv[1] == '--check':
+        sys.exit(check(sys.argv[2:]))
     base_p, suite_p, out = sys.argv[1:4]
     t, _ = recover.readfile(base_p)
     s, _ = recover.readfile(suite_p)

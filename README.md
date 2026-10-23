@@ -107,6 +107,9 @@ older Main DXF (`master-bed186-v6-shoes2-2block-laundry.dxf`, in `~/Downloads` o
 - entrance: one 1.20 x 0.42 m shoe unit (no bench niche) and a 1.20 x 0.40 m bench facing the front door;
 - the coffee corner is as before.
 
+Client edit since (2026-10-23, all three files): the guest WC vanity counter `A4A` is 0.60 m deep (front edge moved from
+x 204.63 to 204.472, 2.6 cm clear of the door frame) instead of v12's 0.455 m.
+
 **Editing a room outside the suite:** edit it in one file (say `dwg/main.dxf`), copy it into the other two with
 `suite_merge.py` (BASE = the edited file, SUITE = OUT = the version to update; each keeps its own suite), check,
 then rebuild all three (§3 / §4):

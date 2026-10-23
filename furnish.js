@@ -504,13 +504,13 @@ export function furnish(scene, M, mat, version = "main") {
     }
   });
   bath.scale.z = 0.9 / 0.812;  // modelled 0.81 m deep; the DWG bath is 0.90
-  item(14.66, 7.75, "W", p => {  // battened oak wall, thick stone slab, open shelf over walnut drawers, rounded mirror
+  item(14.66, 7.75, "W", p => {  // battened oak wall, thick stone slab (DWG counter 0.60 deep), open shelf over walnut drawers, rounded mirror
     p.box(-0.8, 0.8, 0, M.ceiling, 0, 0.03, mat.oakBattens);
-    p.box(-0.78, 0.78, 0.2, 0.5, 0.03, 0.48, mat.walnut);  // floating drawer unit, its top an open shelf
-    for (const x of [-0.39, 0, 0.39]) p.box(x - 0.003, x + 0.003, 0.215, 0.44, 0.48, 0.483, shadowGap);
-    p.box(-0.76, 0.76, 0.44, 0.445, 0.48, 0.483, shadowGap);
-    p.box(-0.74, 0.74, 0.18, 0.2, 0.06, 0.44, mat.ledStrip);
-    p.box(-0.8, 0.8, 0.72, 0.85, 0.03, 0.53, travertine, 0.01);
+    p.box(-0.78, 0.78, 0.2, 0.5, 0.03, 0.55, mat.walnut);  // floating drawer unit, its top an open shelf
+    for (const x of [-0.39, 0, 0.39]) p.box(x - 0.003, x + 0.003, 0.215, 0.44, 0.55, 0.553, shadowGap);
+    p.box(-0.76, 0.76, 0.44, 0.445, 0.55, 0.553, shadowGap);
+    p.box(-0.74, 0.74, 0.18, 0.2, 0.06, 0.51, mat.ledStrip);
+    p.box(-0.8, 0.8, 0.72, 0.85, 0.03, 0.6, travertine, 0.01);
     p.box(-0.76, 0.76, 0.705, 0.72, 0.05, 0.1, mat.ledStrip);
     p.box(-0.6, -0.3, 0.5, 0.6, 0.1, 0.38, charcoal, 0.02); p.box(-0.15, 0.15, 0.5, 0.58, 0.1, 0.38, charcoal, 0.02);
     for (const x of [0.38, 0.47, 0.56]) { const r = p.cyl(x, 0.24, 0.04, 0.46, 0.74, mat.oatmeal, 16); r.rotation.x = Math.PI / 2; r.position.y = 0.545; }

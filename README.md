@@ -1,0 +1,237 @@
+# Karim's Apartment — 3D model viewer
+
+A Three.js viewer of the flat, built from the architect's DWG floor plan: Dollhouse / Top / Walk views,
+a 2D drawing view, a tape measure, the designer's renders as "photo spots", and an in-viewer
+**Generate Photo Spot** button that turns a Walk view into a photoreal render with OpenAI.
+
+- Plain static site: no bundler, no npm. Three.js 0.170 comes from jsDelivr through the import map in `index.html`.
+- Live on Vercel. Every push to `main` deploys to production (`.github/workflows/deploy.yml`).
+- All geometry comes from the DWG. Dimensions are never taken from the renders.
+
+---
+
+## 1. File map
+
+| File | What it is | Edit by hand? |
+|---|---|---|
+| `index.html` | The whole viewer: scene, views, UI, plan versions (`VERSIONS`), URL params | Yes |
+| `model.js` | Walls, openings, rooms, labels and tour grid, as `window.MODEL` | **No**: built by `build_geometry.py` |
+| `drawing.json` | DWG linework, text and snap points for the 2D drawing view | **No**: built by `build_drawing.py` |
+| `tour.json` | Room seeds, room viewpoints ("stops"), entry point, floor-finish overrides | Yes |
+| `furnish.js` | Furniture, joinery and fittings, room by room | Yes |
+| `materials.js` | Material library (oak, limewash, stone, …) using the textures in `textures/` | Yes |
+| `spots.json` | Photo spots: designer renders plus approved AI renders, each with a camera | Yes (or via Approve) |
+| `photogen-brief.json` | Finishes text and material-board swatches for Generate Photo Spot | Yes |
+| `spots.js`, `renders.js` | Photo-spot UI in Walk; the Renders gallery screen | Yes |
+| `drawing.js`, `measure.js` | 2D drawing view with object snaps; 3D tape measure | Yes |
+| `photogen.js` | Generate Photo Spot UI (screenshot, comment, approve) | Yes |
+| `photogen.py` | Local dev server **and** the Generate Photo Spot backend (OpenAI calls) | Yes |
+| `api/photospot.py`, `photogen_blob.py` | The same backend as a Vercel function, storing files in Vercel Blob | Yes |
+| `publish_renders.sh` | Uploads renders, reference copies and the material board to Blob | Yes |
+| `build_geometry.py`, `build_drawing.py` | DXF → `model.js` / `drawing.json` | Yes |
+| `*-bigger-bedroom.*` | The "Bigger Master Bedroom" plan version (see §4) | Same rules as the main files |
+| `models/*.glb` | Fixtures made from the renders with Meshy (image-to-3D) | Replace only |
+| `textures/` | Poly Haven PBR scans (CC0, see `CREDITS.txt`) | Add only |
+| `renders/` | Designer renders and approved AI renders (**git-ignored**, served from Blob live) | Add files |
+| `notes/compare/` | Local-only render-vs-model comparison tool (git-ignored) | — |
+| `explore.html` | First viewer from the initial commit. Not linked from anywhere; legacy | No |
+
+---
+
+## 2. Running it locally
+
+```sh
+python3 photogen.py              # http://127.0.0.1:8000, with Generate Photo Spot
+python3 photogen.py --dry-run    # same, but "generates" by echoing the screenshot (no OpenAI credits)
+python3 photogen.py 8765         # another port
+```
+
+- Any static server also works (`python3 -m http.server`). The Generate Photo Spot button then hides itself.
+- Real generation needs `OPENAI_API_KEY` in `.env` (git-ignored). Optional: `OPENAI_IMAGE_MODEL` (default `gpt-image-2`).
+- The material board needs Pillow (`pip install pillow`). Without it, generation runs with no board.
+
+**URL parameters** (combine with `&`):
+
+| Param | Effect |
+|---|---|
+| `?v=bigger-bedroom` | Load a plan version (default: main) |
+| `?view=top` / `?view=dollhouse` | Start in that view |
+| `?room=master` | Start in Walk at the first room whose caption starts with this |
+| `?cam=x,y,h,lookX,lookY,lookH[,fov]` | Stand at an exact camera (plan metres), e.g. to match a render |
+| `?clean` | Hide all UI (for screenshots) |
+| `?show=drawing` / `?show=renders` | Open the drawing or Renders screen |
+
+---
+
+## 3. Building the model from the DWG
+
+The build scripts need the Python venv at `~/.dwg-tools` (ezdxf, shapely, numpy). `dwg2dxf` comes from
+libredwg (`brew install libredwg`).
+
+```sh
+P=~/Downloads/master-bed186-v6-shoes2-2block-laundry.dxf
+~/.dwg-tools/bin/python build_geometry.py $P                  # → model.js (+ reads tour.json)
+~/.dwg-tools/bin/python build_drawing.py  $P                  # → drawing.json (needs model.js first)
+~/.dwg-tools/bin/python build_geometry.py $P --debug debug.png  # plan image for checking walls
+```
+
+**Laundry / guest bathroom from the "2 block" proposal (2026-10-23).** Both versions build from a DXF, not
+straight from their DWG: the v6 / v9 DWG converted with `dwg2dxf`, with the laundry + guest toilet zone
+(DWG x 200.74 to 205.08, y -114.86 to -112.30) swapped for `~/Downloads/2 block-karim.dwg`'s. The proposal
+sits +20.694, +40.481 m from our frame. Its partition is 0.34 m further west: laundry 1.71 x 2.30 m, guest
+toilet 2.51 x 2.30 m. The toilet door, the bath and the bath's end wall moved with it, and so did the laundry
+washer. Nothing else was taken from the proposal (its kitchen and master toilet also differ).
+
+**Client edits in the Main DXF (2026-10-23, Main only).** Drawn straight into
+`master-bed186-v6-shoes2-2block-laundry.dxf` (state before them: `*-2block-laundry.before-comments.dxf`):
+dishwasher block `dfs` moved to the end of the kitchen's north run beside the fridge tower; entrance joinery
+(shoe unit + bench niche, x 9.76-11.35, front y 4.21, boxing in the pier) and a mirror bench, mirror and shelf
+centred on the front door; the dining "desk" block `wwwrf` replaced by a 0.60 m coffee corner (x 19.72-21.22)
+with a mini water dispenser at the column end. v9 doesn't have these yet.
+
+`build_geometry.py` flags:
+- `--out FILE`: model file to write (default `model.js`).
+- `--tour FILE`: tour file to read (default `tour.json`).
+- `--wall x0,y0,x1,y1`: add a wall face line the DWG left out, in DWG coordinates. Repeatable.
+- `--debug FILE.png`: write a debug render of the plan.
+
+What the scripts rely on in the DWG:
+- **Layers:** `1wall` = walls, `Windows`, `3door`, `2furni` / `2 furni` = furniture. Room names come from the drawing's text labels (English or Arabic).
+- **Heights are fixed in `build_geometry.py`:** ceiling 2.6 m, door head 2.1 m, window sill 0.9 m, slider head 2.4 m, parapet 1.1 m.
+- **Wet rooms** (kitchen, bath, WC, laundry) get tile floors; **outdoor rooms** (terrace, balcony) get decking. Matching is by room name.
+
+> **Main `model.js` rebuilds byte-identical from the patched v6 DXF (`drawing.json` to within 0.1 mm). Don't
+> regenerate them unless the drawing changed.** Diff the output (`git diff --stat`) after any rebuild.
+
+**Coordinate frames** (easy to mix up):
+- **`tour.json`** uses DWG model-space metres, e.g. `[198.9, -117.75]`.
+- **Everything else** uses plan metres in `model.js`'s frame: `furnish.js`, `spots.json` cams, `?cam=`, `drawing.json`. Here x = east, y = north, origin at the plan's corner, e.g. `[5.2, 6.3]`.
+- **3D world** is `(x, height, -y)`.
+
+---
+
+## 4. Plan versions
+
+| Version | `?v=` | DWG | Files |
+|---|---|---|---|
+| Main | *(none)* / `main` | `~/Downloads/master-bed186-v6-shoes2.dwg`, built from `master-bed186-v6-shoes2-2block-laundry.dxf` | `model.js`, `drawing.json`, `tour.json`, `spots.json` |
+| Bigger Master Bedroom | `bigger-bedroom` | `~/Downloads/master-bed-v9.dwg`, built from `master-bed-v9-2block-laundry.dxf` | `model-bigger-bedroom.js`, `drawing-bigger-bedroom.json`, `tour-bigger-bedroom.json`, `spots-bigger-bedroom.json` |
+
+Build the Bigger Master Bedroom version. v9 is missing the bathroom/kitchen wall face line, so `--wall` adds it:
+
+```sh
+V=~/Downloads/master-bed-v9-2block-laundry.dxf
+~/.dwg-tools/bin/python build_geometry.py $V --out model-bigger-bedroom.js \
+    --tour tour-bigger-bedroom.json --wall 196.65,-112.594,196.65,-115.017
+~/.dwg-tools/bin/python build_drawing.py $V --model model-bigger-bedroom.js --out drawing-bigger-bedroom.json
+```
+
+**Rule: a version may differ from Main only in the rooms it changes.** Any other DWG difference is a
+mistake to flag, not to build.
+
+To add a version:
+1. Diff its DWG against the main one and confirm only the intended rooms changed.
+2. Write `tour-<id>.json` and `spots-<id>.json` that **extend** the main files. Copy `*-bigger-bedroom.json` as a template.
+   - Tour: `{ "extends": "tour.json", "seeds": [...], "stops": [...], "doorsAsDrawn": [...] }`. Seeds and stops replace the main ones with the same name or room. `doorsAsDrawn` lists door hinges that open the way the DWG swings them.
+   - Spots: `{ "extends": "spots.json", "replaces": [rooms], "spots": [...] }`. Drops the main spots in those rooms and adds its own.
+3. Run both build scripts with `--out` / `--tour` / `--model` as above.
+4. Add an entry to `VERSIONS` in `index.html`.
+5. If furniture differs, branch on `version === "<id>"` in `furnish.js` (see the `bigger-bedroom` block).
+
+---
+
+## 5. Editing the model by hand
+
+**Furniture: `furnish.js`**
+- Each piece is built in its own frame: x across, y up, z out from the wall.
+- `item(x, y, facing, build)` puts its back-centre on a plan point, facing `N` / `E` / `S` / `W` into the room.
+- Positions come from the DWG furniture layer where the piece is drawn there. Otherwise use standard sizes fitted to the room as the renders show it.
+- Load a GLB fixture with `p.model("models/x.glb", material | null, dx, dy, dz, { size | height | width })`:
+  - pass a library material for single-material pieces;
+  - pass `null` to keep a mixed-material model's own textures.
+
+**Materials: `materials.js`**
+- `makeMaterials()` builds the library.
+- `size` is the real-world width one texture tile covers. UVs are in metres.
+- New texture: drop Poly Haven `_diff` / `_nor` / `_rough` JPGs into `textures/` and add a line to `CREDITS.txt`.
+
+**Floors and rooms: `tour.json`**
+- `finishes`: override a room's floor, e.g. `{"KITCHEN": "wood"}`. Values: `wood`, `tile`, `decking`.
+- `seeds`: name parts of an open floor shared by several rooms. `"replace": true` moves a drawing label's seed.
+- `stops`: the room buttons' camera viewpoints, as `eye` and `look` points.
+- After changing seeds or stops, re-run `build_geometry.py` (§3). They are baked into `model.js`.
+
+**Client decisions that override the designer's renders** (don't "fix" these to match a render):
+- The kitchen door stays on the east wall, as in the DWG.
+- The terrace counter has **no sink** (render 34 still shows one).
+- The 2.5 × 4.2 m X-box left of the living room is a void, not part of the flat.
+- The shoe cabinet is the unit beside the front door. Nothing goes in the master-suite corridor.
+- No scroll-driven tour. Keep the button UI with smooth animated transitions.
+
+---
+
+## 6. Graphics: renders and photo spots
+
+Realism comes from **photo spots**: stand on a marked spot in Walk, press **Enter photo spot**, and a photo of
+that view replaces the model.
+
+**Designer renders**
+1. Put the image in `renders/` (git-ignored).
+2. Add an entry to `spots.json`: `{"id", "room", "caption", "cam": [x, y, h, lookX, lookY, lookH, fov], "photo": "renders/…"}`.
+   - Find the cam by opening `?cam=…&clean` and adjusting until the model matches the render.
+   - Without `cam`, the render only appears in the Renders gallery.
+3. Publish it to the live site:
+   ```sh
+   sh publish_renders.sh
+   ```
+   - This uploads each render, a 1024 px reference copy and the material board to the Blob store.
+   - Files already online at the same size are skipped.
+   - It needs the Vercel CLI, logged in and linked. It pulls `BLOB_READ_WRITE_TOKEN` into `.env.local` if missing.
+
+**Generate Photo Spot** (Walk view button)
+
+- **What gets sent.** `photogen.js` sends three things to `photogen.py`:
+  - a screenshot of the model from where you stand;
+  - a plan crop of the room drawn from the DWG;
+  - the camera numbers.
+- **The OpenAI call.** `photogen.py` calls OpenAI image edit (`gpt-image-2`, 1536×1024). Along with the screenshot it sends:
+  - the **material board**: the `swatches` in `photogen-brief.json`, each a crop of a render (`box` = left, top, right, bottom as fractions), laid out as one labelled image;
+  - a few designer renders of the room as style references;
+  - the finishes text: `all`, plus `rooms[<ROOM>]` for each room in shot.
+- **Revise or approve.**
+  - Comment to re-run on the attempt shown.
+  - **Approve** copies the image into `renders/` and appends an `"ai": true` spot to the spots file of the plan version on screen.
+  - Drafts are kept in `renders/drafts/`.
+- **Golden rule:** a generated spot **re-surfaces** the model screenshot and never redesigns it.
+  - The screenshot stays image 1, so the angle and every object stay put.
+  - Finishes come only from the board and the finish text. Don't add furniture lists or layout instructions.
+  - Asking it to "draw the designer's version" made it copy a render's layout, with bad results.
+- `photogen-brief.json` is re-read on every run, so edits to finishes and swatches apply immediately. After changing swatches, run `sh publish_renders.sh` so the live site gets the new board.
+- Test UI changes with `--dry-run`. Real runs cost OpenAI credits.
+
+**3D fixtures with Meshy**
+- `models/*.glb` were made with Meshy image-to-3D from render crops.
+- Use Meshy only when asked. It costs about 20 credits per object on the Pro plan; confirm the cost first.
+
+**Render vs model comparison** (`notes/compare/`, local only)
+- `compare.py [id …]` screenshots the model at each view in `views.json` using `?clean&cam=…` and pastes it beside the render as `pair-<id>.jpg`.
+- It has hard-coded `/private/tmp/...` paths for the raw renders and the screenshot script. Update them before reuse.
+
+---
+
+## 7. Deploying and secrets
+
+- **Deploy:** push to `main`. GitHub Actions runs `vercel deploy --prod` with the `VERCEL_TOKEN` repo secret.
+- **`vercel.json`:**
+  - `/renders/*` → the public Blob store `karim-home-3d-photospots`. The live site never serves `renders/` from git.
+  - `/api/photospot/<action>` → `api/photospot.py`. Max duration 300 s; `models/`, `textures/`, `notes/`, `dist/` and `renders/` are excluded from the function bundle.
+- **Live approved spots** are saved to Blob as `renders/ai-spots/<spots file>/<id>.json`. The page merges them into the spots file it loads.
+  - To make one permanent in git, copy its entry into `spots*.json` and its image into `renders/`.
+- **Vercel env vars:**
+  - `OPENAI_API_KEY`
+  - `BLOB_READ_WRITE_TOKEN`
+  - optional `PHOTOSPOT_PASSWORD`: if set, the page asks for it once before generate or approve. Currently unset.
+- **Local secrets:** `.env` holds `OPENAI_API_KEY`. `.env.local` holds `BLOB_READ_WRITE_TOKEN` (from `vercel env pull`). Git and Vercel ignore both.
+- **Ignored files:**
+  - `.gitignore`: `renders/`, `dist/`, `notes/compare/`, `.env*`, `.vercel`, `.sc/`, `.gstack/`.
+  - `.vercelignore` also drops the build scripts, `notes/`, `.github/` and `publish_renders.sh` from the deploy.

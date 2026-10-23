@@ -12,7 +12,8 @@
   {"id": "19", "room": "LIVING ROOM", "caption": "Living room 2", "cam": [3.05, 2.3, 1.3, 6.15, 2.3, 1.25, 62], "photo": "renders/19-Livingroom.jpeg"},
   {"id": "24", "room": "KITCHEN", "caption": "Kitchen", "cam": [8.05, 5.95, 1.45, 8.05, 9.09, 1.3, 62], "photo": "renders/24-Kitchen.jpeg"},
   {"id": "26", "room": "LAUNDRY", "caption": "Laundry", "cam": [11.85, 6.3, 1.45, 11.3, 9.18, 1.15, 72], "photo": "renders/26-Laudanry_room.png"},
-  {"id": "29", "room": "ENTRANCE", "caption": "Entrance", "cam": [9.6, 5.5, 1.4, 9.4, 3.6, 1.2, 80], "photo": "renders/29-_Entrance.png"},
+  {"id": "29", "room": "ENTRANCE", "caption": "Entrance", "cam": [9.4, 5.1, 1.35, 9.25, 3.6, 1.25, 88], "photo": "renders/29-Entrance_door.jpg"},
+  {"id": "30", "room": "ENTRANCE", "caption": "Entrance mirror", "cam": [8.48, 3.85, 1.3, 8.48, 5.55, 1.05, 68], "photo": "renders/30-Entrance_mirror.png"},
   {"id": "32", "room": "TERRACE", "caption": "Terrace 1", "cam": [21.9, 6.2, 1.45, 24.6, 2.6, 1.0, 58], "photo": "renders/32-Terrace.png"},
   {"id": "34", "room": "TERRACE", "caption": "Terrace 2", "cam": [23.1, 6.3, 1.5, 23.1, 9.4, 1.2, 70], "photo": "renders/34-Terrace.png"}
 ]

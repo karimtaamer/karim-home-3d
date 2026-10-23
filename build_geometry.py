@@ -116,7 +116,7 @@ def room_kind(name):
     return "outdoor" if any(w in n for w in OUTDOOR) else "wet" if any(w in n for w in WET) else "dry"
 
 
-def plan_lines(msp, B):
+def plan_lines(msp, B, door_blocks=True):
     """The drawing's linework (walls, windows, doors, furniture) flattened to polylines, for the ink-plan look."""
     out = []
 
@@ -140,7 +140,7 @@ def plan_lines(msp, B):
 
     for e in msp:
         cls = LINE_LAYERS.get(e.dxf.layer)
-        if cls:
+        if cls and (door_blocks or not (e.dxftype() == "INSERT" and e.dxf.layer == DOOR_LAYER)):
             add(e, cls)
     return out
 
@@ -209,7 +209,12 @@ def main():
                 poly = Polygon(pts)
                 if poly.is_valid and B.contains(poly) and poly.area > 0.005:
                     closed_wall.append(poly)
-            wall_segs += [s for s in entity_segments(e) if inb(s)]
+            # Dashed wall-layer lines mark something overhead (an arch, a bulkhead), not a wall.
+            lt = e.dxf.get("linetype", "BYLAYER")
+            if lt.upper() == "BYLAYER":
+                lt = doc.layers.get(lay).dxf.linetype
+            if not any(k in lt.upper() for k in ("DASH", "HIDDEN")):
+                wall_segs += [s for s in entity_segments(e) if inb(s)]
         elif lay == WINDOW_LAYER:
             window_segs += [s for s in entity_segments(e) if inb(s)]
 
@@ -262,6 +267,7 @@ def main():
     # 1) Door swings: hinge + closed-leaf end span the opening; wall faces either side give its depth.
     # Swings are drawn loose on the wall layer or inside door blocks (dynamic blocks hold one arc
     # per leaf size; the right size is the one whose closed leaf lands on the far jamb).
+    door_swings = []  # (hinge, radius, closed-leaf end) per door, for drawing a clean swing
     swings = {}  # hinge -> ([arcs], drawn as a door block?)
     def collect(entities, door_block_at=None, depth=0):
         for e in entities:
@@ -307,6 +313,7 @@ def main():
         if best is None:
             continue
         fit, r, end, in_wall = best
+        swing_of = (c, r, end)
         if in_wall:  # cut the opening the drawing left solid, then treat it like any other door
             ang = round(math.atan2(end[1] - c[1], end[0] - c[0]) / (math.pi / 4)) * (math.pi / 4)
             mid = Point(c[0] + math.cos(ang) * r / 2, c[1] + math.sin(ang) * r / 2)
@@ -353,6 +360,7 @@ def main():
                 # Several states of one door block (or a loose arc over a block) = one door.
                 if not any(d.centroid.distance(o.centroid) < 0.4 for o in doors):
                     doors.append(d)
+                    door_swings.append(swing_of)
     # A leaf can be a little narrower than its wall gap (frame); the door fills the whole gap.
     for i, d in enumerate(doors):
         for g in as_polys(gaps):
@@ -468,7 +476,7 @@ def main():
             openings[i] = ("slider", g)
 
     # Tour route: outside the front door, then stop to stop, walking through doors and sliders.
-    legs, start = [], None
+    legs, start, nav = [], None, None
     if tour.get("stops"):
         passable = unary_union([g for k, g in openings if k in ("door", "slider")])
         entry = min((g for k, g in openings if k == "door"), key=lambda g: g.distance(Point(tour["entry"])))
@@ -487,6 +495,27 @@ def main():
         walkable = unary_union([walkable, apron.difference(walls.buffer(0.05))])
         pts = [start] + [tuple(st["eye"]) for st in tour["stops"]]
         legs = [walk_route(walkable, a, b) for a, b in zip(pts, pts[1:])]
+        # Walkable grid for the viewer's own route-finding (walk to a room through the doors).
+        from shapely.prepared import prep
+        ok = prep(walkable)
+        gx0, gy0, gx1, gy1 = walkable.bounds
+        cols, rows_n = int((gx1 - gx0) / GRID) + 1, int((gy1 - gy0) / GRID) + 1
+        nav = {"x0": round(gx0, 3), "y0": round(gy0, 3), "cell": GRID, "cols": cols,
+               "rows": ["".join("1" if ok.contains(Point(gx0 + i * GRID, gy0 + j * GRID)) else "0" for i in range(cols))
+                        for j in range(rows_n)]}
+
+    # Linework for the ink plan: only what lies on the flat (not the void or stray blocks), and
+    # without the drawing's own door swings (dynamic door blocks draw every size at once).
+    on_flat = unary_union([floor, walls, unary_union([g for _, g in openings])]).buffer(0.05)
+    hinges = [Point(c) for c, _, _ in door_swings]
+    def is_swing(pts):
+        return len(pts) > 4 and any(math.dist(pts[0], (h.x, h.y)) > 0.4 and
+                                    abs(math.dist(pts[0], (h.x, h.y)) - math.dist(pts[-1], (h.x, h.y))) < 0.03 and
+                                    abs(math.dist(pts[len(pts) // 2], (h.x, h.y)) - math.dist(pts[0], (h.x, h.y))) < 0.03
+                                    for h in hinges)
+    drawn = [(c, pts) for c, pts in plan_lines(msp, B, door_blocks=False)
+             if on_flat.contains(LineString(pts).interpolate(0.5, normalized=True))
+             and not (c in ("wall", "door") and is_swing(pts))]
 
     ox, oy = B.bounds[0], B.bounds[1]
     ring = lambda p: [[round(x - ox, 4), round(y - oy, 4)] for x, y in p.exterior.coords[:-1]]
@@ -497,7 +526,9 @@ def main():
         "walls": [{"outer": ring(p), "holes": holes(p), "height": CEILING} for p in as_polys(full) if p.area > 0.002]
                  + [{"outer": ring(p), "holes": holes(p), "height": PARAPET} for p in as_polys(parapet) if p.area > 0.002],
         "floor": [{"outer": ring(p), "holes": holes(p), "kind": k, "room": n} for n, k, g in rooms for p in as_polys(g)],
-        "lines": [{"kind": c, "pts": [[round(x - ox, 3), round(y - oy, 3)] for x, y in pts]} for c, pts in plan_lines(msp, B)],
+        "lines": [{"kind": c, "pts": [[round(x - ox, 3), round(y - oy, 3)] for x, y in pts]} for c, pts in drawn],
+        "swings": [{"hinge": [round(c[0] - ox, 3), round(c[1] - oy, 3)], "r": round(r, 3),
+                    "closed": [round(e[0] - ox, 3), round(e[1] - oy, 3)]} for c, r, e in door_swings],
         "origin": [ox, oy],
         "tour": {
             "title": tour.get("title", ""), "subtitle": tour.get("subtitle", ""),
@@ -507,6 +538,7 @@ def main():
                        "look": [round(st["look"][0] - ox, 3), round(st["look"][1] - oy, 3)]} for st in tour.get("stops", [])],
             "legs": [[[round(x - ox, 3), round(y - oy, 3)] for x, y in leg] for leg in legs],
         },
+        "nav": nav and {**nav, "x0": round(nav["x0"] - ox, 3), "y0": round(nav["y0"] - oy, 3)},
         "openings": [{"kind": k, "outer": ring(g)} for k, g in openings],
         "shafts": [ring(p) for p in shafts],
         "furniture": [ring(p) for p in furniture],

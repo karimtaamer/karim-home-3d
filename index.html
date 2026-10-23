@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Lotus Apartment</title>
+<title>Karim's Apartment</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,6 +31,29 @@
   #loader { position: fixed; inset: 0; z-index: 5; background: #f3eee5; display: grid; place-items: center; }
   #loader div { font-family: "Cormorant Garamond", serif; font-size: 46px; letter-spacing: .3em; }
   #loader span { display: inline-block; opacity: 0; }
+  #roomsToggle, #bar .break, #pad { display: none; }
+  /* Phones: the views up top, rooms folded behind one chip, and arrows to walk with. */
+  @media (max-width: 760px) {
+    #title { top: 12px; left: 14px; right: auto; text-align: left; }
+    #title h1 { font-size: 24px; }
+    #title p { display: none; }
+    #bar { top: 46px; left: 12px; right: 12px; max-width: none; }
+    #bar .break { display: block; flex-basis: 100%; height: 0; }
+    #roomsToggle { display: inline-block; }
+    #bar #rooms { display: none; max-height: 46vh; overflow-y: auto; }
+    #bar.rooms-open #rooms { display: flex; }
+    #help { right: 14px; border-radius: 12px; }
+    body.walking #help { right: 176px; }
+    body.walking #pad { display: grid; }
+    #pad { right: 14px; bottom: 14px; grid-template: repeat(2, 48px) / repeat(3, 48px); gap: 6px; touch-action: none; user-select: none; -webkit-user-select: none; }
+    #pad button { border: 0; border-radius: 14px; background: #fffaf3e6; color: #2b2622; font-size: 18px; box-shadow: 0 1px 4px #0002, 0 0 0 1px #2b262214 inset;
+      backdrop-filter: blur(6px); -webkit-touch-callout: none; touch-action: none; }
+    #pad button.held { background: #2b2622; color: #f3eee5; }
+    #pad [data-key=ArrowUp] { grid-area: 1 / 2; }
+    #pad [data-key=ArrowLeft] { grid-area: 2 / 1; }
+    #pad [data-key=ArrowDown] { grid-area: 2 / 2; }
+    #pad [data-key=ArrowRight] { grid-area: 2 / 3; }
+  }
 </style>
 <script type="importmap">
 { "imports": {
@@ -42,22 +65,30 @@
 <script src="model.js"></script>
 </head>
 <body>
-<div id="loader"><div>LOTUS</div></div>
+<div id="loader"><div>KARIM</div></div>
 <canvas id="scene"></canvas>
 <div id="bar" class="ui">
   <div class="row">
     <button data-view="dollhouse" class="on">Dollhouse</button>
     <button data-view="top">Top</button>
     <button data-view="walk">Walk</button>
+    <button id="roomsToggle">Rooms ▾</button>
+    <span class="break"></span>
     <button id="cut" class="on">Walls: cut away</button>
     <button id="ceil">Ceiling: off</button>
   </div>
   <div class="row" id="rooms"></div>
 </div>
-<div id="title" class="ui"><h1>Lotus Apartment</h1><p>Drawn from the DWG</p></div>
+<div id="title" class="ui"><h1>Karim's Apartment</h1><p>Drawn from the DWG</p></div>
 <div id="shade" class="ui"></div>
 <div id="caption" class="ui"><div class="name"></div><div class="meta"></div></div>
 <div id="help" class="ui"></div>
+<div id="pad" class="ui">
+  <button data-key="ArrowUp" aria-label="Forward">▲</button>
+  <button data-key="ArrowLeft" aria-label="Left">◀</button>
+  <button data-key="ArrowDown" aria-label="Back">▼</button>
+  <button data-key="ArrowRight" aria-label="Right">▶</button>
+</div>
 <script type="module">
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -482,10 +513,17 @@ const HELP = {
   top: "Scroll to zoom · drag to pan",
   walk: "Click to look around · WASD / arrows to move · Shift to hurry · Esc to free the mouse",
 };
+const PHONE = matchMedia("(max-width: 760px)");
+const HELP_PHONE = {
+  dollhouse: "Drag to orbit · pinch to zoom · two fingers to pan",
+  top: "Pinch to zoom · drag to pan",
+  walk: "Drag to look around · arrows to walk",
+};
 function setMode(m) {
   mode = m;
   document.querySelectorAll("[data-view]").forEach(b => b.classList.toggle("on", b.dataset.view === m));
-  help.textContent = HELP[m];
+  help.textContent = (PHONE.matches ? HELP_PHONE : HELP)[m];
+  document.body.classList.toggle("walking", m === "walk");
   labelRenderer.domElement.style.display = m === "walk" ? "none" : "";
   document.getElementById("shade").style.opacity = m === "walk" ? 1 : 0;
   if (m !== "walk" && walker.isLocked) walker.unlock();
@@ -515,7 +553,32 @@ function goRoom(v) {
 const keys = {};
 addEventListener("keydown", e => { keys[e.code] = true; if (glide && /^(Key[WASD]|Arrow)/.test(e.code)) stopGlide(); });
 addEventListener("keyup", e => { keys[e.code] = false; });
-renderer.domElement.addEventListener("click", () => mode === "walk" && !tween && walker.lock());
+renderer.domElement.addEventListener("click", () => mode === "walk" && !tween && !PHONE.matches && walker.lock());
+
+// Phones have no pointer lock: drag to look, and the on-screen arrows stand in for the arrow keys.
+const lookEuler = new THREE.Euler(0, 0, 0, "YXZ");
+let dragFrom = null;
+renderer.domElement.addEventListener("pointerdown", e => {
+  if (mode !== "walk" || tween || !PHONE.matches) return;
+  stopGlide();
+  dragFrom = [e.clientX, e.clientY];
+});
+addEventListener("pointermove", e => {
+  if (!dragFrom || mode !== "walk" || tween) return;
+  lookEuler.setFromQuaternion(camera.quaternion);
+  lookEuler.y += (e.clientX - dragFrom[0]) * 0.005;
+  lookEuler.x = THREE.MathUtils.clamp(lookEuler.x + (e.clientY - dragFrom[1]) * 0.005, -1.2, 1.2);
+  camera.quaternion.setFromEuler(lookEuler);
+  dragFrom = [e.clientX, e.clientY];
+});
+addEventListener("pointerup", () => (dragFrom = null));
+addEventListener("pointercancel", () => (dragFrom = null));
+for (const b of document.querySelectorAll("#pad button")) {
+  const hold = on => { keys[b.dataset.key] = on; b.classList.toggle("held", on); if (on) stopGlide(); };
+  b.addEventListener("pointerdown", e => { e.preventDefault(); b.setPointerCapture(e.pointerId); hold(true); });
+  for (const t of ["pointerup", "pointercancel", "lostpointercapture"]) b.addEventListener(t, () => hold(false));
+  b.addEventListener("contextmenu", e => e.preventDefault());
+}
 const ray = new THREE.Raycaster();
 const velocity = new THREE.Vector3();
 function blocked(from, dir, dist) {
@@ -646,9 +709,10 @@ const roomBar = document.getElementById("rooms");
 for (const v of viewpoints) {
   const b = document.createElement("button");
   b.textContent = v.caption;
-  b.onclick = () => goRoom(v);
+  b.onclick = () => { document.getElementById("bar").classList.remove("rooms-open"); goRoom(v); };
   roomBar.appendChild(b);
 }
+document.getElementById("roomsToggle").onclick = () => document.getElementById("bar").classList.toggle("rooms-open");
 document.querySelectorAll("[data-view]").forEach(b => (b.onclick = () => {
   stopGlide();
   if (b.dataset.view === "top") goTop();
@@ -716,7 +780,7 @@ renderer.setAnimationLoop(() => {
 });
 
 const loader = document.getElementById("loader");
-loader.firstElementChild.innerHTML = [..."LOTUS"].map(c => `<span>${c}</span>`).join("");
+loader.firstElementChild.innerHTML = [..."KARIM"].map(c => `<span>${c}</span>`).join("");
 gsap.timeline()
   .to("#loader span", { opacity: 1, y: 0, duration: 0.45, stagger: 0.07, ease: "power2.out", startAt: { y: 14 } })
   .to(loader, { opacity: 0, duration: 0.5, delay: 0.15, onComplete: () => loader.remove() });

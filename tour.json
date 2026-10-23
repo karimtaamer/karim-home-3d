@@ -1,6 +1,6 @@
 {
   "_comment": "Presentation only - geometry comes from the DWG. Points are DWG model-space metres [x, y]. 'seeds' name parts of an open floor shared by several rooms (several seeds may share a name; 'replace' moves a drawing label's seed); 'stops' are the scroll-tour camera stops in order (eye = where you stand, look = what you look at). 'entry' is a point at the front door; the tour starts outside it. 'finishes' overrides a room's floor finish (default: wood in dry rooms, tile in wet rooms, decking outdoors).",
-  "title": "Lotus Apartment",
+  "title": "Karim's Apartment",
   "subtitle": "A walk through home",
   "seeds": [
     {

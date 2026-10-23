@@ -1,0 +1,188 @@
+{
+ "_about": "Finishes for Generate Photo Spot (photogen.py), from the designer's renders in renders/. Finishes only, never furniture or layout: the view to edit already has every object in place. 'all' goes with every view, then the entry for each room in shot. 'swatches' are crops of the renders (box = left, top, right, bottom as fractions of the image) laid out as one labelled material board. The server re-reads this file on every run.",
+ "all": [
+  "Walls: warm cream-beige limewash plaster with a soft mottled, hand-troweled texture and gentle tonal variation (never flat white paint), slim oak skirting.",
+  "Ceilings: flat warm off-white; recessed downlights stay small and round; where the model shows LED strips, they glow warm (2700 K).",
+  "Floors: honey-coloured natural oak boards with a fine, real grain and soft sheen; bathrooms in large-format pale beige stone tiles.",
+  "Doors: flush honey-oak leaves with a fine vertical grain, no plank grooves, in slim matching oak frames, with slim brushed-steel lever handles.",
+  "Joinery: honey oak or darker walnut with flat fronts; white or marble tops.",
+  "Fabrics: cream and oatmeal boucle and linen; cushions in blush, sage, slate blue and soft mustard; chunky knitted throws; textured cream rugs.",
+  "Metal and glass: brass and bronze fittings, opal glass globes, brushed nickel in bathrooms.",
+  "Light: warm and soft, golden daylight from the windows, gentle long shadows, a slightly hazy warm glow, like the designer's renders."
+ ],
+ "rooms": {
+  "MASTER BEDROOM": "Headboard panels in cream boucle; bed in white linen with a sage quilted cover, blush and cream cushions and a chunky cream knitted throw; bedside chests in walnut; pendants are opal glass globes on thin brass rods; the canvas above the bed is a soft abstract in blush, terracotta, sage and cream in a thin oak frame with a brass picture light.",
+  "TOILET 1": "Honey-oak horizontal slatted cladding, pale beige large stone tiles, a white solid-surface top, walnut drawers, brushed-nickel fittings, a white wall-hung WC, warm LED strips under the vanity and cabinets.",
+  "TOILET 2": "Beige travertine-look stone tiles, a horizontal oak slat-look feature wall, a grey travertine counter with a white vessel basin, walnut drawers, a dark bronze mirror frame, brushed-bronze fittings.",
+  "RECEPTION": "Cream linen sofas on walnut plinths; slate-blue, sage and blush cushions; marble and fluted walnut coffee table; oak niche shelves lit warm; textured cream jute rug.",
+  "DINING": "Walnut table; cream boucle chairs on walnut legs; warm fabric pendants; walnut sideboard and cabinets; textured cream rug.",
+  "LIVING ROOM": "Oatmeal-greige textured sofa with blush, sage, slate and mustard cushions; travertine and walnut coffee table; walnut TV console with a cream top; shaggy cream rug.",
+  "KITCHEN": "Matt white-greige flat base units, honey-oak wall units and shelves, grey-beige veined marble splashback, white worktop with a thin black edge, black appliances, warm plinth LED.",
+  "LAUNDRY": "Honey-oak flat-panel cabinets with slim recessed handles, beige stone counter, pale beige stone floor tiles, white walls.",
+  "ENTRANCE": "Mottled limewash walls, honey-oak trim and arched niche linings with a warm LED cove, cream upholstered bench, opal wall sconces, a runner rug with blush, sage and cream ovals.",
+  "HALLWAY": "Corridor finishes as in the entrance: mottled warm limewash walls, honey-oak floor and skirting, honey-oak door leaves and frames, opal or fabric wall sconces with a warm glow, cream boucle bench, a runner rug in blush, sage and cream.",
+  "TERRACE": "Warm brown timber-look decking, walnut-tone bench base and cabinets, cream cushions with sage, blush, mustard and slate, travertine-look table, cream rendered walls, terracotta roof tiles, golden-hour sky; the counter has no sink."
+ },
+ "swatches": [
+  {
+   "label": "WALLS: limewash plaster",
+   "render": "19-Livingroom.jpeg",
+   "box": [
+    0.23,
+    0.17,
+    0.36,
+    0.34
+   ]
+  },
+  {
+   "label": "CEILING: downlights, LED cove",
+   "render": "18-Livingroom.jpeg",
+   "box": [
+    0.25,
+    0.0,
+    0.45,
+    0.33
+   ]
+  },
+  {
+   "label": "FLOOR: honey oak",
+   "render": "24-Kitchen.jpeg",
+   "box": [
+    0.3,
+    0.84,
+    0.62,
+    1.0
+   ]
+  },
+  {
+   "label": "DOORS: flush honey oak",
+   "render": "19-Livingroom.jpeg",
+   "box": [
+    0.145,
+    0.25,
+    0.215,
+    0.86
+   ]
+  },
+  {
+   "label": "DOOR + FRAME: front door",
+   "render": "29-_Entrance.png",
+   "box": [
+    0.69,
+    0.15,
+    0.94,
+    0.79
+   ]
+  },
+  {
+   "label": "JOINERY: walnut",
+   "render": "14-Dining.png",
+   "box": [
+    0.82,
+    0.54,
+    0.99,
+    0.69
+   ]
+  },
+  {
+   "label": "HEADBOARD: cream boucle",
+   "render": "17-Master_Bedroom.png",
+   "box": [
+    0.615,
+    0.54,
+    0.73,
+    0.655
+   ]
+  },
+  {
+   "label": "BEDDING: sage quilt, knit throw",
+   "render": "17-Master_Bedroom.png",
+   "box": [
+    0.3,
+    0.68,
+    0.7,
+    0.9
+   ]
+  },
+  {
+   "label": "ART: abstract canvas",
+   "render": "17-Master_Bedroom.png",
+   "box": [
+    0.29,
+    0.21,
+    0.62,
+    0.49
+   ]
+  },
+  {
+   "label": "BATHROOM: oak slats",
+   "render": "05-Master_bathroom.png",
+   "box": [
+    0.06,
+    0.44,
+    0.22,
+    0.56
+   ]
+  },
+  {
+   "label": "BATHROOM: beige stone tiles",
+   "render": "05-Master_bathroom.png",
+   "box": [
+    0.42,
+    0.72,
+    0.62,
+    0.94
+   ]
+  },
+  {
+   "label": "CORRIDOR: walls, oak trim, LED cove",
+   "render": "29-_Entrance.png",
+   "box": [
+    0.21,
+    0.1,
+    0.49,
+    0.62
+   ]
+  },
+  {
+   "label": "CORRIDOR: runner rug",
+   "render": "29-_Entrance.png",
+   "box": [
+    0.15,
+    0.83,
+    0.99,
+    0.93
+   ]
+  },
+  {
+   "label": "RUG: textured cream",
+   "render": "11-Reception.png",
+   "box": [
+    0.3,
+    0.78,
+    0.7,
+    0.92
+   ]
+  },
+  {
+   "label": "CUSHIONS + SOFA fabric",
+   "render": "11-Reception.png",
+   "box": [
+    0.37,
+    0.5,
+    0.75,
+    0.68
+   ]
+  },
+  {
+   "label": "LIGHTS: brass, opal glass",
+   "render": "17-Master_Bedroom.png",
+   "box": [
+    0.18,
+    0.42,
+    0.26,
+    0.56
+   ]
+  }
+ ]
+}

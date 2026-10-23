@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/renders/:path*", "destination": "https://ezauif7vtmi92gwt.public.blob.vercel-storage.com/renders/:path*" },
+    { "source": "/api/photospot/:action", "destination": "/api/photospot?action=:action" }
+  ],
+  "functions": {
+    "api/photospot.py": { "maxDuration": 300, "excludeFiles": "{models,textures,notes,dist,renders}/**" }
+  }
+}

@@ -5,6 +5,20 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+// Fixtures modelled from the renders (image-to-3D with Meshy, in models/). Single-material pieces
+// are pre-scaled to real size and take a library material (so the render's baked lighting doesn't
+// come along); mixed-material pieces keep their own textures and are fitted to size on load.
+const gltf = new GLTFLoader();
+const scenes = new Map();
+function loadScene(url) {
+  if (!scenes.has(url)) scenes.set(url, gltf.loadAsync(url).then(g => {
+    g.scene.traverse(o => o.isMesh && !o.geometry.attributes.normal && o.geometry.computeVertexNormals());
+    return g.scene;
+  }));
+  return scenes.get(url);
+}
 
 // UVs in metres, projected along each face's main axis, so textures keep their real scale.
 function metreUVs(g) {
@@ -21,7 +35,7 @@ function metreUVs(g) {
 
 const FACING = { S: 0, E: Math.PI / 2, N: Math.PI, W: -Math.PI / 2 };
 
-export function furnish(scene, M, mat) {
+export function furnish(scene, M, mat, version = "main") {
   const root = new THREE.Group();
   const ceilingBits = new THREE.Group();  // shown only with the ceiling (downlights, grilles)
   scene.add(root, ceilingBits);
@@ -45,6 +59,23 @@ export function furnish(scene, M, mat) {
     parent.add(g);
     return g;
   }
+  // Materials that arrive with loaded models join the shared cut plane and the fade-in.
+  const late = [];
+  let revealT = 1;
+  function adopt(m) {
+    if (m.userData.adopted) return;
+    m.userData.adopted = true;
+    m.clippingPlanes = mat.ceramic.clippingPlanes;
+    m.userData.baseOpacity = m.opacity;
+    late.push(m);
+    fade(m, revealT);
+  }
+  function fade(m, t) {
+    const want = t < 0.999 || m.userData.baseOpacity < 1;
+    if (m.transparent !== want) { m.transparent = want; m.needsUpdate = true; }
+    m.opacity = m.userData.baseOpacity * t;
+  }
+
   function part(g) {
     const api = {
       g,
@@ -76,6 +107,61 @@ export function furnish(scene, M, mat) {
         m.position.z = z0;
         return m;
       },
+      // Panel with only its top corners rounded (doors, as the renders draw them), `d` deep from z0.
+      roundTop(x0, x1, y0, y1, r, z0, d, material) {
+        const s = new THREE.Shape();
+        s.moveTo(x0, y0); s.lineTo(x1, y0); s.lineTo(x1, y1 - r); s.absarc(x1 - r, y1 - r, r, 0, Math.PI / 2, false);
+        s.lineTo(x0 + r, y1); s.absarc(x0 + r, y1 - r, r, Math.PI / 2, Math.PI, false); s.lineTo(x0, y0);
+        const m = mesh(new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: false, curveSegments: 16 }), material, g);
+        m.position.z = z0;
+        return m;
+      },
+      // Pebble-shaped mirror w x h centred on (x, y), optionally glowing round its edge.
+      pebble(x, y, w, h, z, material, halo) {
+        const pts = [[-1, -0.15], [-0.75, -0.85], [0.05, -1], [0.85, -0.75], [1, 0.05], [0.7, 0.8], [-0.1, 1], [-0.8, 0.72]]
+          .map(([u, v]) => new THREE.Vector3(u * w / 2, v * h / 2, 0));
+        const outline = new THREE.CatmullRomCurve3(pts, true).getPoints(64).map(v => new THREE.Vector2(v.x, v.y));
+        const add = (k, m, dz) => {
+          const o = mesh(new THREE.ShapeGeometry(new THREE.Shape(outline)), m, g, false);
+          o.scale.set(k, k, 1); o.position.set(x, y, z + dz);
+        };
+        if (halo) add(1 + 0.07 / Math.min(w, h), mat.ledStrip, -0.004);
+        add(1, material, 0);
+      },
+      // A modelled fixture from models/, back at z, base at height y. material: library material,
+      // or null to keep the model's own textures. fit: { size: [w, h, d] } or { width } / { height }
+      // (uniform) to scale it on load; cross: also a copy turned 90 degrees (flat foliage cut-outs).
+      model(url, material, x, y, z, { size, width, height, cross = false } = {}) {
+        const holder = new THREE.Group();
+        holder.position.set(x, y, z);
+        g.add(holder);
+        loadScene(url).then(src => {
+          const o = src.clone(true);
+          o.traverse(m => {
+            if (!m.isMesh) return;
+            if (material) m.material = material;
+            else adopt(m.material);
+            m.castShadow = m.receiveShadow = true;
+          });
+          if (size || width || height) {
+            const s = new THREE.Box3().setFromObject(o).getSize(new THREE.Vector3());
+            if (size) o.scale.set(size[0] / s.x, size[1] / s.y, size[2] / s.z);
+            else o.scale.setScalar(width ? width / s.x : height / s.y);
+          }
+          if (!size && !width && !height && !cross) return void holder.add(o);  // pre-fitted (parts keep their alignment)
+          const copies = cross ? [0, Math.PI / 2] : [0];
+          for (const turn of copies) {
+            const c = turn ? o.clone(true) : o, wrap = new THREE.Group();
+            wrap.add(c);
+            wrap.rotation.y = turn;
+            wrap.updateMatrixWorld(true);
+            const b = new THREE.Box3().setFromObject(c);
+            c.position.set(-(b.min.x + b.max.x) / 2, -b.min.y, cross ? -(b.min.z + b.max.z) / 2 : -b.min.z);
+            holder.add(wrap);
+          }
+        });
+        return holder;
+      },
       // Oval or organic mirror: a flat ellipse, optionally glowing round its edge.
       oval(x, y, rx, ry, z, material, halo) {
         if (halo) {
@@ -93,6 +179,17 @@ export function furnish(scene, M, mat) {
   }
 
   // --- Reusable pieces ----------------------------------------------------------------------
+  // Warm grey veined stone (kitchen splashback, guest vanity top) and soft shadow gaps between fronts.
+  const greyStone = mat.marbleTop.clone();
+  greyStone.color.setRGB(0.72, 0.67, 0.62);
+  greyStone.clippingPlanes = mat.marbleTop.clippingPlanes;
+  const shadowGap = mat.greyLacquer.clone();
+  shadowGap.color.setRGB(0.12, 0.11, 0.1);
+  shadowGap.clippingPlanes = mat.greyLacquer.clippingPlanes;
+  // Paler honey oak for lit niche linings: the renders' niches glow light against the plaster.
+  const honeyOak = mat.oakVeneer.clone();
+  honeyOak.color.setRGB(1.55, 1.3, 1.0);
+  honeyOak.clippingPlanes = mat.oakVeneer.clippingPlanes;
   // Potted olive-style tree: a few branches, each carrying a spray of small leaves (one merged mesh).
   const plant = (x, y, h = 1.4, pot = 0.22, base = 0) => item(x, y, "S", p => {
     p.g.position.y = base;
@@ -141,8 +238,8 @@ export function furnish(scene, M, mat) {
       p.cyl(0, 0, 0.14, drop - 0.24, drop, mat.lampShade, 10, 0.14);
     }
   });
-  function sofa(p, w, depth, fabric, cushions = []) {
-    p.box(-w / 2 + 0.04, w / 2 - 0.04, 0.04, 0.2, 0.02, depth - 0.04, mat.walnut, 0.02);
+  function sofa(p, w, depth, fabric, cushions = [], plinth = mat.walnut) {
+    p.box(-w / 2 + 0.04, w / 2 - 0.04, 0.04, 0.2, 0.02, depth - 0.04, plinth, 0.02);
     p.box(-w / 2 + 0.16, w / 2 - 0.16, 0.2, 0.44, 0.2, depth, fabric, 0.06);
     p.box(-w / 2, w / 2, 0.2, 0.86, 0, 0.24, fabric, 0.08);
     for (const s of [-1, 1]) p.box(s * w / 2 - (s > 0 ? 0.18 : 0), s * w / 2 + (s < 0 ? 0.18 : 0), 0.2, 0.62, 0, depth, fabric, 0.07);
@@ -152,11 +249,15 @@ export function furnish(scene, M, mat) {
       m.rotation.x = -0.18;
     });
   }
-  function chair(p, fabric = mat.oatmeal, legs = mat.walnut) {
-    for (const [lx, lz] of [[-0.2, 0.08], [0.2, 0.08], [-0.2, 0.42], [0.2, 0.42]]) p.cyl(lx, lz, 0.018, 0, 0.45, legs, 8);
-    const seat = p.cyl(0, 0.27, 0.27, 0.42, 0.54, fabric, 28); seat.scale.z = 0.95;
-    const back = p.box(-0.27, 0.27, 0.5, 0.9, 0.0, 0.12, fabric, 0.06); back.rotation.x = -0.12;
-    for (const sx of [-1, 1]) { const arm = p.box(sx * 0.27 - 0.06, sx * 0.27 + 0.06, 0.5, 0.74, 0.02, 0.36, fabric, 0.05); arm.rotation.y = sx * 0.25; }
+  function chair(p, fabric = mat.oatmeal, legs = mat.walnut) {  // tub chair: curved shell back, splayed walnut legs
+    for (const [lx, lz] of [[-0.18, 0.1], [0.18, 0.1], [-0.18, 0.42], [0.18, 0.42]]) p.cyl(lx, lz, 0.017, 0, 0.45, legs, 8, 0.012).rotation.set((lz - 0.26) * 0.5, 0, -lx * 0.6);
+    const seat = p.cyl(0, 0.27, 0.24, 0.42, 0.52, fabric, 28); seat.scale.z = 0.92;
+    const a = 1.6, shell = new THREE.Shape();  // shape v = -z, so the arc wraps the back of the seat
+    shell.absarc(0, -0.27, 0.26, Math.PI / 2 - a, Math.PI / 2 + a, false);
+    shell.absarc(0, -0.27, 0.205, Math.PI / 2 + a, Math.PI / 2 - a, true);
+    const geo = new THREE.ExtrudeGeometry(shell, { depth: 0.3, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 3, curveSegments: 24 });
+    geo.rotateX(-Math.PI / 2);
+    mesh(geo, fabric, p.g).position.y = 0.52;
   }
   // Groove lines between door fronts on a run of joinery (front face at z).
   function fronts(p, x0, x1, y0, y1, z, width = 0.6) {
@@ -170,8 +271,8 @@ export function furnish(scene, M, mat) {
   }
 
   // --- Living room (TV room): L-sofa under the west window, TV wall opposite -------------------
-  item(2.94, 2.85, "E", p => sofa(p, 2.7, 0.95, mat.greige, [mat.linenBlush, mat.linenSage, mat.linenSlate, mat.cushionMustard]));
-  item(3.87, 0.56, "N", p => sofa(p, 1.86, 0.95, mat.greige, [mat.linenSage]));
+  item(2.94, 2.85, "E", p => sofa(p, 2.7, 0.95, mat.greige, [mat.linenBlush, mat.linenSage, mat.linenSlate, mat.cushionMustard], mat.greige));
+  item(3.87, 0.56, "N", p => sofa(p, 1.86, 0.95, mat.greige, [mat.linenSage], mat.greige));
   rug(3.7, 0.9, 5.6, 3.9, mat.boucle);
   item(2.94, 2.8, "E", p => p.box(-1.05, 1.05, 2.5, 2.52, 0.02, 0.2, mat.ledStrip));
   item(4.65, 2.52, "S", p => {  // DWG coffee table 0.71 x 1.23
@@ -193,8 +294,8 @@ export function furnish(scene, M, mat) {
   ac(4.6, 4.44, "S");
   for (const y of [2.05, 3.54]) item(2.94, y, "E", p => { const m = mesh(curtainGeometry(0.45, 2.45), mat.curtain, p.g); m.position.set(0, 1.27, 0.06); });
 
-  // --- Master bedroom ----------------------------------------------------------------------------
-  item(4.13, 7.62, "W", p => {  // king bed, headboard on the bathroom wall (DWG bed outline)
+  // --- Master bedroom and bathroom: the same pieces in both plan versions, placed per version -----
+  const bed = p => {  // king bed, built against its headboard wall
     for (const k of [-1, 0, 1]) p.box(k * 0.92 - 0.45, k * 0.92 + 0.45, 0.25, 1.25, 0, 0.1, mat.boucle, 0.04);
     p.box(-0.95, 0.95, 0.06, 0.32, 0.08, 2.15, mat.oakVeneer, 0.02);
     p.box(-0.92, 0.92, 0.32, 0.56, 0.12, 2.1, mat.sheet, 0.06);
@@ -205,17 +306,100 @@ export function furnish(scene, M, mat) {
       m.rotation.x = -0.25;
     }
     p.box(-0.96, 0.96, 0.6, 0.63, 1.3, 1.65, mat.boucle, 0.01);
-  });
-  for (const y of [8.8, 6.45]) {
-    item(4.13, y, "W", p => {
-      p.box(-0.24, 0.24, 0.22, 0.55, 0, 0.42, mat.walnut);
-      p.box(-0.22, 0.22, 0.37, 0.374, 0.42, 0.423, mat.grille);
-      for (const [lx, lz] of [[-0.2, 0.05], [0.2, 0.05], [-0.2, 0.37], [0.2, 0.37]]) p.cyl(lx, lz, 0.014, 0, 0.22, mat.walnut, 6);
+  };
+  const nightstand = p => {
+    p.box(-0.24, 0.24, 0.22, 0.55, 0, 0.42, mat.walnut);
+    p.box(-0.22, 0.22, 0.37, 0.374, 0.42, 0.423, mat.grille);
+    for (const [lx, lz] of [[-0.2, 0.05], [0.2, 0.05], [-0.2, 0.37], [0.2, 0.37]]) p.cyl(lx, lz, 0.014, 0, 0.22, mat.walnut, 6);
+  };
+  const vanity = p => {  // DWG vanity 0.51 x 1.40, round basin
+    p.box(-0.7, 0.7, 0, M.ceiling, 0, 0.02, mat.oakSlats);
+    p.model("models/mbath-vanity.glb", null, 0, 0.3, 0.02, { size: [1.38, 0.56, 0.5] });  // from the renders
+    p.box(-0.68, 0.68, 0.27, 0.29, 0.05, 0.44, mat.ledStrip);
+    p.box(-0.3, 0.42, 0.855, 0.862, 0.12, 0.42, mat.ceramic, 0.003);  // integrated trough
+    p.box(0.02, 0.1, 1.0, 1.06, 0.02, 0.06, mat.chrome);               // wall mixer
+    p.box(0.04, 0.07, 1.02, 1.04, 0.06, 0.2, mat.chrome);              // spout
+    p.model("models/plant-vase.glb", null, -0.5, 0.86, 0.12, { height: 0.38, cross: true });
+    p.box(-0.5, 0.62, 1.15, 2.0, 0.02, 0.05, mat.ledStrip, 0.12);
+    p.box(-0.47, 0.59, 1.18, 1.97, 0.03, 0.06, mat.mirror, 0.12);
+  };
+  const wc = (x0, x1, cabinet) => p => {  // wall-hung WC on a slatted wall and ledge running x0..x1, cabinet above
+    p.box(x0, x1, 0, M.ceiling, 0, 0.02, mat.oakSlats);
+    p.box(x0, x1, 0, 1.1, 0.02, 0.2, mat.oakSlats);
+    p.model("models/wc-wallhung.glb", mat.ceramic, 0, 0.1, 0.2);
+    p.model("models/wc-spray.glb", mat.chrome, -0.33, 0.3, 0.2);  // hand spray on the ledge, shower side
+    p.box(-0.12, 0.12, 1.0, 1.08, 0.2, 0.21, mat.brass);
+    if (cabinet) {
+      p.box(x0, x1, 1.65, 2.45, 0, 0.32, mat.oakVeneer);
+      p.box(x0 + 0.02, x1 - 0.02, 1.62, 1.64, 0.02, 0.3, mat.ledStrip);
+    }
+  };
+  const towelRail = p => {  // towel radiator with a hanging towel, clear of the vanity top
+    p.model("models/mbath-towel-rail.glb", mat.brushedNickel, 0, 0.95, 0.0);
+    p.model("models/mbath-towel.glb", mat.sheet, 0, 0.95, 0.0);
+  };
+  const showerWall = p => {  // lit niche shelves and a fold-down teak seat
+    for (const y of [1.05, 1.45]) {
+      p.box(-0.38, 0.38, y - 0.02, y, 0, 0.16, mat.stoneWall);
+      p.box(-0.38, 0.38, y + 0.3, y + 0.31, 0, 0.12, mat.ledStrip);
+      p.model("models/mbath-bottles.glb", null, 0, y, 0.02, { width: 0.7 });
+    }
+    p.model("models/mbath-seat-teak.glb", mat.oakVeneer, 0, 0.42, 0.0);
+    p.model("models/mbath-seat-brackets.glb", mat.brushedNickel, 0, 0.42, 0.0);
+  };
+  const rainHead = p => {
+    p.cyl(0, 0.38, 0.12, 2.18, 2.2, mat.chrome, 24);
+    p.box(-0.01, 0.01, 2.2, M.ceiling, 0.37, 0.39, mat.chrome);
+  };
+
+  if (version === "bigger-bedroom") {
+    // Bigger Master Bedroom (master-bed-v9.dwg): the bathroom wall moves 0.8 m east, the bed turns to
+    // the window wall, and the suite lobby becomes the bathroom's vanity end, entered from the bedroom.
+    item(3.185, 9.015, "S", bed);  // DWG bed outline, headboard on the north wall
+    for (const x of [2.02, 4.35]) {  // DWG bedside tables
+      item(x, 9.015, "S", nightstand);
+      pendant(x, 8.83, 1.15);
+    }
+    rug(1.905, 6.453, 4.465, 8.503);  // DWG rug
+    item(2.395, 9.02, "S", p => {  // sheer in the reveal of the window over the bed (as rendered)
+      const m = mesh(curtainGeometry(1.1, 1.15), mat.sheer, p.g); m.position.set(0, 1.5, -0.06);
     });
-    pendant(3.95, y, 1.15);
+    item(6.245, 6.363, "W", vanity);                  // DWG vanity on the east wall, by the door
+    item(6.245, 7.3, "W", wc(-0.69, 0.23, false));    // WC between the vanity and the shower
+    item(5.015, 7.35, "E", towelRail);                // on the bedroom wall, opposite the WC
+    item(6.245, 8.62, "W", showerWall);
+    item(5.25, 9.02, "S", rainHead);                  // the shower opening stays open to the ceiling, as rendered
+  } else {
+    item(4.13, 7.62, "W", bed);  // headboard on the bathroom wall (DWG bed outline)
+    for (const y of [8.8, 6.45]) {
+      item(4.13, y, "W", nightstand);
+      pendant(3.95, y, 1.15);
+    }
+    art(4.13, 7.62, "W", 1.6, 0.95, 1.85, 0);
+    rug(1.56, 6.22, 3.9, 9.0);
+    for (const x of [1.72, 3.2]) item(x, 9.02, "S", p => {
+      const m = mesh(curtainGeometry(0.55, 2.45), mat.curtain, p.g); m.position.set(0, 1.27, 0.12);
+    });
+    // Master suite lobby: tall lit shoe cabinet (DWG 0.41 x 0.80)
+    item(6.37, 6.06, "W", p => {
+      p.box(-0.4, 0.4, 0, 2.4, 0, 0.41, mat.walnut);
+      for (let k = 0; k < 7; k++) p.box(-0.37, 0.37, 0.3 + k * 0.3, 0.31 + k * 0.3, 0.05, 0.38, mat.ledStrip);
+      p.box(-0.37, 0.37, 0.1, 2.32, 0.39, 0.41, mat.smokedGlass);
+    });
+    // Master bathroom: vanity west, WC east, arched shower opening to the north
+    item(4.22, 7.3, "E", vanity);
+    item(6.24, 7.3, "W", wc(-0.55, 0.55, true));
+    item(4.52, 8.0, "S", towelRail);  // on the shower partition
+    item(6.24, 8.62, "W", showerWall);
+    item(5.25, 9.02, "S", rainHead);
+    item(5.25, 8.06, "N", p => {  // arch over the shower opening (dashed in the DWG)
+      const s = new THREE.Shape();
+      s.moveTo(-0.43, 1.85); s.absarc(0, 1.85, 0.43, Math.PI, 0, true); s.lineTo(0.43, M.ceiling); s.lineTo(-0.43, M.ceiling); s.lineTo(-0.43, 1.85);
+      const m = mesh(new THREE.ExtrudeGeometry(s, { depth: 0.1, bevelEnabled: false, curveSegments: 24 }), mat.stoneWall, p.g);
+      m.position.z = -0.05;
+    });
   }
-  art(4.13, 7.62, "W", 1.6, 0.95, 1.85, 0);
-  rug(1.56, 6.22, 3.9, 9.0);
+  // The wardrobe, dressing table and shoe display stay on the west and south walls in both versions.
   item(0.56, 6.75, "E", p => {  // DWG wardrobe: smoked-glass sliding doors in a gypsum frame
     p.box(-2.16, 2.16, 0, M.ceiling, 0, 0.6, mat.whiteLacquer);
     p.box(-2.08, 2.08, 0.08, 2.5, 0.6, 0.62, mat.bronzeGlass);
@@ -227,7 +411,7 @@ export function furnish(scene, M, mat) {
     for (const y of [0.24, 0.48]) p.box(-0.52, -0.19, y - 0.002, y + 0.002, 0.48, 0.483, mat.grille);
     p.box(0.2, 0.53, 0, 0.72, 0, 0.48, mat.walnut);
     for (let k = 0; k < 8; k++) p.cyl(0.22 + k * 0.042, 0.48, 0.012, 0.03, 0.7, mat.walnut, 6);
-    p.oval(0, 1.38, 0.52, 0.4, 0.012, mat.mirror, true);
+    p.pebble(0, 1.42, 1.04, 0.78, 0.012, mat.mirror, true);
     p.cyl(0, 0.75, 0.2, 0, 0.45, mat.boucle, 24);
   });
   item(3.36, 4.55, "N", p => {  // two lit shoe-display towers
@@ -247,60 +431,6 @@ export function furnish(scene, M, mat) {
     }
   });
   ac(1.6, 4.55, "N");
-  for (const x of [1.72, 3.2]) item(x, 9.02, "S", p => {
-    const m = mesh(curtainGeometry(0.55, 2.45), mat.curtain, p.g); m.position.set(0, 1.27, 0.12);
-  });
-  // Master suite lobby: tall lit shoe cabinet (DWG 0.41 x 0.80)
-  item(6.37, 6.06, "W", p => {
-    p.box(-0.4, 0.4, 0, 2.4, 0, 0.41, mat.walnut);
-    for (let k = 0; k < 7; k++) p.box(-0.37, 0.37, 0.3 + k * 0.3, 0.31 + k * 0.3, 0.05, 0.38, mat.ledStrip);
-    p.box(-0.37, 0.37, 0.1, 2.32, 0.39, 0.41, mat.smokedGlass);
-  });
-
-  // --- Master bathroom: vanity west, WC east, arched shower opening to the north ----------------
-  item(4.22, 7.3, "E", p => {  // DWG vanity 0.51 x 1.40, round basin
-    p.box(-0.7, 0.7, 0, M.ceiling, 0, 0.02, mat.oakSlats);
-    vanityDrawers(p, -0.68, 0.2, 0.3, 0.82, 0.48);
-    p.box(0.2, 0.68, 0.3, 0.33, 0, 0.48, mat.walnut); p.box(0.66, 0.68, 0.3, 0.82, 0, 0.48, mat.walnut);
-    p.box(0.2, 0.68, 0.55, 0.57, 0, 0.48, mat.walnut);
-    for (const [x, y] of [[0.32, 0.33], [0.52, 0.33], [0.42, 0.57]]) { const t = p.cyl(x, 0.25, 0.08, y, y + 0.16, mat.sheet, 16); t.rotation.x = Math.PI / 2; t.position.set(x, y + 0.08, 0.25); }
-    p.box(-0.7, 0.7, 0.82, 0.86, 0, 0.52, mat.marbleTop);
-    p.box(-0.68, 0.68, 0.27, 0.29, 0.05, 0.44, mat.ledStrip);
-    p.cyl(0.08, 0.28, 0.19, 0.86, 0.98, mat.ceramic, 32, 0.15);
-    p.cyl(0.08, 0.05, 0.012, 0.86, 1.15, mat.chrome, 8);
-    p.box(-0.5, 0.62, 1.15, 2.0, 0.02, 0.05, mat.ledStrip, 0.12);
-    p.box(-0.47, 0.59, 1.18, 1.97, 0.03, 0.06, mat.mirror, 0.12);
-  });
-  item(6.24, 7.3, "W", p => {  // wall-hung WC on a slatted wall, cabinet above
-    p.box(-0.55, 0.55, 0, M.ceiling, 0, 0.02, mat.oakSlats);
-    p.box(-0.55, 0.55, 0, 1.1, 0.02, 0.2, mat.oakSlats);
-    p.box(-0.19, 0.19, 0.3, 0.42, 0.2, 0.75, mat.ceramic, 0.12);
-    p.box(-0.19, 0.19, 0.42, 0.45, 0.22, 0.75, mat.ceramic, 0.012);
-    p.box(-0.12, 0.12, 1.0, 1.08, 0.2, 0.21, mat.brass);
-    p.box(-0.55, 0.55, 1.65, 2.45, 0, 0.32, mat.oakVeneer);
-    p.box(-0.53, 0.53, 1.62, 1.64, 0.02, 0.3, mat.ledStrip);
-  });
-  item(4.52, 8.0, "S", p => {  // towel radiator on the shower partition
-    for (const s of [-1, 1]) p.box(s * 0.2 - 0.01, s * 0.2 + 0.01, 0.95, 1.75, 0.03, 0.06, mat.brass);
-    for (let k = 0; k < 8; k++) p.box(-0.2, 0.2, 1.0 + k * 0.1, 1.012 + k * 0.1, 0.035, 0.05, mat.brass);
-  });
-  item(6.24, 8.62, "W", p => {  // shower: lit niche shelves and a fold-down teak seat
-    for (const y of [1.05, 1.45]) {
-      p.box(-0.38, 0.38, y - 0.02, y, 0, 0.16, mat.stoneWall);
-      p.box(-0.38, 0.38, y + 0.3, y + 0.31, 0, 0.12, mat.ledStrip);
-    }
-    p.box(-0.3, 0.3, 0.45, 0.48, 0.02, 0.38, mat.oakSlats);
-  });
-  item(5.25, 9.02, "S", p => {  // rain head
-    p.cyl(0, 0.38, 0.12, 2.18, 2.2, mat.chrome, 24);
-    p.box(-0.01, 0.01, 2.2, M.ceiling, 0.37, 0.39, mat.chrome);
-  });
-  item(5.25, 8.06, "N", p => {  // arch over the shower opening (dashed in the DWG)
-    const s = new THREE.Shape();
-    s.moveTo(-0.43, 1.85); s.absarc(0, 1.85, 0.43, Math.PI, 0, true); s.lineTo(0.43, M.ceiling); s.lineTo(-0.43, M.ceiling); s.lineTo(-0.43, 1.85);
-    const m = mesh(new THREE.ExtrudeGeometry(s, { depth: 0.1, bevelEnabled: false, curveSegments: 24 }), mat.stoneWall, p.g);
-    m.position.z = -0.05;
-  });
 
   // --- Guest bathroom: bath-shower west, vanity east, WC under the window ----------------------
   item(12.5, 8.05, "E", p => {
@@ -315,21 +445,22 @@ export function furnish(scene, M, mat) {
   item(14.66, 7.75, "W", p => {  // floating stone vanity, vessel basin (DWG circle), rounded mirror
     p.box(-0.8, 0.8, 0, M.ceiling, 0, 0.02, mat.oakSlats);
     vanityDrawers(p, -0.75, 0.75, 0.32, 0.5, 0.45);
-    p.box(-0.8, 0.8, 0.68, 0.8, 0, 0.5, mat.stoneTable, 0.01);
+    p.box(-0.8, 0.8, 0.68, 0.8, 0, 0.5, greyStone, 0.01);
     p.box(-0.75, 0.75, 0.3, 0.32, 0.05, 0.42, mat.ledStrip);
-    p.cyl(0, 0.27, 0.2, 0.8, 0.94, mat.ceramic, 32, 0.15);
-    p.box(-0.42, 0.42, 1.15, 1.95, 0.02, 0.05, mat.bronze, 0.1);
-    p.box(-0.4, 0.4, 1.17, 1.93, 0.04, 0.06, mat.mirror, 0.09);
+    p.cyl(0, 0.27, 0.17, 0.8, 0.92, mat.ceramic, 40, 0.13).scale.x = 1.5;
+    p.box(-0.06, 0.06, 1.0, 1.08, 0.02, 0.03, mat.bronze); p.box(-0.015, 0.015, 1.02, 1.045, 0.03, 0.17, mat.bronze);
+    p.box(-0.48, 0.48, 1.15, 2.0, 0.02, 0.05, mat.walnut, 0.13);
+    p.box(-0.455, 0.455, 1.175, 1.975, 0.04, 0.06, mat.mirror, 0.11);
   });
   item(13.95, 9.18, "S", p => {
-    p.box(-0.19, 0.19, 0.3, 0.42, 0.02, 0.57, mat.ceramic, 0.12);
+    p.model("models/wc-wallhung.glb", mat.ceramic, 0, 0.1, 0.02);
     p.box(-0.12, 0.12, 1.0, 1.08, 0, 0.02, mat.brass);
   });
   for (const x of [13.0, 13.25]) item(x, 9.18, "S", p => {  // two tall lit niches between bath and window
     for (const s of [-1, 1]) p.box(s * 0.11 - 0.02, s * 0.11 + 0.02, 0.9, 2.1, 0, 0.2, mat.stoneWall);
     p.box(-0.13, 0.13, 0.86, 0.9, 0, 0.2, mat.stoneWall); p.box(-0.13, 0.13, 2.1, 2.14, 0, 0.2, mat.stoneWall);
-    p.box(-0.09, 0.09, 0.9, 2.1, 0, 0.01, mat.oakVeneer);
-    for (let k = 0; k < 4; k++) p.box(-0.09, 0.09, 1.15 + k * 0.28, 1.17 + k * 0.28, 0, 0.19, mat.oakVeneer);
+    p.box(-0.09, 0.09, 0.9, 2.1, 0, 0.01, mat.walnut);
+    for (let k = 0; k < 6; k++) p.box(-0.09, 0.09, 1.07 + k * 0.17, 1.085 + k * 0.17, 0, 0.19, mat.walnut);
     p.box(-0.09, 0.09, 2.08, 2.09, 0.02, 0.17, mat.ledStrip);
   });
 
@@ -340,14 +471,14 @@ export function furnish(scene, M, mat) {
       p.box(-len / 2, len / 2, 0, 0.1, 0.06, K.front - 0.06, mat.darkTop);
       p.box(-len / 2, len / 2, 0.02, 0.04, K.front - 0.08, K.front - 0.06, mat.ledStrip);
       p.box(-len / 2, len / 2, 0.1, 0.88, 0, K.front, mat.greyLacquer);
-      for (const y of [0.4, 0.62]) p.box(-len / 2, len / 2, y - 0.002, y + 0.002, K.front, K.front + 0.003, mat.grille);
+      for (const y of [0.4, 0.62]) p.box(-len / 2, len / 2, y - 0.002, y + 0.002, K.front, K.front + 0.003, shadowGap);
       const n = Math.max(1, Math.round(len / 0.6));
-      for (let k = 1; k < n; k++) p.box(-len / 2 + k * len / n - 0.002, -len / 2 + k * len / n + 0.002, 0.12, 0.86, K.front, K.front + 0.003, mat.grille);
+      for (let k = 1; k < n; k++) p.box(-len / 2 + k * len / n - 0.002, -len / 2 + k * len / n + 0.002, 0.12, 0.86, K.front, K.front + 0.003, shadowGap);
       p.box(-len / 2, len / 2, 0.88, 0.92, 0, K.front + 0.01, mat.marbleTop);
       p.box(-len / 2, len / 2, 0.88, 0.92, K.front + 0.01, K.front + 0.02, mat.darkTop);
       if (window) for (let k = 0; k < 24; k++) p.box(window[0] + 0.05, window[1] - 0.05, 1.0 + k * 0.045, 1.012 + k * 0.045, -0.06, -0.03, mat.planter);
       const spans = window ? [[-len / 2, window[0]], [window[1], len / 2]] : [[-len / 2, len / 2]];
-      for (const [a, b] of spans) if (b - a > 0.05) p.box(a, b, 0.92, 1.58, 0, 0.015, mat.marbleTop);
+      for (const [a, b] of spans) if (b - a > 0.05) p.box(a, b, 0.92, 1.58, 0, 0.015, greyStone);
       if (sink >= 0) {
         p.box(sink - 0.35, sink + 0.35, 0.921, 0.925, 0.12, 0.5, mat.blackSteel);
         p.cyl(sink, 0.08, 0.015, 0.92, 1.25, mat.chrome, 8);
@@ -421,8 +552,10 @@ export function furnish(scene, M, mat) {
     p.box(-0.02, 0.38, 0.85, 1.85, 0.05, 0.07, mat.ledStrip, 0.18);
     p.box(0.0, 0.36, 0.87, 1.83, 0.06, 0.08, mat.mirror, 0.17);
     p.box(-0.5, 0.5, 0.42, 0.5, 0, 0.45, mat.boucle, 0.04);
-    p.box(-0.5, 0.5, 0.05, 0.42, 0, 0.42, mat.oakVeneer);
-    p.box(-0.5, 0.5, 0.04, 0.06, 0.05, 0.38, mat.ledStrip);
+    p.box(-0.5, 0.5, 0.2, 0.42, 0, 0.42, mat.whiteLacquer);
+    for (const x of [-0.17, 0.17]) p.box(x - 0.002, x + 0.002, 0.21, 0.41, 0.42, 0.423, shadowGap);
+    p.box(-0.5, 0.5, 0.05, 0.07, 0, 0.42, mat.oakVeneer);
+    p.box(-0.5, 0.5, 0.19, 0.2, 0.05, 0.38, mat.ledStrip);
     p.box(-0.5, 0.5, 2.1, 2.4, 0, 0.45, mat.oakVeneer);
     for (const s of [-1, 1]) p.box(s * 0.55 - 0.05, s * 0.55 + 0.05, 0, 2.1, 0, 0.45, mat.oakVeneer);
     for (let k = 0; k < 4; k++) p.box(-0.35 + k * 0.12, -0.33 + k * 0.12, 1.6, 1.62, 0.05, 0.1, mat.brass);
@@ -434,51 +567,73 @@ export function furnish(scene, M, mat) {
     p.box(0.55, 0.85, 1.0, 1.03, 0, 0.18, mat.oakVeneer);
   });
   sconce(8.25, 5.55, "S"); sconce(6.15, 5.55, "S"); sconce(9.0, 3.66, "N", 1.75);
-  item(8.48, 3.72, "N", p => {  // front door: arched walnut leaf, surround and long brass pull
-    p.arch(-0.56, 0.56, 0, 2.25, -0.02, 0.05, mat.walnut);
-    p.arch(-0.46, 0.46, 0, 2.12, 0.03, 0.02, mat.oakVeneer);
+  item(8.48, 3.72, "N", p => {  // front door per render 29: walnut leaf with rounded top corners, deep surround, long brass pull
+    p.roundTop(-0.56, 0.56, 0, 2.25, 0.3, -0.02, 0.06, mat.walnut);
+    p.roundTop(-0.46, 0.46, 0, 2.14, 0.22, 0.04, 0.02, mat.oakVeneer);
     p.box(0.3, 0.33, 0.7, 1.5, 0.06, 0.09, mat.brass);
   });
   plant(6.8, 3.88, 1.6, 0.24);
   [[3.85, 0.36, 0.48, 1.75], [4.3, 0.36, 0.36, 1.45], [3.95, 0.3, 0.3, 1.2]].forEach(([y, w, h, z], k) => art(6.51, y, "E", w, h, z, k));
-  rug(6.9, 3.95, 9.8, 5.15, mat.linenBlush);
+  rug(6.9, 3.95, 9.8, 5.15, mat.art[1]);
 
-  // --- Reception: TV wall with lit arched niches, two sofas, armchair ---------------------------
-  item(17.25, 3.67, "E", p => {  // 30 cm deep feature wall: arched niches either side, a lit slot under the TV
-    const D = 0.3, wall = new THREE.Shape([new THREE.Vector2(-1.7, 0), new THREE.Vector2(1.7, 0), new THREE.Vector2(1.7, M.ceiling), new THREE.Vector2(-1.7, M.ceiling)]);
-    const hole = (x0, x1, y0, y1, r) => {
-      const h = new THREE.Path();
-      h.moveTo(x0, y0); h.lineTo(x1, y0); h.lineTo(x1, y1 - r);
-      if (r) h.absarc((x0 + x1) / 2, y1 - r, r, 0, Math.PI, false); else h.lineTo(x1, y1), h.lineTo(x0, y1);
-      h.lineTo(x0, y0);
-      return h;
+  // --- Reception: TV wall with lit oak niches, two sofas, armchair -----------------------------
+  item(17.25, 3.67, "E", p => {  // per render 10: a plaster TV box standing proud of a built-out run
+    // holding two tall rounded oak-lined niches (south), and a lit rounded oak recess under the TV.
+    const H = M.ceiling, edge = -0.46, D0 = 0.28, D1 = 0.36;  // run depth, TV box depth
+    const slab = (x0, x1, d, holes) => {
+      const s = new THREE.Shape([new THREE.Vector2(x0, 0), new THREE.Vector2(x1, 0), new THREE.Vector2(x1, H), new THREE.Vector2(x0, H)]);
+      for (const h of holes) s.holes.push(roundRect(new THREE.Path(), ...h));
+      mesh(new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: false, curveSegments: 12 }), mat.limewash, p.g);
     };
-    for (const s of [-1, 1]) wall.holes.push(hole(s * 1.3 - 0.27, s * 1.3 + 0.27, 0.6, 2.2, 0.27));
-    wall.holes.push(hole(-0.95, 0.95, 0.42, 0.66, 0));
-    mesh(new THREE.ExtrudeGeometry(wall, { depth: D, bevelEnabled: false, curveSegments: 20 }), mat.limewash, p.g);
-    for (const s of [-1, 1]) {
-      p.arch(s * 1.3 - 0.27, s * 1.3 + 0.27, 0.6, 2.2, 0.005, 0.02, mat.oakVeneer);
-      for (let k = 0; k < 4; k++) {
-        p.box(s * 1.3 - 0.27, s * 1.3 + 0.27, 0.6 + k * 0.36, 0.625 + k * 0.36, 0, D, mat.oakVeneer);
-        p.box(s * 1.3 - 0.25, s * 1.3 + 0.25, 0.94 + k * 0.36, 0.95 + k * 0.36, 0.05, D - 0.04, mat.ledStrip);
+    const lined = (x0, x1, y0, y1, r, d) => {  // oak lining and back for a rounded opening d deep
+      const ring = roundRect(new THREE.Shape(), x0, x1, y0, y1, r);
+      ring.holes.push(roundRect(new THREE.Path(), x0 + 0.018, x1 - 0.018, y0 + 0.018, y1 - 0.018, r - 0.018));
+      mesh(new THREE.ExtrudeGeometry(ring, { depth: d, bevelEnabled: false, curveSegments: 12 }), honeyOak, p.g);
+      mesh(new THREE.ExtrudeGeometry(roundRect(new THREE.Shape(), x0, x1, y0, y1, r), { depth: 0.01, bevelEnabled: false, curveSegments: 12 }), honeyOak, p.g);
+    };
+    const tall = [[-1.59, -1.25], [-1.11, -0.77]], low = [-0.4, 1.38, 0.33, 0.69, 0.1];
+    slab(-1.72, edge, D0, tall.map(([x0, x1]) => [x0, x1, 0.42, 2.2, 0.13]));
+    slab(edge, 1.72, D1, [low]);
+    lined(...low, D1);
+    p.box(low[0] + 0.1, low[1] - 0.1, 0.665, 0.675, 0.05, D1 - 0.03, mat.ledStrip);
+    for (const [x0, x1] of tall) {
+      lined(x0, x1, 0.42, 2.2, 0.13, D0);
+      for (const y of [0.86, 1.3, 1.74]) {
+        p.box(x0 + 0.015, x1 - 0.015, y, y + 0.025, 0.01, D0, honeyOak);
+        p.box(x0 + 0.03, x1 - 0.03, y - 0.012, y, 0.04, D0 - 0.03, mat.ledStrip);
       }
-      p.cyl(s * 1.3 + 0.08, 0.15, 0.05, 0.98, 1.2, mat.linenSlate, 16);
-      p.box(s * 1.3 - 0.2, s * 1.3 - 0.05, 1.33, 1.55, 0.06, 0.22, mat.linenBlush);
+      p.box(x0 + 0.06, x1 - 0.06, 2.1, 2.112, 0.04, D0 - 0.03, mat.ledStrip);
     }
-    p.box(-0.95, 0.95, 0.42, 0.44, 0, D, mat.oakVeneer);
-    p.box(-0.93, 0.93, 0.645, 0.655, 0.05, D - 0.04, mat.ledStrip);
-    p.box(-0.85, 0.85, 1.0, 1.95, D, D + 0.04, mat.screen);
+    // Shelf styling as rendered: vases, books, a bowl.
+    p.cyl(-1.42, 0.15, 0.045, 1.765, 1.97, mat.linenSage, 16, 0.065); p.cyl(-0.94, 0.15, 0.035, 1.765, 1.99, mat.linenSlate, 16, 0.06);
+    for (const [x, y] of [[-1.47, 1.325], [-0.99, 0.885], [-1.0, 1.325]]) for (let k = 0; k < 4; k++) p.box(x + k * 0.03, x + k * 0.03 + 0.025, y, y + 0.2 - (k % 2) * 0.03, 0.06, 0.24, k % 2 ? mat.linenBlush : mat.walnut);
+    p.cyl(-1.42, 0.15, 0.05, 0.445, 0.6, mat.planter, 16);
+    p.box(0.95, 1.15, 0.345, 0.4, 0.08, 0.26, mat.whiteLacquer);
+    p.cyl(0.2, 0.15, 0.05, 0.345, 0.52, mat.clearGlass, 16);
+    // Slim TV centred over the recess, and skirting along both faces.
+    p.box(-0.26, 1.24, 0.92, 1.77, D1, D1 + 0.03, mat.blackSteel);
+    p.face(-0.25, 1.23, 0.93, 1.76, D1 + 0.031, mat.screen);
+    p.box(-1.72, edge, 0, 0.08, D0, D0 + 0.012, mat.oakVeneer);
+    p.box(edge, 1.72, 0, 0.08, D1, D1 + 0.012, mat.oakVeneer);
+    p.box(edge - 0.012, edge, 0, 0.08, D0, D1, mat.oakVeneer);
   });
   item(18.9, 1.95, "N", p => sofa(p, 2.2, 0.95, mat.boucle, [mat.linenSlate, mat.linenBlush, mat.linenSlate]));
   item(21.15, 3.85, "W", p => sofa(p, 2.0, 0.92, mat.boucle, [mat.linenSlate, mat.linenBlush]));
-  item(19.1, 5.55, "S", p => {  // DWG armchair: walnut frame, slate cushions
-    for (const s of [-1, 1]) p.box(s * 0.36 - 0.03, s * 0.36 + 0.03, 0.05, 0.62, 0.05, 0.75, mat.walnut, 0.015);
-    p.box(-0.33, 0.33, 0.3, 0.44, 0.08, 0.72, mat.linenSlate, 0.05);
-    const b = p.box(-0.33, 0.33, 0.44, 0.88, 0.05, 0.18, mat.linenSlate, 0.05); b.rotation.x = -0.2;
+  item(19.1, 5.55, "S", p => {  // DWG armchair, as rendered: open walnut lounge frame, slate cushions, blush pillow
+    for (const s of [-1, 1]) {
+      const x = s * 0.36;
+      p.box(x - 0.025, x + 0.025, 0.56, 0.6, 0.04, 0.8, mat.walnut, 0.012);  // arm
+      p.box(x - 0.025, x + 0.025, 0, 0.58, 0.68, 0.73, mat.walnut, 0.012).rotation.x = -0.1;  // front leg
+      p.box(x - 0.025, x + 0.025, 0, 0.66, 0.06, 0.11, mat.walnut, 0.012).rotation.x = 0.15;  // back leg
+      p.box(x - 0.02, x + 0.02, 0.2, 0.25, 0.1, 0.74, mat.walnut, 0.01);  // seat rail
+    }
+    p.box(-0.33, 0.33, 0.25, 0.39, 0.14, 0.74, mat.linenSlate, 0.05).rotation.x = -0.08;
+    p.box(-0.33, 0.33, 0.36, 0.88, 0.07, 0.21, mat.linenSlate, 0.05).rotation.x = -0.32;
+    p.box(-0.06, 0.24, 0.46, 0.74, 0.2, 0.33, mat.linenBlush, 0.07).rotation.set(-0.3, 0, 0.2);
   });
   rug(17.9, 2.4, 20.5, 5.0);
   item(19.0, 3.7, "S", p => {  // oval marble coffee table on two walnut drums
-    const top = p.cyl(0, 0, 0.55, 0.36, 0.42, mat.stoneTable, 40); top.scale.z = 0.55;
+    const top = p.cyl(0, 0, 0.55, 0.36, 0.42, mat.marbleTop, 40); top.scale.z = 0.55;
     for (const x of [-0.25, 0.25]) p.cyl(x, 0, 0.15, 0, 0.36, mat.walnut, 24);
   });
   item(20.45, 2.15, "S", p => { p.cyl(0, 0, 0.25, 0.52, 0.56, mat.marbleTop, 32); p.cyl(0, 0, 0.13, 0, 0.52, mat.walnut, 24); });
@@ -608,12 +763,10 @@ export function furnish(scene, M, mat) {
   const mats = [...new Set([...collect(root), ...collect(ceilingBits)])];
   for (const m of mats) m.userData.baseOpacity ??= m.opacity;
   function setReveal(t) {
+    revealT = t;
     root.visible = t > 0.01;
-    for (const m of mats) {
-      const want = t < 0.999 || m.userData.baseOpacity < 1;
-      if (m.transparent !== want) { m.transparent = want; m.needsUpdate = true; }
-      m.opacity = m.userData.baseOpacity * t;
-    }
+    for (const m of mats) fade(m, t);
+    for (const m of late) fade(m, t);
   }
   return { root, ceilingBits, setReveal };
 }
@@ -641,6 +794,15 @@ function nearEdge([x, y], ring, d) {
     if (Math.hypot(x - ax - t * (bx - ax), y - ay - t * (by - ay)) < d) return true;
   }
   return false;
+}
+
+// A rectangle with every corner rounded to r, traced into a THREE.Shape or THREE.Path.
+function roundRect(s, x0, x1, y0, y1, r) {
+  s.moveTo(x0 + r, y0); s.lineTo(x1 - r, y0); s.absarc(x1 - r, y0 + r, r, -Math.PI / 2, 0, false);
+  s.lineTo(x1, y1 - r); s.absarc(x1 - r, y1 - r, r, 0, Math.PI / 2, false);
+  s.lineTo(x0 + r, y1); s.absarc(x0 + r, y1 - r, r, Math.PI / 2, Math.PI, false);
+  s.lineTo(x0, y0 + r); s.absarc(x0 + r, y0 + r, r, Math.PI, Math.PI * 1.5, false);
+  return s;
 }
 
 // A gathered curtain: a vertical sheet with soft folds, `w` wide and `h` tall, centred at 0.

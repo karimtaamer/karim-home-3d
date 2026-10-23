@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Turn a DXF floor plan into model.js (walls, openings, furniture, labels) for the Three.js viewer.
 
-Usage: ~/.dwg-tools/bin/python build_geometry.py <plan.dxf> [--debug debug.png]
+Usage: ~/.dwg-tools/bin/python build_geometry.py <plan.dxf> [--out model.js] [--tour tour.json] [--wall x0,y0,x1,y1 ...] [--debug debug.png]
+(--out / --tour name another plan version's model and tour, e.g. model-bigger-bedroom.js and
+tour-bigger-bedroom.json; see VERSIONS in index.html. --wall adds a wall face line the drawing
+left out, in DWG coordinates; repeat it for several.)
 """
 import heapq
 import json
@@ -13,6 +16,7 @@ from ezdxf import path as ezpath
 from ezdxf import recover
 from shapely.geometry import LineString, MultiPoint, MultiPolygon, Point, Polygon, box
 from shapely.ops import unary_union, voronoi_diagram
+from shapely.strtree import STRtree
 from shapely.validation import make_valid
 
 WALL_LAYER, WINDOW_LAYER, DOOR_LAYER, FURNI_LAYERS = "1wall", "Windows", "3door", ("2furni", "2 furni")
@@ -21,7 +25,6 @@ CLEARANCE, GRID = 0.18, 0.1  # tour camera keeps this far from walls; path-findi
 WET = ("kitchen", "toilet", "bath", "wc", "laundry", "shower", "مطبخ", "حمام", "غسيل")
 OUTDOOR = ("terrace", "balcony", "garden", "roof", "تراس", "بلكونة", "شرفة", "حديقة")
 LINE_LAYERS = {WALL_LAYER: "wall", WINDOW_LAYER: "window", DOOR_LAYER: "door", "2furni": "furniture", "2 furni": "furniture"}
-TOUR = Path(__file__).with_name("tour.json")
 MIN_T, MAX_T = 0.04, 0.5  # wall thickness range (m)
 BRIDGE = 0.75  # closes gaps up to 1.5 m (doors / windows)
 SKIN = 0.01  # room lining thickness (m): wall tiles / skirting sit on this, the walls stay as drawn
@@ -45,6 +48,20 @@ def entity_segments(e):
             p.append(p[0])
         return list(zip(p, p[1:]))
     return []
+
+
+def load_tour(path):
+    """tour.json, or a version's tour that "extends" it: its seeds / stops replace the base's of the same name / room."""
+    if not path.exists():
+        return {}
+    t = json.loads(path.read_text())
+    if "extends" not in t:
+        return t
+    base = load_tour(path.with_name(t.pop("extends")))
+    for k, key in (("seeds", "name"), ("stops", "room")):
+        mine = {x[key]: x for x in t.pop(k, [])}
+        base[k] = [mine.pop(x[key], x) for x in base.get(k, [])] + list(mine.values())
+    return {**base, **t}
 
 
 def plan_bounds(msp):
@@ -195,7 +212,8 @@ def rect_dims(p):
 
 def main():
     src = Path(sys.argv[1])
-    debug = sys.argv[sys.argv.index("--debug") + 1] if "--debug" in sys.argv else None
+    arg = lambda k: sys.argv[sys.argv.index(k) + 1] if k in sys.argv else None
+    debug = arg("--debug")
     doc, _ = recover.readfile(src)
     msp = doc.modelspace()
     B = plan_bounds(msp)
@@ -218,6 +236,10 @@ def main():
                 wall_segs += [s for s in entity_segments(e) if inb(s)]
         elif lay == WINDOW_LAYER:
             window_segs += [s for s in entity_segments(e) if inb(s)]
+    for i, k in enumerate(sys.argv):
+        if k == "--wall":
+            x0, y0, x1, y1 = map(float, sys.argv[i + 1].split(","))
+            wall_segs.append(((x0, y0), (x1, y1)))
 
     # Closed outlines that are thin or column-sized are solid; large closed ones are rooms/shafts.
     solids = [p for p in closed_wall if p.area < 1.5]
@@ -287,8 +309,14 @@ def main():
                     swings.setdefault((round(c.x, 2), round(c.y, 2)), ([], door_block_at is not None))[0].append(e)
     collect(msp)
     # The open leaf is drawn (a hatched panel); the closed position is empty - that's the opening.
-    ink = unary_union([LineString(p) for c, p in plan_lines(msp, B) if c in ("wall", "door")])
-    leaf_ink = lambda c, e: LineString([c, e]).buffer(0.04).intersection(ink).length
+    # Only lines running a good part of the leaf count: the other states of a dynamic door block
+    # next door leave a litter of short jamb pieces over this one's closed position.
+    ink = [LineString(p) for c, p in plan_lines(msp, B) if c in ("wall", "door")]
+    ink_tree = STRtree(ink)
+    def leaf_ink(c, e):
+        band = LineString([c, e]).buffer(0.04)
+        runs = (ink[i].intersection(band).length for i in ink_tree.query(band))
+        return sum(l for l in runs if l > 0.25 * math.dist(c, e))
     wall_band = walls.buffer(0.03, join_style=2)  # a closed leaf is drawn on the wall's face
     for c, (arcs, from_block) in swings.items():
         if not B.contains(Point(c)):
@@ -310,11 +338,11 @@ def main():
             end = min(across or buried or ends, key=lambda e: leaf_ink(c, e))
             fit = Point(end).distance(walls)
             if best is None or fit < best[0] - 0.01:
-                best = (fit, r, end, not across and bool(buried))
+                best = (fit, r, end, not across and bool(buried), next((e for e in ends if e != end), end))
         if best is None:
             continue
-        fit, r, end, in_wall = best
-        swing_of = (c, r, end)
+        fit, r, end, in_wall, drawn_open = best
+        swing_of = (c, r, end, drawn_open)
         if in_wall:  # cut the opening the drawing left solid, then treat it like any other door
             ang = round(math.atan2(end[1] - c[1], end[0] - c[0]) / (math.pi / 4)) * (math.pi / 4)
             mid = Point(c[0] + math.cos(ang) * r / 2, c[1] + math.sin(ang) * r / 2)
@@ -439,7 +467,7 @@ def main():
     regions = [(q, closed_in) for gs, closed_in in ((enclosed, True), ([g for g in as_polys(leftover) if g.area > 0.3], False))
                for g in gs for q in as_polys(g.difference(cut)) if q.area > 0.3]
     # A region holding several room names (open-plan) is split between them by nearest name.
-    tour = json.loads(TOUR.read_text()) if TOUR.exists() else {}
+    tour = load_tour(Path(__file__).parent / (arg("--tour") or "tour.json"))
     moved = {sd["name"] for sd in tour.get("seeds", []) if sd.get("replace")}
     seeds = [(l["text"], (l["x"] + 0.3, l["y"] + 0.1)) for l in labels if l["text"] not in moved] + \
             [(sd["name"], tuple(sd["at"])) for sd in tour.get("seeds", [])]
@@ -508,7 +536,7 @@ def main():
     # Linework for the ink plan: only what lies on the flat (not the void or stray blocks), and
     # without the drawing's own door swings (dynamic door blocks draw every size at once).
     on_flat = unary_union([floor, walls, unary_union([g for _, g in openings])]).buffer(0.05)
-    hinges = [Point(c) for c, _, _ in door_swings]
+    hinges = [Point(c) for c, *_ in door_swings]
     def is_swing(pts):
         return len(pts) > 4 and any(math.dist(pts[0], (h.x, h.y)) > 0.4 and
                                     abs(math.dist(pts[0], (h.x, h.y)) - math.dist(pts[-1], (h.x, h.y))) < 0.03 and
@@ -526,6 +554,8 @@ def main():
              for p in as_polys(g.difference(g.buffer(-SKIN, join_style=2)).intersection(wall_face).difference(gaps_all))
              if p.area > 0.0005]
 
+    # Doors the viewer stands open the way the drawing swings them (others: the first side that lands in a room).
+    as_drawn = lambda c: any(math.dist(c, h) < 0.1 for h in tour.get("doorsAsDrawn", []))
     ox, oy = B.bounds[0], B.bounds[1]
     ring = lambda p: [[round(x - ox, 4), round(y - oy, 4)] for x, y in p.exterior.coords[:-1]]
     holes = lambda p: [[[round(x - ox, 4), round(y - oy, 4)] for x, y in h.coords[:-1]] for h in p.interiors]
@@ -538,7 +568,9 @@ def main():
         "skins": [{"outer": ring(p), "holes": holes(p), "kind": k, "room": n} for n, k, p in skins],
         "lines": [{"kind": c, "pts": [[round(x - ox, 3), round(y - oy, 3)] for x, y in pts]} for c, pts in drawn],
         "swings": [{"hinge": [round(c[0] - ox, 3), round(c[1] - oy, 3)], "r": round(r, 3),
-                    "closed": [round(e[0] - ox, 3), round(e[1] - oy, 3)]} for c, r, e in door_swings],
+                    "closed": [round(e[0] - ox, 3), round(e[1] - oy, 3)],
+                    **({"open": [round(o[0] - ox, 3), round(o[1] - oy, 3)]} if as_drawn(c) else {})}
+                   for c, r, e, o in door_swings],
         "origin": [ox, oy],
         "tour": {
             "title": tour.get("title", ""), "subtitle": tour.get("subtitle", ""),
@@ -554,7 +586,7 @@ def main():
         "furniture": [ring(p) for p in furniture],
         "labels": [{"text": l["text"], "x": round(l["x"] - ox, 3), "y": round(l["y"] - oy, 3)} for l in labels],
     }
-    out = Path(__file__).with_name("model.js")
+    out = Path(__file__).parent / (arg("--out") or "model.js")
     out.write_text("window.MODEL = " + json.dumps(model) + ";\n")
     for k, g in openings:
         if k == "door":

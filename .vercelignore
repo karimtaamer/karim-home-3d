@@ -4,3 +4,9 @@ build_geometry.py
 .sc/
 dist/
 .github/
+build_drawing.py
+renders/
+.env*
+.vercel
+publish_renders.sh
+__pycache__/

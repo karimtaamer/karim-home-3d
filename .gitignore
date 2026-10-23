@@ -4,3 +4,8 @@ __pycache__/
 dist/
 .claude/settings.local.json
 notes/compare/
+renders/
+.gstack/
+.env
+.vercel
+.env*

@@ -11,13 +11,89 @@
   html, body { margin: 0; height: 100%; overflow: hidden; background: #f3eee5; color: #2b2622; font-family: Inter, system-ui, sans-serif; }
   #scene { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
   .ui { position: fixed; z-index: 2; }
-  #bar { top: 14px; left: 14px; display: flex; flex-direction: column; gap: 8px; max-width: 72vw; }
-  #bar .row { display: flex; flex-wrap: wrap; gap: 6px; }
-  #bar button { border: 0; border-radius: 999px; padding: 8px 14px; background: #fffaf3e6; color: #2b2622; box-shadow: 0 1px 4px #0001, 0 0 0 1px #2b262214 inset;
+  #bar { top: 14px; left: 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; max-width: 72vw; }
+  #bar .row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  #bar button, #switcher button, #drawing .dbar button { border: 0; border-radius: 999px; padding: 8px 14px; background: #fffaf3e6; color: #2b2622; box-shadow: 0 1px 4px #0001, 0 0 0 1px #2b262214 inset;
     cursor: pointer; font: 500 12px Inter, sans-serif; letter-spacing: .04em; backdrop-filter: blur(6px); transition: background .2s, color .2s, transform .15s; }
-  #bar button:hover { transform: translateY(-1px); }
-  #bar button.on { background: #2b2622; color: #f3eee5; }
-  #bar #rooms button { font-weight: 400; padding: 6px 12px; font-size: 11.5px; }
+  #bar button:hover, #drawing .dbar button:not(:disabled):hover { transform: translateY(-1px); }
+  #drawing .dbar button:disabled { opacity: .4; cursor: default; }
+  #bar button.on, #drawing .dbar button.on { background: #2b2622; color: #f3eee5; }
+  /* Segmented switches (view, 3D / drawing): one pill, the chosen part dark. */
+  .seg { display: flex; padding: 3px; gap: 2px; border-radius: 999px; background: #fffaf3e6; box-shadow: 0 1px 4px #0001, 0 0 0 1px #2b262214 inset; backdrop-filter: blur(6px); }
+  :is(#bar, #switcher) .seg button { background: none; box-shadow: none; backdrop-filter: none; padding: 6px 13px; }
+  :is(#bar, #switcher) .seg button:hover { transform: none; background: #2b26220f; }
+  :is(#bar, #switcher) .seg button.on { background: #2b2622; color: #f3eee5; }
+  #bar .sep { width: 1px; height: 20px; background: #2b262226; margin: 0 4px; }
+  #bar .tool { font-weight: 400; }
+  :is(#bar, #drawing .dbar) button svg { width: 14px; height: 14px; vertical-align: -3px; margin-right: 6px; fill: none; stroke: currentColor; stroke-width: 1.8;
+    stroke-linecap: round; stroke-linejoin: round; }
+  #bar #measure.on { background: #ff8a3d; color: #fff; }
+  #bar button:disabled { opacity: .45; cursor: default; transform: none; }
+  /* Rooms and photo spots: one panel at a time, folded under its chip. */
+  #bar .menu::after { content: " ▾"; }
+  #bar:is([data-open=versions] [data-menu=versions], [data-open=rooms] [data-menu=rooms], [data-open=spots] [data-menu=spots]) { background: #2b2622; color: #f3eee5; }
+  #bar:is([data-open=versions] [data-menu=versions], [data-open=rooms] [data-menu=rooms], [data-open=spots] [data-menu=spots])::after { content: " ▴"; }
+  #bar .panel { display: none; flex-wrap: wrap; gap: 6px; max-width: 620px; padding: 8px; border-radius: 18px; background: #fffaf3d9;
+    box-shadow: 0 4px 18px #0002, 0 0 0 1px #2b262214 inset; backdrop-filter: blur(8px); }
+  #bar[data-open=versions] #versions, #bar[data-open=rooms] #rooms, #bar[data-open=spots] #spots { display: flex; }
+  #bar #versions { flex-direction: column; align-items: stretch; gap: 4px; }
+  #bar #versions button { text-align: left; }
+  #bar #versions button.on { background: #2b2622; color: #f3eee5; }
+  #bar .panel button { font-weight: 400; padding: 6px 12px; font-size: 11.5px; box-shadow: 0 0 0 1px #2b262214 inset; }
+  #bar #spots { flex-direction: column; align-items: stretch; gap: 4px; }
+  #bar #spots .group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  #bar #spots .title { width: 128px; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: #6d645b; }
+  #switcher { top: 84px; right: 22px; z-index: 4; }
+  #switcher .short { display: none; }
+  body:is(.drawing, .renders) :is(#help, #pad, #caption, #shade) { display: none; }
+  /* Over the drawing and the renders only the version chip stays, so each version's can be looked at. */
+  body:is(.drawing, .renders) #bar { z-index: 4; }
+  body:is(.drawing, .renders) #bar :is(.row > :not([data-menu=versions]), .panel:not(#versions)) { display: none; }
+  body.drawing #title h1 { color: #e8e2d8; }
+  body:is(.drawing, .renders) #title { z-index: 4; }
+  /* Renders: the designer's images room by room, on paper, below the title and the switch. */
+  #renders { position: fixed; inset: 0; z-index: 3; background: #f3eee5; overflow-y: auto; }
+  #renders[hidden], #renders .rbox[hidden] { display: none; }
+  #renders .rlist { padding: 132px 22px 40px; }
+  #renders section { margin-bottom: 34px; }
+  #renders h2 { display: flex; align-items: baseline; gap: 10px; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid #2b26221f;
+    font: 400 30px "Cormorant Garamond", serif; }
+  #renders h2 span { font: 500 11px Inter, sans-serif; letter-spacing: .1em; color: #6d645b; }
+  #renders .rgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  #renders figure { margin: 0; cursor: zoom-in; }
+  #renders figure img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 10px; background: #e6dccf;
+    box-shadow: 0 1px 4px #0001; transition: transform .2s; }
+  #renders figure:hover img { transform: translateY(-2px); }
+  #renders figcaption { margin-top: 6px; font-size: 11.5px; letter-spacing: .04em; color: #6d645b; }
+  #renders .rbox { position: fixed; inset: 0; z-index: 6; display: grid; place-items: center; background: #1c1814f2; }
+  #renders .rbox img { max-width: 90vw; max-height: 84vh; object-fit: contain; }
+  #renders .rcap { position: absolute; left: 22px; bottom: 18px; color: #f3eee5; font-size: 13px; letter-spacing: .06em; }
+  #renders .rbox button { position: absolute; width: 44px; height: 44px; border: 0; border-radius: 999px; background: #fffaf31f; color: #f3eee5;
+    font-size: 22px; cursor: pointer; }
+  #renders .rbox .rclose { top: 18px; right: 22px; font-size: 16px; }
+  #renders .rprev { left: 22px; top: calc(50% - 22px); }
+  #renders .rnext { right: 22px; top: calc(50% - 22px); }
+  /* Tape measure over the 3D scene, and the 2D drawing (AutoCAD-dark, like model space). */
+  .measure-overlay { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+  .measure-overlay svg { width: 100%; height: 100%; }
+  .measure-overlay line { stroke: #ff8a3d; stroke-width: 2.5; stroke-linecap: round; }
+  .measure-overlay line.halo { stroke: #fffaf3; stroke-width: 5.5; stroke-dasharray: none; }
+  .measure-overlay circle { fill: #ff8a3d; stroke: #fffaf3; stroke-width: 2; }
+  .measure-overlay circle.hover { fill: none; stroke: #ff8a3d; stroke-width: 2.5; }
+  .measure-overlay .snap { fill: none; stroke: #2b2622; stroke-width: 2; }
+  .measure-overlay .labels div { position: absolute; transform: translate(-50%, -150%); background: #2b2622; color: #f3eee5; font: 500 12px Inter, sans-serif;
+    padding: 3px 9px; border-radius: 999px; white-space: nowrap; box-shadow: 0 1px 4px #0003; }
+  #drawing { position: fixed; inset: 0; z-index: 3; background: #212830; }
+  #drawing[hidden] { display: none; }
+  #drawing canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+  @media (pointer: fine) { #drawing canvas { cursor: none; } }
+  #drawing .dbar { position: absolute; top: 60px; left: 14px; display: flex; flex-wrap: wrap; gap: 6px; }
+  #drawing .dbar button { background: #2f3742e6; color: #d8dee6; box-shadow: 0 0 0 1px #ffffff1f inset; }
+  #drawing .dbar button.on { background: #f3eee5; color: #2b2622; }
+  #drawing .dstatus { position: absolute; left: 14px; bottom: 14px; display: flex; gap: 18px; font: 11.5px ui-monospace, Menlo, monospace; color: #c9d1d9;
+    background: #161b22cc; padding: 7px 11px; border-radius: 8px; pointer-events: none; }
+  #drawing .dstatus span:empty, #drawing .dstatus:not(:has(span:not(:empty))) { display: none; }
+  #drawing .dhelp { position: absolute; right: 14px; bottom: 14px; font-size: 11.5px; color: #9aa4ae; pointer-events: none; text-align: right; max-width: 46vw; }
   #help { bottom: 14px; left: 14px; font-size: 11.5px; color: #6d645b; background: #fffaf3cc; padding: 7px 11px; border-radius: 999px; }
   #title { top: 18px; right: 22px; text-align: right; pointer-events: none; }
   #title h1 { font-family: "Cormorant Garamond", serif; font-weight: 400; font-size: 34px; margin: 0; line-height: 1; }
@@ -31,7 +107,7 @@
   #loader { position: fixed; inset: 0; z-index: 5; background: #f3eee5; display: grid; place-items: center; }
   #loader div { font-family: "Cormorant Garamond", serif; font-size: 46px; letter-spacing: .3em; }
   #loader span { display: inline-block; opacity: 0; }
-  #roomsToggle, #bar .break, #pad { display: none; }
+  #bar .break, #pad { display: none; }
   /* Phones: the views up top, rooms folded behind one chip, and arrows to walk with. */
   @media (max-width: 760px) {
     #title { top: 12px; left: 14px; right: auto; text-align: left; }
@@ -39,9 +115,8 @@
     #title p { display: none; }
     #bar { top: 46px; left: 12px; right: 12px; max-width: none; }
     #bar .break { display: block; flex-basis: 100%; height: 0; }
-    #roomsToggle { display: inline-block; }
-    #bar #rooms { display: none; max-height: 46vh; overflow-y: auto; }
-    #bar.rooms-open #rooms { display: flex; }
+    #bar .sep { display: none; }
+    #bar .panel { max-height: 46vh; overflow-y: auto; }
     #help { right: 14px; border-radius: 12px; }
     body.walking #help { right: 176px; }
     body.walking #pad { display: grid; }
@@ -53,6 +128,16 @@
     #pad [data-key=ArrowLeft] { grid-area: 2 / 1; }
     #pad [data-key=ArrowDown] { grid-area: 2 / 2; }
     #pad [data-key=ArrowRight] { grid-area: 2 / 3; }
+    #switcher { top: 10px; right: 12px; }
+    #switcher .long { display: none; }
+    #switcher .short { display: inline; }
+    body:is(.drawing, .renders) #title { display: none; }
+    #switcher .seg button { padding: 6px 10px; }
+    #renders .rlist { padding: 96px 12px 28px; }
+    #renders .rgrid { grid-template-columns: 1fr; }
+    #drawing .dbar { top: 92px; left: 12px; right: 12px; }
+    #drawing .dstatus { bottom: 44px; left: 12px; right: 12px; flex-direction: column; gap: 2px; }
+    #drawing .dhelp { left: 12px; right: 12px; bottom: 14px; max-width: none; text-align: left; }
   }
 </style>
 <script type="importmap">
@@ -62,24 +147,39 @@
   "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
 } }
 </script>
-<script src="model.js"></script>
 </head>
 <body>
 <div id="loader"><div>KARIM</div></div>
 <canvas id="scene"></canvas>
 <div id="bar" class="ui">
   <div class="row">
-    <button data-view="dollhouse" class="on">Dollhouse</button>
-    <button data-view="top">Top</button>
-    <button data-view="walk">Walk</button>
-    <button id="roomsToggle">Rooms ▾</button>
+    <button class="menu" data-menu="versions" title="Plan version"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg><span class="vname"></span></button>
+    <span class="sep"></span>
+    <div class="seg" role="group" aria-label="View">
+      <button data-view="dollhouse" class="on">Dollhouse</button>
+      <button data-view="top">Top</button>
+      <button data-view="walk">Walk</button>
+    </div>
+    <button class="menu" data-menu="rooms"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM12 3v7M3 12h6M12 14v7M15 12h6"/></svg>Rooms</button>
+    <button class="menu" data-menu="spots" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg>Photo spots</button>
     <span class="break"></span>
-    <button id="cut" class="on">Walls: cut away</button>
-    <button id="ceil">Ceiling: off</button>
+    <span class="sep"></span>
+    <button id="measure" class="tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg>Measure</button>
+    <button id="clearMeasure" class="tool" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>Clear</button>
+    <button id="photogen" class="tool" hidden disabled title="Walk to a view first"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h5M21 12v7H3V8"/><circle cx="12" cy="13" r="3.5"/><path d="M19 2v6M16 5h6"/></svg>Generate Photo Spot</button>
   </div>
-  <div class="row" id="rooms"></div>
+  <div class="panel" id="versions"></div>
+  <div class="panel" id="rooms"></div>
+  <div class="panel" id="spots"></div>
 </div>
-<div id="title" class="ui"><h1>Karim's Apartment</h1><p>Drawn from the DWG</p></div>
+<div id="title" class="ui"><h1>Karim's Apartment</h1><p>Lotus - New Cairo</p></div>
+<div id="switcher" class="ui"><div class="seg" role="group" aria-label="Show">
+  <button data-show="model" class="on"><span class="long">3D model</span><span class="short">3D</span></button>
+  <button data-show="drawing">Drawing</button>
+  <button data-show="renders" hidden>Renders</button>
+</div></div>
+<div id="drawing" hidden></div>
+<div id="renders" hidden></div>
 <div id="shade" class="ui"></div>
 <div id="caption" class="ui"><div class="name"></div><div class="meta"></div></div>
 <div id="help" class="ui"></div>
@@ -102,6 +202,21 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import gsap from "gsap";
 import { makeMaterials } from "./materials.js";
 import { furnish } from "./furnish.js";
+import { createDrawing, loadDrawing } from "./drawing.js";
+import { createMeasure } from "./measure.js";
+import { createRenders } from "./renders.js";
+import { createPhotoGen } from "./photogen.js";
+
+// --- Plan versions: the main plan and alternatives to it, each built from its own DWG ----------------
+// (build_geometry.py --out / --tour, build_drawing.py --out). ?v=<id> picks one; the main plan is the default.
+const VERSIONS = [
+  { id: "main", name: "Main", model: "model.js", drawing: "drawing.json", spots: "spots.json" },
+  { id: "bigger-bedroom", name: "Bigger Master Bedroom", model: "model-bigger-bedroom.js", drawing: "drawing-bigger-bedroom.json",
+    spots: "spots-bigger-bedroom.json" },
+];
+const params = new URLSearchParams(location.search);
+const version = VERSIONS.find(v => v.id === params.get("v")) || VERSIONS[0];
+await new Promise((onload, onerror) => document.head.appendChild(Object.assign(document.createElement("script"), { src: version.model, onload, onerror })));
 
 // --- The flat, built from window.MODEL (all geometry comes from the DWG via build_geometry.py) ---
 
@@ -165,7 +280,7 @@ function buildFlat(M, scene) {
     glass: new THREE.MeshPhysicalMaterial({ color: 0xcfe2ea, transparent: true, opacity: 0.16, roughness: 0.05, clippingPlanes: clip }),
     frame: lib.blackSteel,
     // Ceilings face down only, so they vanish from above and close the room from inside.
-    ceiling: new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x58564f, roughness: 1, side: THREE.BackSide, clippingPlanes: clip }),
+    ceiling: new THREE.MeshStandardMaterial({ color: 0xf4e6d6, emissive: 0x5a4f45, roughness: 1, side: THREE.BackSide, clippingPlanes: clip }),
     paper: new THREE.MeshBasicMaterial({ color: PAPER, toneMapped: false }),
   };
 
@@ -281,9 +396,10 @@ function buildFlat(M, scene) {
   for (const s of M.swings || []) {
     const [hx, hy] = s.hinge;
     const a0 = Math.atan2(s.closed[1] - hy, s.closed[0] - hx);
-    const sweep = [Math.PI / 2, -Math.PI / 2]
-      .map(d => ({ d, end: [hx + Math.cos(a0 + d) * s.r, hy + Math.sin(a0 + d) * s.r] }))
-      .find(o => roomAt(...o.end)) || { d: Math.PI / 2 };
+    // The side the drawing swings it where the build kept that (s.open), else the first side that lands in a room.
+    const sides = [Math.PI / 2, -Math.PI / 2].map(d => ({ d, end: [hx + Math.cos(a0 + d) * s.r, hy + Math.sin(a0 + d) * s.r] }));
+    const sweep = (s.open ? sides.sort((a, b) => Math.hypot(a.end[0] - s.open[0], a.end[1] - s.open[1]) - Math.hypot(b.end[0] - s.open[0], b.end[1] - s.open[1]))[0]
+      : sides.find(o => roomAt(...o.end))) || { d: Math.PI / 2 };
     const arc = [];
     for (let k = 0; k <= 24; k++) arc.push([hx + Math.cos(a0 + (sweep.d * k) / 24) * s.r, hy + Math.sin(a0 + (sweep.d * k) / 24) * s.r]);
     lines.push({ kind: "door", pts: arc }, { kind: "door", pts: [[hx, hy], arc[arc.length - 1]] });
@@ -327,7 +443,7 @@ function buildFlat(M, scene) {
     if (r.light) r.light.intensity = 2 * t;
   }
 
-  const furniture = furnish(scene, M, lib);
+  const furniture = furnish(scene, M, lib, version.id);
   return { cutPlane, solids, rooms, roomAt, setReveal, materials: mat, lib, furniture, leaves };
 }
 
@@ -403,14 +519,13 @@ const viewpoints = M.tour.stops.map(s => ({ ...s, eye: toWorld(s.eye, EYE), look
 
 // --- Look of the flat: wall cut height, drawing vs finished rooms, ceilings ------------------
 const look = { cut: FULL, finish: 1 };
-let ceilingWanted = false;
 function applyLook() {
   flat.cutPlane.constant = look.cut >= FULL ? 1000 : look.cut;
   flat.materials.wallCut.visible = look.cut < FULL;
   for (const r of Object.values(rooms)) flat.setReveal(r, look.finish);
   flat.furniture.setReveal(look.finish);
   flat.leaves.forEach(l => (l.visible = look.finish > 0.01));
-  const ceilings = mode === "walk" || ceilingWanted;
+  const ceilings = mode === "walk";
   for (const r of Object.values(rooms)) r.ceilings.forEach(c => (c.visible = ceilings));
   flat.furniture.ceilingBits.visible = ceilings && look.finish > 0.01;
   scene.background = mode === "walk" ? sky : paper;
@@ -502,6 +617,10 @@ const orbitTop = new OrbitControls(camera, renderer.domElement);  // top (made w
 orbitTop.enableRotate = false;
 orbitTop.enableDamping = true;
 orbitTop.screenSpacePanning = true;
+orbitTop.zoomToCursor = true;
+// Rotation is off, so the left button and one finger would otherwise do nothing: make them pan.
+orbitTop.mouseButtons.LEFT = THREE.MOUSE.PAN;
+orbitTop.touches.ONE = THREE.TOUCH.PAN;
 orbitTop.enabled = false;
 camera.up.copy(UP);
 const walker = new PointerLockControls(camera, document.body);
@@ -519,26 +638,31 @@ const HELP_PHONE = {
   top: "Pinch to zoom · drag to pan",
   walk: "Drag to look around · arrows to walk",
 };
+const HELP_MEASURE = "Click two points to measure · Shift squares it up · Esc cancels · Backspace undoes";
+function showHelp() {
+  if (measure?.active) help.textContent = PHONE.matches ? "Tap two points to measure" : HELP_MEASURE + (mode === "walk" ? " · drag to look" : mode === "top" ? " · snaps to the DWG" : "");
+  else help.textContent = (PHONE.matches ? HELP_PHONE : HELP)[mode];
+}
 function setMode(m) {
   mode = m;
   document.querySelectorAll("[data-view]").forEach(b => b.classList.toggle("on", b.dataset.view === m));
-  help.textContent = (PHONE.matches ? HELP_PHONE : HELP)[m];
+  showHelp();
   document.body.classList.toggle("walking", m === "walk");
   labelRenderer.domElement.style.display = m === "walk" ? "none" : "";
   document.getElementById("shade").style.opacity = m === "walk" ? 1 : 0;
   if (m !== "walk" && walker.isLocked) walker.unlock();
+  photogen?.sync();
 }
-const cutAway = () => document.getElementById("cut").classList.contains("on");
 
 function goTop() {
   setMode("top");
-  animate([topPose()], { duration: 1.8, cut: PLAN_CUT, finish: 0, onDone: () => { orbitTop.target.copy(centre); orbitTop.enabled = true; } });
+  animate([topPose()], { duration: 1.8, cut: PLAN_CUT, finish: 1, onDone: () => { orbitTop.target.copy(centre); orbitTop.enabled = true; } });
 }
 function goDollhouse() {
   const from = mode;
   setMode("dollhouse");
   const path = from === "walk" ? [{ ...dollPose(), pos: camera.position.clone().setY(6) }, dollPose()] : [dollPose()];
-  animate(path, { duration: from === "top" ? 2.2 : 1.8, cut: cutAway() ? DOLL_CUT : FULL, finish: 1, onDone: () => { orbit.target.copy(centre); orbit.enabled = true; } });
+  animate(path, { duration: from === "top" ? 2.2 : 1.8, cut: DOLL_CUT, finish: 1, onDone: () => { orbit.target.copy(centre); orbit.enabled = true; } });
 }
 function goRoom(v) {
   if (mode === "walk") return walkTo(v);
@@ -553,13 +677,14 @@ function goRoom(v) {
 const keys = {};
 addEventListener("keydown", e => { keys[e.code] = true; if (glide && /^(Key[WASD]|Arrow)/.test(e.code)) stopGlide(); });
 addEventListener("keyup", e => { keys[e.code] = false; });
-renderer.domElement.addEventListener("click", () => mode === "walk" && !tween && !PHONE.matches && walker.lock());
+renderer.domElement.addEventListener("click", () => mode === "walk" && !tween && !PHONE.matches && !measure.active && walker.lock());
 
 // Phones have no pointer lock: drag to look, and the on-screen arrows stand in for the arrow keys.
+// Measuring frees the mouse for picking, so it looks around the same way.
 const lookEuler = new THREE.Euler(0, 0, 0, "YXZ");
 let dragFrom = null;
 renderer.domElement.addEventListener("pointerdown", e => {
-  if (mode !== "walk" || tween || !PHONE.matches) return;
+  if (mode !== "walk" || tween || !(PHONE.matches || measure.active)) return;
   stopGlide();
   dragFrom = [e.clientX, e.clientY];
 });
@@ -709,30 +834,107 @@ const roomBar = document.getElementById("rooms");
 for (const v of viewpoints) {
   const b = document.createElement("button");
   b.textContent = v.caption;
-  b.onclick = () => { document.getElementById("bar").classList.remove("rooms-open"); goRoom(v); };
+  b.onclick = () => { closeMenu(); goRoom(v); };
   roomBar.appendChild(b);
 }
-document.getElementById("roomsToggle").onclick = () => document.getElementById("bar").classList.toggle("rooms-open");
+// Versions: switching reloads the page on the other plan, keeping the view (in Walk, the exact spot and aim)
+// and the screen (the drawing or the renders stay up, now the other version's).
+document.querySelector("#bar .vname").textContent = version.name;
+if (version !== VERSIONS[0]) document.querySelector("#title p").textContent += ` · ${version.name}`;
+const versionBar = document.getElementById("versions");
+for (const v of VERSIONS) {
+  const b = document.createElement("button");
+  b.textContent = v.name;
+  b.classList.toggle("on", v === version);
+  b.onclick = () => {
+    closeMenu();
+    if (v === version) return;
+    const q = new URLSearchParams();
+    if (v !== VERSIONS[0]) q.set("v", v.id);
+    if (mode === "walk") {
+      const p = camera.position, d = camera.getWorldDirection(new THREE.Vector3());
+      q.set("cam", [p.x, -p.z, p.y, p.x + d.x, -(p.z + d.z), p.y + d.y, camera.fov].map(n => +n.toFixed(3)).join(","));
+    } else q.set("view", mode);
+    if (showing !== "model") q.set("show", showing);
+    location.search = q;
+  };
+  versionBar.appendChild(b);
+}
+// Versions / Rooms / Photo spots chips: one panel open at a time; picking, the chip again, or a click elsewhere folds it.
+const bar = document.getElementById("bar");
+const closeMenu = () => delete bar.dataset.open;
+document.querySelectorAll("[data-menu]").forEach(b => (b.onclick = () => {
+  if (bar.dataset.open === b.dataset.menu) closeMenu();
+  else bar.dataset.open = b.dataset.menu;
+}));
+addEventListener("pointerdown", e => !bar.contains(e.target) && closeMenu());
 document.querySelectorAll("[data-view]").forEach(b => (b.onclick = () => {
   stopGlide();
   if (b.dataset.view === "top") goTop();
   else if (b.dataset.view === "dollhouse") goDollhouse();
   else goRoom(viewpoints[0]);
 }));
-document.getElementById("cut").onclick = e => {
-  const on = !e.target.classList.contains("on");
-  e.target.classList.toggle("on", on);
-  e.target.textContent = `Walls: ${on ? "cut away" : "full height"}`;
-  if (mode === "dollhouse") animate([], { duration: 0.9, cut: on ? DOLL_CUT : FULL });
+
+// --- Measuring in 3D, and the DWG as a drawing to measure on ----------------------------------------
+let showing = "model";  // what fills the screen: the 3D model, the drawing or the renders
+const measure = createMeasure({
+  camera, renderer, scene, cutPlane: flat.cutPlane, capMaterial: flat.materials.wallCut,
+  paused: () => showing !== "model" || !!tween,
+  plan: () => mode === "top", snaps: loadDrawing(version.drawing).then(d => d.snaps),
+  onChange: () => {
+    document.getElementById("measure").classList.toggle("on", measure.active);
+    document.getElementById("clearMeasure").hidden = !measure.count;
+    showHelp();
+  },
+});
+document.getElementById("measure").onclick = () => {
+  if (walker.isLocked) walker.unlock();
+  measure.setActive(!measure.active);
 };
-document.getElementById("ceil").onclick = e => {
-  ceilingWanted = !ceilingWanted;
-  e.target.textContent = `Ceiling: ${ceilingWanted ? "on" : "off"}`;
-  applyLook();
-};
+document.getElementById("clearMeasure").onclick = () => measure.clear();
+
+const drawing = createDrawing(document.getElementById("drawing"), version.drawing);
+const switcher = document.getElementById("switcher");
+const renders = createRenders(document.getElementById("renders"), viewpoints.map(v => ({ room: v.room, caption: v.caption })));
+function showScreen(next) {
+  if (next === showing) return;
+  showing = next;
+  document.body.classList.toggle("drawing", showing === "drawing");
+  document.body.classList.toggle("renders", showing === "renders");
+  closeMenu();
+  switcher.querySelectorAll("[data-show]").forEach(b => b.classList.toggle("on", b.dataset.show === showing));
+  if (showing !== "model") {
+    stopGlide();
+    if (walker.isLocked) walker.unlock();
+  }
+  showing === "drawing" ? drawing.show() : drawing.hide();
+  showing === "renders" ? renders.show() : renders.hide();
+}
+switcher.querySelectorAll("[data-show]").forEach(b => (b.onclick = () => showScreen(b.dataset.show)));
+
+// --- Generate Photo Spot: a photoreal render of where you stand in Walk (photogen.js, photogen.py) --------
+let renderList = [], addSpot = null;
+const FLOOR_NAME = { wood: "warm oak", tile: "honed beige stone tiles", decking: "timber decking" };
+const photogen = createPhotoGen({
+  THREE, camera, scene, composer, renderer, M, spotsFile: version.spots,
+  roomAt: (x, y) => {
+    const r = flat.roomAt(x, y);
+    return r && { name: r.name, area: r.area, rings: r.rings, finish: FLOOR_NAME[M.tour.finishes?.[r.name] || DEFAULT_FINISH[r.kind]] };
+  },
+  captionOf: name => viewpoints.find(v => v.room === name)?.caption || name[0] + name.slice(1).toLowerCase(),
+  isWalking: () => mode === "walk",
+  freeMouse: () => walker.isLocked && walker.unlock(),
+  spotCount: room => renderList.filter(s => s.room === room).length,
+  onSaved: spot => addSpot && showRenders(addSpot(spot)),
+});
+function showRenders(list) {
+  renderList = list;
+  if (!list.length) return;
+  renders.fill(list);
+  switcher.querySelector("[data-show=renders]").hidden = false;
+}
 
 // --- Start: the drawing first, then the walls rise into the dollhouse ---------------------------
-const params = new URLSearchParams(location.search);
 const startRoom = params.get("room") && viewpoints.find(v => v.caption.toLowerCase().startsWith(params.get("room").toLowerCase()));
 // ?cam=x,y,h,lookX,lookY,lookH[,fov] (plan metres): stand anywhere, e.g. to match a render's angle.
 const cam = params.get("cam")?.split(",").map(Number);
@@ -747,7 +949,7 @@ if (cam?.length >= 6) {
   setPose({ pos: startRoom.eye, target: startRoom.look, fov: FOV.walk, up: UP });
 } else if (params.get("view") === "top") {
   setMode("top");
-  look.cut = PLAN_CUT; look.finish = 0; applyLook();
+  look.cut = PLAN_CUT; look.finish = 1; applyLook();
   setPose(topPose());
   orbitTop.target.copy(centre); orbitTop.enabled = true;
 } else {
@@ -756,17 +958,26 @@ if (cam?.length >= 6) {
   setPose(topPose());
   if (params.get("view") === "dollhouse") {
     setMode("dollhouse");
-    look.cut = cutAway() ? DOLL_CUT : FULL; look.finish = 1; applyLook();
+    look.cut = DOLL_CUT; look.finish = 1; applyLook();
     setPose(dollPose());
     orbit.target.copy(centre); orbit.enabled = true;
   } else {
     setTimeout(goDollhouse, 1400);
   }
 }
+// Photo spots: the designer's renders at marked spots in Walk (spots.js), and all of them under Renders.
+import("./spots.js").then(m => m.photoSpots({
+  file: version.spots, THREE, gsap, camera, scene, toWorld, goRoom, FOV, EYE, UP, rooms: viewpoints.map(v => ({ room: v.room, caption: v.caption })),
+  isWalking: () => mode === "walk", isBusy: () => !!(tween || glide),
+})).then(({ renders: list, add }) => {
+  addSpot = add;
+  showRenders(list);
+});
 
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
+  if (showing !== "model") return;  // the drawing or the renders cover the scene; no need to keep rendering it
   if (mode === "walk" && !tween && !glide) {
     walkStep(dt);
     const r = flat.roomAt(camera.position.x, -camera.position.z);
@@ -777,6 +988,7 @@ renderer.setAnimationLoop(() => {
   if (orbit.enabled || orbitTop.enabled) fitNear();
   composer.render();
   labelRenderer.render(scene, camera);
+  measure.render();
 });
 
 const loader = document.getElementById("loader");
@@ -785,6 +997,7 @@ gsap.timeline()
   .to("#loader span", { opacity: 1, y: 0, duration: 0.45, stagger: 0.07, ease: "power2.out", startAt: { y: 14 } })
   .to(loader, { opacity: 0, duration: 0.5, delay: 0.15, onComplete: () => loader.remove() });
 if (params.has("view") || startRoom || cam) loader.remove();
+if (["drawing", "renders"].includes(params.get("show"))) showScreen(params.get("show"));
 
 addEventListener("resize", () => {
   camera.aspect = aspect();

@@ -138,7 +138,7 @@ export function makeMaterials(clip) {
     oakSlats: std({ color: 0xf2d6b8, map: map("oak_veneer_01_diff.jpg", 1.2, true, Math.PI / 2), bumpMap: slatBump(), bumpScale: 6, roughness: 0.6 }),
     walnut: scanned("laminate_floor_02", 1.7, { tint: 0x9c8070, roughness: 0.5, rotate: Math.PI / 2, normal: 0.3 }),
     whiteLacquer: std({ color: 0xf2eee8, roughness: 0.35 }),
-    greyLacquer: std({ color: 0xd8d3cd, roughness: 0.35 }),
+    greyLacquer: std({ color: 0x968d84, roughness: 0.4 }),
     bronzeGlass: std({ color: 0xb08f78, metalness: 0.6, roughness: 0.05, envMapIntensity: 2.4 }),
     bronze: std({ color: 0x6b5440, metalness: 0.8, roughness: 0.35 }),
     marbleTop: std({ map: marbleTexture(), roughness: 0.2 }),
@@ -158,11 +158,12 @@ export function makeMaterials(clip) {
     // Metals, glass, appliances
     brass: std({ color: 0xc9a46a, metalness: 1, roughness: 0.35 }),
     chrome: std({ color: 0xdddddd, metalness: 1, roughness: 0.15 }),
+    brushedNickel: std({ color: 0xc8c2b8, metalness: 1, roughness: 0.32 }),
     blackSteel: std({ color: 0x1d1c1b, metalness: 0.6, roughness: 0.35 }),
     blackGlass: std({ color: 0x0c0c0d, metalness: 0.2, roughness: 0.08 }),
     smokedGlass: std({ color: 0x3b2b22, metalness: 0.3, roughness: 0.08, transparent: true, opacity: 0.85 }),
     displayGlass: std({ color: 0x8a6a52, metalness: 0.2, roughness: 0.05, transparent: true, opacity: 0.22 }),
-    mirror: std({ color: 0xc9c6bf, metalness: 0.8, roughness: 0.22, envMapIntensity: 1.4 }),
+    mirror: std({ color: 0xe9e5de, metalness: 0.65, roughness: 0.14, envMapIntensity: 1.6 }),
     clearGlass: new THREE.MeshPhysicalMaterial({ color: 0xe8f2f2, transparent: true, opacity: 0.18, roughness: 0.05 }),
     ceramic: std({ color: 0xf7f5f0, roughness: 0.15 }),
     applianceWhite: std({ color: 0xf4f4f2, roughness: 0.3 }),
@@ -183,6 +184,9 @@ export function makeMaterials(clip) {
       artTexture(47, ["#c98d7a", "#a9b59a", "#e9c9b2", "#d8b7a2"]),
     ].map(t => std({ map: t, roughness: 0.9 })),
   };
+  // The renders' joinery is pale honey oak; the scan reads darker, so lift it past white.
+  M.oakVeneer.color.setRGB(1.3, 1.1, 0.86);
+  M.oakSlats.color.setRGB(1.2, 1.02, 0.82);
   for (const m of Object.values(M).flat()) m.clippingPlanes = clip;
   return M;
 }

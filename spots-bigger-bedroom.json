@@ -1,0 +1,12 @@
+{
+  "_comment": "Photo spots of the Bigger Master Bedroom version: spots.json without its master bedroom and bathroom renders (drawn for the old layout), plus the renders of the new one. Two renders of the same view stand a step apart, so each spot shows its own.",
+  "extends": "spots.json",
+  "replaces": ["MASTER BEDROOM", "TOILET 1"],
+  "spots": [
+    {"id": "bb-1", "room": "TOILET 1", "caption": "Master bathroom 1", "cam": [5.4, 5.95, 1.45, 5.55, 9.0, 1.25, 80], "photo": "renders/bb-1-Master_bathroom.jpg"},
+    {"id": "bb-2", "room": "TOILET 1", "caption": "Master bathroom 2", "cam": [5.45, 6.45, 1.45, 5.6, 9.0, 1.25, 80], "photo": "renders/bb-2-Master_bathroom.jpg"},
+    {"id": "bb-3", "room": "MASTER BEDROOM", "caption": "Master bedroom 1", "cam": [3.4, 7.55, 1.35, 2.5, 4.55, 1.15, 66], "photo": "renders/bb-3-Master_Bedroom.jpg"},
+    {"id": "bb-4", "room": "MASTER BEDROOM", "caption": "Master bedroom 2", "cam": [3.4, 6.95, 1.35, 2.5, 4.55, 1.15, 70], "photo": "renders/bb-4-Master_Bedroom.jpg"},
+    {"id": "bb-5", "room": "MASTER BEDROOM", "caption": "Master bedroom 3", "cam": [3.9, 5.25, 1.4, 3.1, 9.0, 1.2, 66], "photo": "renders/bb-5-Master_Bedroom.jpg"}
+  ]
+}

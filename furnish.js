@@ -312,16 +312,26 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-0.22, 0.22, 0.37, 0.374, 0.42, 0.423, mat.grille);
     for (const [lx, lz] of [[-0.2, 0.05], [0.2, 0.05], [-0.2, 0.37], [0.2, 0.37]]) p.cyl(lx, lz, 0.014, 0, 0.22, mat.walnut, 6);
   };
-  const vanity = p => {  // DWG vanity 0.51 x 1.40, round basin
-    p.box(-0.7, 0.7, 0, M.ceiling, 0, 0.02, mat.oakSlats);
-    p.model("models/mbath-vanity.glb", null, 0, 0.3, 0.02, { size: [1.38, 0.56, 0.5] });  // from the renders
-    p.box(-0.68, 0.68, 0.27, 0.29, 0.05, 0.44, mat.ledStrip);
-    p.box(-0.3, 0.42, 0.855, 0.862, 0.12, 0.42, mat.ceramic, 0.003);  // integrated trough
+  const vanity = (w = 1.4) => p => {  // DWG vanity 0.51 deep, w long (1.40 in Main and v9), round basin
+    const h = w / 2;
+    p.box(-h, h, 0, M.ceiling, 0, 0.02, mat.oakSlats);
+    p.model("models/mbath-vanity.glb", null, 0, 0.3, 0.02, { size: [w - 0.02, 0.56, 0.5] });  // from the renders
+    p.box(-h + 0.02, h - 0.02, 0.27, 0.29, 0.05, 0.44, mat.ledStrip);
+    p.box(-h + 0.4, h - 0.28, 0.855, 0.862, 0.12, 0.42, mat.ceramic, 0.003);  // integrated trough
     p.box(0.02, 0.1, 1.0, 1.06, 0.02, 0.06, mat.chrome);               // wall mixer
     p.box(0.04, 0.07, 1.02, 1.04, 0.06, 0.2, mat.chrome);              // spout
-    p.model("models/plant-vase.glb", null, -0.5, 0.86, 0.12, { height: 0.38, cross: true });
-    p.box(-0.5, 0.62, 1.15, 2.0, 0.02, 0.05, mat.ledStrip, 0.12);
-    p.box(-0.47, 0.59, 1.18, 1.97, 0.03, 0.06, mat.mirror, 0.12);
+    p.model("models/plant-vase.glb", null, -h + 0.2, 0.86, 0.12, { height: 0.38, cross: true });
+    p.box(-h + 0.2, h - 0.08, 1.15, 2.0, 0.02, 0.05, mat.ledStrip, 0.12);
+    p.box(-h + 0.23, h - 0.11, 1.18, 1.97, 0.03, 0.06, mat.mirror, 0.12);
+  };
+  const wardrobe = w => p => {  // DWG wardrobe w long: smoked-glass sliding doors (about 1.04 m each) in a gypsum frame
+    const h = w / 2, n = Math.max(1, Math.round((w - 0.16) / 1.04));
+    p.box(-h, h, 0, M.ceiling, 0, 0.6, mat.whiteLacquer);
+    p.box(-h + 0.08, h - 0.08, 0.08, 2.5, 0.6, 0.62, mat.bronzeGlass);
+    for (let k = 0; k <= n; k++) {
+      const x = -h + 0.08 + k * (w - 0.16) / n;
+      p.box(x - 0.015, x + 0.015, 0.08, 2.5, 0.62, 0.635, mat.walnut);
+    }
   };
   const wc = (x0, x1, cabinet) => p => {  // wall-hung WC on a slatted wall and ledge running x0..x1, cabinet above
     p.box(x0, x1, 0, M.ceiling, 0, 0.02, mat.oakSlats);
@@ -364,11 +374,47 @@ export function furnish(scene, M, mat, version = "main") {
     item(2.395, 9.02, "S", p => {  // sheer in the reveal of the window over the bed (as rendered)
       const m = mesh(curtainGeometry(1.1, 1.15), mat.sheer, p.g); m.position.set(0, 1.5, -0.06);
     });
-    item(6.245, 6.363, "W", vanity);                  // DWG vanity on the east wall, by the door
+    item(6.245, 6.363, "W", vanity());                // DWG vanity on the east wall, by the door
     item(6.245, 7.3, "W", wc(-0.69, 0.23, false));    // WC between the vanity and the shower
     item(5.015, 7.35, "E", towelRail);                // on the bedroom wall, opposite the WC
     item(6.245, 8.62, "W", showerWall);
     item(5.25, 9.02, "S", rainHead);                  // the shower opening stays open to the ceiling, as rendered
+  } else if (version === "shifted-bedroom") {
+    // Shifted Bedroom (master-v12.dwg): the bathroom moves to the west end, the bed's headboard goes on
+    // its partition, the wardrobe runs along the kitchen wall and a desk sits on the south wall.
+    item(2.162, 7.511, "E", bed);  // DWG bed outline, centred on the bathroom partition
+    for (const y of [6.231, 8.79]) {  // DWG bedside tables
+      item(2.162, y, "E", nightstand);
+      pendant(2.34, y, 1.15);
+    }
+    art(2.162, 7.511, "E", 1.6, 0.95, 1.85, 0);
+    for (const x of [2.95, 5.37]) item(x, 9.02, "S", p => {  // curtains either side of the 2.18 m window
+      const m = mesh(curtainGeometry(0.55, 2.45), mat.curtain, p.g); m.position.set(0, 1.27, 0.12);
+    });
+    item(6.367, 7.336, "W", wardrobe(3.36));  // DWG wardrobe on the kitchen wall
+    item(1.665, 4.55, "N", wardrobe(2.1));    // DWG wardrobe on the south wall
+    item(0.556, 5.591, "E", wardrobe(0.81));  // DWG cupboard by the bathroom door, from the south wardrobe front
+    item(3.617, 4.55, "N", p => {  // DWG desk 1.80 x 0.62: drawer pedestals, knee space, backlit mirror
+      p.box(-0.9, 0.9, 0.72, 0.76, 0, 0.6, mat.walnut);
+      for (const [x0, x1] of [[-0.9, -0.45], [0.45, 0.9]]) {
+        p.box(x0, x1, 0, 0.72, 0, 0.58, mat.walnut);
+        for (const y of [0.24, 0.48]) p.box(x0 + 0.01, x1 - 0.01, y - 0.002, y + 0.002, 0.58, 0.583, mat.grille);
+      }
+      p.pebble(0, 1.42, 1.04, 0.78, 0.012, mat.mirror, true);
+    });
+    item(3.617, 5.75, "S", p => {  // DWG desk chair, pulled in to the desk
+      p.box(-0.24, 0.24, 0.42, 0.5, 0.06, 0.5, mat.boucle, 0.04);
+      p.box(-0.24, 0.24, 0.5, 0.85, 0, 0.07, mat.boucle, 0.03);
+      for (const [lx, lz] of [[-0.2, 0.1], [0.2, 0.1], [-0.2, 0.46], [0.2, 0.46]]) p.cyl(lx, lz, 0.014, 0, 0.42, mat.walnut, 6);
+    });
+    ac(3.617, 4.55, "N");
+    // Master bathroom: vanity and WC on the west wall, shower at the north end behind a glass screen
+    item(0.556, 6.68, "E", vanity(1.03));             // DWG vanity 0.52 x 1.03
+    item(0.556, 7.58, "E", wc(-0.387, 0.416, true));  // between the vanity and the shower wall
+    item(2.052, 7.5, "W", towelRail);                 // on the partition, clear of the open door
+    item(0.556, 8.57, "E", showerWall);
+    item(1.3, 9.02, "S", rainHead);
+    item(1.66, 8.056, "S", p => p.box(-0.39, 0.39, 0, 2.0, -0.005, 0.005, mat.clearGlass));  // dashed screen in the DWG
   } else {
     item(4.13, 7.62, "W", bed);  // headboard on the bathroom wall (DWG bed outline)
     for (const y of [8.8, 6.45]) {
@@ -387,7 +433,7 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(-0.37, 0.37, 0.1, 2.32, 0.39, 0.41, mat.smokedGlass);
     });
     // Master bathroom: vanity west, WC east, arched shower opening to the north
-    item(4.22, 7.3, "E", vanity);
+    item(4.22, 7.3, "E", vanity());
     item(6.24, 7.3, "W", wc(-0.55, 0.55, true));
     item(4.52, 8.0, "S", towelRail);  // on the shower partition
     item(6.24, 8.62, "W", showerWall);
@@ -399,38 +445,36 @@ export function furnish(scene, M, mat, version = "main") {
       m.position.z = -0.05;
     });
   }
-  // The wardrobe, dressing table and shoe display stay on the west and south walls in both versions.
-  item(0.56, 6.75, "E", p => {  // DWG wardrobe: smoked-glass sliding doors in a gypsum frame
-    p.box(-2.16, 2.16, 0, M.ceiling, 0, 0.6, mat.whiteLacquer);
-    p.box(-2.08, 2.08, 0.08, 2.5, 0.6, 0.62, mat.bronzeGlass);
-    for (const x of [-2.08, -1.04, 0, 1.04, 2.08]) p.box(x - 0.015, x + 0.015, 0.08, 2.5, 0.62, 0.635, mat.walnut);
-  });
-  item(2.36, 4.55, "N", p => {  // dressing table with the backlit oval mirror
-    p.box(-0.53, 0.53, 0.72, 0.76, 0, 0.5, mat.walnut);
-    p.box(-0.53, -0.18, 0, 0.72, 0, 0.48, mat.walnut);
-    for (const y of [0.24, 0.48]) p.box(-0.52, -0.19, y - 0.002, y + 0.002, 0.48, 0.483, mat.grille);
-    p.box(0.2, 0.53, 0, 0.72, 0, 0.48, mat.walnut);
-    for (let k = 0; k < 8; k++) p.cyl(0.22 + k * 0.042, 0.48, 0.012, 0.03, 0.7, mat.walnut, 6);
-    p.pebble(0, 1.42, 1.04, 0.78, 0.012, mat.mirror, true);
-    p.cyl(0, 0.75, 0.2, 0, 0.45, mat.boucle, 24);
-  });
-  item(3.36, 4.55, "N", p => {  // two lit shoe-display towers
-    for (const s of [-1, 1]) {
-      const x0 = s < 0 ? -0.47 : 0.01, x1 = s < 0 ? -0.01 : 0.47;
-      p.box(x0, x1, 0, 0.12, 0, 0.4, mat.walnut);
-      p.box(x0, x1, 2.32, 2.4, 0, 0.4, mat.walnut);
-      p.box(x0, x0 + 0.03, 0, 2.4, 0, 0.4, mat.walnut); p.box(x1 - 0.03, x1, 0, 2.4, 0, 0.4, mat.walnut);
-      p.box(x0, x1, 0, 2.4, 0, 0.02, mat.walnut);
-      for (let k = 0; k < 7; k++) {
-        const y = 0.3 + k * 0.29;
-        p.box(x0 + 0.03, x1 - 0.03, y - 0.015, y, 0.02, 0.38, mat.walnut);
-        p.box(x0 + 0.03, x1 - 0.03, y + 0.24, y + 0.25, 0.3, 0.32, mat.ledStrip);
-        for (const sx of [-0.1, 0.1]) p.box((x0 + x1) / 2 + sx - 0.05, (x0 + x1) / 2 + sx + 0.05, y, y + 0.09, 0.08, 0.34, k % 2 ? mat.sheet : mat.oatmeal, 0.03);
+  // The wardrobe, dressing table and shoe display stay on the west and south walls in Main and v9.
+  if (version !== "shifted-bedroom") {
+    item(0.56, 6.75, "E", wardrobe(4.32));
+    item(2.36, 4.55, "N", p => {  // dressing table with the backlit oval mirror
+      p.box(-0.53, 0.53, 0.72, 0.76, 0, 0.5, mat.walnut);
+      p.box(-0.53, -0.18, 0, 0.72, 0, 0.48, mat.walnut);
+      for (const y of [0.24, 0.48]) p.box(-0.52, -0.19, y - 0.002, y + 0.002, 0.48, 0.483, mat.grille);
+      p.box(0.2, 0.53, 0, 0.72, 0, 0.48, mat.walnut);
+      for (let k = 0; k < 8; k++) p.cyl(0.22 + k * 0.042, 0.48, 0.012, 0.03, 0.7, mat.walnut, 6);
+      p.pebble(0, 1.42, 1.04, 0.78, 0.012, mat.mirror, true);
+      p.cyl(0, 0.75, 0.2, 0, 0.45, mat.boucle, 24);
+    });
+    item(3.36, 4.55, "N", p => {  // two lit shoe-display towers
+      for (const s of [-1, 1]) {
+        const x0 = s < 0 ? -0.47 : 0.01, x1 = s < 0 ? -0.01 : 0.47;
+        p.box(x0, x1, 0, 0.12, 0, 0.4, mat.walnut);
+        p.box(x0, x1, 2.32, 2.4, 0, 0.4, mat.walnut);
+        p.box(x0, x0 + 0.03, 0, 2.4, 0, 0.4, mat.walnut); p.box(x1 - 0.03, x1, 0, 2.4, 0, 0.4, mat.walnut);
+        p.box(x0, x1, 0, 2.4, 0, 0.02, mat.walnut);
+        for (let k = 0; k < 7; k++) {
+          const y = 0.3 + k * 0.29;
+          p.box(x0 + 0.03, x1 - 0.03, y - 0.015, y, 0.02, 0.38, mat.walnut);
+          p.box(x0 + 0.03, x1 - 0.03, y + 0.24, y + 0.25, 0.3, 0.32, mat.ledStrip);
+          for (const sx of [-0.1, 0.1]) p.box((x0 + x1) / 2 + sx - 0.05, (x0 + x1) / 2 + sx + 0.05, y, y + 0.09, 0.08, 0.34, k % 2 ? mat.sheet : mat.oatmeal, 0.03);
+        }
+        p.box(x0 + 0.03, x1 - 0.03, 0.12, 2.32, 0.38, 0.4, mat.displayGlass);
       }
-      p.box(x0 + 0.03, x1 - 0.03, 0.12, 2.32, 0.38, 0.4, mat.displayGlass);
-    }
-  });
-  ac(1.6, 4.55, "N");
+    });
+    ac(1.6, 4.55, "N");
+  }
 
   // --- Guest bathroom: bath-shower west, vanity east, WC under the window (renders 08, 09) -----
   const travertine = mat.stoneTable.clone();

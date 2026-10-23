@@ -122,6 +122,7 @@ coffee corner (to 18.9-20.1). It now skips same-span pairs, so piers are as wide
 |---|---|---|---|
 | Main | *(none)* / `main` | `~/Downloads/master-bed186-v6-shoes2.dwg`, built from `master-bed186-v6-shoes2-2block-laundry.dxf` | `model.js`, `drawing.json`, `tour.json`, `spots.json` |
 | Bigger Master Bedroom | `bigger-bedroom` | `~/Downloads/master-bed-v9.dwg`, built from `master-bed-v9-2block-laundry.dxf` | `model-bigger-bedroom.js`, `drawing-bigger-bedroom.json`, `tour-bigger-bedroom.json`, `spots-bigger-bedroom.json` |
+| Shifted Bedroom | `shifted-bedroom` | `~/Downloads/master-v12.dwg` (suite only), built from `master-v12-shifted-bedroom.dxf` | `model-shifted-bedroom.js`, `drawing-shifted-bedroom.json`, `tour-shifted-bedroom.json`, `spots-shifted-bedroom.json` |
 
 Bigger Master Bedroom (v9) folds the passage into the master toilet, which **needs façade approval**. Never present it
 as settled.
@@ -135,6 +136,20 @@ V=~/Downloads/master-bed-v9-2block-laundry.dxf
 ~/.dwg-tools/bin/python build_drawing.py $V --model model-bigger-bedroom.js --out drawing-bigger-bedroom.json
 ```
 
+Shifted Bedroom (v12) moves the master bathroom to the west end, centres the bed on its partition, puts the
+wardrobe on the kitchen wall and a desk on the south wall. It also moves and widens the north-façade windows
+(bedroom 2.18 m, bathroom 0.90 m), which **needs façade approval**. Its DXF is the Main DXF with the suite zone
+(DWG x 190.6 to 196.78, y -117.25 to -112.15, plus the corridor's north face line) swapped for v12's, so it keeps
+Main's 2-block laundry and client edits. v12 itself differs from Main outside the suite (laundry, guest WC, kitchen,
+entrance, coffee corner): those parts were not taken. v12's "MM" note (MTEXT on `2furni`) was left out, since it
+would become a room label.
+
+```sh
+S=~/Downloads/master-v12-shifted-bedroom.dxf
+~/.dwg-tools/bin/python build_geometry.py $S --out model-shifted-bedroom.js --tour tour-shifted-bedroom.json
+~/.dwg-tools/bin/python build_drawing.py $S --model model-shifted-bedroom.js --out drawing-shifted-bedroom.json
+```
+
 **Rule: a version may differ from Main only in the rooms it changes.** Any other DWG difference is a
 mistake to flag, not to build.
 
@@ -145,7 +160,7 @@ To add a version:
    - Spots: `{ "extends": "spots.json", "replaces": [rooms], "spots": [...] }`. Drops the main spots in those rooms and adds its own.
 3. Run both build scripts with `--out` / `--tour` / `--model` as above.
 4. Add an entry to `VERSIONS` in `index.html`.
-5. If furniture differs, branch on `version === "<id>"` in `furnish.js` (see the `bigger-bedroom` block).
+5. If furniture differs, branch on `version === "<id>"` in `furnish.js` (see the `bigger-bedroom` and `shifted-bedroom` blocks).
 
 ---
 

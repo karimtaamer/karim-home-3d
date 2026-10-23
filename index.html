@@ -213,6 +213,8 @@ const VERSIONS = [
   { id: "main", name: "Main", model: "model.js", drawing: "drawing.json", spots: "spots.json" },
   { id: "bigger-bedroom", name: "Bigger Master Bedroom", model: "model-bigger-bedroom.js", drawing: "drawing-bigger-bedroom.json",
     spots: "spots-bigger-bedroom.json" },
+  { id: "shifted-bedroom", name: "Shifted Bedroom", model: "model-shifted-bedroom.js", drawing: "drawing-shifted-bedroom.json",
+    spots: "spots-shifted-bedroom.json" },
 ];
 const params = new URLSearchParams(location.search);
 const version = VERSIONS.find(v => v.id === params.get("v")) || VERSIONS[0];

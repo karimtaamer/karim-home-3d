@@ -755,9 +755,16 @@ export function furnish(scene, M, mat, version = "main") {
     });
     item(21.22, (y0 + y1) / 2, "W", p => { const m = mesh(curtainGeometry(y1 - y0, 2.45), mat.sheer, p.g); m.position.set(0, 1.25, 0.2); });
   }
-  // Plaster curtain boxes hiding the tracks (the south one runs into the corner), AC on the south one.
-  for (const [y0, y1] of [[1.94, 4.665], [5.915, 8.505]]) item(21.222, (y0 + y1) / 2, "W", p => p.box(-(y1 - y0) / 2, (y1 - y0) / 2, 2.3, M.ceiling, 0, 0.3, mat.limewash));
-  item(20.922, 3.51, "W", p => p.box(-0.45, 0.45, 2.27, 2.56, 0, 0.22, mat.applianceWhite, 0.04));
+  // One plaster curtain box along the whole east wall, deep enough to carry a split AC on its face over
+  // each slider with 15 cm clear to the ceiling: Carrier 1.5 HP (80.5 x 28.5 x 19.4 cm) over the south
+  // slider, 2.25 HP (95.7 x 30.2 x 21.3 cm) over the north one.
+  item(21.222, (1.94 + 9.5) / 2, "W", p => p.box(-3.78, 3.78, 2.1, M.ceiling, 0, 0.3, mat.limewash));
+  for (const [y, w, h, d] of [[3.512, 0.805, 0.285, 0.194], [7.21, 0.957, 0.302, 0.213]]) item(20.922, y, "W", p => {
+    const top = M.ceiling - 0.15;
+    p.box(-w / 2, w / 2, top - h, top, 0, d, mat.applianceWhite, 0.035);
+    p.box(-w / 2 + 0.04, w / 2 - 0.04, top - h + 0.03, top - h + 0.06, d - 0.004, d + 0.002, mat.grille);
+    p.box(w / 2 - 0.12, w / 2 - 0.07, top - 0.1, top - 0.085, d, d + 0.002, mat.blackGlass);
+  });
 
   // --- Dining: walnut table for six, tub chairs, lantern pendants; buffet wall and coffee bar ----
   item(18.4, 7.6, "S", p => {
@@ -779,7 +786,7 @@ export function furnish(scene, M, mat, version = "main") {
   // splayed back into the wall like the TV wall, then a walnut sideboard under a backlit pebble mirror.
   item(14.79, 8.0, "E", p => {  // local x = plan y - 8, z = plan x - 14.79
     const H = M.ceiling, F = 0.462, P = 0.062;  // mass front (x 15.25), wall panel face (x 14.85)
-    const S = -1.213, C = -1.013, E = -0.347, K = 0.4, N = 1.477;  // y 6.79, corner, 7.65, 8.40, 9.48
+    const S = -1.213, C = -1.013, E = -0.347, K = 0.103, N = 1.477;  // y 6.79, corner, 7.65, 8.10 (45 cm splay), 9.48
     const niche = [-0.883, -0.474, 0.45, 2.25, 0.13], deep = 0.25;
     const face = new THREE.Shape([new THREE.Vector2(C, 0), new THREE.Vector2(E, 0), new THREE.Vector2(E, H), new THREE.Vector2(C, H)]);
     face.holes.push(roundRect(new THREE.Path(), ...niche));

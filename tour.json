@@ -1,0 +1,179 @@
+{
+  "_comment": "Presentation only - geometry comes from the DWG. Points are DWG model-space metres [x, y]. 'seeds' name parts of an open floor shared by several rooms (several seeds may share a name; 'replace' moves a drawing label's seed); 'stops' are the scroll-tour camera stops in order (eye = where you stand, look = what you look at). 'entry' is a point at the front door; the tour starts outside it. 'finishes' overrides a room's floor finish (default: wood in dry rooms, tile in wet rooms, decking outdoors).",
+  "title": "Lotus Apartment",
+  "subtitle": "A walk through home",
+  "seeds": [
+    {
+      "name": "ENTRANCE",
+      "at": [
+        199.2,
+        -117.3
+      ]
+    },
+    {
+      "name": "HALLWAY",
+      "at": [
+        204.0,
+        -115.4
+      ]
+    },
+    {
+      "name": "RECEPTION",
+      "at": [
+        209.5,
+        -118.3
+      ],
+      "replace": true
+    },
+    {
+      "name": "DINING",
+      "at": [
+        209.5,
+        -113.8
+      ]
+    },
+    {
+      "name": "MASTER BEDROOM",
+      "at": [
+        196.0,
+        -115.6
+      ]
+    },
+    {
+      "name": "TOILET 1",
+      "at": [
+        195.6,
+        -113.0
+      ]
+    }
+  ],
+  "stops": [
+    {
+      "room": "ENTRANCE",
+      "caption": "Entrance",
+      "eye": [
+        198.9,
+        -117.75
+      ],
+      "look": [
+        196.0,
+        -117.2
+      ]
+    },
+    {
+      "room": "RECEPTION",
+      "caption": "Reception",
+      "eye": [
+        211.2,
+        -113.0
+      ],
+      "look": [
+        208.6,
+        -118.6
+      ]
+    },
+    {
+      "room": "DINING",
+      "caption": "Dining",
+      "eye": [
+        209.6,
+        -119.2
+      ],
+      "look": [
+        208.4,
+        -113.0
+      ]
+    },
+    {
+      "room": "TERRACE",
+      "caption": "Terrace",
+      "eye": [
+        212.6,
+        -119.3
+      ],
+      "look": [
+        214.6,
+        -113.0
+      ]
+    },
+    {
+      "room": "KITCHEN",
+      "caption": "Kitchen",
+      "eye": [
+        199.9,
+        -115.4
+      ],
+      "look": [
+        197.4,
+        -113.0
+      ]
+    },
+    {
+      "room": "LAUNDRY",
+      "caption": "Laundry",
+      "eye": [
+        202.2,
+        -114.6
+      ],
+      "look": [
+        201.8,
+        -112.9
+      ]
+    },
+    {
+      "room": "TOILET 2",
+      "caption": "Guest bathroom",
+      "eye": [
+        204.2,
+        -114.6
+      ],
+      "look": [
+        203.4,
+        -113.0
+      ]
+    },
+    {
+      "room": "LIVING ROOM",
+      "caption": "Living room",
+      "eye": [
+        196.2,
+        -117.7
+      ],
+      "look": [
+        194.2,
+        -120.6
+      ]
+    },
+    {
+      "room": "MASTER BEDROOM",
+      "caption": "Master bedroom",
+      "eye": [
+        194.3,
+        -116.6
+      ],
+      "look": [
+        191.8,
+        -113.2
+      ]
+    },
+    {
+      "room": "TOILET 1",
+      "caption": "Master bathroom",
+      "eye": [
+        195.6,
+        -114.65
+      ],
+      "look": [
+        195.3,
+        -112.9
+      ]
+    }
+  ],
+  "entry": [
+    198.9,
+    -118.1
+  ],
+  "finishes": {
+    "KITCHEN": "wood"
+  }
+}

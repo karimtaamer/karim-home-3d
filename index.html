@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lotus Apartment</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html.lenis, html.lenis body { height: auto; }
+  .lenis.lenis-smooth { scroll-behavior: auto !important; }
+  body { margin: 0; background: #f3eee5; color: #2b2622; font-family: Inter, system-ui, sans-serif; }
+  #scene { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+  #track { height: 1600vh; }
+  .ui { position: fixed; z-index: 2; pointer-events: none; }
+  #intro { top: 9vh; left: 7vw; }
+  #intro h1 { font-family: "Cormorant Garamond", serif; font-weight: 400; font-size: clamp(44px, 6vw, 92px); letter-spacing: .01em; margin: 0; line-height: 1; }
+  #intro p { margin: 14px 0 0; font-size: 13px; letter-spacing: .28em; text-transform: uppercase; color: #6d645b; }
+  #hint { bottom: 6vh; left: 50%; transform: translateX(-50%); font-size: 11px; letter-spacing: .3em; text-transform: uppercase; color: #6d645b; }
+  #hint span { display: block; text-align: center; margin-top: 8px; animation: nudge 1.8s ease-in-out infinite; }
+  @keyframes nudge { 50% { transform: translateY(6px); } }
+  #caption { left: 6vw; bottom: 8vh; color: #fff; text-shadow: 0 1px 18px #0006; opacity: 0; }
+  #caption .count { font-size: 11px; letter-spacing: .3em; text-transform: uppercase; opacity: .85; }
+  #caption .name { font-family: "Cormorant Garamond", serif; font-size: clamp(40px, 5vw, 76px); line-height: 1.02; margin: 6px 0 4px; }
+  #caption .meta { font-size: 13px; letter-spacing: .08em; opacity: .9; }
+  #rail { right: 3.2vw; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; align-items: flex-end; opacity: 0; }
+  #rail div { font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: #8c8278; transition: color .3s, transform .3s; }
+  #rail div.on { color: #2b2622; transform: translateX(-6px); }
+  #rail.dark div { color: #ffffffa0; } #rail.dark div.on { color: #fff; }
+  #outro { left: 50%; bottom: 10vh; transform: translateX(-50%); text-align: center; opacity: 0; }
+  #outro a { pointer-events: auto; display: inline-block; padding: 12px 22px; border: 1px solid #2b2622; border-radius: 999px; color: #2b2622; text-decoration: none; font-size: 12px; letter-spacing: .24em; text-transform: uppercase; background: #f3eee5cc; }
+  .plan-label { font-size: 10px; letter-spacing: .24em; text-transform: uppercase; color: #2b2622; white-space: nowrap; pointer-events: none; }
+  #loader { position: fixed; inset: 0; z-index: 5; background: #f3eee5; display: grid; place-items: center; }
+  #loader div { font-family: "Cormorant Garamond", serif; font-size: 46px; letter-spacing: .3em; }
+  #loader span { display: inline-block; opacity: 0; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+  "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js",
+  "lenis": "https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.mjs"
+} }
+</script>
+<script src="model.js"></script>
+</head>
+<body>
+<div id="loader"><div>LOTUS</div></div>
+<canvas id="scene"></canvas>
+<div id="track"></div>
+<div id="intro" class="ui"><h1></h1><p></p></div>
+<div id="hint" class="ui">Scroll to walk in<span>↓</span></div>
+<div id="caption" class="ui"><div class="count"></div><div class="name"></div><div class="meta"></div></div>
+<div id="rail" class="ui"></div>
+<div id="outro" class="ui"><a href="explore.html">Explore freely</a></div>
+<script type="module">
+import * as THREE from "three";
+import { CSS2DRenderer, CSS2DObject } from "three/addons/renderers/CSS2DRenderer.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import gsap from "gsap";
+import Lenis from "lenis";
+
+// --- The flat, built from window.MODEL (all geometry comes from the DWG via build_geometry.py) ---
+
+const PAPER = 0xf3eee5;
+const INK = 0x2b2622;
+
+const FINISH = {
+  wood: { color: 0xc39a6b, roughness: 0.7 },
+  tile: { color: 0xdcd3c6, roughness: 0.45 },
+  decking: { color: 0x8c5b3d, roughness: 0.85 },
+};
+const DEFAULT_FINISH = { dry: "wood", wet: "tile", outdoor: "decking" };
+
+// Plan (x, y) metres -> world (x, 0, -y); shapes are extruded upwards.
+function shape(ring, holes = []) {
+  const s = new THREE.Shape(ring.map(([x, y]) => new THREE.Vector2(x, y)));
+  s.holes = holes.map(h => new THREE.Path(h.map(([x, y]) => new THREE.Vector2(x, y))));
+  return s;
+}
+
+function flat(ring, holes, material, y) {
+  const g = new THREE.ShapeGeometry(shape(ring, holes));
+  g.rotateX(-Math.PI / 2);
+  const m = new THREE.Mesh(g, material);
+  m.position.y = y;
+  return m;
+}
+
+function pointInRing([x, y], ring) {
+  let hit = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j];
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) hit = !hit;
+  }
+  return hit;
+}
+
+function ringArea(ring) {
+  let a = 0;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) a += ring[j][0] * ring[i][1] - ring[i][0] * ring[j][1];
+  return Math.abs(a) / 2;
+}
+
+function buildFlat(M, scene) {
+  // Everything above the cut plane is clipped: 1.2 m reads as a floor plan, 1000 shows full walls.
+  const cutPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 1000);
+  const clip = [cutPlane];
+  const mat = {
+    wall: new THREE.MeshStandardMaterial({ color: 0xf1ebe2, roughness: 0.92, clippingPlanes: clip }),
+    // The inside of a clipped wall, seen from above, is the solid ink of a drawn plan.
+    wallCut: new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide, clippingPlanes: clip }),
+    glass: new THREE.MeshPhysicalMaterial({ color: 0xcfe2ea, transparent: true, opacity: 0.22, roughness: 0.05, clippingPlanes: clip }),
+    // Ceilings face down only, so they vanish from above and close the room from inside.
+    ceiling: new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x58564f, roughness: 1, side: THREE.BackSide, clippingPlanes: clip }),
+    paper: new THREE.MeshBasicMaterial({ color: PAPER }),
+  };
+
+  const solids = [];
+  function prism(ring, holes, base, top, material = mat.wall) {
+    const g = new THREE.ExtrudeGeometry(shape(ring, holes), { depth: top - base, bevelEnabled: false });
+    g.rotateX(-Math.PI / 2);
+    const face = new THREE.Mesh(g, material);
+    face.position.y = base;
+    face.castShadow = face.receiveShadow = material !== mat.glass;
+    scene.add(face);
+    if (material !== mat.glass) {
+      const cut = new THREE.Mesh(g, mat.wallCut);
+      cut.position.y = base;
+      scene.add(cut);
+      solids.push(face);
+    }
+    return face;
+  }
+
+  for (const w of M.walls) prism(w.outer, w.holes, 0, w.height);
+  for (const o of M.openings) {
+    if (o.kind === "door") {
+      prism(o.outer, [], M.doorHead, M.ceiling);
+    } else if (o.kind === "slider") {
+      prism(o.outer, [], M.sliderHead, M.ceiling);
+      prism(o.outer, [], 0, M.sliderHead, mat.glass);
+    } else {
+      prism(o.outer, [], 0, M.sill);
+      prism(o.outer, [], M.winHead, M.ceiling);
+      prism(o.outer, [], M.sill, M.winHead, mat.glass);
+    }
+  }
+
+  // Rooms: a paper floor (the drawing) under a finished floor that fades in, plus the room's
+  // share of the plan linework and a warm light, so each room can "come alive" on its own.
+  const finishes = M.tour?.finishes || {};
+  const rooms = {};
+  const room = name => (rooms[name] ??= {
+    name, kind: "dry", rings: [], area: 0, floors: [], ceilings: [],
+    lineMat: new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity: 1 }),
+    centre: new THREE.Vector3(), light: null, reveal: 0,
+  });
+  for (const f of M.floor) {
+    const r = room(f.room);
+    r.kind = f.kind;
+    r.rings.push(f.outer);
+    r.area += ringArea(f.outer) - f.holes.reduce((a, h) => a + ringArea(h), 0);
+    const paper = flat(f.outer, f.holes, mat.paper, 0);
+    paper.receiveShadow = true;
+    scene.add(paper);
+    const finish = FINISH[finishes[f.room] || DEFAULT_FINISH[f.kind]] || FINISH.wood;
+    const fm = new THREE.MeshStandardMaterial({ ...finish, transparent: true, opacity: 0 });
+    const floorMesh = flat(f.outer, f.holes, fm, 0.002);
+    floorMesh.receiveShadow = true;
+    scene.add(floorMesh);
+    r.floors.push(floorMesh);
+    if (f.kind !== "outdoor") {
+      const c = flat(f.outer, f.holes, mat.ceiling, M.ceiling);
+      scene.add(c);
+      r.ceilings.push(c);
+    }
+  }
+  for (const r of Object.values(rooms)) {
+    const pts = r.rings.flat();
+    const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length;
+    const cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+    r.centre.set(cx, 0, -cy);
+    if (r.kind !== "outdoor") {
+      r.light = new THREE.PointLight(0xffd2a1, 0, 7, 1.6);
+      r.light.position.set(cx, M.ceiling - 0.35, -cy);
+      scene.add(r.light);
+    }
+  }
+  const roomAt = (x, y) => Object.values(rooms).find(r => r.rings.some(ring => pointInRing([x, y], ring)));
+
+  // Plan linework, grouped by the room it sits in (walls and windows stay as permanent ink).
+  const groups = new Map();
+  const shared = new THREE.LineBasicMaterial({ color: INK });
+  for (const l of M.lines) {
+    const mid = l.pts[Math.floor(l.pts.length / 2)];
+    const r = l.kind === "furniture" || l.kind === "door" ? roomAt(mid[0], mid[1]) : null;
+    const key = r ? r.name : "";
+    if (!groups.has(key)) groups.set(key, []);
+    const arr = groups.get(key);
+    for (let i = 1; i < l.pts.length; i++) {
+      arr.push(l.pts[i - 1][0], 0.012, -l.pts[i - 1][1], l.pts[i][0], 0.012, -l.pts[i][1]);
+    }
+  }
+  for (const [key, arr] of groups) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.Float32BufferAttribute(arr, 3));
+    const lines = new THREE.LineSegments(g, key ? rooms[key].lineMat : shared);
+    scene.add(lines);
+  }
+
+  function setReveal(r, t) {
+    r.reveal = t;
+    for (const f of r.floors) {
+      f.material.opacity = t;
+      f.material.transparent = t < 1;
+    }
+    r.lineMat.opacity = 1 - t;
+    r.lineMat.visible = t < 0.999;
+    if (r.light) r.light.intensity = 2.2 * t;
+  }
+
+  return { cutPlane, solids, rooms, roomAt, setReveal, materials: mat };
+}
+
+// --- Scroll tour ------------------------------------------------------------------------------
+
+const M = window.MODEL;
+const T = M.tour;
+const EYE = 1.6;
+const CUT = 1.2;
+const toWorld = ([x, y], h = 0) => new THREE.Vector3(x, h, -y);
+const clamp01 = v => Math.min(1, Math.max(0, v));
+const smooth = (a, b, v) => { const t = clamp01((v - a) / (b - a)); return t * t * (3 - 2 * t); };
+const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const lerp = (a, b, t) => a + (b - a) * t;
+
+// --- Renderer, scene, the flat ---------------------------------------------------------------
+const canvas = document.getElementById("scene");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.localClippingEnabled = true;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(innerWidth, innerHeight);
+Object.assign(labelRenderer.domElement.style, { position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1 });
+document.body.appendChild(labelRenderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(PAPER);
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.05, 4000);
+const [W, D] = M.bounds;
+const centre = new THREE.Vector3(W / 2, 0, -D / 2);
+
+scene.add(new THREE.HemisphereLight(0xfffaf2, 0xd8cbb4, 1.6));
+const sun = new THREE.DirectionalLight(0xffe7c7, 1.5);
+sun.position.set(centre.x - 9, 22, centre.z + 12);
+sun.target.position.copy(centre);
+sun.castShadow = true;
+sun.shadow.mapSize.set(4096, 4096);
+Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 70 });
+sun.shadow.bias = -0.0004;
+scene.add(sun, sun.target);
+
+const flat = buildFlat(M, scene);
+const rooms = flat.rooms;
+
+// --- Tour path: outside the front door, then stop to stop through the doorways ------------------
+const stops = T.stops.map((s, i) => ({
+  ...s, i,
+  eye: toWorld(s.eye, EYE),
+  look: toWorld(s.look, EYE - 0.15),
+  area: rooms[s.room]?.area ?? 0,
+}));
+const legs = T.legs.map(pts => {
+  const v = pts.map(p => toWorld(p, EYE));
+  if (v.length === 2) v.splice(1, 0, v[0].clone().lerp(v[1], 0.5));
+  const curve = new THREE.CatmullRomCurve3(v, false, "centripetal");
+  return { curve, length: curve.getLength() };
+});
+
+// Scroll timeline: weights are relative lengths of scroll for each phase.
+const totalLeg = legs.reduce((a, l) => a + l.length, 0);
+const segs = [{ type: "plan", w: 0.07 }, { type: "rise", w: 0.11 }, { type: "descend", w: 0.06 }];
+legs.forEach((l, i) => {
+  segs.push({ type: "leg", i, w: 0.5 * (0.35 / legs.length + 0.65 * l.length / totalLeg) });
+  segs.push({ type: "dwell", i, w: 0.028 });
+});
+segs.push({ type: "outro", w: 0.07 });
+const sum = segs.reduce((a, s) => a + s.w, 0);
+let at = 0;
+for (const s of segs) { s.a = at / sum; at += s.w; s.b = at / sum; }
+const segAt = p => segs.find(s => p <= s.b) || segs[segs.length - 1];
+
+// Camera rig: everything is described as (position, target, fov, up) so phases can blend.
+const aspect = () => innerWidth / innerHeight;
+const half = () => Math.max(D / 2, W / 2 / aspect()) * 1.18;
+const dollyDist = fov => half() / Math.tan(THREE.MathUtils.degToRad(fov) / 2);
+const FOV_PLAN = 2.2, FOV_DOLL = 38, FOV_WALK = 64;
+function overview(t) {  // t: 0 = drawn plan straight down, 1 = dollhouse three-quarter view
+  const e = ease(t);
+  const fov = lerp(FOV_PLAN, FOV_DOLL, e);
+  const pitch = THREE.MathUtils.degToRad(lerp(89.9, 52, e));
+  const yaw = THREE.MathUtils.degToRad(lerp(0, -18, e));
+  const dist = dollyDist(fov) * lerp(1, 0.92, e);
+  const dir = new THREE.Vector3(Math.cos(pitch) * Math.sin(yaw), Math.sin(pitch), Math.cos(pitch) * Math.cos(yaw));
+  const up = new THREE.Vector3(0, 0, -1).lerp(new THREE.Vector3(0, 1, 0), smooth(0, 0.35, e)).normalize();
+  return { pos: centre.clone().addScaledVector(dir, dist), target: centre.clone(), fov, up };
+}
+const startPose = () => {
+  const c = legs[0].curve;
+  return { pos: c.getPointAt(0), target: c.getPointAt(0.25), fov: FOV_WALK, up: new THREE.Vector3(0, 1, 0) };
+};
+function legPose(i, u) {
+  const c = legs[i].curve;
+  const pos = c.getPointAt(u);
+  const ahead = c.getPointAt(Math.min(1, u + 0.02)).sub(pos);
+  if (ahead.lengthSq() < 1e-6) ahead.copy(c.getTangentAt(Math.min(u, 0.999)));
+  ahead.y = 0;
+  ahead.normalize();
+  const along = pos.clone().addScaledVector(ahead, 2.5);
+  const target = along.lerp(stops[i].look, smooth(0.55, 1, u));
+  return { pos, target, fov: FOV_WALK, up: new THREE.Vector3(0, 1, 0) };
+}
+function dwellPose(i, t) {
+  const s = stops[i];
+  const dir = s.look.clone().sub(s.eye);
+  dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), THREE.MathUtils.degToRad(lerp(-7, 7, t)));
+  return { pos: s.eye.clone(), target: s.eye.clone().add(dir), fov: FOV_WALK, up: new THREE.Vector3(0, 1, 0) };
+}
+function blend(a, b, t) {
+  return {
+    pos: a.pos.clone().lerp(b.pos, t), target: a.target.clone().lerp(b.target, t),
+    fov: lerp(a.fov, b.fov, t), up: a.up.clone().lerp(b.up, t).normalize(),
+  };
+}
+function poseAt(p) {
+  const s = segAt(p);
+  const t = clamp01((p - s.a) / (s.b - s.a));
+  if (s.type === "plan") return overview(0);
+  if (s.type === "rise") return overview(t);
+  if (s.type === "descend") {
+    // Swoop down to the front door: blend the dollhouse view into standing outside it.
+    const e = ease(t);
+    const a = overview(1), b = startPose();
+    const pose = blend(a, b, e);
+    pose.pos.y += Math.sin(e * Math.PI) * 2.5;
+    return pose;
+  }
+  if (s.type === "leg") return blend(legPose(s.i, ease(t)), dwellPose(s.i, 0), 0);
+  if (s.type === "dwell") return dwellPose(s.i, t);
+  const last = stops.length - 1;
+  return blend(dwellPose(last, 1), overview(1), ease(t));
+}
+
+// Where the camera stands (plan coords) at progress p, for working out when it enters each room.
+function walkerAt(p) {
+  const s = segAt(p);
+  if (s.type !== "leg" && s.type !== "dwell") return null;
+  const pos = s.type === "leg" ? legs[s.i].curve.getPointAt(ease((p - s.a) / (s.b - s.a))) : stops[s.i].eye;
+  return [pos.x, -pos.z];
+}
+const firstVisit = {};
+for (let p = segs[3].a; p <= 1; p += 0.0005) {
+  const w = walkerAt(p);
+  const r = w && flat.roomAt(w[0], w[1]);
+  if (r && firstVisit[r.name] === undefined) firstVisit[r.name] = p;
+}
+stops.forEach(s => { firstVisit[s.room] ??= segs.find(g => g.type === "dwell" && g.i === s.i).a; });
+
+// --- Overlays --------------------------------------------------------------------------------
+document.querySelector("#intro h1").textContent = T.title || "Home";
+document.querySelector("#intro p").textContent = T.subtitle || "";
+const rail = document.getElementById("rail");
+stops.forEach(s => { const d = document.createElement("div"); d.textContent = s.caption; rail.appendChild(d); });
+const planLabels = [];
+for (const s of stops) {
+  const r = rooms[s.room];
+  if (!r) continue;
+  const el = document.createElement("div");
+  el.className = "plan-label";
+  el.textContent = s.caption;
+  const obj = new CSS2DObject(el);
+  obj.position.copy(r.centre).setY(0.05);
+  scene.add(obj);
+  planLabels.push(el);
+}
+const caption = document.getElementById("caption");
+let shownStop = -1;
+function showCaption(i) {
+  if (i === shownStop) return;
+  shownStop = i;
+  if (i < 0) { gsap.to(caption, { opacity: 0, y: 12, duration: 0.35 }); return; }
+  const s = stops[i];
+  caption.querySelector(".count").textContent = `${String(i + 1).padStart(2, "0")} / ${String(stops.length).padStart(2, "0")}`;
+  caption.querySelector(".name").textContent = s.caption;
+  caption.querySelector(".meta").textContent = s.area ? `${s.area.toFixed(1)} m²` : "";
+  gsap.fromTo(caption, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" });
+  [...rail.children].forEach((d, k) => d.classList.toggle("on", k === i));
+}
+
+// --- Frame ----------------------------------------------------------------------------------
+function apply(p) {
+  const pose = poseAt(p);
+  camera.position.copy(pose.pos);
+  camera.up.copy(pose.up);
+  camera.fov = pose.fov;
+  camera.updateProjectionMatrix();
+  camera.lookAt(pose.target);
+
+  // Walls rise: the plan cut moves from 1.2 m to above the ceiling.
+  const rise = segs[1];
+  const r = smooth(rise.a, rise.b, p);
+  flat.cutPlane.constant = r >= 1 ? 1000 : lerp(CUT, M.ceiling + 0.05, ease(r));
+
+  // Rooms stay a drawing until the walk reaches them; the outro shows the whole flat finished.
+  const outro = segs[segs.length - 1];
+  const all = smooth(outro.a, outro.b, p);
+  for (const room of Object.values(rooms)) {
+    const f = firstVisit[room.name];
+    const t = f === undefined ? 0 : smooth(f - 0.004, f + 0.018, p);
+    flat.setReveal(room, Math.max(t, all));
+  }
+
+  document.getElementById("intro").style.opacity = 1 - smooth(0.015, 0.06, p);
+  document.getElementById("hint").style.opacity = 1 - smooth(0.0, 0.03, p);
+  const labelsOn = 1 - smooth(rise.a, rise.a + (rise.b - rise.a) * 0.4, p);
+  planLabels.forEach(el => el.style.opacity = labelsOn);
+  labelRenderer.domElement.style.display = labelsOn > 0.01 ? "" : "none";
+
+  const s = segAt(p);
+  const inside = s.type === "leg" || s.type === "dwell";
+  rail.style.opacity = inside ? 1 : 0;
+  rail.classList.toggle("dark", inside);
+  const tIn = (p - s.a) / (s.b - s.a);
+  showCaption(s.type === "dwell" || (s.type === "leg" && tIn > 0.7) ? s.i : -1);
+  document.getElementById("outro").style.opacity = smooth(outro.a + (outro.b - outro.a) * 0.6, outro.b, p);
+}
+
+const fixed = new URLSearchParams(location.search).get("p");
+const lenis = fixed === null ? new Lenis({ lerp: 0.075, wheelMultiplier: 0.9 }) : null;
+const progress = () => {
+  if (fixed !== null) return clamp01(Number(fixed));
+  const max = document.documentElement.scrollHeight - innerHeight;
+  return max > 0 ? clamp01(scrollY / max) : 0;
+};
+function frame(time) {
+  lenis?.raf(time);
+  apply(progress());
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// Loader: letters in, then reveal the drawing.
+const loader = document.getElementById("loader");
+loader.firstElementChild.innerHTML = [..."LOTUS"].map(c => `<span>${c}</span>`).join("");
+gsap.timeline()
+  .to("#loader span", { opacity: 1, y: 0, duration: 0.5, stagger: 0.08, ease: "power2.out", startAt: { y: 14 } })
+  .to(loader, { opacity: 0, duration: 0.6, delay: 0.25, onComplete: () => loader.remove() });
+if (fixed !== null) loader.remove();
+
+addEventListener("resize", () => {
+  camera.aspect = aspect();
+  renderer.setSize(innerWidth, innerHeight);
+  labelRenderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>

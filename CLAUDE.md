@@ -1,4 +1,5 @@
 Read README.md first. It covers the file map, local server, DWG builds, plan versions, editing, photo spots and deploy.
+Before changing a plan drawing (DWG/DXF), read DWG_EDITING.md.
 
 Rules worth repeating:
 - Dimensions come only from the DWG. Never regenerate main `model.js` / `drawing.json` unasked.

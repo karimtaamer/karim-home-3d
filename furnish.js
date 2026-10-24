@@ -488,9 +488,10 @@ export function furnish(scene, M, mat, version = "main") {
     ac(3.567, 4.55, "N");  // over the mirror (knee-space centre)
     if (NC) {
     // Nagham's Changes en-suite (DWG): shower in the north-west corner, 0.84 wide x 1.50 deep (1.39 by the column),
-    // an 11 cm solid partition (stone-lined like the other bathroom walls) between it and the basin, and a 1 cm
+    // a 20 cm solid partition (stone-lined, with a shelf niche) between it and the basin, and a 1 cm
     // clear glass panel 0.90 long between it and the WC, leaving a 0.60 walk-in gap. WC centred in its 0.79 bay on
-    // the north wall, on a low 0.85 flush box under the 0.90 window sill. Vanity as before on the west wall.
+    // the north wall, on a low 0.85 flush box (as drawn; the 0.68 WC window above has a 1.50 sill, so a standard
+    // ~1.12 frame would also fit). Vanity as before on the west wall.
     item(0.556, 6.68, "E", vanity(1.03));
     item(1.7988, 9.0201, "S", p => {  // WC bay 1.406..2.192 (local +x east)
       const h = 0.3928, d = 0.2;
@@ -505,6 +506,18 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(-0.012, 0.012, 0, 0.01, 0, 0.9, mat.chrome);
     });
     item(2.192, 7.113, "W", towelRail);               // east wall south of the WC, clear of the open door leaf
+    // Niche in the shower face of the 0.20 solid partition (DWG dashed), centred on the 0.84 width: 0.30 wide x 0.10
+    // deep, five 4 cm porcelain shelves with 25 cm clear between (tops 0.29 / 0.58 / 0.87 / 1.16 / 1.45), slot top
+    // 1.70, a warm LED under each top. The model carves the slot 1 cm oversize full height (build --cut) so the stone
+    // lining finishes it at 30 x 10; porcelain fills it below, between and above (5 mm into the lining).
+    item(0.9759, 7.5201, "N", p => {
+      const tops = [0.29, 0.58, 0.87, 1.16, 1.45], top = 1.7, t = 0.04;
+      p.box(-0.155, 0.155, 0, tops[0], -0.105, 0, mat.stoneWall);
+      for (const y of tops.slice(1)) p.box(-0.155, 0.155, y - t, y, -0.105, 0, mat.stoneWall);
+      p.box(-0.155, 0.155, top, M.ceiling, -0.105, 0, mat.stoneWall);
+      for (const y of [...tops.slice(1).map(y => y - t), top]) p.box(-0.13, 0.13, y - 0.015, y - 0.005, -0.09, -0.07, mat.ledStrip);
+      for (const y of [tops[1], tops[3]]) p.model("models/mbath-bottles.glb", null, 0, y, -0.09, { width: 0.2 });
+    });
     // Shower set on the west wall, centred on the clear run south of the column: rain arm 0.42 out to the shower's
     // centreline, thermostatic mixer and diverter, a hand shower on a fixed holder on the partition side.
     item(0.556, 8.215, "E", p => {

@@ -235,15 +235,20 @@ from Shifted Bedroom's where the furniture differs.
 Its en-suite (2026-10-24) is rearranged to Nagham's sketch: the bathroom/bedroom partition (the headboard wall, still
 0.11) sits 14 cm further east (bathroom-side face DWG x 192.5965), and the bed and bedside tables moved with it (bed
 foot 1.40 from the wardrobe front). Shower in the north-west corner, 0.84 wide inside x 1.50 deep (1.39 beside the
-column; no back-wall build-out or niche stack, so no `--cut`); an 0.11 solid partition (stone-lined in the build)
-between it and the basin; a 1 cm clear glass panel, 0.90 long from the north wall, on its own `Glass` layer (colour 4,
+column; no back-wall build-out); a 0.20 solid partition (stone-lined in the build) between it and the basin, with a
+niche in its shower face (0.30 wide x 0.10 deep, centred on the shower, dashed; five 4 cm porcelain shelves to a 1.70
+slot top in `furnish.js`, carved by `--cut`); a 1 cm clear glass panel, 0.90 long from the north wall, on its own `Glass` layer (colour 4,
 not `Windows`, so the build doesn't read it as a window), leaving a 0.60 walk-in gap; WC centred in the 0.79 bay to
-its east on the north wall, on a 0.20-deep, 0.85-high flush box under the window. Vanity, bathroom door and the room's
+its east on the north wall, on a 0.20-deep, 0.85-high flush box. The en-suite window is WC-only: 0.68 wide, DWG x
+191.864-192.544 (0.05 of wall to the glass, 0.05 reveal to the partition, centred on the WC), the shower side solid;
+designed sill 1.50, head 2.10, obscured glass. The build has one sill/head for every window (0.90 / 2.10,
+`build_geometry.py`), so the 3D shows it 0.90-2.10 in clear glass. Vanity, bathroom door and the room's
 other walls are as before. `furnish.js` (the `NC` branch in the shared block) and `spotnames.js` follow it.
 
 ```sh
 N=dwg/naghams-changes.dxf
-~/.dwg-tools/bin/python build_geometry.py $N --out model-naghams-changes.js --tour tour-naghams-changes.json
+~/.dwg-tools/bin/python build_geometry.py $N --out model-naghams-changes.js --tour tour-naghams-changes.json \
+    --cut 191.2209,-114.2031,191.5409,-114.0731   # shower niche in the shower/basin partition
 ~/.dwg-tools/bin/python build_drawing.py $N --model model-naghams-changes.js --out drawing-naghams-changes.json
 ```
 

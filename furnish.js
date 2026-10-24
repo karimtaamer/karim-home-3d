@@ -769,7 +769,8 @@ export function furnish(scene, M, mat, version = "main") {
   // --- Kitchen: U of white flat-panel units, oak uppers, wide black fridge ---------------------
   const K = { x0: 6.48, x1: 10.21, y0: 5.67, y1: 9.09, front: 0.6 };
   // sink / hob: centre along the run (null = none), sinkW / hobW: their widths (the hood matches the hob).
-  function run(x, y, facing, len, { sink = null, sinkW = 0.7, hob = null, hobW = 0.9, uppers = true, window } = {}) {
+  // up / splash: [start, end] extensions of the uppers and the stone splash past the run's ends (corner units).
+  function run(x, y, facing, len, { sink = null, sinkW = 0.7, hob = null, hobW = 0.9, uppers = true, window, up = [0, 0], splash = [0, 0] } = {}) {
     item(x, y, facing, p => {
       p.box(-len / 2, len / 2, 0, 0.1, 0.06, K.front - 0.06, mat.darkTop);
       p.box(-len / 2, len / 2, 0.02, 0.04, K.front - 0.08, K.front - 0.06, mat.ledStrip);
@@ -781,7 +782,8 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(-len / 2, len / 2, 0.88, 0.92, K.front + 0.01, K.front + 0.02, mat.darkTop);
       if (window) for (let k = 0; k < 24; k++) p.box(window[0] + 0.05, window[1] - 0.05, 1.0 + k * 0.045, 1.012 + k * 0.045, -0.06, -0.03, mat.planter);
       const spans = window ? [[-len / 2, window[0]], [window[1], len / 2]] : [[-len / 2, len / 2]];
-      for (const [a, b] of spans) if (b - a > 0.05) p.box(a, b, 0.92, 1.58, 0, 0.015, greyStone);
+      const ext = ([a, b], [s0, s1]) => [a === -len / 2 ? a - s0 : a, b === len / 2 ? b + s1 : b];
+      for (const sp of spans) { const [a, b] = ext(sp, splash); if (b - a > 0.05) p.box(a, b, 0.92, 1.58, 0, 0.015, greyStone); }
       if (sink !== null) {
         p.box(sink - sinkW / 2, sink + sinkW / 2, 0.921, 0.925, 0.09, 0.55, mat.blackSteel);
         p.cyl(sink, 0.06, 0.015, 0.92, 1.25, mat.chrome, 8);
@@ -791,18 +793,25 @@ export function furnish(scene, M, mat, version = "main") {
         p.box(hob - hobW / 2, hob + hobW / 2, 1.5, 1.62, 0, 0.5, mat.chrome);
       }
       if (uppers) {
-        for (const [a, b] of spans) {
+        for (const sp of spans) {
+          const [a, b] = ext(sp, up);
           if (b - a < 0.05) continue;
           p.box(a, b, 1.6, 2.25, 0, 0.35, mat.oakVeneer);
-          p.box(a, b, 1.58, 1.6, 0.05, 0.3, mat.ledStrip);
+          p.box(a, b + (b > len / 2 ? 0.05 : 0), 1.58, 1.6, 0.05, 0.3, mat.ledStrip);  // into a corner: on to the next run's strip
           p.box(a, b, 2.25, M.ceiling, 0, 0.35, mat.whiteLacquer);
         }
       }
     });
   }
   // West run, hob: DWG hob block 0.924 wide centred at y 7.376. North run, sink: DWG sink block 0.877 wide at x 8.193.
-  run(K.x0, (6.27 + K.y1 - K.front) / 2, "E", K.y1 - K.front - 6.27, { hob: 7.376 - (6.27 + K.y1 - K.front) / 2, hobW: 0.924 });
-  run((K.x0 + 9.6) / 2, K.y1, "S", 9.6 - K.x0, { sink: 8.193 - (K.x0 + 9.6) / 2, sinkW: 0.877, window: [7.45 - (K.x0 + 9.6) / 2, 8.75 - (K.x0 + 9.6) / 2] });
+  // Nagham's Changes closes the upper corners: the west uppers (oak, LED, white to the ceiling) run on 0.25 to the
+  // north uppers' front (y 8.74) and start at the pantry front (y 6.2604); the north uppers run on 0.26 past x 9.6
+  // to the east run's upper front (x 9.86). The stone splash wraps both corners to the adjoining run's splash.
+  const KNC = version === "naghams-changes", UD = 0.35;
+  run(K.x0, (6.27 + K.y1 - K.front) / 2, "E", K.y1 - K.front - 6.27, { hob: 7.376 - (6.27 + K.y1 - K.front) / 2, hobW: 0.924,
+    ...(KNC && { up: [6.27 - 6.2604, K.front - UD], splash: [0, K.front - 0.015] }) });
+  run((K.x0 + 9.6) / 2, K.y1, "S", 9.6 - K.x0, { sink: 8.193 - (K.x0 + 9.6) / 2, sinkW: 0.877, window: [7.45 - (K.x0 + 9.6) / 2, 8.75 - (K.x0 + 9.6) / 2],
+    ...(KNC && { up: [0, K.x1 - UD - 9.6], splash: [0, K.x1 - 0.015 - 9.6] }) });
   if (version === "naghams-changes") {
     // Nagham's Changes: the whole south run (DWG x 196.8797 west wall face to 198.9716) becomes floor-to-ceiling
     // joinery, 0.60 deep off the DWG wall face (y 5.6604): a 1.192 pantry from the west wall, then a 0.90

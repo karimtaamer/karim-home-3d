@@ -8,7 +8,8 @@
 //            | { obj, slide: Vector3 }],                //   or a sliding one: obj moves by `slide` (its parent's frame)
 //     anchor: Vector3,                                  // where the cue sits, in g's frame (the doors' centre, a little out)
 //     reach: 1.8, duration: 0.6,                        // plan metres from the anchor to offer it; seconds to open
-//   };
+//     peek: 1.0, peekAt: Vector3,                       // optional, low cabinets: crouch to this eye height on opening,
+//   };                                                  //   turned to peekAt (g's frame; default the anchor)
 // createInteract() collects them from the scene; call update() every frame. Leaves start from their built pose (closed).
 // See README §5 "Openable cabinets".
 
@@ -53,7 +54,7 @@ export function createInteract({ THREE, camera, scene, renderer, isActive, isLoc
       if (!d) return;
       list.push({
         ...d, root: g, reach: d.reach ?? REACH, duration: d.duration ?? 0.6, t: 0, to: 0,
-        at: g.localToWorld(d.anchor.clone()),
+        at: g.localToWorld(d.anchor.clone()), look: g.localToWorld((d.peekAt || d.anchor).clone()),
         leaves: d.leaves.map(l => ({ ...l, axis: l.axis || "y", rot: l.obj.rotation[l.axis || "y"], pos: l.obj.position.clone() })),
       });
     });
@@ -71,7 +72,29 @@ export function createInteract({ THREE, camera, scene, renderer, isActive, isLoc
   function toggle(o = target) {
     if (!o) return;
     o.to = o.to ? 0 : 1;
+    if (o.peek && o.to && !crouch) kneel(o);
+    else if (crouch?.o === o && !o.to) rise();
     label();
+  }
+
+  // Low cabinets (peek: eye height) are seen into by crouching to it as they open, turned to the inside; you stand
+  // back up when they close or you step out of reach. Only the eye height moves: walking and looking carry on.
+  let crouch = null;  // { o, stand, y0, y1, t, aim0, aim1 }
+  function kneel(o) {
+    const aim0 = camera.getWorldPosition(new THREE.Vector3()).add(camera.getWorldDirection(new THREE.Vector3()));
+    crouch = { o, stand: camera.position.y, y0: camera.position.y, y1: o.peek, t: 0, aim0, aim1: o.look };
+  }
+  function rise() {
+    if (!crouch || crouch.y1 === crouch.stand) return;
+    Object.assign(crouch, { y0: camera.position.y, y1: crouch.stand, t: 0, aim0: null });
+  }
+  function bob(dt) {
+    if (!crouch || crouch.t >= 1) return;
+    crouch.t = Math.min(1, crouch.t + dt / crouch.o.duration);
+    const e = ease(crouch.t);
+    camera.position.y = crouch.y0 + (crouch.y1 - crouch.y0) * e;
+    if (crouch.aim0) camera.lookAt(crouch.aim0.clone().lerp(crouch.aim1, e));
+    if (crouch.t >= 1 && crouch.y1 === crouch.stand) crouch = null;
   }
   const label = () => target && (cue.dataset.label = `${target.to ? "Close" : "Open"} ${target.label.toLowerCase()} · E`);
   cue.setAttribute("aria-label", "Open or close");
@@ -118,6 +141,8 @@ export function createInteract({ THREE, camera, scene, renderer, isActive, isLoc
       pose(o);
     }
     if (bare || !list.length || !isActive()) { wait = 0; return show(null); }
+    if (crouch && Math.hypot(crouch.o.at.x - camera.position.x, crouch.o.at.z - camera.position.z) > crouch.o.reach) rise();
+    bob(dt);
     if ((wait -= dt) <= 0) { wait = CHECK; show(aimed()); }
     if (!target) return;
     v.copy(target.at).project(camera);

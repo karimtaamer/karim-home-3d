@@ -352,11 +352,13 @@ export function furnish(scene, M, mat, version = "main") {
     for (const [lx, lz] of [[-w / 2 + 0.04, 0.05], [w / 2 - 0.04, 0.05], [-w / 2 + 0.04, d - 0.05], [w / 2 - 0.04, d - 0.05]]) p.cyl(lx, lz, 0.014, 0, 0.22, mat.walnut, 6);
   };
   // centred: trough, mixer and mirror on the vanity's centreline (Nagham's Changes); otherwise 6 cm off it, as in the renders.
-  // d: depth from the wall face; above: what hangs over the basin in place of the backlit mirror (Kareem's cabinet).
-  const vanity = (w = 1.4, centred = false, d = 0.52, above = null) => p => {  // DWG vanity 0.51 deep, w long (1.40 in Main and v9), round basin
+  // d: depth from the wall face; above: what hangs over the basin in place of the backlit mirror (Kareem's cabinet);
+  // body: builds the floating body in place of the modelled one (Kareem's openable under-sink cabinet).
+  const vanity = (w = 1.4, centred = false, d = 0.52, above = null, body = null) => p => {  // DWG vanity 0.51 deep, w long (1.40 in Main and v9), round basin
     const h = w / 2, c = centred ? 0 : 0.06, t = centred ? 0.2365 : h - 0.34, r = h - 0.14;
     p.box(-h, h, 0, M.ceiling, 0, 0.02, mat.oakSlats);
-    p.model("models/mbath-vanity.glb", null, 0, 0.3, 0.02, { size: [w - 0.02, 0.56, d - 0.02] });  // from the renders
+    if (body) body(p, w, d);
+    else p.model("models/mbath-vanity.glb", null, 0, 0.3, 0.02, { size: [w - 0.02, 0.56, d - 0.02] });  // from the renders
     p.box(-h + 0.02, h - 0.02, 0.27, 0.29, 0.05, d - 0.08, mat.ledStrip);
     p.box(c - t, c + t, 0.855, 0.862, 0.12, 0.42, mat.ceramic, 0.003);  // integrated trough
     p.box(c - 0.04, c + 0.04, 1.0, 1.06, 0.02, 0.06, mat.chrome);               // wall mixer
@@ -397,6 +399,71 @@ export function furnish(scene, M, mat, version = "main") {
     }
     c.userData.openable = { id: "medicine-cabinet", label: "Medicine cabinet", leaves, anchor: new THREE.Vector3(0, (y0 + y1) / 2, f + 0.06),
       reach: 1.8, duration: 0.6 };
+  };
+  // Kareem's floating vanity body, w x d, 0.30 to the 0.86 counter, in place of the modelled one: a mid-oak carcass under a
+  // pale oak counter, two handle-less doors hinged at the outer ends on their front corners (they meet the side walls
+  // 1 cm off, so they stop at 88 degrees), marked openable (interact.js). Inside: an instant electric water heater flat on
+  // the left side panel (as you face it: local -x), its hoses to angle valves on the back, a socket, and the trough's trap.
+  const heaterVanity = (p0, w, d) => {
+    const c = new THREE.Group(), p = part(c), leaves = [];
+    p0.g.add(c);
+    const H = w / 2 - 0.01, t = 0.018, F = d - 0.02, y0 = 0.3, y1 = 0.8;  // half width, board, carcass front, body
+    const body = mat.oakVeneer.clone(); body.color.setRGB(0.78, 0.55, 0.36); body.clippingPlanes = mat.oakVeneer.clippingPlanes;
+    const white = mat.applianceWhite.clone(); white.roughness = 0.75; white.clippingPlanes = mat.applianceWhite.clippingPlanes;
+    const top = mat.oakVeneer.clone(); top.color.setRGB(1.6, 1.45, 1.25); top.clippingPlanes = mat.oakVeneer.clippingPlanes;
+    p.box(-H, H, y1, 0.86, 0.02, d, top);                                             // pale oak counter, as the model's
+    for (const s of [-1, 1]) p.box(s < 0 ? -H : H - t, s < 0 ? -H + t : H, y0, y1, 0.02, F, body);  // sides
+    p.box(-H, H, y0, y0 + t, 0.02, F, body);                                          // bottom
+    p.box(-H, H, y1 - t, y1, 0.02, F, body);                                          // top under the counter
+    p.box(-H + t, H - t, y0 + t, y1 - t, 0.02, 0.032, honeyOak);                      // back, pale so the inside reads
+    const B = 0.032;  // back panel face
+    for (const s of [-1, 1]) {  // doors: 20 mm, meeting with a 3 mm gap
+      const g = new THREE.Group(), q = part(g);
+      g.position.set(s * H, 0, d);
+      p.g.add(g);
+      q.box(s < 0 ? 0 : -H + 0.0015, s < 0 ? H - 0.0015 : 0, y0, y1, -0.02, 0, body);
+      leaves.push({ obj: g, axis: "y", open: s * 88 * Math.PI / 180 });  // the same sign as medCabinet's: free edges swing out (+z)
+    }
+    // An axis-aligned run of pipe or hose from a to b ([x, y, z]).
+    const run = (a, b, r, m) => {
+      const k = [0, 1, 2].find(i => a[i] !== b[i]), L = Math.abs(b[k] - a[k]);
+      const o = p.cyl(0, 0, r, -L / 2, L / 2, m, 12);
+      o.position.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2);
+      if (k === 0) o.rotation.z = Math.PI / 2;
+      if (k === 2) o.rotation.x = Math.PI / 2;
+    };
+    const path = (pts, r, m) => pts.slice(1).forEach((b, i) => run(pts[i], b, r, m));
+    // Instant water heater (Purity / Cemsan SPEED 7.5 kW: 37 x 24 x 10.5 cm), back on the left panel, its face to the middle.
+    const x0 = -H + t, x1 = x0 + 0.105, hy0 = 0.37, hy1 = 0.74, hz = 0.3;
+    p.box(x0, x1, hy0, hy1, hz - 0.12, hz + 0.12, white, 0.012);
+    p.box(x1, x1 + 0.004, 0.53, 0.66, hz - 0.06, hz + 0.06, mat.greyLacquer, 0.003);  // control panel
+    const dial = p.cyl(0, 0, 0.022, -0.006, 0.006, mat.grille, 24);                   // temperature dial on the panel
+    dial.position.set(x1 + 0.01, 0.6, hz);
+    dial.rotation.z = Math.PI / 2;
+    p.box(x1 + 0.004, x1 + 0.007, 0.548, 0.554, hz + 0.035, hz + 0.041, mat.downlight);  // power LED
+    // Hoses from its bottom (cold in, hot out) to two angle valves on the back panel.
+    for (const [hzz, vx, hy] of [[hz - 0.04, -0.36, 0.35], [hz + 0.04, -0.27, 0.33]]) {
+      const hx = x0 + 0.05;
+      path([[hx, hy0, hzz], [hx, hy, hzz], [hx, hy, 0.075], [vx, hy, 0.075], [vx, 0.4, 0.075]], 0.006, mat.brushedNickel);
+      run([vx, 0.42, B], [vx, 0.42, 0.075], 0.012, mat.chrome);                       // valve body
+      p.cyl(vx, B + 0.003, 0.022, 0.417, 0.423, mat.chrome, 24).rotation.x = Math.PI / 2;  // rosette
+      p.box(vx - 0.006, vx + 0.006, 0.432, 0.46, 0.05, 0.062, mat.chrome, 0.003);     // quarter-turn handle
+      run([vx, 0.4, 0.075], [vx, 0.42, 0.075], 0.008, mat.chrome);
+    }
+    // White socket on the back panel, the heater's cable up and across to it.
+    p.box(-0.29, -0.21, 0.62, 0.7, B, B + 0.01, white, 0.004);
+    for (const x of [-0.262, -0.238]) p.box(x - 0.003, x + 0.003, 0.655, 0.665, B + 0.01, B + 0.011, shadowGap);
+    path([[x0 + 0.05, hy1, hz], [x0 + 0.05, 0.765, hz], [x0 + 0.05, 0.765, 0.06], [-0.25, 0.765, 0.06], [-0.25, 0.68, 0.06], [-0.25, 0.68, B + 0.012]],
+      0.004, white);
+    // Trough waste: tail down from the counter, a chrome bottle trap, and the arm back into the wall.
+    run([0, y1 - t, 0.27], [0, 0.6, 0.27], 0.016, mat.chrome);
+    p.cyl(0, 0.27, 0.032, 0.48, 0.62, mat.chrome, 24, 0.032);
+    run([0, 0.57, 0.27], [0, 0.57, B], 0.016, mat.chrome);
+    p.cyl(0, B + 0.003, 0.03, 0.564, 0.576, mat.chrome, 24).rotation.x = Math.PI / 2;
+    // Under the 0.86 counter the inside can't be seen from standing eye height: opening it crouches you to 0.95, turned
+    // a little towards the heater.
+    c.userData.openable = { id: "vanity-cabinet", label: "Vanity cabinet", leaves, anchor: new THREE.Vector3(0, (y0 + y1) / 2, d + 0.06),
+      reach: 1.8, duration: 0.6, peek: 0.95, peekAt: new THREE.Vector3(-0.15, 0.5, 0.3) };
   };
   // DWG wardrobe w long. Default: smoked-glass sliding doors in a gypsum frame. `white`: plain white lacquer
   // leaves with a recessed vertical finger-pull between them (hidden handle), no walnut mullions.
@@ -555,7 +622,7 @@ export function furnish(scene, M, mat, version = "main") {
     // Kareem's Changes: the bathroom door sits 0.16 further east, so the vanity runs the whole wall (1.185, south wall
     // to the partition) and is 0.60 deep; the backlit mirror becomes a 0.80 x 0.75 mirrored medicine cabinet, 0.30
     // out from the battens, bottom 1.32 (0.46 over the counter), three glass shelves, all centred on the bowl.
-    if (version === "kareems-changes") item(0.556, 6.7276, "E", vanity(1.185, true, 0.6, medCabinet()));  // centre DWG y -114.8856
+    if (version === "kareems-changes") item(0.556, 6.7276, "E", vanity(1.185, true, 0.6, medCabinet(), heaterVanity));  // centre DWG y -114.8856
     else item(0.556, 6.7435, "E", vanity(1.153, true));  // centre DWG y -114.8697, bowl, mixer and mirror on it
     item(1.8037, 9.0201, "S", p => {  // WC bay 1.416..2.192 (local +x east)
       const h = 0.3878, d = 0.3, top = 1.12;

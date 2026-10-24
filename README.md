@@ -84,10 +84,11 @@ P=dwg/main.dxf
 place and commit them. They are identical outside the master suite and differ only inside it.
 `~/.dwg-tools/bin/python suite_merge.py --check dwg/*.dxf` must print `outside the suite: identical` after any edit
 (it skips `dwg/as-built.dxf`, the survey of the flat as it stands, §4).
-**Exception (2026-10-24):** `dwg/naghams-changes.dxf` also differs in the kitchen: the south run east of the L
-corner (DWG x 197.48 to 198.97) is a floor-to-ceiling 90 cm appliance tower plus a 58.9 cm pantry, 60 deep, in
-place of counter, under-counter unit and wall cabinets. So `--check` lists those 14 kitchen entities for that file;
-any other difference is still an error. A room edit copied in with `suite_merge.py` must keep that kitchen run.
+**Exception (2026-10-24):** `dwg/naghams-changes.dxf` also differs in the kitchen: the whole south run (DWG x 196.88
+west wall to 198.97) is floor-to-ceiling joinery, 60 deep: a 119.2 cm pantry from the west wall, then a 90 cm appliance
+tower at the east end, in place of counter, under-counter unit and wall cabinets. So `--check` lists those 15 kitchen
+entities for that file; any other difference is still an error. A room edit copied in with `suite_merge.py` must keep
+that kitchen run.
 
 **Changing the plan, step by step** (anyone with repo access):
 1. Pull, then edit the version's file in `dwg/` (AutoCAD, DraftSight, LibreCAD or ezdxf). Save it back **as DXF,

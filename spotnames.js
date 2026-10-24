@@ -37,7 +37,7 @@ export const WORDS = [
   [6.48, 7.38, "hob"], [8.04, 9.09, "sink"], [7.54, 5.67, "counter"], [10.21, 8.764, "counter"],
   [10.21, 8.1265, "dishwasher"], [10.21, 7.3235, "fridge"],
   // Nagham's Changes: the south run's tall units
-  [7.5276, 5.6604, "oven", "naghams-changes"], [8.2721, 5.6604, "pantry", "naghams-changes"],
+  [8.1166, 5.6604, "oven", "naghams-changes"], [7.0707, 5.6604, "pantry", "naghams-changes"],
   // Laundry
   [10.32, 7.9215, "cupboards"], [11.236, 9.18, "counter"], [11.835, 9.18, "washer"],
   // Entrance: the console by the door, the mirror wall facing it, the door

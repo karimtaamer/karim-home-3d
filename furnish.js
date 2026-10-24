@@ -713,11 +713,10 @@ export function furnish(scene, M, mat, version = "main") {
   run(K.x0, (6.27 + K.y1 - K.front) / 2, "E", K.y1 - K.front - 6.27, { hob: 7.376 - (6.27 + K.y1 - K.front) / 2, hobW: 0.924 });
   run((K.x0 + 9.6) / 2, K.y1, "S", 9.6 - K.x0, { sink: 8.193 - (K.x0 + 9.6) / 2, sinkW: 0.877, window: [7.45 - (K.x0 + 9.6) / 2, 8.75 - (K.x0 + 9.6) / 2] });
   if (version === "naghams-changes") {
-    // Nagham's Changes: the south run's straight counter (DWG x 197.4826 to 198.9716, from the west run's
-    // front to the counter's end) becomes floor-to-ceiling joinery, 0.60 deep off the DWG wall face (y 5.6604):
-    // a 0.90 appliance tower (microwave over oven) and a 0.589 pantry. Only the corner square under the L stays.
-    const XT = 7.0776, XP = 7.9776, XE = 8.5666, WY = 5.6604, D = 0.6, f = 0.018, H = M.ceiling;
-    run((K.x0 + XT) / 2, K.y0, "N", XT - K.x0, { uppers: false });                    // corner of the L
+    // Nagham's Changes: the whole south run (DWG x 196.8797 west wall face to 198.9716) becomes floor-to-ceiling
+    // joinery, 0.60 deep off the DWG wall face (y 5.6604): a 1.192 pantry from the west wall, then a 0.90
+    // appliance tower (microwave over oven) at the east end. The hob run ends against the pantry's front.
+    const XW = 6.4747, XJ = 7.0776, XT = 7.6666, XE = 8.5666, WY = 5.6604, D = 0.6, f = 0.018, H = M.ceiling;
     const tall = (hw, build) => p => {               // carcass, recessed plinth, then the fronts from build
       for (const s of [-1, 1]) p.box(s > 0 ? hw - f : -hw, s > 0 ? hw : -hw + f, 0, H, 0, D, mat.whiteLacquer);
       p.box(-hw + f, hw - f, 0.1, H, 0, 0.02, mat.whiteLacquer);
@@ -730,7 +729,7 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(a, b, y1 - 0.002, y1 + 0.002, D, D + 0.003, shadowGap);
       for (let k = 1; k < n; k++) { const x = a + k * (b - a) / n; p.box(x - 0.002, x + 0.002, y0, y1, D, D + 0.003, shadowGap); }
     };
-    item((XT + XP) / 2, WY, "N", tall(0.45, (p, w) => {
+    item((XT + XE) / 2, WY, "N", tall(0.45, (p, w) => {
       const aw = 0.2975;                              // 0.595 built-in appliances, white fillers either side
       doors(p, -w, w, 0.1, 0.6, 2);                   // two-door cupboard under the oven
       for (const s of [-1, 1]) p.box(s > 0 ? aw : -w, s > 0 ? w : -aw, 0.6, 1.65, D - f, D, mat.whiteLacquer);
@@ -747,9 +746,15 @@ export function furnish(scene, M, mat, version = "main") {
       doors(p, -w, w, 1.65, 2.25, 2);                 // two-door cupboards to the ceiling,
       doors(p, -w, w, 2.25, H, 2);                    // jointed in line with the oak uppers
     }));
-    item((XP + XE) / 2, WY, "N", tall((XE - XP) / 2, (p, w) => {
-      doors(p, -w, w, 0.1, 2.25, 1);                  // pantry: tall door and a top door
-      doors(p, -w, w, 2.25, H, 1);
+    // Pantry: its west 0.603 (to XJ, the hob run's front line) sits behind the hob run's end, so that part is a
+    // fixed flush panel (blind corner, reached through the door, e.g. a corner pull-out); the east 0.589 opens:
+    // a tall door 0.10-2.25 and a top door 2.25-2.60. Local x runs opposite to plan x (facing N).
+    item((XW + XT) / 2, WY, "N", tall((XT - XW) / 2, (p, w) => {
+      const j = (XW + XT) / 2 - XJ;                   // the joint, in local x
+      p.box(j, w, 0.1, H, D - f, D, mat.whiteLacquer); // blind panel
+      p.box(j - 0.002, j + 0.002, 0.1, H, D, D + 0.003, shadowGap);
+      doors(p, -w, j, 0.1, 2.25, 1);
+      doors(p, -w, j, 2.25, H, 1);
     }));
   } else {
     run((K.x0 + 8.6) / 2, K.y0, "N", 8.6 - K.x0, { uppers: false });                 // south run

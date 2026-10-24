@@ -9,7 +9,8 @@ drawn from the DWG and the view's numbers. This turns them into an OpenAI image 
 screenshot's angle and objects and only re-surfaces them, using a material board cropped from the
 designer's renders, a few of the renders themselves and the finishes written out in photogen-brief.json;
 the earlier renders (designer's and approved AI spots) that show the furniture of the rooms in shot go too, so
-the pieces keep their real design. Comments re-run it on the attempt shown.
+the pieces keep their real design. The screenshot alone says what the room has (walls, doors, windows, niches,
+furniture); the other images lend only surfaces and designs. Comments re-run it on the attempt shown.
 Approving copies the image into renders/ and adds the spot to spots.json, like a designer render (or to
 the plan version's spots file the page is showing, e.g. spots-bigger-bedroom.json).
 
@@ -46,7 +47,10 @@ NAME_MODEL = os.environ.get("OPENAI_NAME_MODEL", "gpt-4.1-nano")  # names a spot
 # USD per million tokens, OpenAI's list prices for gpt-image-1 (text in, image in, image out); gpt-image-2 is
 # assumed to cost the same until OpenAI's price page says otherwise. Only used to log what a call cost.
 PRICE = {"text": 5.0, "image": 10.0, "output": 40.0}
-SAME_ROOM, MAX_REFS = 2, 4  # whole designer renders sent for colour and light (more invites copying their layout)
+# Whole designer renders sent for colour and light (more invites copying their layout): those of this room and the
+# rooms in shot up to MAX_REFS; renders of rooms not in shot only to make up SAME_ROOM, as their doors and windows
+# are elsewhere and leak into the photo (a living-room door appeared at the edge of a dining view).
+SAME_ROOM, MAX_REFS = 2, 4
 MAX_FURNITURE, MAX_IMAGES = 6, 16  # extra renders sent for their furniture; OpenAI edits take at most 16 images
 SOFT = {"LIVING ROOM", "RECEPTION", "MASTER BEDROOM", "DINING"}  # the rooms that show the fabrics and art best
 REF_PX = 1024  # long side of a whole render as sent; the board carries the close-up detail
@@ -64,6 +68,16 @@ Ceilings are {ceiling} m high; door heads {doorHead} m; windows run from a {sill
 glass sliders are {sliderHead} m high. Client decisions that override the designer's renders: the kitchen
 door is on the kitchen's east wall, as in the architect's drawing; the terrace counter has no sink; the shoe
 cabinet is the unit beside the front door."""
+# Where the room comes from, in every prompt: the image named holds the architecture and what is in the room; the
+# others lend only surfaces and designs, so nothing of theirs (a door at the edge of a render, say) comes in.
+LOCK = """\
+For this photo, {img} is the only authority for the architecture and for what is in the room: every wall, opening, door, window, \
+niche, column, beam, ceiling feature, built-in, piece of furniture, light, plant, artwork and object, and where each \
+one is. Do not add any door, opening, window, niche, furniture, decor or fixture that is not visible in {img}, and \
+do not remove any that is. Where {img} shows plain wall, the photo shows plain wall. Keep everything at the edges \
+of the frame exactly as {img} has it, and do not complete what is cut off there from another image. The other \
+images lend only materials, colours, light and the design of pieces that are already in {img}; their walls, doors, \
+windows, openings and layout belong to other rooms or angles and must not appear."""
 
 
 def save(path, data, mime):
@@ -212,17 +226,18 @@ def small(path):
 
 
 def references(room, seen, name):
-    """Designer renders on disk: this room's, then one of each other room in shot, then one each from rooms
-    of the same sort (bathrooms for a bathroom, the terrace for the terrace, living spaces otherwise), up to MAX_REFS."""
+    """Designer renders on disk: this room's, then one of each other room in shot, up to MAX_REFS; then, only while
+    there are fewer than SAME_ROOM, one each from rooms of the same sort (bathrooms for a bathroom, the terrace for
+    the terrace, living spaces otherwise)."""
     have = [s for s in spots(name) if not s.get("ai") and (BLOB or (ROOT / s["photo"]).exists())]
     refs = [s for s in have if s["room"] == room][:SAME_ROOM]
     wet = lambda r: bool(re.search(r"toilet|bath|wc|shower|laundry", r, re.I))
     out = lambda r: r == "TERRACE"
     seen = [STAND_IN.get(r, r) for r in seen]  # rooms with no render of their own borrow a neighbour's
-    rest = [r for r in seen] + sorted({s["room"] for s in have} - {room, *seen}, key=lambda r: (out(r) != out(room), wet(r) != wet(room), r not in SOFT, r))
-    for r in rest:
+    other = sorted({s["room"] for s in have} - {room, *seen}, key=lambda r: (out(r) != out(room), wet(r) != wet(room), r not in SOFT, r))
+    for r, most in [(r, MAX_REFS) for r in seen] + [(r, SAME_ROOM) for r in other]:
         pick = next((s for s in have if s["room"] == r), None)
-        if pick and len(refs) < MAX_REFS:
+        if pick and pick not in refs and len(refs) < most:
             refs.append(pick)
     return refs
 
@@ -321,18 +336,22 @@ def prompt(ctx, refs, comments, revising, has_board):
         "exactly the same camera, angle, lens, framing and composition, and keep every wall, opening, door, "
         "window, piece of furniture, light and object in the same place, with the same shape and size. "
         + ("Do not add, remove or move anything, and do not borrow the layout of any other image or any object "
-           "that is not in image 1. Change only the materials, colours, textures and light so they match the "
+           "that is not in the VIEW. Change only the materials, colours, textures and light so they match the "
            "designer's finishes, and give each piece of furniture its real design from the FURNITURE images. "
            if furn else
            "Do not add, remove, move or redesign anything, and do not borrow the layout or objects of any other "
            "image. Change only the materials, colours, textures and light so they match the designer's finishes. ")
         + "No text, no labels, no people.",
         "",
+        LOCK.format(img="the VIEW"),
+        "",
         "Images, in order:",
     ]
     if revising:
         lines.append(f"{next(n)}. PREVIOUS - your last attempt at this view. Keep it exactly, except where the "
-                     "comments below ask for a change.")
+                     "comments below ask for a change, and except that anything in it the VIEW does not have (a "
+                     "door, opening, window, niche, piece of furniture or fixture) is a mistake: put back what the "
+                     "VIEW shows there.")
     lines += [
         f"{next(n)}. VIEW - a screenshot of the 3D model from the exact camera spot, drawn from the architect's "
         "DWG. Its geometry is right; its surfaces are rough placeholders (flat paint, plain wood, plastic-"
@@ -344,16 +363,17 @@ def prompt(ctx, refs, comments, revising, has_board):
     if has_board:
         lines.append(f"{next(n)}. BOARD - the designer's materials, cropped from their renders, each labelled with "
                      "what it is for. Give each surface in the VIEW the matching swatch: walls the limewash "
-                     "plaster, the ceiling its warm off-white, the floor the honey oak, door leaves and frames the "
-                     "flush honey oak, the headboard the cream boucle, bedding, rugs and cushions their fabrics, "
-                     "bathroom walls the oak slats and stone, corridor walls and trim the corridor finishes. Copy "
-                     "their colour, grain, weave, texture and sheen closely.")
+                     "plaster, the ceiling its warm off-white, the floor the honey oak, any door leaves and frames "
+                     "the VIEW shows the flush honey oak, the headboard the cream boucle, bedding, rugs and cushions "
+                     "their fabrics, bathroom walls the oak slats and stone, corridor walls and trim the corridor "
+                     "finishes. Copy their colour, grain, weave, texture and sheen closely. The board is materials "
+                     "only: a swatch is not an object to add (the door swatches do not mean this view has a door).")
     lines += [ref_line(next(n), s, w, r["name"], [x["name"] for x in seen]) for s, w in refs]
     if furn:
         lines += ["", "Use the EXACT furniture shown in the FURNITURE reference images (same design, shape, fabric, "
                   "colour, wood and details) for the pieces standing where the VIEW's blocks are; do not substitute "
                   "other designs. Do not copy those images' layout or camera: positions and sizes come from the VIEW, "
-                  "and a piece that is not in the VIEW stays out."]
+                  "and a piece that is not in the VIEW stays out, even when a FURNITURE image lists it for this room."]
     lines += [
         "",
         f"Room: {r['caption']} (DWG label {r['name']}), about {r['width']:.2f} m east-west by {r['depth']:.2f} m "
@@ -362,33 +382,47 @@ def prompt(ctx, refs, comments, revising, has_board):
         f"Camera: {v['height']:.2f} m above the floor, looking {v['facing']}, tilted {v['tilt']}, horizontal "
         f"field of view {v['hfov']:.0f} degrees (vertical {v['vfov']:.0f}).",
         "",
-        "Finishes of the whole apartment (from the designer's renders):",
+        "Finishes of the whole apartment (from the designer's renders; they say how what the VIEW shows should look, "
+        "never what to add):",
         *[f"- {x}" for x in allrooms],
         *[f"{captionish(name)}: {text}" for name, text in rooms],
         "",
         FACTS.format(**ctx["heights"]),
     ]
     if revising:
-        lines += ["", "This is a revision of the PREVIOUS image. Fix these client comments now: " + comments[-1]]
+        lines += ["", "This is a revision of the PREVIOUS image. Only these comments can add or remove something "
+                  "the VIEW has or lacks. Where a comment says a part is wrong, inaccurate or should not be there, "
+                  "make that part match the VIEW exactly (a door or opening the VIEW lacks is removed, and plain "
+                  "wall goes back), and do not redraw it more clearly. Fix these client comments now: " + comments[-1]]
         if len(comments) > 1:
             lines.append("Earlier comments, already fixed - keep them fixed: " + " | ".join(comments[:-1]))
     return "\n".join(lines)
 
 
-def ref_line(k, s, w, room, seen):
-    """Image k's line in a prompt: a whole render (s), sent for colour and light (w None) or its furniture too."""
-    here = " (this room)" if s["room"] == room else " (a room in shot)" if s["room"] in seen else ""
+def ref_line(k, s, w, room, seen, base="the VIEW"):
+    """Image k's line in a prompt: a whole render (s), sent for colour and light (w None) or its furniture too.
+    base names the image that holds the room's architecture and objects."""
+    here = (" (this room)" if s["room"] == room else " (a room in shot)" if s["room"] in seen
+            else f" (another room, the {captionish(s['room']).lower()}, not in this view)")
+    rest = (f"do not copy its layout, its camera, its walls, doors, windows, openings or niches, or any object "
+            f"{base} does not have.")
+    # A render of the same space shows the walls the photo shows, but as an earlier design drew them: its doors
+    # and openings can be gone from the plan (a door right of the reception's TV wall kept coming back).
+    same = (f" It was drawn for an earlier design of this space: where its walls, doors, openings, niches or windows "
+            f"differ from {base} (for example a door beside the TV wall or the lit niches), {base} is right and that "
+            "door or opening does not exist." if s["room"] == room or s["room"] in seen else "")
+    rest += same
     if w is None:
         return (f"{k}. RENDER - the designer's render \"{s['caption']}\"{here}, from another angle. "
                 "Use it only for the colour palette, the warmth and softness of the light and the render "
-                "quality; ignore its layout and objects.")
+                f"quality; ignore its layout, architecture and objects: they are not in {base}." + same)
     if s.get("ai"):
         return (f"{k}. FURNITURE - render \"{s['caption']}\"{here}, an approved earlier photo of this "
-                "apartment from another angle, shows its furniture as already chosen. Keep those pieces' "
-                "designs and the render quality; do not copy its layout or camera.")
+                f"apartment from another angle, shows its furniture as already chosen. Keep the designs of "
+                f"those pieces that are in {base}, and the render quality; " + rest)
     return (f"{k}. FURNITURE - the designer's render \"{s['caption']}\"{here}, from another angle, "
-            f"shows {'; '.join(w)}. Keep those pieces' designs, and use it for the colour palette, the "
-            "light and the render quality; do not copy its layout or camera.")
+            f"shows {'; '.join(w)}. Keep the designs of those pieces that are in {base}, and use it for the "
+            "colour palette, the light and the render quality; " + rest)
 
 
 def edit_prompt(s, refs, instruction, earlier, has_board):
@@ -397,8 +431,11 @@ def edit_prompt(s, refs, instruction, earlier, has_board):
     lines = [
         "Edit image 1 (RENDER), a finished photo of this apartment, as the client asks below. Change only what "
         "the request asks for. Keep everything else exactly as it is: the same camera, angle, lens, framing and "
-        "composition, and every wall, opening, piece of furniture, light and object in the same place with the "
-        "same shape, size, material and colour. Keep the photorealistic render quality. No text, no labels, no people.",
+        "composition, and every wall, opening, door, window, piece of furniture, light and object in the same "
+        "place with the same shape, size, material and colour. Keep the photorealistic render quality. No text, "
+        "no labels, no people.",
+        "",
+        LOCK.format(img="image 1") + " Only the client's request below can add or remove something.",
         "",
         "Images, in order:",
         f"1. RENDER - \"{s['caption']}\", the photo to revise.",
@@ -406,7 +443,7 @@ def edit_prompt(s, refs, instruction, earlier, has_board):
     if has_board:
         lines.append(f"{next(n)}. BOARD - the designer's materials, cropped from their renders, each labelled with "
                      "what it is for. Use these finishes for anything the request changes.")
-    lines += [ref_line(next(n), x, w, s["room"], []) for x, w in refs]
+    lines += [ref_line(next(n), x, w, s["room"], [], "image 1") for x, w in refs]
     if any(w is not None for _, w in refs):
         lines += ["", "A piece the request names takes its EXACT design from the FURNITURE images; do not copy their "
                   "layout or camera."]

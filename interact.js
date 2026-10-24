@@ -140,9 +140,9 @@ export function createInteract({ THREE, camera, scene, renderer, isActive, isLoc
       o.t = o.to ? Math.min(1, o.t + dt / o.duration) : Math.max(0, o.t - dt / o.duration);
       pose(o);
     }
-    if (bare || !list.length || !isActive()) { wait = 0; return show(null); }
-    if (crouch && Math.hypot(crouch.o.at.x - camera.position.x, crouch.o.at.z - camera.position.z) > crouch.o.reach) rise();
+    if (crouch && (bare || !isActive() || Math.hypot(crouch.o.at.x - camera.position.x, crouch.o.at.z - camera.position.z) > crouch.o.reach)) rise();
     bob(dt);
+    if (bare || !list.length || !isActive()) { wait = 0; return show(null); }
     if ((wait -= dt) <= 0) { wait = CHECK; show(aimed()); }
     if (!target) return;
     v.copy(target.at).project(camera);

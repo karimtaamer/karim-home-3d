@@ -981,11 +981,11 @@ export function furnish(scene, M, mat, version = "main") {
     const top = p.cyl(0, 0, 0.55, 0.36, 0.42, mat.marbleTop, 40); top.scale.z = 0.55;
     for (const x of [-0.25, 0.25]) p.cyl(x, 0, 0.15, 0, 0.36, mat.walnut, 24);
   });
-  item(20.45, 2.15, "S", p => { p.cyl(0, 0, 0.25, 0.52, 0.56, mat.marbleTop, 32); p.cyl(0, 0, 0.13, 0, 0.52, mat.walnut, 24); });
-  plant(17.6, 2.25, 1.6, 0.24);
-  // Two 1.05 x 1.30 m framed prints as in the reception render, centred on the south wall (TV run face
-  // 17.53 to the east wall 21.22), with the pier (19.30 to 19.75) standing in the gap between them.
-  for (const x of [18.446, 20.306]) art(x, 1.95, "N", 1.0, 1.25, 1.62, x < 19 ? 0 : 1);
+  item(20.45, 2.34, "S", p => { p.cyl(0, 0, 0.25, 0.52, 0.56, mat.marbleTop, 32); p.cyl(0, 0, 0.13, 0, 0.52, mat.walnut, 24); });
+  plant(17.6, 2.33, 1.6, 0.24);
+  // Two 1.05 x 1.30 m framed prints as in render 11, 0.30 m apart and centred over the sofa, on the south
+  // wall's built-out face (y 2.0705, flush with the pier: the recesses either side are filled to it).
+  for (const x of [18.195, 19.525]) art(x, 2.0705, "N", 1.0, 1.25, 1.62, x < 19 ? 0 : 1);
   for (const [y0, y1] of [[2.78, 4.24], [6.34, 8.08]]) {  // curtains either side of each slider
     for (const y of [y0 - 0.15, y1 + 0.15]) item(21.22, y, "W", p => {
       const m = mesh(curtainGeometry(0.45, 2.5), mat.curtain, p.g); m.position.set(0, 1.3, 0.1);

@@ -716,7 +716,7 @@ export function furnish(scene, M, mat, version = "main") {
     // Nagham's Changes: the whole south run (DWG x 196.8797 west wall face to 198.9716) becomes floor-to-ceiling
     // joinery, 0.60 deep off the DWG wall face (y 5.6604): a 1.192 pantry from the west wall, then a 0.90
     // appliance tower (microwave over oven) at the east end. The hob run ends against the pantry's front.
-    const fin = mat.greyLacquer;  // same finish as the kitchen's base-unit fronts (run())
+    const fin = mat.whiteLacquer;  // cream-white finish for the tower and pantry
     const XW = 6.4747, XJ = 7.0776, XT = 7.6666, XE = 8.5666, WY = 5.6604, D = 0.6, f = 0.018, H = M.ceiling;
     const tall = (hw, build) => p => {               // carcass, recessed plinth, then the fronts from build
       for (const s of [-1, 1]) p.box(s > 0 ? hw - f : -hw, s > 0 ? hw : -hw + f, 0, H, 0, D, fin);
@@ -725,7 +725,7 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(-hw + f, hw - f, 0.02, 0.04, D - 0.08, D - 0.06, mat.ledStrip);
       build(p, hw - f);
     };
-    const doors = (p, a, b, y0, y1, n) => {          // flat handleless fronts in the kitchen finish, n across, shadow gaps between
+    const doors = (p, a, b, y0, y1, n) => {          // flat white handleless fronts, n across, shadow gaps between
       p.box(a, b, y0, y1, D - f, D, fin);
       p.box(a, b, y1 - 0.002, y1 + 0.002, D, D + 0.003, shadowGap);
       for (let k = 1; k < n; k++) { const x = a + k * (b - a) / n; p.box(x - 0.002, x + 0.002, y0, y1, D, D + 0.003, shadowGap); }

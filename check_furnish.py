@@ -51,8 +51,8 @@ ITEMS = [
      {'whiteLacquer', 'bronzeGlass', 'walnut'}, 0.0),
     ('south wardrobe', {'shifted-bedroom', 'naghams-changes'}, ('outline', 1.564, 4.857, 189.9, 61.8), 'xy',
      {'whiteLacquer', 'bronzeGlass'}, 0.0),
-    ('appliance tower', {'naghams-changes'}, ('outline', 8.1166, 5.9604, 90.0, 60.0), 'xy', {'greyLacquer'}, 0.0),
-    ('pantry', {'naghams-changes'}, ('outline', 7.0707, 5.9604, 119.2, 60.0), 'xy', {'greyLacquer'}, 0.0),
+    ('appliance tower', {'naghams-changes'}, ('outline', 8.1166, 5.9604, 90.0, 60.0), 'xy', {'whiteLacquer'}, 0.0),
+    ('pantry', {'naghams-changes'}, ('outline', 7.0707, 5.9604, 119.2, 60.0), 'xy', {'whiteLacquer'}, 0.0),
     ('master dresser', {'shifted-bedroom', 'naghams-changes'}, ('outline', 3.517, 4.775, 200.0, 45.0), 'xy', {'walnut'}, 0.0),
 ]
 

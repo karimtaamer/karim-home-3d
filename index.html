@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #f3eee5; color: #2b2622; font-family: Inter, system-ui, sans-serif; }
-  #scene { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+  #scene { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; touch-action: none; }
   .ui { position: fixed; z-index: 2; }
   #bar { top: 14px; left: 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; max-width: 72vw; }
   #bar .row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
@@ -640,9 +640,11 @@ const HELP_PHONE = {
   top: "Pinch to zoom · drag to pan",
   walk: "Drag to look around · arrows to walk",
 };
-const HELP_MEASURE = "Click two points to measure · Shift squares it up · Esc cancels · Backspace undoes";
+const HELP_MEASURE = "Click or drag to measure · Shift squares it up · Esc cancels · Backspace undoes";
 function showHelp() {
-  if (measure?.active) help.textContent = PHONE.matches ? "Tap two points to measure" : HELP_MEASURE + (mode === "walk" ? " · drag to look" : mode === "top" ? " · snaps to the DWG" : "");
+  if (measure?.active) help.textContent = PHONE.matches
+    ? "Tap or drag to measure · " + (mode === "walk" ? "a second finger looks around" : "two fingers pan / zoom")
+    : HELP_MEASURE + (mode === "walk" ? " · right-drag to look" : mode === "top" ? " · right-drag pans · snaps to the DWG" : " · right-drag orbits");
   else help.textContent = (PHONE.matches ? HELP_PHONE : HELP)[mode];
 }
 function setMode(m) {
@@ -682,24 +684,26 @@ addEventListener("keyup", e => { keys[e.code] = false; });
 renderer.domElement.addEventListener("click", () => mode === "walk" && !tween && !PHONE.matches && !measure.active && walker.lock());
 
 // Phones have no pointer lock: drag to look, and the on-screen arrows stand in for the arrow keys.
-// Measuring frees the mouse for picking, so it looks around the same way.
+// Measuring frees the mouse, but one finger / the left button measures: right-drag or a second finger looks.
 const lookEuler = new THREE.Euler(0, 0, 0, "YXZ");
-let dragFrom = null;
+let dragFrom = null;  // [x, y, pointerId]
 renderer.domElement.addEventListener("pointerdown", e => {
   if (mode !== "walk" || tween || !(PHONE.matches || measure.active)) return;
+  if (measure.active && e.button === 0 && e.isPrimary) return;
   stopGlide();
-  dragFrom = [e.clientX, e.clientY];
+  dragFrom = [e.clientX, e.clientY, e.pointerId];
 });
+renderer.domElement.addEventListener("contextmenu", e => measure.active && e.preventDefault());
 addEventListener("pointermove", e => {
-  if (!dragFrom || mode !== "walk" || tween) return;
+  if (!dragFrom || e.pointerId !== dragFrom[2] || mode !== "walk" || tween) return;
   lookEuler.setFromQuaternion(camera.quaternion);
   lookEuler.y += (e.clientX - dragFrom[0]) * 0.005;
   lookEuler.x = THREE.MathUtils.clamp(lookEuler.x + (e.clientY - dragFrom[1]) * 0.005, -1.2, 1.2);
   camera.quaternion.setFromEuler(lookEuler);
-  dragFrom = [e.clientX, e.clientY];
+  dragFrom = [e.clientX, e.clientY, e.pointerId];
 });
-addEventListener("pointerup", () => (dragFrom = null));
-addEventListener("pointercancel", () => (dragFrom = null));
+addEventListener("pointerup", e => dragFrom?.[2] === e.pointerId && (dragFrom = null));
+addEventListener("pointercancel", e => dragFrom?.[2] === e.pointerId && (dragFrom = null));
 for (const b of document.querySelectorAll("#pad button")) {
   const hold = on => { keys[b.dataset.key] = on; b.classList.toggle("held", on); if (on) stopGlide(); };
   b.addEventListener("pointerdown", e => { e.preventDefault(); b.setPointerCapture(e.pointerId); hold(true); });
@@ -884,6 +888,13 @@ const measure = createMeasure({
   paused: () => showing !== "model" || !!tween,
   plan: () => mode === "top", snaps: loadDrawing(version.drawing).then(d => d.snaps),
   onChange: () => {
+    // Measuring takes one finger and the left button; two fingers still pan / zoom, the right button orbits / pans.
+    const on = measure.active;
+    orbit.mouseButtons.LEFT = on ? null : THREE.MOUSE.ROTATE;
+    orbit.mouseButtons.RIGHT = on ? THREE.MOUSE.ROTATE : THREE.MOUSE.PAN;
+    orbit.touches.ONE = on ? null : THREE.TOUCH.ROTATE;
+    orbitTop.mouseButtons.LEFT = on ? null : THREE.MOUSE.PAN;
+    orbitTop.touches.ONE = on ? null : THREE.TOUCH.PAN;
     document.getElementById("measure").classList.toggle("on", measure.active);
     document.getElementById("clearMeasure").hidden = !measure.count;
     showHelp();

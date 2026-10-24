@@ -1,4 +1,4 @@
-// Tape measure for the 3D views: click (or tap) two surfaces to get the distance between them in cm.
+// Tape measure for the 3D views: click / tap two surfaces, or drag from one to the other, to get the distance in cm.
 // Lines and labels are drawn on an SVG/HTML overlay so they stay crisp and readable over the scene.
 // In the top view it measures in plan instead, snapping to the DWG's points exactly as the drawing does.
 import * as THREE from "three";
@@ -76,7 +76,7 @@ export function createMeasure({ camera, renderer, scene, cutPlane, capMaterial, 
 
   function setActive(on) {
     active = on;
-    start = hover = null;
+    start = hover = press = null;
     el.style.cursor = on ? "crosshair" : "";
     onChange?.();
   }
@@ -93,20 +93,49 @@ export function createMeasure({ camera, renderer, scene, cutPlane, capMaterial, 
     lastAim = null;
   }
 
-  el.addEventListener("pointerdown", e => { if (active && e.button === 0) press = { x: e.clientX, y: e.clientY, t: performance.now() }; });
-  el.addEventListener("pointerup", e => {
-    if (!active || !press || paused()) return;
-    const still = Math.hypot(e.clientX - press.x, e.clientY - press.y) < CLICK_PX && performance.now() - press.t < 600;
-    press = null;
-    if (still) pick(e.clientX, e.clientY, e.pointerType === "mouse" ? SNAP_PX.mouse : SNAP_PX.touch);
+  // With the tape on, one finger (or the left button) measures: pressing sets A, or presses B, which follows
+  // the pointer until it lifts; a press dragged off A ends at B on lift. A second finger drops the point under way.
+  const pointers = new Set();
+  function drop() {
+    if (press?.a) start = null;
+    press = hover = lastAim = null;
+  }
+  function follow(x, y) {
+    const h = pointAt(x, y, press.reach);
+    hover = constrain(h.p);
+    hoverKind = hover === h.p ? h.kind : undefined;
+  }
+  el.addEventListener("pointerdown", e => {
+    pointers.add(e.pointerId);
+    if (pointers.size > 1) return drop();
+    if (!active || e.button !== 0 || paused()) return;
+    press = { id: e.pointerId, x: e.clientX, y: e.clientY, reach: e.pointerType === "mouse" ? SNAP_PX.mouse : SNAP_PX.touch, a: !start };
+    if (!press.a) return follow(e.clientX, e.clientY);
+    start = pointAt(e.clientX, e.clientY, press.reach).p;
+    if (!start) press = null;  // nothing under the pointer to start from
   });
-  el.addEventListener("pointermove", e => { if (active && e.pointerType === "mouse") mouse = [e.clientX, e.clientY]; });
-  el.addEventListener("pointerleave", () => { mouse = null; hover = null; });
+  el.addEventListener("pointermove", e => {
+    if (active && e.pointerType === "mouse") mouse = [e.clientX, e.clientY];
+    if (press?.id !== e.pointerId || paused()) return;
+    if (Math.hypot(e.clientX - press.x, e.clientY - press.y) > CLICK_PX) press.moved = true;
+    if (!press.a || press.moved) follow(e.clientX, e.clientY);  // the live B, snapped
+  });
+  const release = e => {
+    pointers.delete(e.pointerId);
+    if (press?.id !== e.pointerId) return;
+    if (e.type !== "pointerup" || paused()) return drop();
+    // Lifting fixes B; a press that set A only ends the measurement if it was dragged off A.
+    if (start && (!press.a || press.moved)) pick(e.clientX, e.clientY, press.reach);
+    press = null;
+  };
+  el.addEventListener("pointerup", release);
+  el.addEventListener("pointercancel", release);
+  el.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") { mouse = null; if (!press) hover = null; } });
   addEventListener("keydown", e => {
     if (paused() || !active) return;
     if (e.key === "Shift") lock = true;
-    else if (e.key === "Escape") start = null;
-    else if (e.key === "Backspace" || e.key === "Delete") { start ? (start = null) : done.pop(); onChange?.(); }
+    else if (e.key === "Escape") start = press = null;
+    else if (e.key === "Backspace" || e.key === "Delete") { start ? (start = press = null) : done.pop(); onChange?.(); }
   });
   addEventListener("keyup", e => { if (e.key === "Shift") lock = false; });
 
@@ -164,7 +193,7 @@ export function createMeasure({ camera, renderer, scene, cutPlane, capMaterial, 
     get active() { return active; },
     get count() { return done.length; },
     setActive,
-    clear() { done.length = 0; start = null; onChange?.(); },
+    clear() { done.length = 0; start = press = null; onChange?.(); },
     render,
   };
 }

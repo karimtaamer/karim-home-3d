@@ -29,16 +29,19 @@ export function createDrawing(root, url) {
   const ctx = canvas.getContext("2d");
   const xy = root.querySelector(".xy"), dist = root.querySelector(".dist"), clear = root.querySelector("[data-tool=clear]");
   const touchy = matchMedia("(pointer: coarse)").matches;
-  root.querySelector(".dhelp").textContent = touchy
-    ? "Drag to pan · pinch to zoom · tap two points to measure"
-    : "Wheel to zoom · drag to pan · click two points to measure · Shift / F8 ortho · Esc cancels · Backspace undoes";
+  const helpText = () => (root.querySelector(".dhelp").textContent = touchy
+    ? (measuring ? "Tap or drag to measure · two fingers pan / zoom" : "Drag to pan · pinch to zoom")
+    : measuring
+      ? "Wheel to zoom · click or drag to measure · right / middle / Space-drag pans · Shift / F8 ortho · Esc cancels · Backspace undoes"
+      : "Wheel to zoom · drag to pan");
 
   let data = null, paths = null;
   let shown = false, dpr = 1, W = 0, H = 0;
   const view = { s: 40, tx: 0, ty: 0 };  // screen = (tx + x·s, ty − y·s)
   const done = [];  // finished measurements: [[ax, ay], [bx, by]]
-  let start = null, cursor = null, snap = null, ortho = false, shift = false, measuring = true;
+  let start = null, cursor = null, snap = null, ortho = false, shift = false, space = false, measuring = true;
   let queued = false;
+  helpText();
 
   const toScreen = ([x, y]) => [view.tx + x * view.s, view.ty - y * view.s];
   const toWorld = (sx, sy) => [(sx - view.tx) / view.s, (view.ty - sy) / view.s];
@@ -194,19 +197,19 @@ export function createDrawing(root, url) {
     dist.textContent = `Distance ${cm(Math.hypot(b[0] - a[0], b[1] - a[1]))} · ΔX ${cm(Math.abs(b[0] - a[0]))} · ΔY ${cm(Math.abs(b[1] - a[1]))}`;
   }
 
-  function pick(sx, sy, reach) {
-    const p = target(sx, sy, reach);
-    if (!start) start = p;
-    else {
-      if (Math.hypot(p[0] - start[0], p[1] - start[1]) > 1e-4) done.push([start, p]);
-      start = null;
-    }
-    cursor = p;
-  }
-
-  // --- Pointer: drag pans (middle button always), wheel / pinch zooms, a click or tap picks ----
+  // --- Pointer: with Measure on, one finger (or the left button) measures: pressing sets A, or presses B,
+  // which follows the pointer until it lifts; a press dragged off A ends at B on lift. Two fingers, the
+  // middle / right button or Space-drag pan (any drag does with Measure off); wheel / pinch zooms. ----
   const pointers = new Map();
-  let press = null, lastMiddle = 0;
+  let press = null, gesture = null, lastMiddle = 0;  // gesture: the measuring press ({ id, reach, a: it set A })
+
+  // A second finger, a cancelled pointer or Esc drops the point under way (A if this press set it).
+  function dropGesture() {
+    if (!gesture) return;
+    if (gesture.a) start = null;
+    cursor = start;
+    gesture = snap = null;
+  }
   const zoomAt = (sx, sy, f) => {
     const s0 = view.s;
     view.s = Math.min(4000, Math.max(2, s0 * f));
@@ -218,8 +221,19 @@ export function createDrawing(root, url) {
   canvas.addEventListener("pointerdown", e => {
     canvas.setPointerCapture(e.pointerId);
     pointers.set(e.pointerId, [e.clientX, e.clientY]);
-    if (pointers.size === 1) press = { x: e.clientX, y: e.clientY, button: e.button, moved: false };
-    else press = null;  // a second finger: pinch, never a pick
+    if (pointers.size === 1) {
+      press = { x: e.clientX, y: e.clientY, button: e.button, moved: false };
+      if (measuring && data && e.button === 0 && !space) {
+        gesture = { id: e.pointerId, reach: e.pointerType === "mouse" ? SNAP_PX.mouse : SNAP_PX.touch, a: !start };
+        cursor = target(e.clientX, e.clientY, gesture.reach);
+        if (gesture.a) start = cursor;
+      }
+    } else {
+      press = null;  // a second finger: pan / pinch, never a measurement
+      dropGesture();
+    }
+    status();
+    redraw();
     if (e.button === 1) {
       e.preventDefault();
       if (performance.now() - lastMiddle < 350) fit();  // double-click the wheel: zoom extents
@@ -237,17 +251,26 @@ export function createDrawing(root, url) {
       if (before > 0) zoomAt((e.clientX + o[0]) / 2, (e.clientY + o[1]) / 2, now / before);
     } else if (prev && press) {
       if (Math.hypot(e.clientX - press.x, e.clientY - press.y) > CLICK_PX || press.button === 1) press.moved = true;
-      if (press.moved) { view.tx += e.clientX - prev[0]; view.ty += e.clientY - prev[1]; }
+      if (gesture) cursor = target(e.clientX, e.clientY, gesture.reach);  // the live B, snapped
+      else if (press.moved) { view.tx += e.clientX - prev[0]; view.ty += e.clientY - prev[1]; }
     }
     if (prev) pointers.set(e.pointerId, [e.clientX, e.clientY]);
-    if (data && e.pointerType === "mouse") cursor = target(e.clientX, e.clientY, SNAP_PX.mouse);
+    if (data && e.pointerType === "mouse" && !gesture) cursor = target(e.clientX, e.clientY, SNAP_PX.mouse);
     status();
     redraw();
   });
   const release = e => {
     if (!pointers.delete(e.pointerId)) return;
-    if (e.type === "pointerup" && press && !press.moved && press.button === 0 && measuring && data) {
-      pick(e.clientX, e.clientY, e.pointerType === "mouse" ? SNAP_PX.mouse : SNAP_PX.touch);
+    if (gesture?.id === e.pointerId) {
+      // Lifting fixes B; a press that set A only ends the measurement if it was dragged off A.
+      if (e.type !== "pointerup") dropGesture();
+      else if (start && (!gesture.a || press?.moved)) {
+        const p = target(e.clientX, e.clientY, gesture.reach);
+        if (Math.hypot(p[0] - start[0], p[1] - start[1]) > 1e-4) done.push([start, p]);
+        start = null;
+        cursor = p;
+      }
+      gesture = null;
       status();
       redraw();
     }
@@ -267,25 +290,30 @@ export function createDrawing(root, url) {
   addEventListener("keydown", e => {
     if (!shown) return;
     if (e.key === "Shift") { shift = true; }
-    else if (e.key === "Escape") { start = null; }
-    else if (e.key === "Backspace" || e.key === "Delete") { start ? (start = null) : done.pop(); }
+    else if (e.key === " ") { e.preventDefault(); space = true; return; }  // Space-drag pans
+    else if (e.key === "Escape") { start = gesture = null; }
+    else if (e.key === "Backspace" || e.key === "Delete") { start ? (start = gesture = null) : done.pop(); }
     else if (e.key === "F8") { e.preventDefault(); setOrtho(!ortho); }
     else return;
     status();
     redraw();
   });
-  addEventListener("keyup", e => { if (e.key === "Shift") { shift = false; redraw(); } });
+  addEventListener("keyup", e => {
+    if (e.key === "Shift") { shift = false; redraw(); }
+    else if (e.key === " " && shown) { e.preventDefault(); space = false; }
+  });
 
   const button = t => root.querySelector(`[data-tool=${t}]`);
   const setOrtho = on => (ortho = on);  // F8 (or hold Shift); no button
   button("measure").onclick = () => {
     measuring = !measuring;
     button("measure").classList.toggle("on", measuring);
-    if (!measuring) start = null;
+    if (!measuring) start = gesture = null;
+    helpText();
     status();
     redraw();
   };
-  clear.onclick = () => { done.length = 0; start = null; status(); redraw(); };
+  clear.onclick = () => { done.length = 0; start = gesture = null; status(); redraw(); };
   addEventListener("resize", () => shown && resize());
 
   return {
@@ -295,6 +323,6 @@ export function createDrawing(root, url) {
       resize();
       if (!data) await load();
     },
-    hide() { shown = false; root.hidden = true; shift = false; },
+    hide() { shown = false; root.hidden = true; shift = space = false; },
   };
 }

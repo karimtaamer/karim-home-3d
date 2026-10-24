@@ -90,14 +90,16 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     #edit-ai .m.me { background: #2b2622; color: #f3eee5; align-self: flex-end; }
     #edit-ai .m.err { background: #fbe4e1; color: #8a2119; align-self: stretch; }
     #edit-ai .m.note { background: none; color: #6d645b; font-size: 11.5px; padding: 0 2px; }
-    #edit-ai .m img { display: block; max-width: 100%; border-radius: 8px; margin-top: 6px; }
+    #edit-ai .m img { display: block; max-width: min(100%, 120px); max-height: 84px; width: auto; height: auto; object-fit: cover; border-radius: 8px; margin-top: 6px; }
+    #edit-ai .m.ref { padding: 3px; background: #2b262214; max-width: 28%; }
+    #edit-ai .m.ref img { margin: 0; max-width: 100%; max-height: 80px; }
     #edit-ai .busy { display: flex; align-items: center; gap: 9px; color: #6d645b; font-size: 12px; }
     #edit-ai .busy::before { content: ""; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #2b262226; border-top-color: #b8862f; animation: eai-spin 1s linear infinite; }
     @keyframes eai-spin { to { transform: rotate(1turn); } }
-    #edit-ai .thumbs { display: flex; gap: 6px; padding: 0 18px; flex-wrap: wrap; }
+    #edit-ai .thumbs { display: flex; gap: 8px; padding: 8px 18px 0; flex-wrap: wrap; }
     #edit-ai .thumbs:empty { display: none; }
     #edit-ai .thumbs span { position: relative; }
-    #edit-ai .thumbs img { height: 52px; border-radius: 6px; display: block; }
+    #edit-ai .thumbs img { height: 44px; width: 44px; object-fit: cover; border-radius: 6px; display: block; }
     #edit-ai .thumbs b { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: #2b2622; color: #fff;
       font-size: 11px; display: grid; place-items: center; cursor: pointer; }
     #edit-ai form { display: flex; gap: 6px; align-items: flex-end; padding: 10px 14px 16px; }
@@ -106,9 +108,34 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     #edit-ai form button { height: 40px; }
     #edit-ai .attach { width: 40px; padding: 0; font-size: 17px; }
     @media (max-width: 760px) {
-      #edit-ai .chat { top: auto; left: 0; width: auto; height: 56vh; border-radius: 18px 18px 0 0; box-shadow: 0 -6px 24px #0003; }
+      #edit-ai .chat { top: auto; left: 0; width: auto; height: 80vh; height: calc(100dvh - 64px); max-height: 82dvh; border-radius: 18px 18px 0 0; box-shadow: 0 -6px 24px #0003; }
+      #edit-ai.chatting .x { top: 10px; }
       #edit-ai .ask { top: 62px; border-radius: 16px; }
     }
+    #edit-ai .demo { position: absolute; left: 50%; top: 92px; transform: translateX(-50%); pointer-events: none; width: 170px;
+      filter: drop-shadow(0 10px 24px #0005); animation: eai-in .4s ease-out; }
+    #edit-ai .demo[hidden], #edit-ai.chatting .demo { display: none; }
+    #edit-ai .demo svg { display: block; width: 100%; height: auto; overflow: visible; }
+    #edit-ai .demo .cap { margin-top: 8px; text-align: center; font: 600 11px Inter, sans-serif; letter-spacing: .04em; color: #fffaf3; text-shadow: 0 1px 4px #000a; }
+    #edit-ai .demo .loop { fill: none; stroke: ${INK}; stroke-width: 3.2; stroke-linecap: round; stroke-dasharray: 190; stroke-dashoffset: 190;
+      animation: eai-draw 3.2s ease-in-out infinite; }
+    #edit-ai .demo .hand { animation: eai-hand 3.2s ease-in-out infinite; filter: drop-shadow(0 3px 4px #0006); }
+    #edit-ai .demo .pick { animation: eai-pick 3.2s ease-in-out infinite; }
+    @keyframes eai-in { from { opacity: 0; transform: translate(-50%, 8px); } }
+    @keyframes eai-draw { 0%, 12% { stroke-dashoffset: 190; opacity: 1; } 62% { stroke-dashoffset: 0; opacity: 1; } 88% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+    @keyframes eai-pick { 0%, 55% { fill-opacity: 0; } 66%, 88% { fill-opacity: .28; } 100% { fill-opacity: 0; } }
+    @keyframes eai-hand {
+      0% { transform: translate(40px, 150px) rotate(-8deg); opacity: 0; }
+      10% { transform: translate(84px, 78px) rotate(-8deg); opacity: 1; }
+      12% { transform: translate(84px, 76px) scale(.94); }
+      24% { transform: translate(104px, 104px) scale(.94); }
+      36% { transform: translate(86px, 140px) scale(.94); }
+      48% { transform: translate(62px, 110px) scale(.94); }
+      62% { transform: translate(84px, 78px) scale(.94); }
+      72% { transform: translate(96px, 160px) scale(1); opacity: 1; }
+      90%, 100% { transform: translate(110px, 210px); opacity: 0; } }
+    @media (max-width: 760px) { #edit-ai .demo { top: 168px; width: 160px; } }
+    @media (prefers-reduced-motion: reduce) { #edit-ai .demo .hand, #edit-ai .demo .loop, #edit-ai .demo .pick { animation: none; stroke-dashoffset: 0; } }
     #edit-ai-toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 6; display: flex; gap: 8px; align-items: center;
       max-width: calc(100vw - 24px); padding: 9px 10px 9px 16px; border-radius: 16px; background: #2b2622f2; color: #f3eee5; font: 12.5px Inter, sans-serif;
       box-shadow: 0 6px 20px #0004; }
@@ -130,6 +157,31 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     <img class="freeze" alt=""><canvas class="ink"></canvas><div class="tint"></div>
     <div class="ask"><span>Highlight what to change: circle or scribble on it.</span>
       <button class="whole">Whole view</button><button class="clear" hidden>Clear</button><button class="go next" disabled>Next</button></div>
+    <div class="demo" aria-hidden="true"><svg viewBox="0 0 150 250">
+      <defs><linearGradient id="eai-wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9c8b4"/><stop offset="1" stop-color="#efe5d8"/></linearGradient>
+        <linearGradient id="eai-floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b86f3c"/><stop offset="1" stop-color="#8f5129"/></linearGradient>
+        <clipPath id="eai-screen"><rect x="14" y="20" width="102" height="196" rx="12"/></clipPath></defs>
+      <rect x="6" y="8" width="118" height="220" rx="20" fill="#1e1a17"/><rect x="8" y="10" width="114" height="216" rx="18" fill="none" stroke="#5a4e45" stroke-width="1.2"/>
+      <g clip-path="url(#eai-screen)">
+        <rect x="14" y="20" width="102" height="196" fill="url(#eai-wall)"/>
+        <polygon points="14,20 116,20 116,52 34,64 14,58" fill="#c9b8a4"/>
+        <circle cx="54" cy="44" r="2.2" fill="#fff8e6"/><circle cx="92" cy="38" r="2.2" fill="#fff8e6"/>
+        <polygon points="14,58 34,64 34,170 14,184" fill="#e6dccd"/>
+        <rect x="18" y="80" width="12" height="40" fill="#8fb0c4" opacity=".7"/>
+        <polygon points="14,184 34,170 116,178 116,216 14,216" fill="url(#eai-floor)"/>
+        <polygon points="40,66 112,56 112,176 40,168" fill="#f6f0e6" stroke="#cfc3b2" stroke-width=".8"/>
+        <line x1="64" y1="63" x2="64" y2="171" stroke="#cfc3b2" stroke-width=".8"/><line x1="88" y1="60" x2="88" y2="173" stroke="#cfc3b2" stroke-width=".8"/>
+        <line x1="61" y1="104" x2="61" y2="128" stroke="#7a5a3e" stroke-width="1.6"/><line x1="85" y1="102" x2="85" y2="128" stroke="#7a5a3e" stroke-width="1.6"/>
+        <polygon class="pick" points="64,63 88,60 88,173 64,171" fill="${INK}" fill-opacity="0"/>
+        <path class="loop" d="M76 64 C 98 62, 100 100, 96 140 C 92 176, 60 178, 58 140 C 56 104, 56 70, 80 66"/>
+        <rect x="50" y="26" width="30" height="5" rx="2.5" fill="#fffaf3cc"/>
+      </g>
+      <rect x="52" y="13" width="26" height="4" rx="2" fill="#000"/>
+      <g class="hand"><g transform="translate(-8,-4)">
+        <path d="M10 2 C 10 -2, 17 -2, 17 2 L 17 30 L 18 22 C 18 18, 25 18, 25 22 L 25 32 L 26 26 C 26 22, 33 22, 33 26 L 33 36 L 34 31 C 34 27, 41 27, 41 31 L 41 52 C 41 66, 33 74, 22 74 C 12 74, 6 68, 3 58 L -4 40 C -6 35, 0 32, 4 36 L 10 46 Z"
+          fill="#efbb92" stroke="#5c3a22" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M17 30 L17 40 M25 32 L25 41 M33 36 L33 43" stroke="#8a5d3b" stroke-width="1" stroke-linecap="round" fill="none"/></g></g>
+    </svg><div class="cap">Circle what to change</div></div>
     <button class="x" title="Close">×</button>
     <aside class="chat" hidden>
       <header><h2>Edit AI</h2><span class="meta"></span><button class="redo" title="Circle something else">Re-mark</button></header>
@@ -173,7 +225,10 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     document.body.classList.add("edit-ai-open");
     sizeInk();
     markStep();
+    showDemo(true);
   }
+  // The looping "circle it" demo on the highlight step, until the first stroke (or Whole view).
+  function showDemo(on) { $(".demo").hidden = !on; }
   function close() {
     if (busy) return;
     box.hidden = true;
@@ -204,15 +259,15 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     $(".clear").hidden = !strokes.length;
   }
   let pen = null;
-  ink.addEventListener("pointerdown", e => { ink.setPointerCapture(e.pointerId); pen = [[e.clientX, e.clientY]]; strokes.push(pen); drawInk(); markStep(); });
+  ink.addEventListener("pointerdown", e => { showDemo(false); ink.setPointerCapture(e.pointerId); pen = [[e.clientX, e.clientY]]; strokes.push(pen); drawInk(); markStep(); });
   ink.addEventListener("pointermove", e => { if (pen) { pen.push([e.clientX, e.clientY]); drawInk(); } });
   const lift = () => (pen = null);
   ink.addEventListener("pointerup", lift);
   ink.addEventListener("pointercancel", lift);
-  $(".clear").onclick = () => { strokes = []; drawInk(); markStep(); };
-  $(".whole").onclick = () => { whole = true; strokes = []; drawInk(); toChat("Got it, the whole view. What do you want changed?"); };
+  $(".clear").onclick = () => { strokes = []; drawInk(); markStep(); showDemo(true); };
+  $(".whole").onclick = () => { showDemo(false); whole = true; strokes = []; drawInk(); toChat("Got it, the whole view. What do you want changed?"); };
   $(".next").onclick = () => { whole = false; toChat("Got it, I see what you marked. What do you want changed?"); };
-  $(".redo").onclick = () => { if (!busy) { box.classList.remove("chatting"); $(".chat").hidden = true; markStep(); } };
+  $(".redo").onclick = () => { if (!busy) { box.classList.remove("chatting"); $(".chat").hidden = true; markStep(); showDemo(!strokes.length); } };
   $(".x").onclick = close;
   btn.onclick = open;
   addEventListener("resize", () => !box.hidden && sizeInk());

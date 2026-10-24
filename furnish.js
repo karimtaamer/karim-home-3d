@@ -392,13 +392,27 @@ export function furnish(scene, M, mat, version = "main") {
       q.box(s < 0 ? 0.003 : -h + 0.0045, s < 0 ? h - 0.0045 : -0.003, y0 + 0.003, y1 - 0.003, 0.026, 0.032, mat.mirror);
     }
   };
-  const wardrobe = (w, door = 1.04) => p => {  // DWG wardrobe w long: smoked-glass sliding doors (about `door` m each) in a gypsum frame
+  // DWG wardrobe w long. Default: smoked-glass sliding doors in a gypsum frame. `white`: plain white lacquer
+  // leaves with a recessed vertical finger-pull between them (hidden handle), no walnut mullions.
+  const wardrobe = (w, door = 1.04, white = false) => p => {
     const h = w / 2, n = Math.max(1, Math.round((w - 0.16) / door));
     p.box(-h, h, 0, M.ceiling, 0, 0.6, mat.whiteLacquer);
-    p.box(-h + 0.08, h - 0.08, 0.08, 2.5, 0.6, 0.62, mat.bronzeGlass);
-    for (let k = 0; k <= n; k++) {
-      const x = -h + 0.08 + k * (w - 0.16) / n;
-      p.box(x - 0.015, x + 0.015, 0.08, 2.5, 0.62, 0.635, mat.walnut);
+    if (white) {
+      const span = (w - 0.16) / n, z0 = 0.6, z1 = 0.62;
+      for (let k = 0; k < n; k++) {
+        const x0 = -h + 0.08 + k * span, x1 = x0 + span;
+        p.box(x0 + 0.002, x1 - 0.002, 0.08, 2.5, z0, z1, mat.whiteLacquer);  // leaf
+      }
+      for (let k = 1; k < n; k++) {  // recessed pull between leaves: a shallow dark groove, no protruding handle
+        const x = -h + 0.08 + k * span;
+        p.box(x - 0.007, x + 0.007, 0.35, 1.85, z1 - 0.014, z1, mat.walnut);
+      }
+    } else {
+      p.box(-h + 0.08, h - 0.08, 0.08, 2.5, 0.6, 0.62, mat.bronzeGlass);
+      for (let k = 0; k <= n; k++) {
+        const x = -h + 0.08 + k * (w - 0.16) / n;
+        p.box(x - 0.015, x + 0.015, 0.08, 2.5, 0.62, 0.635, mat.walnut);
+      }
     }
   };
   // Plain wall-mounted bidet mixer (no hose or spray gun): round body out from the wall, lever on top, short spout
@@ -473,9 +487,10 @@ export function furnish(scene, M, mat, version = "main") {
     for (const x of [2.95, 5.37]) item(x, 9.02, "S", p => {  // curtains either side of the 2.18 m window
       const m = mesh(curtainGeometry(0.55, 2.45), mat.curtain, p.g); m.position.set(0, 1.27, 0.12);
     });
-    item(6.367, 7.336, "W", wardrobe(3.36));  // DWG wardrobe on the kitchen wall
-    item(1.564, 4.55, "N", wardrobe(1.895, 0.45));  // DWG wardrobe on the south wall, 20 cm shorter for the dresser: four ~43 cm sliding doors
-    item(0.556, 5.561, "E", wardrobe(0.872));  // DWG cupboard by the bathroom door (0.87 long, its end overlaps the south wardrobe front as drawn)
+    // Kareem's Changes: white lacquer sliding doors with recessed hidden pulls (other versions keep smoked glass).
+    item(6.367, 7.336, "W", wardrobe(3.36, 1.04, version === "kareems-changes"));  // DWG wardrobe on the kitchen wall
+    item(1.564, 4.55, "N", wardrobe(1.895, 0.45, version === "kareems-changes"));  // DWG wardrobe on the south wall, 20 cm shorter for the dresser: four ~43 cm sliding doors
+    item(0.556, 5.561, "E", wardrobe(0.872, 1.04, version === "kareems-changes"));  // DWG cupboard by the bathroom door (0.87 long, its end overlaps the south wardrobe front as drawn)
     // DWG dresser 2.00 x 0.45 x 0.75, east end on the lobby wall. Facing it (local -x = east = your left): three
     // drawers under a lit open shelf column, knee space with one shallow drawer and a pouf, fluted cabinet with a
     // glass-topped jewellery tray. Walnut body, pale oak top; backlit pebble mirror over the knee space.

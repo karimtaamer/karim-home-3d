@@ -37,7 +37,7 @@ ITEMS = [
     ('entrance bench', None, ('outline', 8.512, 5.35, 120.0, 40.0), 'xy', {'boucle'}, 0.05),
     ('entrance shoe unit', None, ('outline', 10.419, 3.81, 120.0, 42.0), 'xy', {'whiteLacquer'}, 0.05),
     ('coffee counter', None, ('outline', 20.474, 9.2, 150.0, 60.1), 'xy', {'marbleTop'}, 0.05),
-    ('guest WC counter depth', None, ('outline', 14.367, 8.035, 60.4, 230.4), 'x', {'stoneTable*', 'oakBattens'}, 0.05),
+    ('guest WC counter', None, ('outline', 14.367, 8.035, 60.4, 230.4), 'xy', {'stoneTable*', 'oakBattens'}, 0.05),  # wall to wall
     ('living sofa north module', None, ('outline', 3.465, 3.732, 103.0, 97.4), 'xy', {'greige'}, 0.0),
     ('living sofa return', None, ('outline', 4.389, 1.093, 82.6, 102.6), 'x', {'greige'}, 0.0),
     ('living end table', None, ('outline', 3.459, 4.329, 104.3, 22.7), 'xy', {'walnut'}, 0.0),

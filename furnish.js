@@ -575,35 +575,40 @@ export function furnish(scene, M, mat, version = "main") {
   const charcoal = mat.greige.clone();
   charcoal.color.setRGB(0.24, 0.23, 0.22);
   charcoal.clippingPlanes = mat.greige.clippingPlanes;
-  const bath = item(12.324, 8.05, "E", p => {  // wood-look plank wall, stone-clad bath, framed screen over the door end
+  // Local +x is north. The door is at the south end, so the opening is there (0.80) and the fixed screen covers the
+  // north end by the WC. Rain shower over the screen end; the grooved plank wall and the niche end leave no clean
+  // run for a hand-shower rail, so a low brass mixer with a bath spout sits mid-wall, in reach from the opening.
+  const bath = item(12.324, 8.05, "E", p => {  // wood-look plank wall, stone-clad bath, framed screen at the WC end
     p.box(-1.08, 1.08, 0, M.ceiling, 0, 0.02, mat.woodTile);
     p.box(-0.85, 0.85, 0, 0.55, 0.02, 0.75, mat.stoneWall);
     p.box(-0.78, 0.78, 0.52, 0.56, 0.08, 0.7, mat.ceramic);
-    const g0 = -0.85, g1 = 0.05, z = 0.73;  // fixed screen on the rim, black frame all round
+    const g0 = -0.05, g1 = 0.85, z = 0.73;  // fixed screen on the rim, black frame all round
     p.box(g0, g1, 0.56, 2.3, z, z + 0.01, mat.clearGlass);
     for (const [a, b, c, d] of [[g0, g1, 2.28, 2.31], [g0, g1, 0.55, 0.58], [g0, g0 + 0.025, 0.55, 2.31], [g1 - 0.025, g1, 0.55, 2.31]])
       p.box(a, b, c, d, z - 0.012, z + 0.022, mat.blackSteel);
-    p.cyl(-0.4, 0.38, 0.008, 2.44, M.ceiling, mat.chrome, 8);  // ceiling rain head inside the screen
-    p.box(-0.55, -0.25, 2.42, 2.44, 0.23, 0.53, mat.chrome, 0.005);
-    p.box(0.22, 0.3, 0.92, 1.06, 0.02, 0.045, mat.brass, 0.01);  // brass mixer and hand shower, right of the screen
-    p.box(0.245, 0.275, 1.04, 1.12, 0.045, 0.06, mat.brass, 0.005);
-    p.cyl(0.38, 0.05, 0.016, 0.98, 1.22, mat.brass, 12, 0.012);
-    for (const [x, t] of [[0.35, 0.09], [0.41, -0.09]]) p.cyl(x, 0.05, 0.005, 0.58, 0.98, mat.brass, 6).rotation.z = t;
-    for (const x of [-0.62, -0.32]) {  // towels hung on the screen
+    p.cyl(0.45, 0.38, 0.008, 2.44, M.ceiling, mat.chrome, 8);  // ceiling rain head, 30 cm round, inside the screen
+    p.cyl(0.45, 0.38, 0.15, 2.425, 2.44, mat.chrome, 32);
+    const mx = 0.118;  // low thermostatic mixer and bath spout, on the DWG tap symbol
+    p.cyl(mx, 0.02, 0.055, 0.8, 0.82, mat.brass, 32).rotation.x = Math.PI / 2;
+    const knob = p.cyl(mx, 0.04, 0.025, 0.79, 0.83, mat.brass, 16); knob.rotation.x = Math.PI / 2; knob.position.y = 0.81;
+    p.box(mx - 0.02, mx + 0.02, 0.66, 0.69, 0.02, 0.17, mat.brass, 0.008);
+    for (const x of [0.2, 0.5]) {  // towels hung on the screen
       p.box(x - 0.1, x + 0.1, 1.2, 1.85, z + 0.025, z + 0.05, mat.boucle, 0.01);
       p.box(x - 0.012, x + 0.012, 1.84, 1.9, z + 0.02, z + 0.05, mat.blackSteel);
     }
   });
   bath.scale.z = 0.9 / 0.812;  // modelled 0.81 m deep; the DWG bath is 0.90
-  item(14.66, 7.75, "W", p => {  // battened oak wall, thick stone slab (DWG counter 0.60 deep), open shelf over walnut drawers, rounded mirror
-    p.box(-0.8, 0.8, 0, M.ceiling, 0, 0.03, mat.oakBattens);
-    p.box(-0.78, 0.78, 0.2, 0.5, 0.03, 0.55, mat.walnut);  // floating drawer unit, its top an open shelf
-    for (const x of [-0.39, 0, 0.39]) p.box(x - 0.003, x + 0.003, 0.215, 0.44, 0.55, 0.553, shadowGap);
-    p.box(-0.76, 0.76, 0.44, 0.445, 0.55, 0.553, shadowGap);
-    p.box(-0.74, 0.74, 0.18, 0.2, 0.06, 0.51, mat.ledStrip);
-    p.box(-0.8, 0.8, 0.72, 0.85, 0.03, 0.6, travertine, 0.01);
-    p.box(-0.76, 0.76, 0.705, 0.72, 0.05, 0.1, mat.ledStrip);
+  item(14.66, 7.75, "W", p => {  // battened oak wall, thick stone slab (DWG counter 0.60 x 2.30), open shelf over walnut drawers, rounded mirror
+    const n = -1.425, s = 0.855;  // wall to wall: slab and unit run between the 1 cm stone linings (plan y 9.175 to 6.895)
+    p.box(n - 0.01, s + 0.01, 0, M.ceiling, 0, 0.03, mat.oakBattens);  // battens face to face of the walls
+    p.box(n, s, 0.2, 0.5, 0.03, 0.55, mat.walnut);  // floating drawer unit, its top an open shelf
+    for (let k = 1; k < 5; k++) { const x = n + k * (s - n) / 5; p.box(x - 0.003, x + 0.003, 0.215, 0.44, 0.55, 0.553, shadowGap); }
+    p.box(n + 0.02, s - 0.02, 0.44, 0.445, 0.55, 0.553, shadowGap);
+    p.box(n + 0.04, s - 0.04, 0.18, 0.2, 0.06, 0.51, mat.ledStrip);
+    p.box(n, s, 0.72, 0.85, 0.03, 0.6, travertine, 0.01);
+    p.box(n + 0.04, s - 0.04, 0.705, 0.72, 0.05, 0.1, mat.ledStrip);
     p.box(-0.6, -0.3, 0.5, 0.6, 0.1, 0.38, charcoal, 0.02); p.box(-0.15, 0.15, 0.5, 0.58, 0.1, 0.38, charcoal, 0.02);
+    p.box(-1.2, -0.9, 0.5, 0.6, 0.1, 0.38, charcoal, 0.02);  // a third basket at the WC end
     for (const x of [0.38, 0.47, 0.56]) { const r = p.cyl(x, 0.24, 0.04, 0.46, 0.74, mat.oatmeal, 16); r.rotation.x = Math.PI / 2; r.position.y = 0.545; }
     const basin = p.cyl(0, 0.3, 0.2, 0.85, 0.96, mat.ceramic, 48, 0.15); basin.scale.x = 1.5;  // wide low vessel
     p.box(-0.02, 0.02, 1.02, 1.05, 0.03, 0.18, mat.brass, 0.008);  // wall spout and two handles
@@ -617,12 +622,12 @@ export function furnish(scene, M, mat, version = "main") {
     p.cyl(0.55, 0.3, 0.05, 0.85, 1.05, mat.planter, 16, 0.04);  // styling: vase, bottles
     for (const [x, h] of [[-0.45, 0.16], [-0.52, 0.12], [-0.6, 0.18]]) p.cyl(x, 0.3, 0.025, 0.85, 0.85 + h, mat.ceramic, 12);
   });
-  item(13.8, 9.18, "S", p => {  // wall-hung WC, brass bidet spray left, roll holder right
+  item(13.642, 9.18, "S", p => {  // wall-hung WC (DWG), centred 42.5 cm from the bath ledge and the vanity front; brass bidet spray left, roll holder right
     p.model("models/wc-wallhung.glb", mat.ceramic, 0, 0.1, 0.02);
     p.box(-0.32, -0.26, 0.42, 0.5, 0, 0.04, mat.brass, 0.01);
     p.cyl(-0.29, 0.05, 0.02, 0.2, 0.42, mat.brass, 12);
-    p.box(0.33, 0.47, 0.6, 0.72, 0, 0.1, mat.brass, 0.03);
-    p.cyl(0.4, 0.07, 0.055, 0.58, 0.7, mat.whiteLacquer, 20).rotation.z = Math.PI / 2;
+    p.box(0.22, 0.36, 0.6, 0.72, 0, 0.1, mat.brass, 0.03);
+    p.cyl(0.29, 0.07, 0.055, 0.58, 0.7, mat.whiteLacquer, 20).rotation.z = Math.PI / 2;
   });
   item(13.32, 9.18, "S", p => {  // walnut flush panel with a brass plate, beside the niches
     p.box(-0.12, 0.12, 1.05, 1.21, 0, 0.015, mat.walnut, 0.005);

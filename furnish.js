@@ -448,9 +448,9 @@ export function furnish(scene, M, mat, version = "main") {
     item(0.556, 6.68, "E", vanity(1.03));             // DWG vanity 0.52 x 1.03
     item(0.556, 7.58, "E", wc(-0.387, 0.416, true, { box: 0.34, pan: [0.36, 0.33, 0.47] }));  // flush box 34 deep, cabinet flush above (30 cm inside), vanity to partition; pan 36 x 47 as the DWG block
     item(2.052, 7.113, "W", towelRail);               // east wall south of the WC, clear of the open door leaf and the shower entry
-    // Shower (DWG): 1.50 wide x 0.78 deep behind a 24 cm partition 0.90 long on the west, open 0.60 entry on
+    // Shower (DWG): 1.50 wide x 0.83 deep behind a 19 cm partition 0.90 long on the west, open 0.60 entry on
     // the east. 3-way set on the west wall (rain arm, hand shower on a rail, thermostatic mixer and diverter);
-    // three lit niches recessed 15 cm into the partition's shower face, 0.80 wide, 1.00 to 1.90 m.
+    // three lit niches recessed 10 cm into the partition's shower face, 0.80 wide, 1.00 to 1.90 m.
     item(0.556, 8.62, "E", p => {
       p.cyl(0, 0.03, 0.075, 1.0, 1.02, mat.chrome, 32).rotation.x = Math.PI / 2;  // thermostatic mixer
       p.cyl(0, 0.045, 0.03, 1.0, 1.07, mat.chrome, 24).rotation.x = Math.PI / 2;
@@ -465,7 +465,11 @@ export function furnish(scene, M, mat, version = "main") {
       p.cyl(-0.31, 0.11, 0.022, 1.42, 1.62, mat.chrome, 16);
       p.cyl(-0.31, 0.11, 0.045, 1.62, 1.66, mat.chrome, 24);
     });
-    item(1.006, 8.247, "N", p => {  // on the 1 cm stone lining of the partition's shower face: niches 0.80 wide (DWG dashed outline)
+    item(2.041, 8.745, "W", p => {  // teak fold-down seat on the east wall at the back, shown open: 0.45 wide x 0.35 deep, top 0.45 (DWG dashed)
+      p.model("models/mbath-seat-teak.glb", mat.oakVeneer, 0, 0.35, 0, { size: [0.45, 0.1, 0.35] });
+      p.model("models/mbath-seat-brackets.glb", mat.brushedNickel, 0, 0.35, 0, { size: [0.45, 0.1, 0.35] });
+    });
+    item(1.006, 8.197, "N", p => {  // on the 1 cm stone lining of the partition's shower face: niches 0.80 wide (DWG dashed outline)
       p.face(-0.4, 0.4, 1.0, 1.9, 0.002, mat.greyLacquer);  // the recess, read as a darker back
       for (const y of [1.0, 1.3, 1.6, 1.9]) p.box(-0.4, 0.4, y - 0.02, y + 0.005, 0, 0.012, greyStone);
       for (const y of [1.3, 1.6, 1.9]) p.box(-0.38, 0.38, y - 0.035, y - 0.025, 0.004, 0.012, mat.ledStrip);

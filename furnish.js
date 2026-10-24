@@ -270,29 +270,60 @@ export function furnish(scene, M, mat, version = "main") {
     for (let k = 1; k < n; k++) p.box(x0 + k * (x1 - x0) / n - 0.002, x0 + k * (x1 - x0) / n + 0.002, y0 + 0.02, y1 - 0.02, depth, depth + 0.003, mat.darkTop);
   }
 
-  // --- Living room (TV room): L-sofa under the west window, TV wall opposite -------------------
-  item(2.94, 2.85, "E", p => sofa(p, 2.7, 0.95, mat.greige, [mat.linenBlush, mat.linenSage, mat.linenSlate, mat.cushionMustard], mat.greige));
-  item(3.87, 0.56, "N", p => sofa(p, 1.86, 0.95, mat.greige, [mat.linenSage], mat.greige));
-  rug(3.7, 0.9, 5.6, 3.9, mat.boucle);
-  item(2.94, 2.8, "E", p => p.box(-1.05, 1.05, 2.5, 2.52, 0.02, 0.2, mat.ledStrip));
-  item(4.65, 2.52, "S", p => {  // DWG coffee table 0.71 x 1.23
-    p.box(-0.355, 0.355, 0.36, 0.42, -0.615, 0.615, mat.stoneTable, 0.03);
-    for (const z of [-0.35, 0.35]) p.cyl(0, z, 0.12, 0, 0.36, mat.walnut, 24);
+  // --- Living room (TV room), per the living-room renders: one L corner sofa backing onto the west
+  // window wall, its return (chaise) along the south wall on the left as you face it, the TV wall
+  // opposite, framed art on both side walls, the split AC high on the north (door) wall by the window.
+  item(0, 0, "S", p => {  // DWG corner sofa: west run x 2.95-3.98, y 0.58-4.22; return x 3.98-4.80, y 0.58-1.61
+    const B = (x0, x1, y0, y1, h0, h1, m, r = 0) => p.box(x0, x1, h0, h1, -y1, -y0, m, r);
+    const X0 = 2.95, X1 = 3.98, XC = 4.80, Y0 = 0.58, YC = 1.606, Y1 = 4.219, fab = mat.greige;
+    B(X0 + 0.03, X1 - 0.03, Y0 + 0.03, Y1 - 0.03, 0, 0.08, shadowGap);  // recessed plinth
+    B(X1 - 0.03, XC - 0.03, Y0 + 0.03, YC - 0.03, 0, 0.08, shadowGap);
+    for (const [a, b] of [[Y0, YC], [1.602, 2.428], [2.424, 3.249], [3.245, 4.045]])  // seat modules
+      B(X0 + 0.15, X1, a + (a === Y0 ? 0.15 : 0.005), b - 0.005, 0.08, 0.44, fab, 0.07);
+    B(X1, XC, Y0 + 0.15, YC, 0.08, 0.44, fab, 0.07);  // the return (chaise) seat, open end
+    B(X0, X0 + 0.16, Y0, Y1, 0.08, 0.72, fab, 0.06);  // low backs along both walls
+    B(X0, XC, Y0, Y0 + 0.16, 0.08, 0.72, fab, 0.06);
+    B(X0, X1, 4.045, Y1, 0.08, 0.6, fab, 0.07);  // arm at the north end
+    for (const [a, b] of [[Y0 + 0.16, YC], [1.606, 2.428], [2.428, 3.249], [3.249, 4.045]])  // back cushions
+      B(X0 + 0.14, X0 + 0.36, a + 0.01, b - 0.01, 0.42, 0.84, fab, 0.09).rotation.z = 0.12;
+    B(X1 + 0.01, XC - 0.01, Y0 + 0.14, Y0 + 0.36, 0.42, 0.84, fab, 0.09).rotation.x = 0.12;
+    // Scatter cushions as rendered: blush and sage in the corner, sage, slate and mustard along the run.
+    const cushion = (x, y, m, along) => B(x - (along ? 0.07 : 0.21), x + (along ? 0.07 : 0.21), y - (along ? 0.21 : 0.07), y + (along ? 0.21 : 0.07), 0.44, 0.84, m, 0.08);
+    cushion(3.55, Y0 + 0.42, mat.linenBlush, false); cushion(X0 + 0.42, 1.25, mat.linenSage, true);
+    cushion(X0 + 0.42, 2.45, mat.linenSage, true); cushion(X0 + 0.42, 3.05, mat.linenSlate, true); cushion(X0 + 0.42, 3.6, mat.cushionMustard, true);
+    B(X1 + 0.05, X1 + 0.55, Y0 + 0.4, YC - 0.05, 0.44, 0.47, mat.linenSage, 0.012);  // sage throw over the chaise
+    B(2.937, X1, 4.219, 4.442, 0, 0.55, mat.walnut, 0.02);  // DWG end table between the arm and the north wall
   });
-  item(6.15, 2.32, "W", p => p.box(-1.75, 1.75, 0, M.ceiling, 0, 0.012, mat.limewashTaupe));
-  item(6.16, 2.25, "W", p => {  // DWG TV unit on the east wall
+  rug(3.75, 0.95, 5.55, 3.95, mat.rug);  // cream shaggy rug
+  item(2.94, 2.8, "E", p => p.box(-1.75, 1.75, 2.5, 2.52, 0.02, 0.2, mat.ledStrip));  // cove light over the window wall
+  item(4.645, 2.529, "S", p => {  // DWG coffee table 0.72 x 1.23: light stone top on two round walnut pedestals
+    p.box(-0.36, 0.36, 0.36, 0.42, -0.617, 0.617, mat.stoneTable, 0.03);
+    for (const z of [-0.33, 0.33]) p.cyl(0, z, 0.13, 0, 0.36, mat.walnut, 24);
+    p.cyl(-0.05, -0.15, 0.1, 0.42, 0.47, mat.walnut, 20, 0.06);  // fruit bowl, vase, books, candle
+    p.cyl(0.05, 0.12, 0.05, 0.42, 0.6, mat.planter, 16, 0.04);
+    p.box(0.02, 0.22, 0.42, 0.48, 0.3, 0.48, mat.oatmeal);
+  });
+  item(6.15, 2.25, "W", p => p.box(-1.75, 1.75, 0, M.ceiling, 0, 0.012, mat.limewashTaupe));
+  item(6.16, 2.25, "W", p => {  // DWG TV unit on the east wall: floating walnut console, 3 drawers, light top
     p.box(-0.87, 0.87, 0.45, 0.72, 0, 0.4, mat.walnut);
     fronts(p, -0.87, 0.87, 0.45, 0.72, 0.4, 0.58);
     p.box(-0.87, 0.87, 0.72, 0.75, 0, 0.42, mat.stoneTable);
     p.box(-0.87, 0.87, 0.43, 0.45, 0.05, 0.36, mat.ledStrip);
     p.box(-0.8, 0.8, 1.1, 1.95, 0, 0.05, mat.screen);
-    for (const s of [-1, 1]) { p.box(s * 1.15 - 0.015, s * 1.15 + 0.015, 1.05, 1.95, 0, 0.03, mat.brass); p.box(s * 1.15 - 0.012, s * 1.15 + 0.012, 1.08, 1.92, 0.03, 0.045, mat.ledStrip); }
+    for (const s of [-1, 1]) {  // thin vertical sconces either side of the TV
+      p.box(s * 1.15 - 0.012, s * 1.15 + 0.012, 1.15, 1.9, 0, 0.03, mat.brass);
+      p.box(s * 1.15 - 0.01, s * 1.15 + 0.01, 1.17, 1.88, 0.03, 0.04, mat.ledStrip);
+      p.cyl(s * 1.15, 0.035, 0.035, 1.5, 1.52, mat.brass, 16);
+    }
+    p.cyl(0.62, 0.2, 0.06, 0.75, 0.93, mat.planter, 16, 0.045);  // vases on the console
+    p.cyl(-0.62, 0.2, 0.05, 0.75, 0.88, mat.planter, 16, 0.04);
   });
-  plant(5.85, 0.85, 1.5); plant(5.85, 3.65, 1.4);
-  art(2.94, 1.15, "E", 0.7, 1.05, 1.55, 1);
-  art(5.2, 0.56, "N", 0.8, 1.05, 1.5, 2);
-  ac(4.6, 4.44, "S");
-  for (const y of [2.05, 3.54]) item(2.94, y, "E", p => { const m = mesh(curtainGeometry(0.45, 2.45), mat.curtain, p.g); m.position.set(0, 1.27, 0.06); });
+  plant(5.12, 0.84, 1.8, 0.24);  // tall olive by the end of the chaise
+  plant(5.9, 1.08, 1.35, 0.2);   // beside the TV console
+  art(3.62, 0.548, "N", 0.9, 1.25, 1.62, 0);  // large abstracts on both side walls, picture lights above
+  art(4.35, 4.443, "S", 0.75, 1.0, 1.48, 1);
+  ac(4.0, 4.443, "S");  // split AC high on the door wall, by the window corner
+  for (const y of [2.0, 3.59]) item(2.94, y, "E", p => { const m = mesh(curtainGeometry(0.5, 2.45), mat.curtain, p.g); m.position.set(0, 1.27, 0.06); });
 
   // --- Master bedroom and bathroom: the same pieces in both plan versions, placed per version -----
   // King bed, built against its headboard wall: w wide, l long from the wall (headboard included),
@@ -850,21 +881,16 @@ export function furnish(scene, M, mat, version = "main") {
   item(16.95, 9.5, "S", p => p.box(-1.0, 1.0, 2.5, 2.52, 0.02, 0.22, mat.ledStrip));
   plant(21.0, 5.9, 1.7, 0.25);
 
-  // --- Terrace: decking, terracotta canopy, L bench, lounge set, BBQ counter ----------
+  // --- Terrace: decking, L bench, lounge set, BBQ counter ----------
   const T = { x0: 21.47, x1: 24.76, y0: 1.78, y1: 9.4 };  // no pergola, per the client
-  item(T.x0, 3.5, "E", p => {  // tiled canopy over the south slider, lifted clear of the AC box
-    const roof = p.box(-1.1, 1.1, 0, 0.06, 0, 1.0, mat.roofTiles);
-    roof.position.y = 2.95; roof.rotation.x = 0.35;
-    p.box(-1.1, 1.1, 2.75, 2.95, 0, 0.12, mat.render);
-  });
-  // Concealed AC in a 60 x 60 cm louvred metal box over each slider: its bottom 30 cm over the door head
-  // (doors read 2.10 m), its top 30 cm above it (2.70 m), as wide as the opening.
+  // Concealed AC in a 60 x 60 cm louvred box over each slider, finished in the wall colour: its bottom
+  // 30 cm over the door head (doors read 2.10 m), its top 30 cm above it (2.70 m), as wide as the opening.
   for (const [y0, y1] of [[2.81, 4.214], [6.34, 8.08]]) item(T.x0, (y0 + y1) / 2, "E", p => {
     const w = (y1 - y0) / 2, b0 = 2.1, b1 = 2.7, D = 0.6;
-    p.box(-w, w, b0, b1, 0, D - 0.04, mat.darkTop);
-    for (const [y, t] of [[b0, 0.025], [b1 - 0.025, 0.025]]) p.box(-w, w, y, y + t, 0, D, mat.blackSteel);
-    for (const s of [-1, 1]) p.box(s * w - (s > 0 ? 0.025 : 0), s * w + (s < 0 ? 0.025 : 0), b0, b1, 0, D, mat.blackSteel);
-    for (let y = b0 + 0.045; y < b1 - 0.04; y += 0.05) p.box(-w + 0.025, w - 0.025, y, y + 0.03, D - 0.04, D - 0.005, mat.blackSteel).rotation.x = -0.5;
+    p.box(-w, w, b0, b1, 0, D - 0.04, mat.limewash);
+    for (const [y, t] of [[b0, 0.025], [b1 - 0.025, 0.025]]) p.box(-w, w, y, y + t, 0, D, mat.limewash);
+    for (const s of [-1, 1]) p.box(s * w - (s > 0 ? 0.025 : 0), s * w + (s < 0 ? 0.025 : 0), b0, b1, 0, D, mat.limewash);
+    for (let y = b0 + 0.045; y < b1 - 0.04; y += 0.05) p.box(-w + 0.025, w - 0.025, y, y + 0.03, D - 0.04, D - 0.005, mat.limewash).rotation.x = -0.5;
   });
   item(25.14, 3.6, "W", p => {  // L-shaped built-in bench, east and south
     p.box(-1.65, 1.65, 0, 0.42, 0, 0.6, mat.walnut);

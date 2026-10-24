@@ -487,10 +487,10 @@ export function furnish(scene, M, mat, version = "main") {
     item(0.556, 7.58, "E", wc(-0.387, 0.416, true, { box: 0.34, pan: [0.36, 0.33, 0.47], cab: [1.4, 2.2] }));  // flush box 34 deep to 1.10; cabinet 1.40-2.20 flush above (30 cm inside, shelves 1.67 and 1.93), vanity to partition; pan 36 x 47 as the DWG block
     item(2.052, 7.113, "W", towelRail);               // east wall south of the WC, clear of the open door leaf and the shower entry
     // Shower (DWG): 1.22 wide x 0.92 deep behind a 10 cm partition on the west, open 0.61 entry on the east. The back
-    // (west) wall is built out 28 cm, flush with the column's inner face, from the column to the partition: a stack
-    // of lit niches at the column end, the 3-way set beside it (rain arm, hand shower on a rail on the partition
-    // side, thermostatic mixer and diverter), mixer 10 cm clear of the niches.
-    item(0.836, 8.383, "E", p => {
+    // (west) wall is built out 28 cm, flush with the column's inner face, from the column to the partition: the 3-way
+    // set on the wall centreline (rain arm, thermostatic mixer and diverter), a hand shower on a fixed holder 11 cm
+    // clear of the mixer on the column side, and a stack of lit niches 10 cm clear of the mixer on the partition side.
+    item(0.836, 8.5033, "E", p => {
       p.cyl(0, 0.03, 0.075, 1.0, 1.02, mat.chrome, 32).rotation.x = Math.PI / 2;  // thermostatic mixer
       p.cyl(0, 0.045, 0.03, 1.0, 1.07, mat.chrome, 24).rotation.x = Math.PI / 2;
       p.cyl(0, 0.03, 0.06, 1.2, 1.22, mat.chrome, 32).rotation.x = Math.PI / 2;    // 3-way diverter
@@ -498,28 +498,40 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(-0.012, 0.012, 1.3, 2.12, 0.04, 0.06, mat.chrome);                      // riser to the arm
       p.box(-0.02, 0.02, 2.1, 2.14, 0, 0.42, mat.chrome);                            // wall arm, 0.42 out
       p.cyl(0, 0.42, 0.13, 2.08, 2.1, mat.chrome, 32);                                // rain head
-      p.box(-0.16, -0.14, 1.0, 1.9, 0.03, 0.05, mat.chrome);                         // hand-shower rail, partition side
-      for (const y of [1.0, 1.9]) p.box(-0.17, -0.13, y - 0.02, y + 0.02, 0, 0.05, mat.chrome);
-      p.box(-0.175, -0.125, 1.52, 1.58, 0.04, 0.08, mat.chrome);                     // slider holding the hand shower
-      p.cyl(-0.15, 0.11, 0.022, 1.42, 1.62, mat.chrome, 16);
-      p.cyl(-0.15, 0.11, 0.045, 1.62, 1.66, mat.chrome, 24);
+      const hx = 0.21;                                                                // hand shower, column side
+      p.cyl(hx, 0.01, 0.022, 0.91, 0.93, mat.chrome, 24).rotation.x = Math.PI / 2;   // wall outlet, elbow down
+      p.box(hx - 0.008, hx + 0.008, 0.905, 0.935, 0.01, 0.043, mat.chrome);
+      p.cyl(hx, 0.035, 0.008, 0.87, 0.92, mat.chrome, 12);
+      p.cyl(hx, 0.01, 0.025, 1.07, 1.09, mat.chrome, 24).rotation.x = Math.PI / 2;   // fixed holder
+      p.box(hx - 0.008, hx + 0.008, 1.07, 1.09, 0.01, 0.045, mat.chrome);
+      p.cyl(hx, 0.045, 0.016, 1.06, 1.1, mat.chrome, 16);
+      p.cyl(hx, 0.045, 0.011, 0.97, 1.25, mat.chrome, 16);                           // slim handset
+      p.cyl(hx, 0.045, 0.015, 1.22, 1.27, mat.chrome, 24);
+      // Hose hanging in a loop: a U at the bottom, one side up to the outlet, the other to the handset
+      const r = 0.045, yU = 0.62;
+      const u = mesh(new THREE.TorusGeometry(r, 0.006, 8, 24, Math.PI), mat.chrome, p.g);
+      u.position.set(hx, yU, 0.035); u.rotation.z = Math.PI;
+      for (const [x0, y1] of [[r, 0.87], [-r, 0.97]]) {
+        const L = Math.hypot(x0, y1 - yU);
+        p.cyl(hx + x0 / 2, 0.035, 0.006, (yU + y1 - L) / 2, (yU + y1 + L) / 2, mat.chrome, 8).rotation.z = Math.atan2(x0, y1 - yU);
+      }
     });
     item(2.041, 8.745, "W", p => {  // teak fold-down seat on the east wall at the back, shown open: 0.45 wide x 0.35 deep, top 0.45 (DWG dashed)
       p.model("models/mbath-seat-teak.glb", mat.oakVeneer, 0, 0.35, 0, { size: [0.45, 0.1, 0.35] });
       p.model("models/mbath-seat-brackets.glb", mat.brushedNickel, 0, 0.35, 0, { size: [0.45, 0.1, 0.35] });
     });
-    // Niche stack in the back-wall build-out (DWG dashed), 5 cm clear of the column: four niches 0.30 wide x 0.15
-    // deep x 0.25 clear, floors 0.95 / 1.28 / 1.61 / 1.94 with 8 cm stone bands, a warm LED under each top (sills
-    // laid with a slight fall inward). The model carves a slot 1 cm oversize full height (build --cut) so the stone
-    // lining finishes it at 30 x 15; stone fills it below, between and above.
-    item(0.836, 8.7101, "E", p => {
+    // Niche stack in the back-wall build-out (DWG dashed), partition side, 3 cm tile return to the partition: four
+    // niches 0.20 wide x 0.15 deep x 0.25 clear, floors 0.95 / 1.28 / 1.61 / 1.94 with 8 cm stone bands, a warm LED
+    // under each top (sills laid with a slight fall inward). The model carves a slot 1 cm oversize full height (build
+    // --cut) so the stone lining finishes it at 20 x 15; stone fills it below, between and above.
+    item(0.836, 8.2279, "E", p => {
       const floors = [0.95, 1.28, 1.61, 1.94], c = 0.25;
-      p.box(-0.155, 0.155, 0, floors[0], -0.155, 0, mat.stoneWall);  // 5 mm into the lining: no shared faces
-      for (const y of floors.slice(1)) p.box(-0.155, 0.155, y - 0.08, y, -0.155, 0, mat.stoneWall);
-      p.box(-0.155, 0.155, floors[3] + c, M.ceiling, -0.155, 0, mat.stoneWall);
+      p.box(-0.105, 0.105, 0, floors[0], -0.155, 0, mat.stoneWall);  // 5 mm into the lining: no shared faces
+      for (const y of floors.slice(1)) p.box(-0.105, 0.105, y - 0.08, y, -0.155, 0, mat.stoneWall);
+      p.box(-0.105, 0.105, floors[3] + c, M.ceiling, -0.155, 0, mat.stoneWall);
       for (const y of floors) {
-        p.box(-0.13, 0.13, y + c - 0.015, y + c - 0.005, -0.14, -0.12, mat.ledStrip);
-        p.model("models/mbath-bottles.glb", null, 0, y, -0.14, { width: 0.22 });
+        p.box(-0.08, 0.08, y + c - 0.015, y + c - 0.005, -0.14, -0.12, mat.ledStrip);
+        p.model("models/mbath-bottles.glb", null, 0, y, -0.14, { width: 0.16 });
       }
     });
   } else {

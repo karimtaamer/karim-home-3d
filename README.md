@@ -212,7 +212,7 @@ the bath end wall.
 ```sh
 S=dwg/shifted-bedroom.dxf
 ~/.dwg-tools/bin/python build_geometry.py $S --out model-shifted-bedroom.js --tour tour-shifted-bedroom.json \
-    --cut 191.0809,-113.0631,191.2609,-112.7431   # master shower niche stack in the back-wall build-out
+    --cut 191.0809,-113.4953,191.2609,-113.2753   # master shower niche stack in the back-wall build-out
 ~/.dwg-tools/bin/python build_drawing.py $S --model model-shifted-bedroom.js --out drawing-shifted-bedroom.json
 ```
 

@@ -4,13 +4,16 @@
     python3 photogen.py [port]          # serves this folder on http://127.0.0.1:8000
     python3 photogen.py --dry-run       # same, but "generates" by echoing the model view (no API calls)
 
-Generate Photo Spot (Walk view) sends a screenshot of the model from where you stand, a plan of the room
-drawn from the DWG and the view's numbers. This turns them into an OpenAI image edit that keeps the
-screenshot's angle and objects and only re-surfaces them, using a material board cropped from the
-designer's renders, a few of the renders themselves and the finishes written out in photogen-brief.json;
-the earlier renders (designer's and approved AI spots) that show the furniture of the rooms in shot go too, so
-the pieces keep their real design. The screenshot alone says what the room has (walls, doors, windows, niches,
-furniture); the other images lend only surfaces and designs. Comments re-run it on the attempt shown.
+Generate Photo Spot (Walk view) sends an untextured clay screenshot of the model (matte grey shapes, glass
+see-through, lights white) from the framed camera, a plan of the room it looks at, drawn from the DWG, and the
+view's numbers. This turns them into an OpenAI image edit that keeps the screenshot's angle and shapes and only
+paints the real finishes on them, using a material board cropped from the designer's renders, a few of the
+renders themselves (this room's; another room's in shot only when both are wet or both dry) and the
+finishes written out in photogen-brief.json; the earlier renders (designer's and approved AI spots) that show
+the furniture of this room go too, so the pieces keep their real design (never another room's furniture: a bed
+seen through the en-suite door would come in). The screenshot alone says what the room has (walls, doors,
+windows, niches, furniture); the other images lend only surfaces and designs. Comments re-run it on the attempt
+shown.
 Approving copies the image into renders/ and adds the spot to spots.json, like a designer render (or to
 the plan version's spots file the page is showing, e.g. spots-bigger-bedroom.json).
 
@@ -77,7 +80,9 @@ one is. Do not add any door, opening, window, niche, furniture, decor or fixture
 do not remove any that is. Where {img} shows plain wall, the photo shows plain wall. Keep everything at the edges \
 of the frame exactly as {img} has it, and do not complete what is cut off there from another image. The other \
 images lend only materials, colours, light and the design of pieces that are already in {img}; their walls, doors, \
-windows, openings and layout belong to other rooms or angles and must not appear."""
+windows, openings and layout belong to other rooms or angles and must not appear. Nothing from another image (a \
+bed, a door, a piece of furniture, a whole room) appears unless {img} has its shape in that place; through a doorway \
+or opening the photo shows only what {img} shows there."""
 
 
 def save(path, data, mime):
@@ -225,16 +230,21 @@ def small(path):
     return out
 
 
+def wet(r):
+    return bool(re.search(r"toilet|bath|wc|shower|laundry", r, re.I))
+
+
 def references(room, seen, name):
-    """Designer renders on disk: this room's, then one of each other room in shot, up to MAX_REFS; then, only while
-    there are fewer than SAME_ROOM, one each from rooms of the same sort (bathrooms for a bathroom, the terrace for
-    the terrace, living spaces otherwise)."""
+    """Designer renders on disk: this room's, then one of each other room in shot that is wet only if this room is
+    (a bathroom's for a bathroom, a dry room's for a dry room: a bedroom edge seen from the en-suite sends no bedroom),
+    up to MAX_REFS; then, only while there are fewer than SAME_ROOM, one each from rooms of the same sort (bathrooms
+    for a bathroom, the terrace for the terrace, living spaces otherwise). All for colour and light only."""
     have = [s for s in spots(name) if not s.get("ai") and (BLOB or (ROOT / s["photo"]).exists())]
     refs = [s for s in have if s["room"] == room][:SAME_ROOM]
-    wet = lambda r: bool(re.search(r"toilet|bath|wc|shower|laundry", r, re.I))
     out = lambda r: r == "TERRACE"
     seen = [STAND_IN.get(r, r) for r in seen]  # rooms with no render of their own borrow a neighbour's
     other = sorted({s["room"] for s in have} - {room, *seen}, key=lambda r: (out(r) != out(room), wet(r) != wet(room), r not in SOFT, r))
+    seen = [r for r in seen if wet(r) == wet(room)]
     for r, most in [(r, MAX_REFS) for r in seen] + [(r, SAME_ROOM) for r in other]:
         pick = next((s for s in have if s["room"] == r), None)
         if pick and pick not in refs and len(refs) < most:
@@ -242,12 +252,13 @@ def references(room, seen, name):
     return refs
 
 
-def furniture(room, seen, name):
-    """Earlier renders that show the real pieces of this room and the rooms in shot: the designer's ones named in
-    photogen-brief.json's furniture list (this room's first, most pieces first), then the approved AI spots of
-    those rooms, newest first. -> [(spot, [where, ..])]"""
+def furniture(room, name):
+    """Earlier renders that show the real pieces of this room (and of the room it borrows renders from, STAND_IN),
+    never of the other rooms in shot: their furniture is not in the VIEW, and sending it brings it in (a bed through
+    the en-suite door). The designer's ones named in photogen-brief.json's furniture list (this room's first, most
+    pieces first), then the approved AI spots of this room, newest first. -> [(spot, [where, ..])]"""
     items = json.loads(BRIEF.read_text()).get("furniture", []) if BRIEF.exists() else []
-    rooms = list(dict.fromkeys(x for r in [room, *seen] for x in (r, STAND_IN.get(r, r))))
+    rooms = list(dict.fromkeys([room, STAND_IN.get(room, room)]))
     try:
         later, gone = blob_spots(name), deleted(name)
     except Exception as e:  # without them the designer's renders still go
@@ -353,9 +364,12 @@ def prompt(ctx, refs, comments, revising, has_board):
                      "door, opening, window, niche, piece of furniture or fixture) is a mistake: put back what the "
                      "VIEW shows there.")
     lines += [
-        f"{next(n)}. VIEW - a screenshot of the 3D model from the exact camera spot, drawn from the architect's "
-        "DWG. Its geometry is right; its surfaces are rough placeholders (flat paint, plain wood, plastic-"
-        "looking fabric) to be replaced with the real finishes. Ignore any gold rings on the floor.",
+        f"{next(n)}. VIEW - an untextured clay render of the 3D model from the exact camera spot, drawn from the "
+        "architect's DWG. Its grey shapes are the exact architecture, furniture and objects: every one stays, "
+        "with its outline, size and place, and nothing is added. Resurface them only with the finishes from the "
+        "brief, the BOARD and the references; do not add, remove, move or reshape anything. Grey is not a colour "
+        "to keep: every surface gets its real finish. Its faint blue-grey see-through panes are glass (windows, "
+        "glass doors, screens and shelves); the bright white strips and shades are lights.",
         f"{next(n)}. PLAN - the room from above, from the DWG: walls black, glazing blue, door openings brown, "
         "furniture outlines grey, the camera a red dot with its field of view in red. North is up. Use it to "
         "understand the room beyond the frame and where daylight comes from; do not draw it.",
@@ -371,7 +385,7 @@ def prompt(ctx, refs, comments, revising, has_board):
     lines += [ref_line(next(n), s, w, r["name"], [x["name"] for x in seen]) for s, w in refs]
     if furn:
         lines += ["", "Use the EXACT furniture shown in the FURNITURE reference images (same design, shape, fabric, "
-                  "colour, wood and details) for the pieces standing where the VIEW's blocks are; do not substitute "
+                  "colour, wood and details) for the pieces standing where the VIEW's grey shapes are; do not substitute "
                   "other designs. Do not copy those images' layout or camera: positions and sizes come from the VIEW, "
                   "and a piece that is not in the VIEW stays out, even when a FURNITURE image lists it for this room."]
     lines += [
@@ -513,7 +527,7 @@ def request(ctx, view, vmime, vext, plan, comments, prev, name):
     images += [(f"view.{vext}", view, vmime), ("plan.png", plan, "image/png")]
     if mats:
         images.append((mats.name, mats.read_bytes(), "image/jpeg"))
-    furn = furniture(room, seen, name)
+    furn = furniture(room, name)
     shows = {s["photo"]: w for s, w in furn}
     sent = [(s, shows.get(s["photo"])) for s in refs]  # a whole render that shows furniture serves both
     sent += [(s, w) for s, w in furn if s["photo"] not in {x["photo"] for x in refs}][:max(0, min(MAX_FURNITURE, MAX_IMAGES - len(images) - len(refs)))]
@@ -570,7 +584,7 @@ def revise(req):
     if mats:
         images.append((mats.name, mats.read_bytes(), "image/jpeg"))
     used = []
-    for x, w in furniture(s["room"], [], name):
+    for x, w in furniture(s["room"], name):
         if x["photo"] == s["photo"] or len(used) >= MAX_FURNITURE or len(images) >= MAX_IMAGES:
             continue
         p = picture(x)

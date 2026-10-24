@@ -1,7 +1,7 @@
 // Generate Photo Spot: in Walk, turn the view you are standing in into a photoreal render with OpenAI
-// (photogen.py does the calls, so the key never reaches the page). It sends a screenshot of the model,
-// a plan of the room drawn from the DWG and the view's numbers; the designer's renders go along as
-// style references. Comment to re-run it on the attempt shown; approve to save it as a photo spot.
+// (photogen.py does the calls, so the key never reaches the page). It sends an untextured clay screenshot of
+// the model (the shapes only; the finishes come from the brief and references), a plan of the room drawn from
+// the DWG and the view's numbers; the designer's renders go along as style references. Comment to re-run it on the attempt shown; approve to save it as a photo spot.
 // The endpoints are photogen.py's: the local server, or api/photospot.py on Vercel; with neither (a plain
 // static server) the button stays hidden. If PHOTOSPOT_PASSWORD is set there, the page asks for it once.
 // The button first shows a preview of the shot from where you stand, with − / + to frame it: + widens it by
@@ -9,9 +9,15 @@
 // that and then narrows the lens. The spot is saved with that framing, and named after the furniture piece
 // it frames (spotnames.js), or failing that, by photogen.py from the generated image.
 
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { framedWord, uniqueName } from "./spotnames.js";
 
 const W = 1536, H = 1024;  // the 3:2 frame photogen.py asks for
+// The clay VIEW: matte light grey; glass a faint grey-blue at its own opacity; lamps and LED strips a soft white.
+const CLAY = 0xd9d9d6, CLAY_GLASS = 0xdde6ea, CLAY_SKY = 0xf4f4f2;
 const COMPASS = ["north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west"];
 // Framing: steps back of STEP m up to BACK m, CLEAR m short of any wall or tall piece behind; then the frame's
 // vertical lens in steps of LENS degrees, from FOV_MIN to FOV_MAX (about 50 to 112 degrees across at 3:2).
@@ -110,9 +116,10 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
   // The framing being chosen: where you stand (pos), the most you can step back (room), how far back and the lens.
   let shot = null;
 
-  function frame(p) {
+  function frame(p, clay = false) {
     // The model from pose p (or as you see it), without the photo-spot rings, drawn straight into a 3:2 frame at
-    // full size. It goes as the picture to edit, so its angle and every object in it stay put; only the finishes change.
+    // full size. The clay one goes as the picture to edit, so its angle and every object in it stay put and the
+    // model's placeholder finishes don't: only the real ones are painted on. The textured one is the preview.
     const rings = scene.getObjectByName("photo-spot-markers");
     const was = rings?.visible;
     if (rings) rings.visible = false;
@@ -124,7 +131,7 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     camera.updateProjectionMatrix();
     renderer.setPixelRatio(1); renderer.setSize(W, H, false);
     composer.setPixelRatio(1); composer.setSize(W, H);
-    composer.render();
+    clay ? clayRender() : composer.render();
     const c = document.createElement("canvas");
     c.width = W; c.height = H;
     c.getContext("2d").drawImage(renderer.domElement, 0, 0, W, H);
@@ -134,6 +141,53 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     camera.updateProjectionMatrix();
     if (rings) rings.visible = was;
     return c.toDataURL("image/jpeg", 0.92);  // a PNG this size can pass Vercel's 4.5 MB request limit
+  }
+
+  // One render with every mesh in matte clay, then everything put back. A material's clay twin keeps what decides
+  // whether and where it shows (opacity and transparency, so faded and hidden pieces stay so; side; the cut
+  // plane's clipping) and drops its colour, maps, metal and gloss. Glass keeps its low opacity so windows read
+  // as openings; a strong glow (lamp shades, LED strips) turns a soft white so light sources still read; mirrors
+  // are clay. The lights turn white and the sky a flat light grey, so nothing tints the clay; the screen's bloom
+  // is left out and a soft ambient occlusion (GTAO) shades the corners instead.
+  function clayRender() {
+    const twins = new Map(), meshes = [], lights = [], bg = scene.background;
+    const twin = m => {
+      if (!twins.has(m)) {
+        const glow = m.emissive && Math.max(m.emissive.r, m.emissive.g, m.emissive.b) * (m.emissiveIntensity ?? 1) >= 0.8;
+        twins.set(m, new THREE.MeshStandardMaterial({
+          color: m.transparent && m.opacity < 0.3 ? CLAY_GLASS : CLAY, roughness: 1, metalness: 0,
+          emissive: glow ? 0xffffff : CLAY, emissiveIntensity: glow ? 1.2 : 0.03,  // a little lift in the shade
+          transparent: m.transparent, opacity: m.opacity, depthWrite: m.depthWrite, visible: m.visible,
+          side: m.side, clippingPlanes: m.clippingPlanes, clipShadows: m.clipShadows,
+        }));
+      }
+      return twins.get(m);
+    };
+    let ao = null;
+    try {
+      scene.traverse(o => {
+        if (o.isMesh) {
+          meshes.push([o, o.material]);
+          o.material = Array.isArray(o.material) ? o.material.map(twin) : twin(o.material);
+        } else if (o.isLight) {
+          lights.push([o, o.color.clone(), o.groundColor?.clone()]);
+          o.color.set(0xffffff);
+          o.groundColor?.set(0xffffff);
+        }
+      });
+      scene.background = new THREE.Color(CLAY_SKY);
+      ao = new EffectComposer(renderer);
+      ao.addPass(new RenderPass(scene, camera));
+      ao.addPass(new GTAOPass(scene, camera, W, H));
+      ao.addPass(new OutputPass());
+      ao.render();
+    } finally {
+      for (const [o, m] of meshes) o.material = m;
+      for (const [o, c, g] of lights) { o.color.copy(c); if (g) o.groundColor.copy(g); }
+      scene.background = bg;
+      if (ao) { for (const p of ao.passes) p.dispose?.(); ao.dispose(); }
+      for (const m of twins.values()) m.dispose();
+    }
   }
 
   // The lens of the screen's middle 3:2: its height is kept unless the screen is narrower than 3:2.
@@ -292,20 +346,23 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     return c.toDataURL("image/png");
   }
 
+  // What thumbnail k shows: -1 the model view, -2 the clay view (the one sent), then the attempts from 0.
+  const atOf = k => (k < 2 ? -1 - k : k - 2);
   function show(i) {
     job.at = i;
-    stage.src = i < 0 ? job.view : job.attempts[i].src;
-    thumbs.querySelectorAll("figure").forEach((f, k) => f.classList.toggle("on", k - 1 === i));
+    stage.src = i === -2 ? job.clay : i < 0 ? job.view : job.attempts[i].src;
+    thumbs.querySelectorAll("figure").forEach((f, k) => f.classList.toggle("on", atOf(k) === i));
     sync();
   }
   function drawThumbs() {
     thumbs.innerHTML = "";
-    [{ src: job.view, label: "Model view" }, ...job.attempts.map((a, i) => ({ src: a.src, label: `Attempt ${i + 1}` }))].forEach((t, k) => {
+    [{ src: job.view, label: "Model view" }, { src: job.clay, label: "Clay view (sent)" },
+      ...job.attempts.map((a, i) => ({ src: a.src, label: `Attempt ${i + 1}` }))].forEach((t, k) => {
       const f = document.createElement("figure");
       f.innerHTML = `<img alt=""><figcaption></figcaption>`;
       f.querySelector("img").src = t.src;
       f.querySelector("figcaption").textContent = t.label;
-      f.onclick = () => !job.busy && show(k - 1);
+      f.onclick = () => !job.busy && show(atOf(k));
       thumbs.appendChild(f);
     });
   }
@@ -347,7 +404,7 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     const t0 = performance.now();
     const tick = setInterval(() => (status.textContent = `${comment ? "Revising" : "Generating"} · ${Math.round((performance.now() - t0) / 1000)} s · usually 1–2 min`), 500);
     try {
-      const out = await call("generate", { spots: spotsFile, view: job.view, plan: job.plan, ctx: job.ctx, cam: job.cam, comments, previous: base?.draft });
+      const out = await call("generate", { spots: spotsFile, view: job.clay, plan: job.plan, ctx: job.ctx, cam: job.cam, comments, previous: base?.draft });
       job.attempts.push({ ...out, comments });
       notes.value = "";
       drawThumbs();
@@ -392,7 +449,7 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     eye.position.copy(p.pos);
     const word = framedWord({ THREE, camera: eye, root: furniture, solids, version, hfov: v.info.hfov, vfov: v.info.vfov });
     job = {
-      view: frame(p), cam: v.cam, room: r.name, caption, word, named: false, attempts: [], at: -1, busy: false,
+      view: frame(p), clay: frame(p, true), cam: v.cam, room: r.name, caption, word, named: false, attempts: [], at: -1, busy: false,
       ctx: {
         room: { name: r.name, caption, area: r.area, width: x1 - x0, depth: y1 - y0, finish: r.finish },
         seen: [...new Set([here.name, ...seen(v, r.name)])].filter(n => n !== r.name).map(n => ({ name: n, caption: captionOf(n) })),
@@ -406,7 +463,7 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     $(".gen.meta").textContent = `${caption}${here.name !== r.name ? ` (from ${captionOf(here.name)})` : ""} · facing ${v.info.facing} · ${v.info.hfov.toFixed(0)}° lens`;
     box.dataset.mode = "generate";
     drawThumbs();
-    show(-1);
+    show(-2);
     run();
   };
   $(".revise").onclick = () => run(notes.value.trim());

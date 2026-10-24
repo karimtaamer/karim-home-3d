@@ -395,12 +395,17 @@ that view replaces the model.
   `photogen.py` names it from the image with `gpt-4.1-nano` (`OPENAI_NAME_MODEL`), well under $0.001. The name
   stays editable before saving.
 - **What gets sent.** `photogen.js` sends three things to `photogen.py`:
-  - a screenshot of the model from where you stand;
+  - an untextured **clay** screenshot of the model from the framed camera (shown as the "Clay view (sent)" thumbnail):
+    every material swapped for a matte light grey for that one render (glass a faint see-through grey-blue, lamps and
+    LED strips white, no bloom, soft GTAO), then put back. The AI only paints the real finishes onto those shapes;
+    the textured "Model view" is the preview only;
   - a plan crop of the room drawn from the DWG;
   - the camera numbers.
 - **The OpenAI call.** `photogen.py` calls OpenAI image edit (`gpt-image-2`, 1536×1024). Along with the screenshot it sends:
   - the **material board**: the `swatches` in `photogen-brief.json`, each a crop of a render (`box` = left, top, right, bottom as fractions), laid out as one labelled image;
-  - a few designer renders of the room as style references, and the earlier renders that show its furniture (see below);
+  - a few designer renders of the room as style references (another room in shot adds one only if both rooms are
+    wet or both dry, so a bedroom edge seen from the en-suite sends no bedroom), and the earlier renders that show
+    its furniture (see below);
   - the finishes text: `all`, plus `rooms[<ROOM>]` for each room in shot.
 - **Revise or approve.**
   - Comment to re-run on the attempt shown.
@@ -412,7 +417,7 @@ that view replaces the model.
   - Asking it to "draw the designer's version" made it copy a render's layout, with bad results.
 - **Furniture references (2026-10-24).** Generations used to invent furniture (e.g. a sofa that isn't Karim's). Now the real pieces come from earlier renders:
   - `furniture` in `photogen-brief.json` lists each piece: `item`, `room` (where it stands), `render` (a file in `renders/` that shows it), `where` (a short description) and optional `rooms` (other rooms it is seen from).
-  - For the room and each room in shot, `photogen.py` sends the renders that show their pieces, labelled `FURNITURE - ... shows <where>`, plus that plan version's approved AI spots of those rooms (on Vercel fetched from Blob as they are).
+  - For the room the shot is filed under (and its `STAND_IN`, e.g. the entrance for the hallway) only, `photogen.py` sends the renders that show its pieces, labelled `FURNITURE - ... shows <where>`, plus that plan version's approved AI spots of that room (on Vercel fetched from Blob as they are). Never other rooms in shot: their pieces came into the photo (a bed through the en-suite door).
   - A render already sent as a style reference serves both roles. At most `MAX_FURNITURE` (6) extra images, and never more than 16 in all (OpenAI's limit).
   - The geometry lock stays: the VIEW decides what stands where; only the pieces' designs come from the references.
   - **To add a piece:** add a `furniture` entry naming a render already in a `spots*.json` file. Nothing to publish: the whole 1024 px renders are already in Blob.

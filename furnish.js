@@ -376,8 +376,9 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-0.12, 0.12, 1.0, 1.08, d, d + 0.01, mat.brass);
     if (cabinet) {
       const c = o.box ? d : 0.32;  // a deep flush box takes a cabinet flush with its front
-      p.box(x0, b1, 1.65, 2.45, 0, c, mat.oakVeneer);
-      p.box(x0 + 0.02, b1 - 0.02, 1.62, 1.64, 0.02, c - 0.02, mat.ledStrip);
+      const [c0, c1] = o.cab ?? [1.65, 2.45];  // cabinet bottom and top
+      p.box(x0, b1, c0, c1, 0, c, mat.oakVeneer);
+      p.box(x0 + 0.02, b1 - 0.02, c0 - 0.03, c0 - 0.01, 0.02, c - 0.02, mat.ledStrip);
     }
   };
   const towelRail = p => {  // towel radiator with a hanging towel, clear of the vanity top
@@ -446,7 +447,7 @@ export function furnish(scene, M, mat, version = "main") {
     ac(3.617, 4.55, "N");
     // Master bathroom: vanity and WC on the west wall, shower at the north end behind a glass screen
     item(0.556, 6.68, "E", vanity(1.03));             // DWG vanity 0.52 x 1.03
-    item(0.556, 7.58, "E", wc(-0.387, 0.416, true, { box: 0.34, pan: [0.36, 0.33, 0.47] }));  // flush box 34 deep, cabinet flush above (30 cm inside), vanity to partition; pan 36 x 47 as the DWG block
+    item(0.556, 7.58, "E", wc(-0.387, 0.416, true, { box: 0.34, pan: [0.36, 0.33, 0.47], cab: [1.4, 2.2] }));  // flush box 34 deep to 1.10; cabinet 1.40-2.20 flush above (30 cm inside, shelves 1.67 and 1.93), vanity to partition; pan 36 x 47 as the DWG block
     item(2.052, 7.113, "W", towelRail);               // east wall south of the WC, clear of the open door leaf and the shower entry
     // Shower (DWG): 1.50 wide x 0.83 deep behind a 19 cm partition 0.90 long on the west, open 0.60 entry on
     // the east. 3-way set on the west wall (rain arm, hand shower on a rail, thermostatic mixer and diverter);

@@ -488,22 +488,24 @@ export function furnish(scene, M, mat, version = "main") {
     ac(3.567, 4.55, "N");  // over the mirror (knee-space centre)
     if (NC) {
     // Nagham's Changes en-suite (DWG): shower in the north-west corner, 0.84 wide x 1.50 deep (1.39 by the column),
-    // a 20 cm solid partition (stone-lined, with a shelf niche) between it and the basin, and a 1 cm
-    // clear glass panel 0.90 long between it and the WC, leaving a 0.60 walk-in gap. WC centred in its 0.79 bay on
-    // the north wall, on a low 0.85 flush box (as drawn; the 0.68 WC window above has a 1.50 sill, so a standard
-    // ~1.12 frame would also fit). Vanity as before on the west wall.
-    item(0.556, 6.68, "E", vanity(1.03));
-    item(1.7988, 9.0201, "S", p => {  // WC bay 1.406..2.192 (local +x east)
-      const h = 0.3928, d = 0.2;
-      p.box(-h, h, 0, 0.85, 0, d, mat.oakSlats);
-      p.model("models/wc-wallhung.glb", mat.ceramic, 0, 0.1, d, { size: [0.36, 0.33, 0.47] });  // pan 36 x 47 as the DWG block
+    // a 20 cm solid partition (stone-lined, with a shelf niche) between it and the basin, and a 2 cm clear glass
+    // panel (with its channel) 0.90 long between it and the WC, leaving a 0.60 walk-in gap. WC bay 0.776 wide on the
+    // north wall: a concealed-cistern build-out 0.30 deep across the bay, 1.12 high under the 0.68 window (sill
+    // 1.50), porcelain-clad with a porcelain top ledge and a flush plate; wall-hung pan 0.54 long, centred.
+    // Vanity 1.153 on the west wall, from its old south end to the partition, bowl centred.
+    item(0.556, 6.7435, "E", vanity(1.153));
+    item(1.8037, 9.0201, "S", p => {  // WC bay 1.416..2.192 (local +x east)
+      const h = 0.3878, d = 0.3, top = 1.12;
+      p.box(-h, h, 0, top - 0.02, 0, d - 0.01, mat.stoneWall);                      // framed build-out, tiled
+      p.box(-h, h, top - 0.02, top, 0, d, mat.stoneWall, 0.004);                    // porcelain top ledge
+      p.box(-0.12, 0.12, 0.92, 1.08, d - 0.01, d, mat.brass, 0.005);               // flush plate on the face
+      p.model("models/wc-wallhung.glb", mat.ceramic, 0, 0.1, d, { size: [0.36, 0.33, 0.54] });  // pan 0.54 long, as the DWG block
       bidetMixer(p, -0.3, 0.55, d, mat.chrome);
-      p.box(-0.12, 0.12, 0.7, 0.78, d, d + 0.01, mat.brass);  // flush plate on the box front
     });
-    item(1.4009, 9.0201, "S", p => {  // DWG glass: 1 cm x 0.90 from the north wall, 2.00 tall, slim wall channel
+    item(1.4059, 9.0201, "S", p => {  // DWG glass: 2 cm with its channel, 0.90 from the north wall, 2.00 tall
       p.box(-0.005, 0.005, 0.01, 2.0, 0, 0.9, mat.clearGlass);
-      p.box(-0.012, 0.012, 0, 2.0, 0, 0.02, mat.chrome);
-      p.box(-0.012, 0.012, 0, 0.01, 0, 0.9, mat.chrome);
+      p.box(-0.01, 0.01, 0, 2.0, 0, 0.02, mat.chrome);
+      p.box(-0.01, 0.01, 0, 0.01, 0, 0.9, mat.chrome);
     });
     item(2.192, 7.113, "W", towelRail);               // east wall south of the WC, clear of the open door leaf
     // Niche in the shower face of the 0.20 solid partition (DWG dashed), centred on the 0.84 width: 0.30 wide x 0.10

@@ -237,12 +237,14 @@ Its en-suite (2026-10-24) is rearranged to Nagham's sketch: the bathroom/bedroom
 foot 1.40 from the wardrobe front). Shower in the north-west corner, 0.84 wide inside x 1.50 deep (1.39 beside the
 column; no back-wall build-out); a 0.20 solid partition (stone-lined in the build) between it and the basin, with a
 niche in its shower face (0.30 wide x 0.10 deep, centred on the shower, dashed; five 4 cm porcelain shelves to a 1.70
-slot top in `furnish.js`, carved by `--cut`); a 1 cm clear glass panel, 0.90 long from the north wall, on its own `Glass` layer (colour 4,
-not `Windows`, so the build doesn't read it as a window), leaving a 0.60 walk-in gap; WC centred in the 0.79 bay to
-its east on the north wall, on a 0.20-deep, 0.85-high flush box. The en-suite window is WC-only: 0.68 wide, DWG x
-191.864-192.544 (0.05 of wall to the glass, 0.05 reveal to the partition, centred on the WC), the shower side solid;
-designed sill 1.50, head 2.10, obscured glass. The build has one sill/head for every window (0.90 / 2.10,
-`build_geometry.py`), so the 3D shows it 0.90-2.10 in clear glass. Vanity, bathroom door and the room's
+slot top in `furnish.js`, carved by `--cut`); a 2 cm clear glass panel (with its channel), 0.90 long from the north
+wall, on its own `Glass` layer (colour 4, not `Windows`, so the build doesn't read it as a window), leaving a 0.60
+walk-in gap. WC bay to its east on the north wall, 0.776 wide: a concealed-cistern build-out 0.30 deep across the bay
+(`2furni`; 1.12 high in 3D, porcelain-clad with a top ledge and a flush plate) and a wall-hung pan 0.54 long, centred,
+front 0.84 from the north wall. The en-suite window is WC-only: 0.68 wide, DWG x 191.869-192.549 (0.048 of wall to
+the glass and to the partition, centred on the WC), the shower side solid; designed sill 1.50, head 2.10, obscured
+glass. The build has one sill/head for every window (0.90 / 2.10, `build_geometry.py`), so the 3D shows it 0.90-2.10
+in clear glass. Vanity 1.153 long (old south end to the partition), 0.51 deep, bowl centred. Bathroom door and the room's
 other walls are as before. `furnish.js` (the `NC` branch in the shared block) and `spotnames.js` follow it.
 
 ```sh

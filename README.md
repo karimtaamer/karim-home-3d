@@ -119,6 +119,11 @@ older Main DXF (`master-bed186-v6-shoes2-2block-laundry.dxf`, in `~/Downloads` o
 Client edit since (2026-10-23, all three files): the guest WC vanity counter `A4A` is 0.60 m deep (front edge moved from
 x 204.63 to 204.472, 2.6 cm clear of the door frame) instead of v12's 0.455 m.
 
+Client edit (2026-10-24, all three files): the entrance shoe unit is an L-shaped built-in (`2furni` polyline `1243`): a
+0.44 x 0.26 m piece on the column's face and a 1.09 x 0.42 m console beside it, now running to the side wall (east edge
+DWG x 201.4240 to 201.7536, was 33 cm short). `furnish.js` builds it as the entrance render's console (oak frame, LED
+cove, seat on a drawer, lit shoe shelf, mirror and hooks) beside a cream cabinet with oak fluting.
+
 **`furnish.js` synced with the DXFs (2026-10-24)**, checked with `check_furnish.py` (all three versions pass). No
 drawing change, so no rebuild (`build_geometry.py` on `dwg/shifted-bedroom.dxf` gives the same model geometry).
 - Kitchen (all versions): one 0.991 m fridge filling block `wgsfd` (was a 0.65 m fridge plus a 0.32 m tall larder);

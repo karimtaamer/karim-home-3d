@@ -35,7 +35,7 @@ ITEMS = [
     ('laundry joinery', None, ('outline', 10.63, 7.92, 61.9, 206.9), 'xy', {'oakVeneer'}, 0.0),
     ('laundry washer/dryer', None, ('outline', 11.835, 8.888, 60.0, 60.0), 'x', {'applianceWhite'}, 0.05),  # 2 cm off the wall
     ('entrance bench', None, ('outline', 8.512, 5.35, 120.0, 40.0), 'xy', {'boucle'}, 0.05),
-    ('entrance shoe unit', None, ('outline', 10.419, 3.81, 120.0, 42.0), 'xy', {'whiteLacquer'}, 0.05),
+    ('entrance console', None, ('outline', 10.584, 3.81, 153.0, 42.0), 'xy', {'oakVeneer', 'whiteLacquer*'}, 0.05),  # L: column piece + console
     ('coffee counter', None, ('outline', 20.474, 9.2, 150.0, 60.1), 'xy', {'marbleTop'}, 0.05),
     ('guest WC counter', None, ('outline', 14.367, 8.035, 60.4, 230.4), 'xy', {'stoneTable*', 'oakBattens'}, 0.05),  # wall to wall
     ('living sofa north module', None, ('outline', 3.465, 3.732, 103.0, 97.4), 'xy', {'greige'}, 0.0),

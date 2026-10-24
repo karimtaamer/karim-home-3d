@@ -766,17 +766,84 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-0.3, 0.3, 1.6, 2.5, 0, 0.6, mat.oakVeneer);
   });
 
-  // --- Entrance: shoe unit beside the front door, bench and pebble mirror facing it, gallery --------
-  item(10.419, 3.6, "N", p => {  // DWG shoe unit 1.20 x 0.42 (x 9.82 to 11.02), lit niche above
-    p.box(-0.6, 0.6, 0, 1.0, 0, 0.42, mat.whiteLacquer);
-    for (const x of [-0.2, 0.2]) p.box(x - 0.002, x + 0.002, 0.02, 0.98, 0.42, 0.423, shadowGap);
-    p.box(-0.6, 0.6, 1.0, 1.03, 0, 0.42, mat.oakVeneer);
-    p.box(-0.6, 0.6, 1.03, 2.4, 0, 0.02, mat.limewash);
-    for (const s of [-1, 1]) p.box(s * 0.6 - 0.02, s * 0.6 + 0.02, 1.03, 2.4, 0, 0.42, mat.oakVeneer);
-    p.box(-0.6, 0.6, 2.1, 2.4, 0, 0.42, mat.oakVeneer);
-    for (let k = 0; k < 9; k++) p.box(0.2 + k * 0.035, 0.22 + k * 0.035, 1.03, 2.1, 0.02, 0.06, mat.walnut);
-    p.box(-0.58, 0.58, 2.08, 2.1, 0.05, 0.4, mat.ledStrip);
+  // --- Entrance: built-in console beside the front door, bench and pebble mirror facing it, gallery --------
+  // DWG L (2furni): a shallow piece on the column's face (x 9.819 to 10.2585, 0.26 deep) and the console beside it
+  // (x 10.2585 to 11.3486, wall to side wall, 0.42 deep), both fronts on y 4.0201. As the entrance render: the column
+  // piece is a low cream cabinet with a vase and books on it, walnut fluting above, a downlight in its oak header;
+  // the console is an oak frame with an LED cove round its inside, a cream seat on a drawer, a lit open shoe shelf
+  // under it, brass hooks and a tall backlit rounded mirror on the wall.
+  const cream = mat.whiteLacquer.clone();
+  cream.color.setRGB(0.93, 0.87, 0.78);
+  cream.clippingPlanes = mat.whiteLacquer.clippingPlanes;
+  const rust = mat.linenBlush.clone();
+  rust.color.setRGB(0.72, 0.38, 0.27);
+  rust.clippingPlanes = mat.linenBlush.clippingPlanes;
+  const coveWall = mat.limewash.clone();  // the wall inside the frame, warmed by the cove
+  coveWall.emissive = new THREE.Color(0xff9d55);
+  coveWall.emissiveIntensity = 0.3;
+  coveWall.clippingPlanes = mat.limewash.clippingPlanes;
+  item(0, 3.6001, "N", p => {  // local x = -plan x, z = plan y - 3.6001 (the wall face)
+    const W = 3.6001, C = 3.7597, F = 4.0201, XA = 9.819, XB = 10.2585, XE = 11.3486, H = 2.35, HB = 2.17, T = 0.045;
+    const B = (x0, x1, y0, y1, h0, h1, m, r = 0) => p.box(-x1, -x0, h0, h1, y0 - W, y1 - W, m, r);
+    const rounded = (x0, x1, h0, h1, r) => {  // rectangle with all four corners rounded, in local x
+      const s = new THREE.Shape(), a = -x1, b = -x0;
+      s.moveTo(a + r, h0); s.lineTo(b - r, h0); s.absarc(b - r, h0 + r, r, -Math.PI / 2, 0, false);
+      s.lineTo(b, h1 - r); s.absarc(b - r, h1 - r, r, 0, Math.PI / 2, false);
+      s.lineTo(a + r, h1); s.absarc(a + r, h1 - r, r, Math.PI / 2, Math.PI, false);
+      s.lineTo(a, h0 + r); s.absarc(a + r, h0 + r, r, Math.PI, Math.PI * 1.5, false);
+      return s;
+    };
+    // Column piece, 0.44 wide: oak post on the door side, cream cabinet to 0.90 under an oak top, walnut fluting
+    // up to the oak header, downlight and LED strip in the header washing the fluting.
+    B(XA, XA + 0.035, C, F, 0, H, mat.oakVeneer);
+    B(XA + 0.035, XB, C + 0.02, F - 0.03, 0, 0.05, shadowGap);  // recessed plinth
+    B(XA + 0.035, XB, C, F, 0.05, 0.865, cream);
+    B(XA + 0.035, XB, F, F + 0.003, 0.83, 0.834, shadowGap);  // finger pull under the top
+    B(XA + 0.035, XB, C, F, 0.865, 0.9, mat.oakVeneer);
+    B(XA + 0.035, XB, C, C + 0.012, 0.9, HB, mat.walnut);
+    for (let x = XA + 0.045; x + 0.018 <= XB; x += 0.03) B(x, x + 0.018, C + 0.012, C + 0.03, 0.9, HB, mat.oakVeneer);
+    B(XA + 0.035, XB, C, F, HB, H, mat.oakVeneer);
+    B(XA + 0.045, XB - 0.01, C + 0.035, C + 0.05, HB - 0.008, HB, mat.ledStrip);
+    p.cyl(-(XA + XB) / 2, F - 0.08 - W, 0.03, HB - 0.004, HB, mat.downlight, 16);
+    B(9.87, 10.03, C + 0.04, C + 0.2, 0.9, 0.92, mat.sheet, 0.003);  // small books
+    B(9.88, 10.02, C + 0.05, C + 0.19, 0.92, 0.94, mat.oatmeal, 0.003);
+    // Console, 1.09 wide, wall to side wall: oak posts and header 4.5 cm thick, the full 0.42 deep.
+    B(XB, XB + T, W, F, 0, H, mat.oakVeneer);
+    B(XE - T, XE, W, F, 0, H, mat.oakVeneer);
+    B(XB + T, XE - T, W, F, HB, H, mat.oakVeneer);
+    B(XB + T, XE - T, W, F, 0, 0.05, mat.oakVeneer);  // shoe shelf base
+    B(XB + T, XE - T, W, W + 0.015, 0.05, 0.28, honeyOak);  // and its lit back lining
+    B(XB + T, XE - T, W + 0.015, W + 0.03, 0.268, 0.28, mat.ledStrip);  // LED strips along the back and under the drawer
+    B(XB + T, XE - T, F - 0.06, F - 0.04, 0.27, 0.278, mat.ledStrip);
+    const shoes = [[10.42, mat.walnut], [10.66, mat.sheet], [10.9, mat.walnut], [11.14, mat.linenBlush]];
+    for (const [x, m] of shoes) for (const dx of [-0.055, 0.055]) {  // pairs, toes out: sole, low toe, higher heel
+      B(x + dx - 0.042, x + dx + 0.042, W + 0.08, W + 0.34, 0.05, 0.065, m === mat.sheet ? mat.oatmeal : shadowGap, 0.006);
+      B(x + dx - 0.04, x + dx + 0.04, W + 0.22, W + 0.34, 0.06, 0.1, m, 0.035);
+      B(x + dx - 0.04, x + dx + 0.04, W + 0.08, W + 0.23, 0.06, 0.14, m, 0.035);
+    }
+    B(XB + T, XE - T, W, F, 0.28, 0.39, cream);  // drawer, two fronts
+    B((XB + XE) / 2 - 0.002, (XB + XE) / 2 + 0.002, F, F + 0.003, 0.29, 0.38, shadowGap);
+    B(XB + T + 0.005, XE - T - 0.005, W + 0.005, F, 0.39, 0.46, mat.boucle, 0.03);  // upholstered seat, top at 0.46
+    B(10.33, 10.72, W + 0.05, W + 0.17, 0.46, 0.82, rust, 0.06).rotation.x = -0.22;  // terracotta cushion
+    // LED cove round the inside, set back against the wall, and the wall it lights.
+    p.face(-(XE - T), -(XB + T), 0.46, HB, 0.002, coveWall, true);
+    B(XB + T, XE - T, W + 0.005, W + 0.03, HB - 0.006, HB, mat.ledStrip);
+    for (const x of [XB + T, XE - T - 0.006]) B(x, x + 0.006, W + 0.005, W + 0.03, 0.46, HB, mat.ledStrip);
+    // Tall mirror with rounded corners (0.46 x 1.20, 0.75 to 1.95) on the door side, glowing round its edge.
+    const mx0 = 10.36, mx1 = 10.82;
+    mesh(new THREE.ShapeGeometry(rounded(mx0 - 0.025, mx1 + 0.025, 0.725, 1.975, 0.105)), mat.ledStrip, p.g, false).position.z = 0.008;
+    const glass = mesh(new THREE.ExtrudeGeometry(rounded(mx0, mx1, 0.75, 1.95, 0.08), { depth: 0.01, bevelEnabled: false, curveSegments: 12 }), mat.mirror, p.g, false);
+    glass.position.z = 0.012;
+    // Three brass hooks beside it, a linen scarf on the first and a bag on the third.
+    for (const x of [10.95, 11.07, 11.19]) {
+      B(x - 0.007, x + 0.007, W, W + 0.06, 1.6, 1.614, mat.brass);
+      B(x - 0.007, x + 0.007, W + 0.05, W + 0.064, 1.6, 1.64, mat.brass, 0.005);
+    }
+    B(10.89, 11.01, W + 0.03, W + 0.06, 1.0, 1.61, mat.oatmeal, 0.015);
+    B(11.08, 11.3, W + 0.03, W + 0.11, 1.2, 1.4, mat.walnut, 0.02);  // leather bag on the third
+    for (const x of [11.12, 11.26]) B(x - 0.006, x + 0.006, W + 0.065, W + 0.075, 1.4, 1.6, mat.walnut);
   });
+  plant(10.13, 3.89, 0.5, 0.07, 0.9);  // cream vase of olive branches on the column piece
   // Facing the front door, as the entrance render: tall pebble mirror (0.78 x 1.55, thin oak frame, warm LED glow
   // behind) just above a cream boucle bench (DWG 1.20 x 0.40, 0.45 high) on two rounded block legs, a dusty-pink throw
   // over its right end; one brass and opal pill sconce right of the mirror over a rounded oak shelf (DWG 0.40 x 0.18).
@@ -828,7 +895,7 @@ export function furnish(scene, M, mat, version = "main") {
     p.roundTop(-0.46, 0.46, 0, 2.14, 0.22, 0.04, 0.02, mat.oakVeneer);
     p.box(0.3, 0.33, 0.7, 1.5, 0.06, 0.09, mat.brass);
   });
-  plant(11.1, 4.5, 1.6, 0.24); plant(7.64, 5.3, 1.75, 0.2);  // tall olive left of the bench
+  plant(11.1, 4.72, 1.6, 0.24); plant(7.64, 5.3, 1.75, 0.2);  // olives on the side wall clear of the console seat, and left of the bench
   art(7.0, 3.6, "N", 0.75, 1.05, 1.45, 0); art(6.72, 3.62, "N", 0.5, 0.5, 1.3, 1, false);
   [[3.85, 0.36, 0.48, 1.75], [4.3, 0.36, 0.36, 1.45], [3.95, 0.3, 0.3, 1.2]].forEach(([y, w, h, z], k) => art(6.51, y, "E", w, h, z, k));
   rug(7.1, 4.3, 10.9, 5.1, mat.art[1]);

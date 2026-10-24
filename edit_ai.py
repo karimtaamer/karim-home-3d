@@ -79,14 +79,21 @@ def readable(v):
 
 
 def api_key():
-    if os.environ.get("EDIT_AI_OPENAI_API_KEY"):
-        return os.environ["EDIT_AI_OPENAI_API_KEY"]
+    # Prefer the dedicated Edit AI key; ignore the connector placeholder "[REDACTED]"
+    # (Vercel MCP redacts secrets when saving). Fall back to photogen's OPENAI_API_KEY.
+    def _ok(v):
+        v = (v or "").strip().strip('"\'')
+        return v if v and v != "[REDACTED]" and len(v) > 20 else None
+    if k := _ok(os.environ.get("EDIT_AI_OPENAI_API_KEY")):
+        return k
     env = ROOT / ".env"
     if env.exists():
         for line in env.read_text().splitlines():
-            k, _, val = line.partition("=")
-            if k.strip() == "EDIT_AI_OPENAI_API_KEY":
-                return val.strip().strip('"\'')
+            name, _, val = line.partition("=")
+            if name.strip() == "EDIT_AI_OPENAI_API_KEY" and (k := _ok(val)):
+                return k
+    if k := _ok(os.environ.get("OPENAI_API_KEY")):
+        return k
     return None
 
 
@@ -516,7 +523,7 @@ def chat(req):
     if v not in VERSIONS:
         raise ValueError(f"unknown version {v!r}")
     if not api_key():
-        raise PermissionError("Edit AI isn't switched on yet: the server has no EDIT_AI_OPENAI_API_KEY.")
+        raise PermissionError("Edit AI isn't switched on yet: set EDIT_AI_OPENAI_API_KEY (or OPENAI_API_KEY) on the server.")
     message = (req.get("message") or "").strip()[:4000]
     if not message:
         raise ValueError("Say what you want changed.")

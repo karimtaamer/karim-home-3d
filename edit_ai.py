@@ -5,7 +5,7 @@
 
 The page (edit-ai.js) freezes the 3D or 2D view, the user circles what to change (or picks Whole view), says what
 they want and may attach reference pictures. POST /api/edit-ai/chat sends that here; an OpenAI chat model with
-vision (EDIT_AI_MODEL, default gpt-4.1-mini, key EDIT_AI_OPENAI_API_KEY, kept apart from Generate Photo Spot's
+vision (EDIT_AI_MODEL, default gpt-4.1, key EDIT_AI_OPENAI_API_KEY, kept apart from Generate Photo Spot's
 OPENAI_API_KEY) works through tools: it greps and reads furnish.js / materials.js / the docs, edits them by exact
 search/replace, queries and edits the version's DXF (edit_ai_dxf.py), and the model and drawing are rebuilt from the
 DXF (build_geometry.py, build_drawing.py) whenever the plan changed, so the 3D and the 2D stay one.
@@ -36,7 +36,7 @@ ROOT = Path(__file__).resolve().parent
 LIVE = "edit-ai-live"  # the store's prefix, and the folder here
 BLOB = bool(photogen_blob.token())
 ON_VERCEL = bool(os.environ.get("VERCEL"))
-MODEL = os.environ.get("EDIT_AI_MODEL", "gpt-4.1-mini")
+MODEL = os.environ.get("EDIT_AI_MODEL", "gpt-4.1")
 RATE = int(os.environ.get("EDIT_AI_RATE", "20"))
 OPENAI_URL = os.environ.get("EDIT_AI_OPENAI_URL", "https://api.openai.com/v1/chat/completions")  # a test double can stand in
 MAX_STEPS = 16  # tool rounds per message
@@ -634,9 +634,9 @@ def undo(req):
         e = cur["files"].get(path)
         if path in res_before and res_before[path][0] in ("live", "replayed"):
             data = live_content(path, res_before[path])
-        elif e and e.get("base_url"):
-            data = get(e["base_url"])
         else:
+            # Nothing live before it: back to what is deployed now (not the file the edit started from, which may be
+            # older than main and would hide later commits).
             data = deployed(path)
         dep = deployed(path)
         if sha(data) == sha(dep):
@@ -646,6 +646,20 @@ def undo(req):
         contents[path] = data
     man = write_rev(v, files, f"Undo: {cur.get('summary', '')}", sorted(contents), contents)
     return {"rev": man["rev"], "changed": sorted(contents), "sync": man.get("sync")}
+
+
+def reset(req):
+    """Drop every live Edit AI override for a version: it shows exactly what is deployed (a new, empty revision)."""
+    v = req.get("version") or "main"
+    if v not in VERSIONS:
+        raise ValueError(f"unknown version {v!r}")
+    stamp = time.strftime("%Y%m%dT%H%M%S", time.gmtime()) + f"{int(time.time() * 1000) % 1000:03d}"
+    rev = f"{stamp}-{secrets.token_hex(3)}"
+    prev = revisions(v)
+    man = {"version": v, "rev": rev, "parent": prev[-1] if prev else None, "summary": "Reset to the deployed files",
+           "changed": [], "files": {}, "at": int(time.time())}
+    put(f"{LIVE}/{v}/rev-{rev}.json", json.dumps(man).encode(), "application/json")
+    return {"rev": rev, "changed": []}
 
 
 # --- Git sync, after the change is already live ----------------------------------------------------------------------
@@ -768,7 +782,7 @@ class Handler(photogen.Handler):
         act, _ = self.edit_action()
         if not act:
             return super().do_POST()
-        routes = {"chat": chat, "undo": undo}
+        routes = {"chat": chat, "undo": undo, "reset": reset}
         if act not in routes:
             return self.reply(404, {"error": "not found"})
         ip = (self.headers.get("X-Forwarded-For") or self.client_address[0]).split(",")[0].strip()

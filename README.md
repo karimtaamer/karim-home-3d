@@ -436,6 +436,7 @@ that view replaces the model.
   - To make one permanent in git, copy its entry into `spots*.json` and its image into `renders/`.
 - **Vercel env vars:**
   - `OPENAI_API_KEY`
+  - `EDIT_AI_OPENAI_API_KEY` (Edit AI, § 8)
   - `BLOB_READ_WRITE_TOKEN`
   - optional `PHOTOSPOT_PASSWORD`: if set, the page asks for it once before generate, approve, edit or delete.
     Currently unset, so anyone with the link can delete generated renders: set it.
@@ -444,3 +445,29 @@ that view replaces the model.
 - **Ignored files:**
   - `.gitignore`: `renders/`, `dist/`, `notes/compare/`, `.env*`, `.vercel`, `.sc/`, `.gstack/`.
   - `.vercelignore` also drops the build scripts, `notes/`, `.github/` and `publish_renders.sh` from the deploy.
+
+## 8. Edit AI
+
+The floating **Edit AI** button (3D and 2D only, hidden in Renders) lets anyone with the link change the flat in words:
+tap it, the view freezes, circle what to change (or pick **Whole view**), then say what you want and optionally attach reference images.
+
+- **Files:** `edit-ai.js` (button, freeze + highlight, chat, live loading), `edit_ai.py` (the agent and its tools, `/api/edit-ai/*`),
+  `edit_ai_dxf.py` (DXF query/edit CLI), `api/edit-ai.py` (Vercel entry). `index.html` only calls `liveFiles` / `liveImport` / `createEditAI`.
+- **Model:** `gpt-4.1-mini` with vision (override with `EDIT_AI_MODEL`). It greps and reads the repo, edits `furnish.js`,
+  `materials.js` and the version's tour, and (where `dwg/` and the build scripts exist, i.e. locally) moves walls in the plan DXF and
+  rebuilds the model and drawing. It never edits the As-built plan unless you are on the As-built page. No image generation.
+- **Hot path:** every change is saved as a revision in Blob (`edit-ai-live/<version>/rev-*.json`, files content-addressed in
+  `edit-ai-live/files/`; served same-origin through the `/edit-ai-live/*` rewrite). The page loads `GET /api/edit-ai/patches?version=`
+  first and uses those files instead of the deployed ones, then reloads in place with the same camera. Undo writes a new revision.
+  Once git catches up the override is "synced"; if the deployed file moved on, the edit's search/replace ops are replayed on it,
+  and if that fails the override is dropped (conflict) so the site never shows a stale file.
+- **Git:** after the live save a background job commits the change to `main` (local: `git commit` + push as karimtaamer;
+  Vercel: GitHub API, only if `EDIT_AI_GITHUB_TOKEN` is set, else the change lives in Blob only).
+- **Safety:** per-IP rate limit (`EDIT_AI_RATE`, default 20 requests/hour), images capped (~2 MB screenshot, 4 refs re-encoded
+  in the browser to 1024 px, which strips EXIF), JS is syntax-checked (locally) and test-imported in the browser; a broken edit is undone.
+- **Env vars:** `EDIT_AI_OPENAI_API_KEY` (required, separate from photogen's `OPENAI_API_KEY`), optional `EDIT_AI_MODEL`, `EDIT_AI_RATE`,
+  `EDIT_AI_GIT_SYNC=0` (off), `EDIT_AI_GITHUB_TOKEN` / `EDIT_AI_GITHUB_REPO` / `EDIT_AI_GITHUB_BRANCH`, `EDIT_AI_DWG_PYTHON`
+  (python with ezdxf for DXF edits). Without the key the button still shows and explains that Edit AI isn't switched on.
+- **Run locally:** `python3 edit_ai.py [port]` serves the site with both APIs (reads `.env`).
+- **Limits:** the rate limit is per server instance; on Vercel only furniture/finishes/tour edits (no DXF, since `.vercelignore`
+  drops `dwg/` and the build scripts); concurrent edits are last-write-wins; the 2D zoom isn't kept across the reload.

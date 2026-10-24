@@ -1,10 +1,31 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
-    { "source": "/renders/:path*", "destination": "https://ezauif7vtmi92gwt.public.blob.vercel-storage.com/renders/:path*" },
-    { "source": "/api/photospot/:action", "destination": "/api/photospot?action=:action" }
+    {
+      "source": "/renders/:path*",
+      "destination": "https://ezauif7vtmi92gwt.public.blob.vercel-storage.com/renders/:path*"
+    },
+    {
+      "source": "/edit-ai-live/:path*",
+      "destination": "https://ezauif7vtmi92gwt.public.blob.vercel-storage.com/edit-ai-live/:path*"
+    },
+    {
+      "source": "/api/photospot/:action",
+      "destination": "/api/photospot?action=:action"
+    },
+    {
+      "source": "/api/edit-ai/:action",
+      "destination": "/api/edit-ai?action=:action"
+    }
   ],
   "functions": {
-    "api/photospot.py": { "maxDuration": 300, "excludeFiles": "{models,textures,notes,dist,renders}/**" }
+    "api/photospot.py": {
+      "maxDuration": 300,
+      "excludeFiles": "{models,textures,notes,dist,renders}/**"
+    },
+    "api/edit-ai.py": {
+      "maxDuration": 300,
+      "excludeFiles": "{models,textures,notes,dist,renders,docs}/**"
+    }
   }
 }

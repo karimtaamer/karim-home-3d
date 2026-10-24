@@ -220,8 +220,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import gsap from "gsap";
-import { makeMaterials } from "./materials.js";
-import { furnish } from "./furnish.js";
+import { liveFiles, liveImport, createEditAI } from "./edit-ai.js";
 import { createDrawing, loadDrawing } from "./drawing.js";
 import { createMeasure } from "./measure.js";
 import { createRenders } from "./renders.js";
@@ -243,7 +242,11 @@ const VERSIONS = [
 ];
 const params = new URLSearchParams(location.search);
 const version = VERSIONS.find(v => v.id === params.get("v")) || VERSIONS[0];
-await new Promise((onload, onerror) => document.head.appendChild(Object.assign(document.createElement("script"), { src: version.model, onload, onerror })));
+// Edit AI's live changes to this version (edit-ai.js): its files stand in for the deployed ones until git catches up.
+const live = await liveFiles(version.id);
+const { makeMaterials } = await liveImport(live, "materials.js");
+const { furnish } = await liveImport(live, "furnish.js");
+await new Promise((onload, onerror) => document.head.appendChild(Object.assign(document.createElement("script"), { src: live.url(version.model), onload, onerror })));
 
 // --- The flat, built from window.MODEL (all geometry comes from the DWG via build_geometry.py) ---
 
@@ -898,7 +901,7 @@ let showing = "model";  // what fills the screen: the 3D model, the drawing or t
 const measure = createMeasure({
   camera, renderer, scene, cutPlane: flat.cutPlane, capMaterial: flat.materials.wallCut,
   paused: () => showing !== "model" || !!tween,
-  plan: () => mode === "top", snaps: loadDrawing(version.drawing).then(d => d.snaps),
+  plan: () => mode === "top", snaps: loadDrawing(live.url(version.drawing)).then(d => d.snaps),
   onChange: () => {
     // Measuring takes one finger and the left button; two fingers still pan / zoom, the right button pans.
     const on = measure.active;
@@ -915,7 +918,7 @@ document.getElementById("measure").onclick = () => {
 };
 document.getElementById("clearMeasure").onclick = () => measure.clear();
 
-const drawing = createDrawing(document.getElementById("drawing"), version.drawing);
+const drawing = createDrawing(document.getElementById("drawing"), live.url(version.drawing));
 const switcher = document.getElementById("switcher");
 // Edit (a new version) and delete go through Generate Photo Spot's backend, so they show only where it runs.
 const renders = createRenders(document.getElementById("renders"), viewpoints.map(v => ({ room: v.room, caption: v.caption })), {
@@ -1003,6 +1006,13 @@ import("./spots.js").then(m => m.photoSpots({
   showRenders(list);
 });
 
+
+// --- Edit AI: freeze the 3D or the 2D, circle what to change, say how (edit-ai.js, edit_ai.py) -----------
+if (!params.has("clean")) createEditAI({
+  THREE, camera, scene, live, showing: () => showing, mode: () => mode, furniture: flat.furniture.root, materials: flat.lib,
+  cutPlane: flat.cutPlane, room: () => flat.roomAt(camera.position.x, -camera.position.z)?.name, drawingFrame: () => drawing.frame(),
+  freeMouse: () => walker.isLocked && walker.unlock(),
+});
 
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {

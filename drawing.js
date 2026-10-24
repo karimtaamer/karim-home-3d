@@ -535,5 +535,6 @@ export function createDrawing(root, url) {
       if (!data) await load();
     },
     hide() { shown = false; root.hidden = true; shift = space = false; },
+    frame: () => ({ toWorld, toScreen }),  // screen px <-> plan metres, for Edit AI's highlight
   };
 }

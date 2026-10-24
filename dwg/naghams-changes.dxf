@@ -493,7 +493,7 @@ $SKPOLY
   9
 $TDCREATE
  40
-2461338.9430555557
+2461338.9799074074
   9
 $TDUCREATE
  40
@@ -501,7 +501,7 @@ $TDUCREATE
   9
 $TDUPDATE
  40
-2461338.9430671297
+2461338.9799074074
   9
 $TDUUPDATE
  40
@@ -553,7 +553,7 @@ $SPLINESEGS
   9
 $HANDSEED
   5
-1FE4
+2049
   9
 $SURFTAB1
  70
@@ -929,7 +929,7 @@ $FINGERPRINTGUID
   9
 $VERSIONGUID
   2
-{B098E1F8-93D0-48A0-A502-042CE3080E8B}
+{E6AAB66E-80A5-423B-B89B-1BE6B2EF737F}
   9
 $EXTNAMES
 290
@@ -2851,7 +2851,7 @@ TABLE
   2
 VIEW
   5
-1FE0
+2038
 330
 0
 100
@@ -2865,7 +2865,7 @@ TABLE
   2
 UCS
   5
-1FDF
+2037
 330
 0
 100
@@ -3639,7 +3639,7 @@ BLOCK_RECORD
 100
 AcDbSymbolTable
  70
-44
+46
   0
 BLOCK_RECORD
   5
@@ -4618,6 +4618,46 @@ AcDbSymbolTableRecord
 AcDbBlockTableRecord
   2
 WC_CAB_NOTE
+340
+0
+ 70
+0
+280
+1
+281
+0
+  0
+BLOCK_RECORD
+  5
+2039
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+NC_AC_225
+340
+0
+ 70
+0
+280
+1
+281
+0
+  0
+BLOCK_RECORD
+  5
+203F
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+NC_AC_15
 340
 0
  70
@@ -129841,6 +129881,268 @@ AcDbEntity
 100
 AcDbBlockEnd
   0
+BLOCK
+  5
+203A
+330
+2039
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+NC_AC_225
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+NC_AC_225
+  1
+
+  0
+LWPOLYLINE
+  5
+203C
+330
+2039
+100
+AcDbEntity
+  8
+0
+  6
+DASHED2
+100
+AcDbPolyline
+ 90
+4
+ 70
+1
+ 10
+0.0
+ 20
+-0.525
+ 10
+0.23
+ 20
+-0.525
+ 10
+0.23
+ 20
+0.525
+ 10
+0.0
+ 20
+0.525
+  0
+LINE
+  5
+203D
+330
+2039
+100
+AcDbEntity
+  8
+0
+  6
+DASHED2
+100
+AcDbLine
+ 10
+0.0
+ 20
+-0.525
+ 30
+0.0
+ 11
+0.23
+ 21
+0.525
+ 31
+0.0
+  0
+TEXT
+  5
+203E
+330
+2039
+100
+AcDbEntity
+  8
+0
+100
+AcDbText
+ 10
+0.3
+ 20
+-0.52
+ 30
+0.0
+ 40
+0.07
+  1
+SPLIT AC 2.25 HP  top 2.42
+ 50
+90.0
+  7
+HELV
+ 11
+0.3
+ 21
+-0.52
+ 31
+0.0
+100
+AcDbText
+  0
+ENDBLK
+  5
+203B
+330
+2039
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
+  5
+2040
+330
+203F
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+NC_AC_15
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+NC_AC_15
+  1
+
+  0
+LWPOLYLINE
+  5
+2042
+330
+203F
+100
+AcDbEntity
+  8
+0
+  6
+DASHED2
+100
+AcDbPolyline
+ 90
+4
+ 70
+1
+ 10
+-0.425
+ 20
+0.0
+ 10
+0.425
+ 20
+0.0
+ 10
+0.425
+ 20
+0.22
+ 10
+-0.425
+ 20
+0.22
+  0
+LINE
+  5
+2043
+330
+203F
+100
+AcDbEntity
+  8
+0
+  6
+DASHED2
+100
+AcDbLine
+ 10
+-0.425
+ 20
+0.0
+ 30
+0.0
+ 11
+0.425
+ 21
+0.22
+ 31
+0.0
+  0
+TEXT
+  5
+2044
+330
+203F
+100
+AcDbEntity
+  8
+0
+100
+AcDbText
+ 10
+-0.425
+ 20
+0.3
+ 30
+0.0
+ 40
+0.07
+  1
+SPLIT AC 1.5 HP  top 2.40
+  7
+HELV
+ 11
+-0.425
+ 21
+0.3
+ 31
+0.0
+100
+AcDbText
+  0
+ENDBLK
+  5
+2041
+330
+203F
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
 ENDSEC
   0
 SECTION
@@ -172549,6 +172851,46 @@ AcDbPolyline
  20
 -114.61
   0
+INSERT
+  5
+2045
+330
+2
+100
+AcDbEntity
+  8
+2furni
+100
+AcDbBlockReference
+  2
+NC_AC_225
+ 10
+205.2569651574427
+ 20
+-112.8232067325871
+ 30
+0.0
+  0
+INSERT
+  5
+2047
+330
+2
+100
+AcDbEntity
+  8
+2furni
+100
+AcDbBlockReference
+  2
+NC_AC_15
+ 10
+211.00496515744268
+ 20
+-119.5427067325871
+ 30
+0.0
+  0
 ENDSEC
   0
 SECTION
@@ -187847,7 +188189,7 @@ DictionaryVariables
 280
 0
   1
-1.4.5 @ 2026-10-24T19:38:01.358510+00:00
+1.4.5 @ 2026-10-24T20:31:04.528081+00:00
   0
 ENDSEC
   0

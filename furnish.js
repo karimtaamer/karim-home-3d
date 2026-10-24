@@ -225,7 +225,11 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(-w * 0.25, w * 0.25, zc + h / 2 + 0.04, zc + h / 2 + 0.08, 0.06, 0.13, mat.brass, 0.015);
     }
   });
-  const ac = (x, y, facing, top = 2.5) => item(x, y, facing, p => p.box(-0.45, 0.45, top - 0.3, top, 0, 0.22, mat.applianceWhite, 0.04));
+  // Wall-mounted split AC: w wide, h tall, d deep, top at `top`; `vane` adds the louvre slot along the underside front.
+  const ac = (x, y, facing, top = 2.5, w = 0.9, h = 0.3, d = 0.22, vane = false) => item(x, y, facing, p => {
+    p.box(-w / 2, w / 2, top - h, top, 0, d, mat.applianceWhite, 0.04);
+    if (vane) p.box(-w / 2 + 0.06, w / 2 - 0.06, top - h + 0.025, top - h + 0.06, d - 0.004, d + 0.002, mat.grille);
+  });
   const sconce = (x, y, facing, z = 1.8) => item(x, y, facing, p => {
     p.box(-0.04, 0.04, z - 0.14, z + 0.14, 0, 0.03, mat.brass);
     p.cyl(0, 0.08, 0.05, z - 0.1, z + 0.12, mat.lampShade, 20);
@@ -1145,13 +1149,23 @@ export function furnish(scene, M, mat, version = "main") {
     });
     item(21.22, (y0 + y1) / 2, "W", p => { const m = mesh(curtainGeometry(y1 - y0, 2.45), mat.sheer, p.g); m.position.set(0, 1.25, 0.06); });
   }
-  // One plaster curtain box along the whole east wall. The ACs are concealed (ducted) units in metal
-  // boxes on the terrace over each slider (see Terrace), each feeding a linear grille in the box face.
-  item(21.222, (1.94 + 9.5) / 2, "W", p => p.box(-3.78, 3.78, 2.1, M.ceiling, 0, 0.3, mat.limewash));
-  for (const [y0, y1] of [[3.165, 5.165], [6.34, 8.08]]) item(21.222, (y0 + y1) / 2, "W", p => {
-    p.box(-(y1 - y0) / 2 + 0.1, (y1 - y0) / 2 - 0.1, 2.3, 2.36, 0.3, 0.302, mat.grille);
-    for (let k = 1; k < 3; k++) p.box(-(y1 - y0) / 2 + 0.1, (y1 - y0) / 2 - 0.1, 2.3 + k * 0.02 - 0.002, 2.3 + k * 0.02, 0.302, 0.304, mat.applianceWhite);
-  });
+  const NCAC = version === "naghams-changes";  // Nagham's Changes: wall-mounted splits, no ducted AC
+  if (NCAC) {
+    // Slim ceiling-fixed double track over each slider (sheer and curtain runs), as long as the curtain stacks.
+    for (const [y0, y1] of [[3.135, 5.195], [6.34, 8.08]]) item(21.222, (y0 + y1) / 2, "W", p =>
+      p.box(-(y1 - y0) / 2 - 0.375, (y1 - y0) / 2 + 0.375, M.ceiling - 0.03, M.ceiling, 0.02, 0.18, mat.applianceWhite, 0.005));
+    // 1.5 hp split on the south wall's built-out face, east of the right-hand print (frame edge x 20.05),
+    // 0.20 short of the east wall and clear of the curtain stack (y 2.76): 0.85 W x 0.29 H x 0.22 D, top 2.40.
+    ac(20.6, 2.0705, "N", 2.4, 0.85, 0.29, 0.22, true);
+  } else {
+    // One plaster curtain box along the whole east wall. The ACs are concealed (ducted) units in metal
+    // boxes on the terrace over each slider (see Terrace), each feeding a linear grille in the box face.
+    item(21.222, (1.94 + 9.5) / 2, "W", p => p.box(-3.78, 3.78, 2.1, M.ceiling, 0, 0.3, mat.limewash));
+    for (const [y0, y1] of [[3.165, 5.165], [6.34, 8.08]]) item(21.222, (y0 + y1) / 2, "W", p => {
+      p.box(-(y1 - y0) / 2 + 0.1, (y1 - y0) / 2 - 0.1, 2.3, 2.36, 0.3, 0.302, mat.grille);
+      for (let k = 1; k < 3; k++) p.box(-(y1 - y0) / 2 + 0.1, (y1 - y0) / 2 - 0.1, 2.3 + k * 0.02 - 0.002, 2.3 + k * 0.02, 0.302, 0.304, mat.applianceWhite);
+    });
+  }
 
   // --- Dining: walnut table for six, tub chairs, lantern pendants; buffet wall and coffee bar ----
   item(18.4, 7.6, "S", p => {
@@ -1206,6 +1220,9 @@ export function furnish(scene, M, mat, version = "main") {
     p.cyl(1.05, 0.3, 0.045, 0.83, 0.88, mat.blackSteel, 16);
   });
   plant(15.04, 8.15, 0.5, 0.06, 0.83);
+  // 2.25 hp split on the buffet wall panel (x 14.852), centred on the pebble mirror (y 8.79): 1.05 W x 0.30 H
+  // x 0.23 D, top 2.42, its underside 0.12 over the mirror top (2.00) and 0.18 under the ceiling.
+  if (NCAC) ac(14.852, 8.79, "E", 2.42, 1.05, 0.3, 0.23, true);
   item(20.474, 9.5, "S", p => {  // coffee corner (DWG, 0.60 deep), column to wall: walnut base, white top, lit shelves
     p.box(-0.75, 0.75, 0.1, 0.88, 0, 0.58, mat.walnut);
     fronts(p, -0.75, 0.75, 0.1, 0.88, 0.58, 0.5);
@@ -1234,7 +1251,7 @@ export function furnish(scene, M, mat, version = "main") {
   const T = { x0: 21.47, x1: 24.76, y0: 1.78, y1: 9.4 };  // no pergola, per the client
   // Concealed AC in a 60 x 60 cm louvred box over each slider, finished in the wall colour: its bottom
   // 30 cm over the door head (doors read 2.10 m), its top 30 cm above it (2.70 m), as wide as the opening.
-  for (const [y0, y1] of [[2.81, 4.214], [6.34, 8.08]]) item(T.x0, (y0 + y1) / 2, "E", p => {
+  if (!NCAC) for (const [y0, y1] of [[2.81, 4.214], [6.34, 8.08]]) item(T.x0, (y0 + y1) / 2, "E", p => {
     const w = (y1 - y0) / 2, b0 = 2.1, b1 = 2.7, D = 0.6;
     p.box(-w, w, b0, b1, 0, D - 0.04, mat.limewash);
     for (const [y, t] of [[b0, 0.025], [b1 - 0.025, 0.025]]) p.box(-w, w, y, y + t, 0, D, mat.limewash);
@@ -1298,7 +1315,7 @@ export function furnish(scene, M, mat, version = "main") {
       }
     }
   }
-  for (const [x0, x1, y] of [[17.9, 20.4, 4.9], [16.6, 19.2, 6.2], [16.6, 19.2, 9.0]]) {
+  if (!NCAC) for (const [x0, x1, y] of [[17.9, 20.4, 4.9], [16.6, 19.2, 6.2], [16.6, 19.2, 9.0]]) {
     const g = mesh(new THREE.BoxGeometry(x1 - x0, 0.01, 0.08), mat.grille, ceilingBits);
     g.position.set((x0 + x1) / 2, M.ceiling - 0.006, -y);
   }

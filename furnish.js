@@ -487,11 +487,13 @@ export function furnish(scene, M, mat, version = "main") {
     });
     ac(3.567, 4.55, "N");  // over the mirror (knee-space centre)
     if (NC) {
-    // Nagham's Changes en-suite (DWG): shower in the north-west corner, 0.84 wide x 1.50 deep (1.39 by the column),
-    // a 20 cm solid partition (stone-lined, with a shelf niche) between it and the basin, and a 2 cm clear glass
-    // panel (with its channel) 0.90 long between it and the WC, leaving a 0.60 walk-in gap. WC bay 0.776 wide on the
-    // north wall: a concealed-cistern build-out 0.30 deep across the bay, 1.12 high under the 0.68 window (sill
-    // 1.50), porcelain-clad with a porcelain top ledge and a flush plate; wall-hung pan 0.54 long, centred.
+    // Nagham's Changes en-suite (DWG): shower in the north-west corner, 0.84 wide x 1.29 deep in front of a 0.21
+    // solid build-out on the north wall (burying the column) that carries the concealed mixer, rain arm and hand
+    // shower; a 20 cm solid partition (stone-lined, with one wide shelf niche) between it and the basin, and a 2 cm
+    // clear glass panel (with its channel) 0.69 long from the build-out face to 0.90 from the north wall, leaving a
+    // 0.60 walk-in gap. Fold-up teak seat on the west wall by the partition. WC bay 0.776 wide on the north wall: a
+    // concealed-cistern build-out 0.30 deep across the bay, 1.12 high under the 0.68 window (sill 1.50),
+    // porcelain-clad with a porcelain top ledge and a flush plate; wall-hung pan 0.54 long, centred.
     // Vanity 1.153 on the west wall, from its old south end to the partition, bowl centred.
     item(0.556, 6.7435, "E", vanity(1.153));
     item(1.8037, 9.0201, "S", p => {  // WC bay 1.416..2.192 (local +x east)
@@ -502,35 +504,38 @@ export function furnish(scene, M, mat, version = "main") {
       p.model("models/wc-wallhung.glb", mat.ceramic, 0, 0.1, d, { size: [0.36, 0.33, 0.54] });  // pan 0.54 long, as the DWG block
       bidetMixer(p, -0.3, 0.55, d, mat.chrome);
     });
-    item(1.4059, 9.0201, "S", p => {  // DWG glass: 2 cm with its channel, 0.90 from the north wall, 2.00 tall
-      p.box(-0.005, 0.005, 0.01, 2.0, 0, 0.9, mat.clearGlass);
+    item(1.4059, 8.8101, "S", p => {  // DWG glass: 2 cm with its channel, from the shower build-out face to 0.90 from the north wall, 2.00 tall
+      p.box(-0.005, 0.005, 0.01, 2.0, 0, 0.69, mat.clearGlass);
       p.box(-0.01, 0.01, 0, 2.0, 0, 0.02, mat.chrome);
-      p.box(-0.01, 0.01, 0, 0.01, 0, 0.9, mat.chrome);
+      p.box(-0.01, 0.01, 0, 0.01, 0, 0.69, mat.chrome);
     });
     item(2.192, 7.113, "W", towelRail);               // east wall south of the WC, clear of the open door leaf
-    // Niche in the shower face of the 0.20 solid partition (DWG dashed), centred on the 0.84 width: 0.30 wide x 0.10
-    // deep, five 4 cm porcelain shelves with 25 cm clear between (tops 0.29 / 0.58 / 0.87 / 1.16 / 1.45), slot top
-    // 1.70, a warm LED under each top. The model carves the slot 1 cm oversize full height (build --cut) so the stone
-    // lining finishes it at 30 x 10; porcelain fills it below, between and above (5 mm into the lining).
-    item(0.9759, 7.5201, "N", p => {
-      const tops = [0.29, 0.58, 0.87, 1.16, 1.45], top = 1.7, t = 0.04;
-      p.box(-0.155, 0.155, 0, tops[0], -0.105, 0, mat.stoneWall);
-      for (const y of tops.slice(1)) p.box(-0.155, 0.155, y - t, y, -0.105, 0, mat.stoneWall);
-      p.box(-0.155, 0.155, top, M.ceiling, -0.105, 0, mat.stoneWall);
-      for (const y of [...tops.slice(1).map(y => y - t), top]) p.box(-0.13, 0.13, y - 0.015, y - 0.005, -0.09, -0.07, mat.ledStrip);
-      for (const y of [tops[1], tops[3]]) p.model("models/mbath-bottles.glb", null, 0, y, -0.09, { width: 0.2 });
+    // Niche in the shower face of the 0.20 solid partition (DWG dashed), centred on the 0.84 width: cut 0.70 wide x
+    // 0.15 deep rough (0.05 of wall left behind it on the vanity side), finished 0.67 x 0.135 in porcelain. Three
+    // 4 cm porcelain slab shelves with 25.5 cm clear: finished floors 0.745 / 1.04 / 1.335, niche top 1.59, a warm
+    // LED under each top. The model carves the rough slot full height (build --cut); the 1 cm stone lining plus
+    // 5 mm porcelain here finish it, and porcelain fills it below, between and above (5 mm into the lining).
+    item(0.976, 7.5201, "N", p => {
+      const floors = [0.745, 1.04, 1.335], top = 1.59, t = 0.04, w = 0.335, d = 0.135, D = 0.155;
+      p.box(-w - 0.02, w + 0.02, 0, floors[0], -D, 0, mat.stoneWall);                        // solid below the first floor
+      for (const y of floors.slice(1)) p.box(-w - 0.02, w + 0.02, y - t, y, -D, 0, mat.stoneWall); // slab shelves
+      p.box(-w - 0.02, w + 0.02, top, M.ceiling, -D, 0, mat.stoneWall);                       // above the top
+      for (const x of [-1, 1]) p.box(x < 0 ? -w - 0.02 : w, x < 0 ? -w : w + 0.02, floors[0], top, -D, 0, mat.stoneWall);  // side linings to 0.67
+      p.box(-w, w, floors[0], top, -D, -d, mat.stoneWall);                                    // back lining to 0.135
+      for (const y of [...floors.slice(1).map(y => y - t), top]) p.box(-w + 0.03, w - 0.03, y - 0.015, y - 0.005, -d + 0.02, -d + 0.04, mat.ledStrip);
+      for (const [x, y] of [[-0.18, floors[0]], [0.16, floors[1]], [-0.1, floors[2]]]) p.model("models/mbath-bottles.glb", null, x, y, -d + 0.03, { width: 0.2 });
     });
-    // Shower set on the west wall, centred on the clear run south of the column: rain arm 0.42 out to the shower's
-    // centreline, thermostatic mixer and diverter, a hand shower on a fixed holder on the partition side.
-    item(0.556, 8.215, "E", p => {
+    // Shower set on the 0.21 north build-out face: concealed thermostatic mixer and diverter on the shower's
+    // centreline (east of the column, where the build-out is a full 0.21 deep), rain arm 0.42 out, and the
+    // hand-shower outlet and holder at the west end, in front of the buried column.
+    item(0.976, 8.8101, "S", p => {
       p.cyl(0, 0.03, 0.075, 1.0, 1.02, mat.chrome, 32).rotation.x = Math.PI / 2;  // thermostatic mixer
       p.cyl(0, 0.045, 0.03, 1.0, 1.07, mat.chrome, 24).rotation.x = Math.PI / 2;
       p.cyl(0, 0.03, 0.06, 1.2, 1.22, mat.chrome, 32).rotation.x = Math.PI / 2;    // 3-way diverter
       p.cyl(0, 0.045, 0.025, 1.2, 1.26, mat.chrome, 24).rotation.x = Math.PI / 2;
-      p.box(-0.012, 0.012, 1.3, 2.12, 0.04, 0.06, mat.chrome);                      // riser to the arm
-      p.box(-0.02, 0.02, 2.1, 2.14, 0, 0.42, mat.chrome);                            // wall arm, 0.42 out
+      p.box(-0.02, 0.02, 2.1, 2.14, 0, 0.42, mat.chrome);                            // concealed riser, wall arm 0.42 out
       p.cyl(0, 0.42, 0.13, 2.08, 2.1, mat.chrome, 32);                                // rain head
-      const hx = -0.21;                                                               // hand shower, partition side
+      const hx = -0.28;                                                               // hand shower, west end (column zone)
       p.cyl(hx, 0.01, 0.022, 0.91, 0.93, mat.chrome, 24).rotation.x = Math.PI / 2;
       p.box(hx - 0.008, hx + 0.008, 0.905, 0.935, 0.01, 0.043, mat.chrome);
       p.cyl(hx, 0.035, 0.008, 0.87, 0.92, mat.chrome, 12);
@@ -539,6 +544,19 @@ export function furnish(scene, M, mat, version = "main") {
       p.cyl(hx, 0.045, 0.016, 1.06, 1.1, mat.chrome, 16);
       p.cyl(hx, 0.045, 0.011, 0.97, 1.25, mat.chrome, 16);
       p.cyl(hx, 0.045, 0.015, 1.22, 1.27, mat.chrome, 24);
+    });
+    // Fold-up shower seat on the west wall (DWG dashed), shown open: 0.45 along the wall from 0.05 off the
+    // partition face, 0.35 deep, top 0.45; teak-tone slats on brushed champagne-bronze brackets.
+    item(0.556, 7.7951, "E", p => {
+      const teak = mat.oakVeneer.clone(); teak.color.setRGB(0.85, 0.58, 0.36); teak.clippingPlanes = mat.oakVeneer.clippingPlanes;
+      const champagne = mat.brass.clone(); champagne.color.setRGB(0.78, 0.67, 0.51); champagne.roughness = 0.5;  // brushed
+      champagne.clippingPlanes = mat.brass.clippingPlanes;
+      for (let k = 0; k < 5; k++) { const z0 = 0.01 + k * 0.068; p.box(-0.225, 0.225, 0.42, 0.45, z0, z0 + 0.058, teak, 0.004); }  // slats
+      for (const x of [-0.19, 0.19]) {
+        p.box(x - 0.012, x + 0.012, 0.25, 0.42, 0, 0.012, champagne);                // wall plate
+        p.box(x - 0.012, x + 0.012, 0.405, 0.42, 0, 0.33, champagne);                // arm under the slats
+        p.box(x - 0.008, x + 0.008, 0.33, 0.345, 0.15 - 0.165, 0.15 + 0.165, champagne).rotation.x = -Math.atan2(0.135, 0.3);  // stay, wall 0.27 to arm end 0.405
+      }
     });
     } else {
     // Master bathroom: vanity and WC on the west wall, shower at the north end behind a glass screen

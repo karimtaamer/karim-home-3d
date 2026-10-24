@@ -234,23 +234,30 @@ from Shifted Bedroom's where the furniture differs.
 
 Its en-suite (2026-10-24) is rearranged to Nagham's sketch: the bathroom/bedroom partition (the headboard wall, still
 0.11) sits 14 cm further east (bathroom-side face DWG x 192.5965), and the bed and bedside tables moved with it (bed
-foot 1.40 from the wardrobe front). Shower in the north-west corner, 0.84 wide inside x 1.50 deep (1.39 beside the
-column; no back-wall build-out); a 0.20 solid partition (stone-lined in the build) between it and the basin, with a
-niche in its shower face (0.30 wide x 0.10 deep, centred on the shower, dashed; five 4 cm porcelain shelves to a 1.70
-slot top in `furnish.js`, carved by `--cut`); a 2 cm clear glass panel (with its channel), 0.90 long from the north
-wall, on its own `Glass` layer (colour 4, not `Windows`, so the build doesn't read it as a window), leaving a 0.60
-walk-in gap. WC bay to its east on the north wall, 0.776 wide: a concealed-cistern build-out 0.30 deep across the bay
-(`2furni`; 1.12 high in 3D, porcelain-clad with a top ledge and a flush plate) and a wall-hung pan 0.54 long, centred,
-front 0.84 from the north wall. The en-suite window is WC-only: 0.68 wide, DWG x 191.869-192.549 (0.048 of wall to
-the glass and to the partition, centred on the WC), the shower side solid; designed sill 1.50, head 2.10, obscured
-glass. The build has one sill/head for every window (0.90 / 2.10, `build_geometry.py`), so the 3D shows it 0.90-2.10
-in clear glass. Vanity 1.153 long (old south end to the partition), 0.51 deep, bowl centred. Bathroom door and the room's
-other walls are as before. `furnish.js` (the `NC` branch in the shared block) and `spotnames.js` follow it.
+foot 1.40 from the wardrobe front). Shower in the north-west corner, 0.84 wide inside x 1.29 deep, in front of a
+0.21 solid build-out on the north wall (DWG y -112.8031, `1wall`) that buries the column (its old faces kept dashed)
+and carries the concealed mixer, rain arm and hand shower (outlet at the west end, in front of the column). A
+`--wall` face (hidden, DWG x 190.9609) closes the west wall up to the facade behind it. A 0.20 solid partition
+(stone-lined in the build) between the shower and the basin, with one wide niche in its shower face: cut 0.70 wide x
+0.15 deep rough (dashed, centred on the shower, 0.07 solid each side, 0.05 left behind it on the vanity side),
+finished 0.67 x 0.135 in porcelain, three 4 cm porcelain slab shelves with 25.5 cm clear (floors 0.745 / 1.04 /
+1.335, top 1.59) and warm LEDs in `furnish.js`, carved by `--cut`. Fold-up teak seat on the west wall (dashed, open
+outline): 0.45 along the wall from 0.05 off the partition, 0.35 deep, top 0.45, 0.49 clear to the glass line. A 2 cm
+clear glass panel (with its channel), 0.69 long from the build-out face to 0.90 from the north wall, on its own
+`Glass` layer (colour 4, not `Windows`, so the build doesn't read it as a window), leaving a 0.60 walk-in gap. WC
+bay to its east on the north wall, 0.776 wide: a concealed-cistern build-out 0.30 deep across the bay (`2furni`; 1.12
+high in 3D, porcelain-clad with a top ledge and a flush plate) and a wall-hung pan 0.54 long, centred, front 0.84
+from the north wall. The en-suite window is WC-only: 0.68 wide, DWG x 191.869-192.549 (0.048 of wall to the glass
+and to the partition, centred on the WC), the shower side solid; designed sill 1.50, head 2.10, obscured glass. The
+build has one sill/head for every window (0.90 / 2.10, `build_geometry.py`), so the 3D shows it 0.90-2.10 in clear
+glass. Vanity 1.153 long (to the partition), 0.51 deep, bowl centred. Bathroom door and the room's other walls are
+unchanged from Shifted Bedroom. `furnish.js` (the `NC` branch in the shared block) and `spotnames.js` follow it.
 
 ```sh
 N=dwg/naghams-changes.dxf
+# --wall: west wall face hidden behind the shower build-out; --cut: shower niche in the shower/basin partition
 ~/.dwg-tools/bin/python build_geometry.py $N --out model-naghams-changes.js --tour tour-naghams-changes.json \
-    --cut 191.2209,-114.2031,191.5409,-114.0731   # shower niche in the shower/basin partition
+    --wall 190.9609,-112.8031,190.9609,-112.3428 --cut 191.0309,-114.2431,191.7309,-114.0731
 ~/.dwg-tools/bin/python build_drawing.py $N --model model-naghams-changes.js --out drawing-naghams-changes.json
 ```
 

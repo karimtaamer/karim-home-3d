@@ -963,7 +963,7 @@ export function furnish(scene, M, mat, version = "main") {
     skirt.rotation.y = -a;
   });
   item(18.86, 2.103, "N", p => sofa(p, 2.05, 1.02, mat.boucle, [mat.linenSlate, mat.linenBlush, mat.linenSlate]));  // DWG, clear of the pier
-  item(21.15, 3.85, "W", p => sofa(p, 2.0, 0.92, mat.boucle, [mat.linenSlate, mat.linenBlush]));
+  item(21.027, 3.85, "W", p => sofa(p, 2.0, 0.92, mat.boucle, [mat.linenSlate, mat.linenBlush]));  // back on the DWG sofa's back line, clear of the curtains
   item(19.1, 5.55, "S", p => {  // DWG armchair, as rendered: open walnut lounge frame, slate cushions, blush pillow
     for (const s of [-1, 1]) {
       const x = s * 0.36;
@@ -986,16 +986,18 @@ export function furnish(scene, M, mat, version = "main") {
   // Two 1.05 x 1.30 m framed prints as in render 11, 0.30 m apart and centred over the sofa, on the south
   // wall's built-out face (y 2.0705, flush with the pier: the recesses either side are filled to it).
   for (const x of [18.195, 19.525]) art(x, 2.0705, "N", 1.0, 1.25, 1.62, x < 19 ? 0 : 1);
-  for (const [y0, y1] of [[2.78, 4.24], [6.34, 8.08]]) {  // curtains either side of each slider
+  // Curtains either side of each slider (the sofa one 2.00 m, centred on the sofa): sheer on the track nearest
+  // the glass, curtains stacked in front, both clear of the sofa back (x 21.027).
+  for (const [y0, y1] of [[2.82, 4.88], [6.34, 8.08]]) {
     for (const y of [y0 - 0.15, y1 + 0.15]) item(21.22, y, "W", p => {
-      const m = mesh(curtainGeometry(0.45, 2.5), mat.curtain, p.g); m.position.set(0, 1.3, 0.1);
+      const m = mesh(curtainGeometry(0.45, 2.5), mat.curtain, p.g); m.position.set(0, 1.3, 0.14);
     });
-    item(21.22, (y0 + y1) / 2, "W", p => { const m = mesh(curtainGeometry(y1 - y0, 2.45), mat.sheer, p.g); m.position.set(0, 1.25, 0.2); });
+    item(21.22, (y0 + y1) / 2, "W", p => { const m = mesh(curtainGeometry(y1 - y0, 2.45), mat.sheer, p.g); m.position.set(0, 1.25, 0.06); });
   }
   // One plaster curtain box along the whole east wall. The ACs are concealed (ducted) units in metal
   // boxes on the terrace over each slider (see Terrace), each feeding a linear grille in the box face.
   item(21.222, (1.94 + 9.5) / 2, "W", p => p.box(-3.78, 3.78, 2.1, M.ceiling, 0, 0.3, mat.limewash));
-  for (const [y0, y1] of [[2.81, 4.214], [6.34, 8.08]]) item(21.222, (y0 + y1) / 2, "W", p => {
+  for (const [y0, y1] of [[2.85, 4.85], [6.34, 8.08]]) item(21.222, (y0 + y1) / 2, "W", p => {
     p.box(-(y1 - y0) / 2 + 0.1, (y1 - y0) / 2 - 0.1, 2.3, 2.36, 0.3, 0.302, mat.grille);
     for (let k = 1; k < 3; k++) p.box(-(y1 - y0) / 2 + 0.1, (y1 - y0) / 2 - 0.1, 2.3 + k * 0.02 - 0.002, 2.3 + k * 0.02, 0.302, 0.304, mat.applianceWhite);
   });

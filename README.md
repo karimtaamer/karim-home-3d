@@ -1,6 +1,6 @@
 # Karim's Apartment — 3D model viewer
 
-A Three.js viewer of the flat, built from the architect's DWG floor plan: Dollhouse / Top / Walk views,
+A Three.js viewer of the flat, built from the architect's DWG floor plan: Walk (the default) and Top views,
 a 2D drawing view, a tape measure, the designer's renders as "photo spots", and an in-viewer
 **Generate Photo Spot** button that turns a Walk view into a photoreal render with OpenAI.
 
@@ -60,7 +60,8 @@ python3 photogen.py 8765         # another port
 | Param | Effect |
 |---|---|
 | `?v=bigger-bedroom` | Load a plan version (default: main) |
-| `?view=top` / `?view=dollhouse` | Start in that view |
+| (none) | Start in Walk inside the reception |
+| `?view=top` | Start in the Top view (`?view=dollhouse`, from before Dollhouse was removed, starts as with no param) |
 | `?room=master` | Start in Walk at the first room whose caption starts with this |
 | `?cam=x,y,h,lookX,lookY,lookH[,fov]` | Stand at an exact camera (plan metres), e.g. to match a render |
 | `?clean` | Hide all UI (for screenshots) |

@@ -177,9 +177,8 @@
     <button class="menu" data-menu="versions" title="Plan version"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg><span class="vname"></span></button>
     <span class="sep"></span>
     <div class="seg" role="group" aria-label="View">
-      <button data-view="dollhouse" class="on">Dollhouse</button>
+      <button data-view="walk" class="on">Walk</button>
       <button data-view="top">Top</button>
-      <button data-view="walk">Walk</button>
     </div>
     <button class="menu" data-menu="rooms"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM12 3v7M3 12h6M12 14v7M15 12h6"/></svg>Rooms</button>
     <button class="menu" data-menu="spots" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg>Photo spots</button>
@@ -195,8 +194,8 @@
 </div>
 <div id="title" class="ui"><h1>Karim's Apartment</h1><p>Lotus - New Cairo</p></div>
 <div id="switcher" class="ui"><div class="seg" role="group" aria-label="Show">
-  <button data-show="model" class="on"><span class="long">3D model</span><span class="short">3D</span></button>
-  <button data-show="drawing">Drawing</button>
+  <button data-show="model" class="on">3D</button>
+  <button data-show="drawing">2D</button>
   <button data-show="renders" hidden>Renders</button>
 </div></div>
 <div id="drawing" hidden></div>
@@ -483,9 +482,8 @@ function buildFlat(M, scene) {
 const M = window.MODEL;
 const EYE = 1.6;
 const PLAN_CUT = 1.2;
-const DOLL_CUT = 1.3;
 const FULL = M.ceiling + 0.05;  // at or above this the walls are shown whole
-const FOV = { top: 2.2, dollhouse: 40, walk: 70 };
+const FOV = { top: 2.2, walk: 70 };
 const toWorld = ([x, y], h = 0) => new THREE.Vector3(x, h, -y);
 const lerp = (a, b, t) => a + (b - a) * t;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -507,7 +505,7 @@ document.body.appendChild(labelRenderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(PAPER);
-const camera = new THREE.PerspectiveCamera(FOV.dollhouse, innerWidth / innerHeight, 0.05, 4000);
+const camera = new THREE.PerspectiveCamera(FOV.walk,innerWidth / innerHeight, 0.05, 4000);
 const [W, D] = M.bounds;
 const centre = new THREE.Vector3(W / 2, 0, -D / 2);
 
@@ -562,7 +560,7 @@ function applyLook() {
   scene.background = mode === "walk" ? sky : paper;
 }
 
-// --- Room labels (top + dollhouse) ------------------------------------------------------------
+// --- Room labels (top view) ------------------------------------------------------------------
 const planLabels = [];
 for (const v of viewpoints) {
   const r = rooms[v.room];
@@ -582,15 +580,10 @@ const fitDist = fov => (Math.max(D / 2, W / 2 / aspect()) * 1.18) / Math.tan(THR
 function topPose() {
   return { pos: centre.clone().setY(fitDist(FOV.top)), target: centre.clone(), fov: FOV.top, up: NORTH_UP.clone() };
 }
-function dollPose() {
-  const pitch = THREE.MathUtils.degToRad(52), yaw = THREE.MathUtils.degToRad(-18);
-  const dir = new THREE.Vector3(Math.cos(pitch) * Math.sin(yaw), Math.sin(pitch), Math.cos(pitch) * Math.cos(yaw));
-  return { pos: centre.clone().addScaledVector(dir, fitDist(FOV.dollhouse) * 0.92), target: centre.clone(), fov: FOV.dollhouse, up: UP.clone() };
-}
 function currentPose() {
   const dir = new THREE.Vector3();
   camera.getWorldDirection(dir);
-  const target = mode === "walk" ? camera.position.clone().add(dir) : (mode === "top" ? orbitTop : orbit).target.clone();
+  const target = mode === "walk" ? camera.position.clone().add(dir) : orbitTop.target.clone();
   return { pos: camera.position.clone(), target, fov: camera.fov, up: camera.up.clone() };
 }
 function setPose(p) {
@@ -621,7 +614,7 @@ let tween = null;
 function animate(path, { duration = 1.6, cut, finish, onDone } = {}) {
   // path: list of poses to pass through; cut / finish: target look values.
   tween?.kill();
-  orbit.enabled = orbitTop.enabled = false;
+  orbitTop.enabled = false;
   const from = { cut: look.cut, finish: look.finish };
   const state = { t: 0 };
   const poses = [currentPose(), ...path];
@@ -639,10 +632,6 @@ function animate(path, { duration = 1.6, cut, finish, onDone } = {}) {
 }
 
 // --- Controls -----------------------------------------------------------------------------------
-const orbit = new OrbitControls(camera, renderer.domElement);  // dollhouse (made with y up)
-orbit.enableDamping = true;
-orbit.maxPolarAngle = THREE.MathUtils.degToRad(86);
-orbit.enabled = false;
 camera.up.copy(NORTH_UP);
 const orbitTop = new OrbitControls(camera, renderer.domElement);  // top (made with north up)
 orbitTop.enableRotate = false;
@@ -656,16 +645,15 @@ orbitTop.enabled = false;
 camera.up.copy(UP);
 const walker = new PointerLockControls(camera, document.body);
 
-let mode = "dollhouse";
+let mode = "walk";
+let intro = null;  // the opening drop-in; picking a view first cancels it
 const help = document.getElementById("help");
 const HELP = {
-  dollhouse: "Drag to orbit · scroll to zoom · right-drag to pan",
   top: "Scroll to zoom · drag to pan",
   walk: "Click to look around · WASD / arrows to move · Shift to hurry · Esc to free the mouse",
 };
 const PHONE = matchMedia("(max-width: 760px)");
 const HELP_PHONE = {
-  dollhouse: "Drag to orbit · pinch to zoom · two fingers to pan",
   top: "Pinch to zoom · drag to pan",
   walk: "Drag to look around · arrows to walk",
 };
@@ -673,7 +661,7 @@ const HELP_MEASURE = "Click or drag to measure · Shift squares it up · Esc can
 function showHelp() {
   if (measure?.active) help.textContent = PHONE.matches
     ? "Tap or drag to measure · " + (mode === "walk" ? "a second finger looks around" : "two fingers pan / zoom")
-    : HELP_MEASURE + (mode === "walk" ? " · right-drag to look" : mode === "top" ? " · right-drag pans · snaps to the DWG" : " · right-drag orbits");
+    : HELP_MEASURE + (mode === "walk" ? " · right-drag to look" : " · right-drag pans · snaps to the DWG");
   else help.textContent = (PHONE.matches ? HELP_PHONE : HELP)[mode];
 }
 function setMode(m) {
@@ -688,16 +676,12 @@ function setMode(m) {
 }
 
 function goTop() {
+  clearTimeout(intro);
   setMode("top");
   animate([topPose()], { duration: 1.8, cut: PLAN_CUT, finish: 1, onDone: () => { orbitTop.target.copy(centre); orbitTop.enabled = true; } });
 }
-function goDollhouse() {
-  const from = mode;
-  setMode("dollhouse");
-  const path = from === "walk" ? [{ ...dollPose(), pos: camera.position.clone().setY(6) }, dollPose()] : [dollPose()];
-  animate(path, { duration: from === "top" ? 2.2 : 1.8, cut: DOLL_CUT, finish: 1, onDone: () => { orbit.target.copy(centre); orbit.enabled = true; } });
-}
 function goRoom(v) {
+  clearTimeout(intro);
   if (mode === "walk") return walkTo(v);
   // From above: drop in over the room (no walls in the way), then settle at eye height.
   setMode("walk");
@@ -906,7 +890,6 @@ addEventListener("pointerdown", e => !bar.contains(e.target) && closeMenu());
 document.querySelectorAll("[data-view]").forEach(b => (b.onclick = () => {
   stopGlide();
   if (b.dataset.view === "top") goTop();
-  else if (b.dataset.view === "dollhouse") goDollhouse();
   else goRoom(viewpoints[0]);
 }));
 
@@ -917,11 +900,8 @@ const measure = createMeasure({
   paused: () => showing !== "model" || !!tween,
   plan: () => mode === "top", snaps: loadDrawing(version.drawing).then(d => d.snaps),
   onChange: () => {
-    // Measuring takes one finger and the left button; two fingers still pan / zoom, the right button orbits / pans.
+    // Measuring takes one finger and the left button; two fingers still pan / zoom, the right button pans.
     const on = measure.active;
-    orbit.mouseButtons.LEFT = on ? null : THREE.MOUSE.ROTATE;
-    orbit.mouseButtons.RIGHT = on ? THREE.MOUSE.ROTATE : THREE.MOUSE.PAN;
-    orbit.touches.ONE = on ? null : THREE.TOUCH.ROTATE;
     orbitTop.mouseButtons.LEFT = on ? null : THREE.MOUSE.PAN;
     orbitTop.touches.ONE = on ? null : THREE.TOUCH.PAN;
     document.getElementById("measure").classList.toggle("on", measure.active);
@@ -988,7 +968,7 @@ function showRenders(list) {
   if (list.length) switcher.querySelector("[data-show=renders]").hidden = false;
 }
 
-// --- Start: the drawing first, then the walls rise into the dollhouse ---------------------------
+// --- Start: Walk inside by default (Top via chip or ?view=top); legacy ?view=dollhouse → Walk too -----
 const startRoom = params.get("room") && viewpoints.find(v => v.caption.toLowerCase().startsWith(params.get("room").toLowerCase()));
 // ?cam=x,y,h,lookX,lookY,lookH[,fov] (plan metres): stand anywhere, e.g. to match a render's angle.
 const cam = params.get("cam")?.split(",").map(Number);
@@ -1006,18 +986,12 @@ if (cam?.length >= 6) {
   look.cut = PLAN_CUT; look.finish = 1; applyLook();
   setPose(topPose());
   orbitTop.target.copy(centre); orbitTop.enabled = true;
-} else {
-  setMode("top");
-  look.cut = PLAN_CUT; look.finish = 0; applyLook();
-  setPose(topPose());
-  if (params.get("view") === "dollhouse") {
-    setMode("dollhouse");
-    look.cut = DOLL_CUT; look.finish = 1; applyLook();
-    setPose(dollPose());
-    orbit.target.copy(centre); orbit.enabled = true;
-  } else {
-    setTimeout(goDollhouse, 1400);
-  }
+} else {  // default: Walk inside; legacy ?view=dollhouse maps here too
+  const first = viewpoints.find(v => v.room === "RECEPTION") || viewpoints[0];
+  setMode("walk");
+  look.cut = FULL; look.finish = 1; applyLook();
+  setPose({ pos: first.eye.clone(), target: first.look.clone(), fov: FOV.walk, up: UP.clone() });
+  arrive(first);
 }
 // Photo spots: the designer's renders at marked spots in Walk (spots.js), and all of them under Renders.
 import("./spots.js").then(m => m.photoSpots({
@@ -1029,6 +1003,7 @@ import("./spots.js").then(m => m.photoSpots({
   showRenders(list);
 });
 
+
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -1038,9 +1013,10 @@ renderer.setAnimationLoop(() => {
     const r = flat.roomAt(camera.position.x, -camera.position.z);
     if (r && viewpoints.some(v => v.room === r.name)) showCaption(r.name);
   }
-  if (orbit.enabled) orbit.update();
-  if (orbitTop.enabled) orbitTop.update();
-  if (orbit.enabled || orbitTop.enabled) fitNear();
+  if (orbitTop.enabled) {
+    orbitTop.update();
+    fitNear();
+  }
   composer.render();
   labelRenderer.render(scene, camera);
   measure.render();

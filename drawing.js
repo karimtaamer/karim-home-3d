@@ -20,7 +20,7 @@ export function createDrawing(root, url) {
   root.innerHTML = `
     <canvas></canvas>
     <div class="dbar">
-      <button data-tool="measure" class="on"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg>Measure</button>
+      <button data-tool="measure"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg>Measure</button>
       <button data-tool="clear" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>Clear</button>
     </div>
     <div class="dstatus"><span class="xy"></span><span class="dist"></span></div>
@@ -30,16 +30,16 @@ export function createDrawing(root, url) {
   const xy = root.querySelector(".xy"), dist = root.querySelector(".dist"), clear = root.querySelector("[data-tool=clear]");
   const touchy = matchMedia("(pointer: coarse)").matches;
   const helpText = () => (root.querySelector(".dhelp").textContent = touchy
-    ? (measuring ? "Tap or drag to measure · two fingers pan / zoom" : "Drag to pan · pinch to zoom")
+    ? (measuring ? "Tap or drag to measure · two fingers pan / zoom" : "Drag to pan · pinch to zoom · tap Measure to measure")
     : measuring
       ? "Wheel to zoom · click or drag to measure · right / middle / Space-drag pans · Shift / F8 ortho · Esc cancels · Backspace undoes"
-      : "Wheel to zoom · drag to pan");
+      : "Wheel to zoom · drag to pan · click Measure to measure");
 
   let data = null, paths = null;
   let shown = false, dpr = 1, W = 0, H = 0;
   const view = { s: 40, tx: 0, ty: 0 };  // screen = (tx + x·s, ty − y·s)
   const done = [];  // finished measurements: [[ax, ay], [bx, by]]
-  let start = null, cursor = null, snap = null, ortho = false, shift = false, space = false, measuring = true;
+  let start = null, cursor = null, snap = null, ortho = false, shift = false, space = false, measuring = false;
   let queued = false;
   helpText();
 
@@ -305,14 +305,16 @@ export function createDrawing(root, url) {
 
   const button = t => root.querySelector(`[data-tool=${t}]`);
   const setOrtho = on => (ortho = on);  // F8 (or hold Shift); no button
-  button("measure").onclick = () => {
-    measuring = !measuring;
+  // Measure is off whenever the drawing opens; only its button turns it on (and off again).
+  function setMeasuring(on) {
+    measuring = on;
     button("measure").classList.toggle("on", measuring);
     if (!measuring) start = gesture = null;
     helpText();
     status();
     redraw();
-  };
+  }
+  button("measure").onclick = () => setMeasuring(!measuring);
   clear.onclick = () => { done.length = 0; start = gesture = null; status(); redraw(); };
   addEventListener("resize", () => shown && resize());
 
@@ -320,6 +322,7 @@ export function createDrawing(root, url) {
     async show() {
       shown = true;
       root.hidden = false;
+      setMeasuring(false);
       resize();
       if (!data) await load();
     },

@@ -120,9 +120,10 @@ for (const o of M.openings) {
   if (o.kind === "door") {
     walls.push(prism(o.outer, [], M.doorHead, M.ceiling, mat.wall));
   } else {
-    walls.push(prism(o.outer, [], 0, M.sill, mat.wall));
-    walls.push(prism(o.outer, [], M.winHead, M.ceiling, mat.wall));
-    prism(o.outer, [], M.sill, M.winHead, mat.glass, false);
+    const sill = o.sill ?? M.sill, head = o.head ?? M.winHead;  // per-window heights (build_geometry.py --window)
+    walls.push(prism(o.outer, [], 0, sill, mat.wall));
+    walls.push(prism(o.outer, [], head, M.ceiling, mat.wall));
+    prism(o.outer, [], sill, head, mat.glass, false);
   }
 }
 

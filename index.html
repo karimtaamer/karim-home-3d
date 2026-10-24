@@ -304,6 +304,7 @@ function buildFlat(M, scene) {
     // The inside of a clipped wall, seen from above, is the solid ink of a drawn plan.
     wallCut: new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide, clippingPlanes: clip, toneMapped: false }),
     glass: new THREE.MeshPhysicalMaterial({ color: 0xcfe2ea, transparent: true, opacity: 0.16, roughness: 0.05, clippingPlanes: clip }),
+    frosted: new THREE.MeshPhysicalMaterial({ color: 0xeef3f4, transparent: true, opacity: 0.82, roughness: 0.7, clippingPlanes: clip }),
     frame: lib.blackSteel,
     // Ceilings face down only, so they vanish from above and close the room from inside.
     ceiling: new THREE.MeshStandardMaterial({ color: 0xf4e6d6, emissive: 0x5a4f45, roughness: 1, side: THREE.BackSide, clippingPlanes: clip }),
@@ -316,9 +317,10 @@ function buildFlat(M, scene) {
     g.rotateX(-Math.PI / 2);
     const face = new THREE.Mesh(g, material);
     face.position.y = base;
-    face.castShadow = face.receiveShadow = material !== mat.glass;
+    const glazed = material === mat.glass || material === mat.frosted;
+    face.castShadow = face.receiveShadow = !glazed;
     scene.add(face);
-    if (material !== mat.glass) {
+    if (!glazed) {
       const cut = new THREE.Mesh(g, mat.wallCut);
       cut.position.y = base;
       scene.add(cut);
@@ -335,11 +337,12 @@ function buildFlat(M, scene) {
       prism(o.outer, [], M.sliderHead, M.ceiling);
       prism(o.outer, [], 0, M.sliderHead, mat.glass);
       frame(o.outer, 0, M.sliderHead, 2);
-    } else {
-      prism(o.outer, [], 0, M.sill);
-      prism(o.outer, [], M.winHead, M.ceiling);
-      prism(o.outer, [], M.sill, M.winHead, mat.glass);
-      frame(o.outer, M.sill, M.winHead, 1);
+    } else {  // a window may carry its own sill / head / frosted glass (build_geometry.py --window)
+      const sill = o.sill ?? M.sill, head = o.head ?? M.winHead;
+      prism(o.outer, [], 0, sill);
+      prism(o.outer, [], head, M.ceiling);
+      prism(o.outer, [], sill, head, o.frosted ? mat.frosted : mat.glass);
+      frame(o.outer, sill, head, 1);
     }
   }
 

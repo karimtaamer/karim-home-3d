@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Turn a DXF floor plan into model.js (walls, openings, furniture, labels) for the Three.js viewer.
 
-Usage: ~/.dwg-tools/bin/python build_geometry.py <plan.dxf> [--out model.js] [--tour tour.json] [--wall x0,y0,x1,y1 ...] [--debug debug.png]
+Usage: ~/.dwg-tools/bin/python build_geometry.py <plan.dxf> [--out model.js] [--tour tour.json] [--wall x0,y0,x1,y1 ...] [--window x,y,sill,head[,frosted] ...] [--debug debug.png]
 (--out / --tour name another plan version's model and tour, e.g. model-bigger-bedroom.js and
 tour-bigger-bedroom.json; see VERSIONS in index.html. --wall adds a wall face line the drawing
-left out, in DWG coordinates; repeat it for several.)
+left out, in DWG coordinates; repeat it for several. --window gives one window its own sill and head,
+and frosted glass, without touching the others.)
 """
 import heapq
 import json
@@ -276,7 +277,11 @@ def main():
         # Read the thickness from the solid wall just past each end of the window; where one end
         # meets a cross wall, the span both ends share is the wall the window sits in.
         spans = []
-        for t in (-L / 2 - 0.08, L / 2 + 0.08):
+        # A window given its own heights (--window) reads the wall at its middle instead: an end probe that lands
+        # in a build-out or a cross wall would run the opening out into the room.
+        own = any(c.buffer(0.01).contains(Point(float(o[0]), float(o[1])))
+                  for o in (sys.argv[i + 1].split(",") for i, k in enumerate(sys.argv) if k == "--window"))
+        for t in ((0,) if own else (-L / 2 - 0.08, L / 2 + 0.08)):
             px, py = m.x + ux * t, m.y + uy * t
             cut = LineString([(px + uy * 0.6, py - ux * 0.6), (px - uy * 0.6, py + ux * 0.6)]).intersection(walls)
             pieces = [q for q in getattr(cut, "geoms", [cut]) if not q.is_empty and q.length > 0.03]
@@ -576,6 +581,14 @@ def main():
 
     # Doors the viewer stands open the way the drawing swings them (others: the first side that lands in a room).
     as_drawn = lambda c: any(math.dist(c, h) < 0.1 for h in tour.get("doorsAsDrawn", []))
+    # --window x,y,sill,head[,frosted]: the window whose opening holds DWG point x,y gets its own sill and head
+    # (and frosted glass), the rest keep SILL / WIN_HEAD. Nothing is written for windows without one.
+    overrides = [sys.argv[i + 1].split(",") for i, k in enumerate(sys.argv) if k == "--window"]
+    def window_override(k, g):
+        for o in overrides:
+            if k == "window" and g.buffer(0.01).contains(Point(float(o[0]), float(o[1]))):
+                return {"sill": float(o[2]), "head": float(o[3]), **({"frosted": True} if "frosted" in o[4:] else {})}
+        return {}
     ox, oy = B.bounds[0], B.bounds[1]
     ring = lambda p: [[round(x - ox, 4), round(y - oy, 4)] for x, y in p.exterior.coords[:-1]]
     holes = lambda p: [[[round(x - ox, 4), round(y - oy, 4)] for x, y in h.coords[:-1]] for h in p.interiors]
@@ -601,7 +614,7 @@ def main():
             "legs": [[[round(x - ox, 3), round(y - oy, 3)] for x, y in leg] for leg in legs],
         },
         "nav": nav and {**nav, "x0": round(nav["x0"] - ox, 3), "y0": round(nav["y0"] - oy, 3)},
-        "openings": [{"kind": k, "outer": ring(g)} for k, g in openings],
+        "openings": [{"kind": k, "outer": ring(g), **window_override(k, g)} for k, g in openings],
         "shafts": [ring(p) for p in shafts],
         "furniture": [ring(p) for p in furniture],
         "labels": [{"text": l["text"], "x": round(l["x"] - ox, 3), "y": round(l["y"] - oy, 3)} for l in labels],

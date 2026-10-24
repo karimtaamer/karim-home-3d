@@ -167,11 +167,15 @@ that version's file only.
 - `--cut x0,y0,x1,y1`: carve a rectangle out of the walls, full height (a niche the DWG draws dashed; the build
   would otherwise fill it as a gap). `furnish.js` fills it above and below. DWG coordinates, repeatable. Run the
   rectangle 2 cm past the wall face into the room: an edge exactly on the face leaves a sliver that closes it.
+- `--window x,y,sill,head[,frosted]`: give the one window whose opening holds DWG point x,y its own sill and head
+  (and frosted glass); its depth is read from the wall at its middle. Every other window keeps the fixed heights,
+  and a model built without the flag is unchanged. `index.html` / `explore.html` read `sill`, `head`, `frosted`
+  on that opening. Repeatable.
 - `--debug FILE.png`: write a debug render of the plan.
 
 What the scripts rely on in the DWG:
 - **Layers:** `1wall` = walls, `Windows`, `3door`, `2furni` / `2 furni` = furniture. Room names come from the drawing's text labels (English or Arabic).
-- **Heights are fixed in `build_geometry.py`:** ceiling 2.6 m, door head 2.1 m, window sill 0.9 m, slider head 2.4 m, parapet 1.1 m.
+- **Heights are fixed in `build_geometry.py`:** ceiling 2.6 m, door head 2.1 m, window sill 0.9 m, slider head 2.4 m, parapet 1.1 m (one window can override its sill/head with `--window`).
 - **Wet rooms** (kitchen, bath, WC, laundry) get tile floors; **outdoor rooms** (terrace, balcony) get decking. Matching is by room name.
 
 **Piers drawn with several back lines** (2026-10-23 fix in `build_geometry.py`): a pier face paired with two
@@ -240,24 +244,29 @@ and carries the concealed mixer, rain arm and hand shower (outlet at the west en
 `--wall` face (hidden, DWG x 190.9609) closes the west wall up to the facade behind it. A 0.20 solid partition
 (stone-lined in the build) between the shower and the basin, with one wide niche in its shower face: cut 0.70 wide x
 0.15 deep rough (dashed, centred on the shower, 0.07 solid each side, 0.05 left behind it on the vanity side),
-finished 0.67 x 0.135 in porcelain, three 4 cm porcelain slab shelves with 25.5 cm clear (floors 0.745 / 1.04 /
-1.335, top 1.59) and warm LEDs in `furnish.js`, carved by `--cut`. Fold-up teak seat on the west wall (dashed, open
+finished 0.67 x 0.135 in porcelain, three 4 cm porcelain slab shelves with 25.5 cm clear (floors 0.895 / 1.19 /
+1.485, top 1.74) and warm LEDs in `furnish.js`, carved by `--cut`. Fold-up teak seat on the west wall (dashed, open
 outline): 0.45 along the wall from 0.05 off the partition, 0.35 deep, top 0.45, 0.49 clear to the glass line. A 2 cm
 clear glass panel (with its channel), 0.69 long from the build-out face to 0.90 from the north wall, on its own
 `Glass` layer (colour 4, not `Windows`, so the build doesn't read it as a window), leaving a 0.60 walk-in gap. WC
 bay to its east on the north wall, 0.776 wide: a concealed-cistern build-out 0.30 deep across the bay (`2furni`; 1.12
 high in 3D, porcelain-clad with a top ledge and a flush plate) and a wall-hung pan 0.54 long, centred, front 0.84
-from the north wall. The en-suite window is WC-only: 0.68 wide, DWG x 191.869-192.549 (0.048 of wall to the glass
-and to the partition, centred on the WC), the shower side solid; designed sill 1.50, head 2.10, obscured glass. The
-build has one sill/head for every window (0.90 / 2.10, `build_geometry.py`), so the 3D shows it 0.90-2.10 in clear
-glass. Vanity 1.153 long (to the partition), 0.51 deep, bowl centred. Bathroom door and the room's other walls are
+from the north wall. The en-suite window is WC-only: 0.60 x 0.60, DWG x 191.9087-192.5087 (0.088 of wall to the
+glass and to the partition, centred on the WC), sill 1.50, head 2.10, frosted, the shower side solid; `--window`
+gives it those heights in 3D, and `furnish.js` clads its wall face in porcelain from the 1.12 cistern ledge to the
+sill. Vanity 1.153 long (to the partition), 0.51 deep, DWG y -115.4463 to -114.2931; bowl, tap spout and backlit
+mirror centred on it at y -114.8697. Towel radiator on the east wall at DWG y -113.725 to -114.175 (0.29 south of
+the pan front), with three champagne-bronze towel hooks at 1.30 (y -114.33 / -114.48 / -114.63) on the 0.61 of
+plain wall between it and the open door leaf. Bathroom door and the room's other walls are
 unchanged from Shifted Bedroom. `furnish.js` (the `NC` branch in the shared block) and `spotnames.js` follow it.
 
 ```sh
 N=dwg/naghams-changes.dxf
-# --wall: west wall face hidden behind the shower build-out; --cut: shower niche in the shower/basin partition
+# --wall: west wall face hidden behind the shower build-out; --cut: shower niche in the shower/basin partition;
+# --window: the WC window's 1.50 sill, 2.10 head and frosted glass
 ~/.dwg-tools/bin/python build_geometry.py $N --out model-naghams-changes.js --tour tour-naghams-changes.json \
-    --wall 190.9609,-112.8031,190.9609,-112.3428 --cut 191.0309,-114.2431,191.7309,-114.0731
+    --wall 190.9609,-112.8031,190.9609,-112.3428 --cut 191.0309,-114.2431,191.7309,-114.0731 \
+    --window 192.2087,-112.47,1.5,2.1,frosted
 ~/.dwg-tools/bin/python build_drawing.py $N --model model-naghams-changes.js --out drawing-naghams-changes.json
 ```
 

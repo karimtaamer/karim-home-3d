@@ -347,17 +347,18 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-w / 2 + 0.02, w / 2 - 0.02, 0.37, 0.374, d, d + 0.003, mat.grille);
     for (const [lx, lz] of [[-w / 2 + 0.04, 0.05], [w / 2 - 0.04, 0.05], [-w / 2 + 0.04, d - 0.05], [w / 2 - 0.04, d - 0.05]]) p.cyl(lx, lz, 0.014, 0, 0.22, mat.walnut, 6);
   };
-  const vanity = (w = 1.4) => p => {  // DWG vanity 0.51 deep, w long (1.40 in Main and v9), round basin
-    const h = w / 2;
+  // centred: trough, mixer and mirror on the vanity's centreline (Nagham's Changes); otherwise 6 cm off it, as in the renders
+  const vanity = (w = 1.4, centred = false) => p => {  // DWG vanity 0.51 deep, w long (1.40 in Main and v9), round basin
+    const h = w / 2, c = centred ? 0 : 0.06, t = centred ? 0.2365 : h - 0.34, r = h - 0.14;
     p.box(-h, h, 0, M.ceiling, 0, 0.02, mat.oakSlats);
     p.model("models/mbath-vanity.glb", null, 0, 0.3, 0.02, { size: [w - 0.02, 0.56, 0.5] });  // from the renders
     p.box(-h + 0.02, h - 0.02, 0.27, 0.29, 0.05, 0.44, mat.ledStrip);
-    p.box(-h + 0.4, h - 0.28, 0.855, 0.862, 0.12, 0.42, mat.ceramic, 0.003);  // integrated trough
-    p.box(0.02, 0.1, 1.0, 1.06, 0.02, 0.06, mat.chrome);               // wall mixer
-    p.box(0.04, 0.07, 1.02, 1.04, 0.06, 0.2, mat.chrome);              // spout
-    p.model("models/plant-vase.glb", null, -h + 0.2, 0.86, 0.12, { height: 0.38, cross: true });
-    p.box(-h + 0.2, h - 0.08, 1.15, 2.0, 0.02, 0.05, mat.ledStrip, 0.12);
-    p.box(-h + 0.23, h - 0.11, 1.18, 1.97, 0.03, 0.06, mat.mirror, 0.12);
+    p.box(c - t, c + t, 0.855, 0.862, 0.12, 0.42, mat.ceramic, 0.003);  // integrated trough
+    p.box(c - 0.04, c + 0.04, 1.0, 1.06, 0.02, 0.06, mat.chrome);               // wall mixer
+    p.box(centred ? -0.015 : 0.04, centred ? 0.015 : 0.07, 1.02, 1.04, 0.06, 0.2, mat.chrome);  // spout
+    p.model("models/plant-vase.glb", null, centred ? -h + 0.16 : -h + 0.2, 0.86, 0.12, { height: 0.38, cross: true });
+    p.box(c - r, c + r, 1.15, 2.0, 0.02, 0.05, mat.ledStrip, 0.12);
+    p.box(c - r + 0.03, c + r - 0.03, 1.18, 1.97, 0.03, 0.06, mat.mirror, 0.12);
   };
   const wardrobe = (w, door = 1.04) => p => {  // DWG wardrobe w long: smoked-glass sliding doors (about `door` m each) in a gypsum frame
     const h = w / 2, n = Math.max(1, Math.round((w - 0.16) / door));
@@ -487,15 +488,18 @@ export function furnish(scene, M, mat, version = "main") {
     });
     ac(3.567, 4.55, "N");  // over the mirror (knee-space centre)
     if (NC) {
+    const champagne = mat.brass.clone(); champagne.color.setRGB(0.78, 0.67, 0.51); champagne.roughness = 0.5;  // brushed champagne bronze
+    champagne.clippingPlanes = mat.brass.clippingPlanes;
     // Nagham's Changes en-suite (DWG): shower in the north-west corner, 0.84 wide x 1.29 deep in front of a 0.21
     // solid build-out on the north wall (burying the column) that carries the concealed mixer, rain arm and hand
     // shower; a 20 cm solid partition (stone-lined, with one wide shelf niche) between it and the basin, and a 2 cm
     // clear glass panel (with its channel) 0.69 long from the build-out face to 0.90 from the north wall, leaving a
     // 0.60 walk-in gap. Fold-up teak seat on the west wall by the partition. WC bay 0.776 wide on the north wall: a
-    // concealed-cistern build-out 0.30 deep across the bay, 1.12 high under the 0.68 window (sill 1.50),
+    // concealed-cistern build-out 0.30 deep across the bay, 1.12 high under the 0.60 x 0.60 frosted window (sill 1.50, head 2.10,
+    // build --window),
     // porcelain-clad with a porcelain top ledge and a flush plate; wall-hung pan 0.54 long, centred.
     // Vanity 1.153 on the west wall, from its old south end to the partition, bowl centred.
-    item(0.556, 6.7435, "E", vanity(1.153));
+    item(0.556, 6.7435, "E", vanity(1.153, true));  // centre DWG y -114.8697, bowl, mixer and mirror on it
     item(1.8037, 9.0201, "S", p => {  // WC bay 1.416..2.192 (local +x east)
       const h = 0.3878, d = 0.3, top = 1.12;
       p.box(-h, h, 0, top - 0.02, 0, d - 0.01, mat.stoneWall);                      // framed build-out, tiled
@@ -503,20 +507,28 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(-0.12, 0.12, 0.92, 1.08, d - 0.01, d, mat.brass, 0.005);               // flush plate on the face
       p.model("models/wc-wallhung.glb", mat.ceramic, 0, 0.1, d, { size: [0.36, 0.33, 0.54] });  // pan 0.54 long, as the DWG block
       bidetMixer(p, -0.3, 0.55, d, mat.chrome);
+      p.box(-0.335, 0.335, top, 1.5, 0, 0.01, mat.stoneWall);                       // porcelain under the window (0.60 + 3 cm reveals), ledge to sill
     });
     item(1.4059, 8.8101, "S", p => {  // DWG glass: 2 cm with its channel, from the shower build-out face to 0.90 from the north wall, 2.00 tall
       p.box(-0.005, 0.005, 0.01, 2.0, 0, 0.69, mat.clearGlass);
       p.box(-0.01, 0.01, 0, 2.0, 0, 0.02, mat.chrome);
       p.box(-0.01, 0.01, 0, 0.01, 0, 0.69, mat.chrome);
     });
-    item(2.192, 7.113, "W", towelRail);               // east wall south of the WC, clear of the open door leaf
+    // Towel radiator on the east wall, 0.29 south of the pan front (DWG y -113.725..-114.175), and three
+    // champagne-bronze towel hooks at 1.30 on the 0.61 of plain wall between it and the open door leaf.
+    item(2.192, 7.6632, "W", towelRail);
+    for (const y of [-114.33, -114.48, -114.63]) item(2.192, y + 121.6132, "W", p => {
+      p.cyl(0, 0.014, 0.018, 1.296, 1.304, champagne, 32).rotation.x = Math.PI / 2;  // rosette on the lining
+      p.cyl(0, 0.045, 0.006, 1.27, 1.33, champagne, 16).rotation.x = Math.PI / 2;    // arm, 6 cm out
+      p.cyl(0, 0.075, 0.009, 1.3, 1.325, champagne, 16);                              // upturned tip
+    });
     // Niche in the shower face of the 0.20 solid partition (DWG dashed), centred on the 0.84 width: cut 0.70 wide x
     // 0.15 deep rough (0.05 of wall left behind it on the vanity side), finished 0.67 x 0.135 in porcelain. Three
-    // 4 cm porcelain slab shelves with 25.5 cm clear: finished floors 0.745 / 1.04 / 1.335, niche top 1.59, a warm
+    // 4 cm porcelain slab shelves with 25.5 cm clear: finished floors 0.895 / 1.19 / 1.485, niche top 1.74, a warm
     // LED under each top. The model carves the rough slot full height (build --cut); the 1 cm stone lining plus
     // 5 mm porcelain here finish it, and porcelain fills it below, between and above (5 mm into the lining).
     item(0.976, 7.5201, "N", p => {
-      const floors = [0.745, 1.04, 1.335], top = 1.59, t = 0.04, w = 0.335, d = 0.135, D = 0.155;
+      const floors = [0.895, 1.19, 1.485], top = 1.74, t = 0.04, w = 0.335, d = 0.135, D = 0.155;
       p.box(-w - 0.02, w + 0.02, 0, floors[0], -D, 0, mat.stoneWall);                        // solid below the first floor
       for (const y of floors.slice(1)) p.box(-w - 0.02, w + 0.02, y - t, y, -D, 0, mat.stoneWall); // slab shelves
       p.box(-w - 0.02, w + 0.02, top, M.ceiling, -D, 0, mat.stoneWall);                       // above the top
@@ -549,8 +561,6 @@ export function furnish(scene, M, mat, version = "main") {
     // partition face, 0.35 deep, top 0.45; teak-tone slats on brushed champagne-bronze brackets.
     item(0.556, 7.7951, "E", p => {
       const teak = mat.oakVeneer.clone(); teak.color.setRGB(0.85, 0.58, 0.36); teak.clippingPlanes = mat.oakVeneer.clippingPlanes;
-      const champagne = mat.brass.clone(); champagne.color.setRGB(0.78, 0.67, 0.51); champagne.roughness = 0.5;  // brushed
-      champagne.clippingPlanes = mat.brass.clippingPlanes;
       for (let k = 0; k < 5; k++) { const z0 = 0.01 + k * 0.068; p.box(-0.225, 0.225, 0.42, 0.45, z0, z0 + 0.058, teak, 0.004); }  // slats
       for (const x of [-0.19, 0.19]) {
         p.box(x - 0.012, x + 0.012, 0.25, 0.42, 0, 0.012, champagne);                // wall plate

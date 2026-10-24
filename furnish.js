@@ -369,8 +369,11 @@ export function furnish(scene, M, mat, version = "main") {
   // Mirrored medicine cabinet (Kareem's Changes), w wide from y0 to y1, hung on the 2 cm battens and 0.30 out from
   // them: an oak carcass with 25 cm clear inside, `shelves` glass shelves evenly spaced, and two mirrored leaves
   // hinged at the outer edges, meeting in the middle (opened `open` degrees; 0 = closed). A soft LED halo round the
-  // edge on the battens and a strip under the front, onto the basin.
-  const medCabinet = (w = 0.8, y0 = 1.32, y1 = 2.07, shelves = 3, open = 0) => p => {
+  // edge on the battens and a strip under the front, onto the basin. Its own group, marked openable (interact.js):
+  // the leaves swing out 105 degrees, clear of the side walls, to show the shelves.
+  const medCabinet = (w = 0.8, y0 = 1.32, y1 = 2.07, shelves = 3, open = 0) => vanityPart => {
+    const c = new THREE.Group(), p = part(c), leaves = [];
+    vanityPart.g.add(c);
     const h = w / 2, b = 0.02, f = 0.285, t = 0.018;  // back on the battens, carcass front edge, board
     p.box(-h - 0.02, h + 0.02, y0 - 0.02, y1 + 0.02, b, b + 0.006, mat.ledStrip, 0.02);  // halo
     p.box(-h, h, y0, y1, b, b + 0.012, honeyOak);                                          // back, 25.3 cm to the front edge
@@ -390,7 +393,10 @@ export function furnish(scene, M, mat, version = "main") {
       p.g.add(g);
       q.box(s < 0 ? 0 : -h + 0.0015, s < 0 ? h - 0.0015 : 0, y0, y1, 0, 0.026, mat.oakVeneer);
       q.box(s < 0 ? 0.003 : -h + 0.0045, s < 0 ? h - 0.0045 : -0.003, y0 + 0.003, y1 - 0.003, 0.026, 0.032, mat.mirror);
+      leaves.push({ obj: g, axis: "y", open: s * 105 * Math.PI / 180 });  // the same sign as `open`: free edges swing out (+z)
     }
+    c.userData.openable = { id: "medicine-cabinet", label: "Medicine cabinet", leaves, anchor: new THREE.Vector3(0, (y0 + y1) / 2, f + 0.06),
+      reach: 1.8, duration: 0.6 };
   };
   // DWG wardrobe w long. Default: smoked-glass sliding doors in a gypsum frame. `white`: plain white lacquer
   // leaves with a recessed vertical finger-pull between them (hidden handle), no walnut mullions.

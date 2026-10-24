@@ -225,6 +225,7 @@ import { createDrawing, loadDrawing } from "./drawing.js";
 import { createMeasure } from "./measure.js";
 import { createRenders } from "./renders.js";
 import { createPhotoGen } from "./photogen.js";
+import { createInteract } from "./interact.js";
 
 // --- Plan versions: the main plan and alternatives to it, each built from its own DWG ----------------
 // (build_geometry.py --out / --tour, build_drawing.py --out). ?v=<id> picks one; the main plan is the default.
@@ -971,6 +972,13 @@ function showRenders(list) {
   if (list.length) switcher.querySelector("[data-show=renders]").hidden = false;
 }
 
+// --- Cabinets that open (furnish.js marks them, interact.js): a soft cue on the one you face in Walk, tap to open / close ---
+const interact = createInteract({
+  THREE, camera, scene, renderer, occluders: flat.solids, isLocked: () => walker.isLocked,
+  isActive: () => mode === "walk" && showing === "model" && !tween && !glide && !measure.active
+    && document.getElementById("photogen-box")?.hidden !== false && !(+document.getElementById("photo")?.style.opacity > 0),
+});
+
 // --- Start: Walk inside by default (Top via chip or ?view=top); legacy ?view=dollhouse → Walk too -----
 const startRoom = params.get("room") && viewpoints.find(v => v.caption.toLowerCase().startsWith(params.get("room").toLowerCase()));
 // ?cam=x,y,h,lookX,lookY,lookH[,fov] (plan metres): stand anywhere, e.g. to match a render's angle.
@@ -1017,6 +1025,7 @@ if (!params.has("clean")) createEditAI({
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
+  interact.update();
   if (showing !== "model") return;  // the drawing or the renders cover the scene; no need to keep rendering it
   if (mode === "walk" && !tween && !glide) {
     walkStep(dt);

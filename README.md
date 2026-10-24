@@ -24,6 +24,7 @@ a 2D drawing view, a tape measure, the designer's renders as "photo spots", and 
 | `photogen-brief.json` | Finishes text and material-board swatches for Generate Photo Spot | Yes |
 | `spots.js`, `renders.js` | Photo-spot UI in Walk; the Renders gallery screen | Yes |
 | `drawing.js`, `measure.js` | 2D drawing view with object snaps; 3D tape measure | Yes |
+| `interact.js` | Openable cabinets in Walk: the soft "tap me" cue and the door animation (§5) | Yes |
 | `photogen.js` | Generate Photo Spot UI (framing preview, screenshot, comment, approve) | Yes |
 | `spotnames.js` | Auto-names for new photo spots: furniture word per `furnish.js` piece, by its plan point | Yes (when a piece moves) |
 | `photogen.py` | Local dev server **and** the Generate Photo Spot backend (OpenAI calls) | Yes |
@@ -328,6 +329,19 @@ To add a version:
 - Load a GLB fixture with `p.model("models/x.glb", material | null, dx, dy, dz, { size | height | width })`:
   - pass a library material for single-material pieces;
   - pass `null` to keep a mixed-material model's own textures.
+
+**Openable cabinets: `interact.js`**
+- In Walk, standing within 1.8 m (in plan) of a cabinet and looking at it shows a soft glowing circle on it. Tap / click it, or press E, to open or close it. With the mouse captured, a click opens it too.
+- Make a piece openable by building it in its own Group, with each door or drawer front in its own child Group (pivot on the hinge). Then mark the Group with data:
+  ```js
+  g.userData.openable = { id: "pantry", label: "Pantry", anchor: new THREE.Vector3(0, 1.2, 0.65),  // cue spot, in g's frame
+    leaves: [{ obj: leftDoor, axis: "y", open: -100 * Math.PI / 180 }, { obj: drawer, slide: new THREE.Vector3(0, 0, 0.4) }],
+    reach: 1.8, duration: 0.6 };
+  ```
+  - A hinged leaf turns `open` radians about `axis`. Check the sign: the free edge must swing out (+z), not into the wall.
+  - A sliding leaf moves by `slide`, in its parent's frame.
+  - Leaves start from their built (closed) pose.
+- `medCabinet` in `furnish.js` is the worked example (Kareem's Changes master en-suite).
 
 **Materials: `materials.js`**
 - `makeMaterials()` builds the library.

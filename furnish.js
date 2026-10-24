@@ -428,12 +428,15 @@ export function furnish(scene, M, mat, version = "main") {
   } else if (version === "shifted-bedroom" || version === "naghams-changes") {  // Nagham's Changes: a copy of it for now
     // Shifted Bedroom (master-v12.dwg): the bathroom moves to the west end, the bed's headboard goes on
     // its partition, the wardrobe runs along the kitchen wall and a desk sits on the south wall.
-    item(2.159, 7.511, "E", bed(2.101, 1.991, 2.101));  // DWG bed outline 2.10 wide x 1.99 long, headboard inside it
+    // Nagham's Changes: the bathroom partition (the headboard wall) sits 14 cm further east, so the bed and
+    // bedside tables do too (bed foot 1.40 from the wardrobe).
+    const NC = version === "naghams-changes", hb = NC ? 2.299 : 2.159;
+    item(hb, 7.511, "E", bed(2.101, 1.991, 2.101));  // DWG bed outline 2.10 wide x 1.99 long, headboard inside it
     for (const y of [6.231, 8.79]) {  // DWG bedside tables 0.47 x 0.52 deep
-      item(2.159, y, "E", nightstand(0.466, 0.516));
-      pendant(2.34, y, 1.15);
+      item(hb, y, "E", nightstand(0.466, 0.516));
+      pendant(hb + 0.181, y, 1.15);
     }
-    art(2.162, 7.511, "E", 1.6, 0.95, 1.85, 0);
+    art(hb + 0.003, 7.511, "E", 1.6, 0.95, 1.85, 0);
     for (const x of [2.95, 5.37]) item(x, 9.02, "S", p => {  // curtains either side of the 2.18 m window
       const m = mesh(curtainGeometry(0.55, 2.45), mat.curtain, p.g); m.position.set(0, 1.27, 0.12);
     });
@@ -483,6 +486,46 @@ export function furnish(scene, M, mat, version = "main") {
       p.cyl(-0.05, 0.25, 0.215, 0.43, 0.45, mat.boucle, 32, 0.225);
     });
     ac(3.567, 4.55, "N");  // over the mirror (knee-space centre)
+    if (NC) {
+    // Nagham's Changes en-suite (DWG): shower in the north-west corner, 0.84 wide x 1.50 deep (1.39 by the column),
+    // an 11 cm solid partition (stone-lined like the other bathroom walls) between it and the basin, and a 1 cm
+    // clear glass panel 0.90 long between it and the WC, leaving a 0.60 walk-in gap. WC centred in its 0.79 bay on
+    // the north wall, on a low 0.85 flush box under the 0.90 window sill. Vanity as before on the west wall.
+    item(0.556, 6.68, "E", vanity(1.03));
+    item(1.7988, 9.0201, "S", p => {  // WC bay 1.406..2.192 (local +x east)
+      const h = 0.3928, d = 0.2;
+      p.box(-h, h, 0, 0.85, 0, d, mat.oakSlats);
+      p.model("models/wc-wallhung.glb", mat.ceramic, 0, 0.1, d, { size: [0.36, 0.33, 0.47] });  // pan 36 x 47 as the DWG block
+      bidetMixer(p, -0.3, 0.55, d, mat.chrome);
+      p.box(-0.12, 0.12, 0.7, 0.78, d, d + 0.01, mat.brass);  // flush plate on the box front
+    });
+    item(1.4009, 9.0201, "S", p => {  // DWG glass: 1 cm x 0.90 from the north wall, 2.00 tall, slim wall channel
+      p.box(-0.005, 0.005, 0.01, 2.0, 0, 0.9, mat.clearGlass);
+      p.box(-0.012, 0.012, 0, 2.0, 0, 0.02, mat.chrome);
+      p.box(-0.012, 0.012, 0, 0.01, 0, 0.9, mat.chrome);
+    });
+    item(2.192, 7.113, "W", towelRail);               // east wall south of the WC, clear of the open door leaf
+    // Shower set on the west wall, centred on the clear run south of the column: rain arm 0.42 out to the shower's
+    // centreline, thermostatic mixer and diverter, a hand shower on a fixed holder on the partition side.
+    item(0.556, 8.215, "E", p => {
+      p.cyl(0, 0.03, 0.075, 1.0, 1.02, mat.chrome, 32).rotation.x = Math.PI / 2;  // thermostatic mixer
+      p.cyl(0, 0.045, 0.03, 1.0, 1.07, mat.chrome, 24).rotation.x = Math.PI / 2;
+      p.cyl(0, 0.03, 0.06, 1.2, 1.22, mat.chrome, 32).rotation.x = Math.PI / 2;    // 3-way diverter
+      p.cyl(0, 0.045, 0.025, 1.2, 1.26, mat.chrome, 24).rotation.x = Math.PI / 2;
+      p.box(-0.012, 0.012, 1.3, 2.12, 0.04, 0.06, mat.chrome);                      // riser to the arm
+      p.box(-0.02, 0.02, 2.1, 2.14, 0, 0.42, mat.chrome);                            // wall arm, 0.42 out
+      p.cyl(0, 0.42, 0.13, 2.08, 2.1, mat.chrome, 32);                                // rain head
+      const hx = -0.21;                                                               // hand shower, partition side
+      p.cyl(hx, 0.01, 0.022, 0.91, 0.93, mat.chrome, 24).rotation.x = Math.PI / 2;
+      p.box(hx - 0.008, hx + 0.008, 0.905, 0.935, 0.01, 0.043, mat.chrome);
+      p.cyl(hx, 0.035, 0.008, 0.87, 0.92, mat.chrome, 12);
+      p.cyl(hx, 0.01, 0.025, 1.07, 1.09, mat.chrome, 24).rotation.x = Math.PI / 2;
+      p.box(hx - 0.008, hx + 0.008, 1.07, 1.09, 0.01, 0.045, mat.chrome);
+      p.cyl(hx, 0.045, 0.016, 1.06, 1.1, mat.chrome, 16);
+      p.cyl(hx, 0.045, 0.011, 0.97, 1.25, mat.chrome, 16);
+      p.cyl(hx, 0.045, 0.015, 1.22, 1.27, mat.chrome, 24);
+    });
+    } else {
     // Master bathroom: vanity and WC on the west wall, shower at the north end behind a glass screen
     item(0.556, 6.68, "E", vanity(1.03));             // DWG vanity 0.52 x 1.03
     item(0.556, 7.58, "E", wc(-0.387, 0.416, true, { box: 0.34, pan: [0.36, 0.33, 0.47], cab: [1.4, 2.2] }));  // flush box 34 deep to 1.10; cabinet 1.40-2.20 flush above (30 cm inside, shelves 1.67 and 1.93), vanity to partition; pan 36 x 47 as the DWG block
@@ -535,6 +578,7 @@ export function furnish(scene, M, mat, version = "main") {
         p.model("models/mbath-bottles.glb", null, 0, y, -0.14, { width: 0.16 });
       }
     });
+    }
   } else {
     item(4.13, 7.62, "W", bed());  // headboard on the bathroom wall (DWG bed outline)
     for (const y of [8.8, 6.45]) {

@@ -232,10 +232,18 @@ Nagham's Changes (2026-10-24) starts as an exact copy of Shifted Bedroom: the DX
 treat it like `shifted-bedroom`. Change its suite in `dwg/naghams-changes.dxf` only, then split its `furnish.js` branch
 from Shifted Bedroom's where the furniture differs.
 
+Its en-suite (2026-10-24) is rearranged to Nagham's sketch: the bathroom/bedroom partition (the headboard wall, still
+0.11) sits 14 cm further east (bathroom-side face DWG x 192.5965), and the bed and bedside tables moved with it (bed
+foot 1.40 from the wardrobe front). Shower in the north-west corner, 0.84 wide inside x 1.50 deep (1.39 beside the
+column; no back-wall build-out or niche stack, so no `--cut`); an 0.11 solid partition (stone-lined in the build)
+between it and the basin; a 1 cm clear glass panel, 0.90 long from the north wall, on its own `Glass` layer (colour 4,
+not `Windows`, so the build doesn't read it as a window), leaving a 0.60 walk-in gap; WC centred in the 0.79 bay to
+its east on the north wall, on a 0.20-deep, 0.85-high flush box under the window. Vanity, bathroom door and the room's
+other walls are as before. `furnish.js` (the `NC` branch in the shared block) and `spotnames.js` follow it.
+
 ```sh
 N=dwg/naghams-changes.dxf
-~/.dwg-tools/bin/python build_geometry.py $N --out model-naghams-changes.js --tour tour-naghams-changes.json \
-    --cut 191.0809,-112.944,191.2609,-112.724   # same shower niche as Shifted Bedroom
+~/.dwg-tools/bin/python build_geometry.py $N --out model-naghams-changes.js --tour tour-naghams-changes.json
 ~/.dwg-tools/bin/python build_drawing.py $N --model model-naghams-changes.js --out drawing-naghams-changes.json
 ```
 

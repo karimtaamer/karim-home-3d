@@ -472,7 +472,7 @@ tap it, the view freezes, circle what to change (or pick **Whole view**), then s
 
 - **Files:** `edit-ai.js` (button, freeze + highlight, chat, live loading), `edit_ai.py` (the agent and its tools, `/api/edit-ai/*`),
   `edit_ai_dxf.py` (DXF query/edit CLI), `api/edit-ai.py` (Vercel entry). `index.html` only calls `liveFiles` / `liveImport` / `createEditAI`.
-- **Model:** `gpt-4.1` with vision (override with `EDIT_AI_MODEL`). It greps and reads the repo, edits `furnish.js`,
+- **Model:** `gpt-5.2` with vision (override with `EDIT_AI_MODEL`). It greps and reads the repo, edits `furnish.js`,
   `materials.js` and the version's tour, and (where `dwg/` and the build scripts exist, i.e. locally) moves walls in the plan DXF and
   rebuilds the model and drawing. It never edits the As-built plan unless you are on the As-built page. No image generation.
 - **Hot path:** every change is saved as a revision in Blob (`edit-ai-live/<version>/rev-*.json`, files content-addressed in

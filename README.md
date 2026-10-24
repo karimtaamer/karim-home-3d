@@ -31,10 +31,10 @@ a 2D drawing view, a tape measure, the designer's renders as "photo spots", and 
 | `publish_renders.sh` | Uploads renders, reference copies and the material board to Blob | Yes |
 | `build_geometry.py`, `build_drawing.py` | DXF → `model.js` / `drawing.json` | Yes |
 | `dwgtool.py` | Inspect a DWG/DXF and render cropped, marked-up PNGs (see `DWG_EDITING.md` §1) | Yes |
-| `dwg/main.dxf`, `dwg/bigger-bedroom.dxf`, `dwg/shifted-bedroom.dxf` | The plan drawing for each version: the only build sources (§3) | Yes, see `DWG_EDITING.md` |
+| `dwg/main.dxf`, `dwg/bigger-bedroom.dxf`, `dwg/shifted-bedroom.dxf`, `dwg/naghams-changes.dxf` | The plan drawing for each version: the only build sources (§3) | Yes, see `DWG_EDITING.md` |
 | `suite_merge.py` | One plan everywhere except the master suite, taken from another; `--check` compares the versions (§3) | Yes |
 | `check_furnish.py` | Runs `furnish.js` in node and compares its key pieces (kitchen appliances, laundry, entrance, coffee corner, guest WC counter, v12 bed/nightstands/cupboard) with the version's DXF; flags > 2 cm (§3) | Yes |
-| `*-bigger-bedroom.*`, `*-shifted-bedroom.*`, `*-as-built.*` | The other plan versions (see §4); `dwg/as-built.dxf` is the survey of the empty flat | Same rules as the main files |
+| `*-bigger-bedroom.*`, `*-shifted-bedroom.*`, `*-naghams-changes.*`, `*-as-built.*` | The other plan versions (see §4); `dwg/as-built.dxf` is the survey of the empty flat | Same rules as the main files |
 | `models/*.glb` | Fixtures made from the renders with Meshy (image-to-3D) | Replace only |
 | `textures/` | Poly Haven PBR scans (CC0, see `CREDITS.txt`) | Add only |
 | `renders/` | Designer renders and approved AI renders (**git-ignored**, served from Blob live) | Add files |
@@ -80,7 +80,7 @@ P=dwg/main.dxf
 ~/.dwg-tools/bin/python build_geometry.py $P --debug debug.png  # plan image for checking walls
 ```
 
-**One drawing per version, in `dwg/` (2026-10-23).** These three DXFs are the only build sources: edit them in
+**One drawing per version, in `dwg/` (2026-10-23).** These DXFs are the only build sources: edit them in
 place and commit them. They are identical outside the master suite and differ only inside it.
 `~/.dwg-tools/bin/python suite_merge.py --check dwg/*.dxf` must print `outside the suite: identical` after any edit
 (it skips `dwg/as-built.dxf`, the survey of the flat as it stands, §4).
@@ -89,7 +89,7 @@ place and commit them. They are identical outside the master suite and differ on
 1. Pull, then edit the version's file in `dwg/` (AutoCAD, DraftSight, LibreCAD or ezdxf). Save it back **as DXF,
    under the same name**: a DWG, or a file with another name, is not picked up by the build.
 2. Master bedroom or master bathroom: edit that version's file only. Any other room: edit one file, copy the change to
-   the other two with `suite_merge.py` (below), then run `--check`.
+   the others with `suite_merge.py` (below), then run `--check`.
 3. Rebuild that version's `model*.js` and `drawing*.json` (commands below and in §4). The viewer reads these, not
    the DXF, so a drawing edit doesn't show until it's rebuilt. Rebuilding needs the `~/.dwg-tools` venv and libredwg
    (above). Without them, push the DXF and ask someone who has them to rebuild.
@@ -100,6 +100,7 @@ place and commit them. They are identical outside the master suite and differ on
    ~/.dwg-tools/bin/python check_furnish.py dwg/main.dxf --version main
    ~/.dwg-tools/bin/python check_furnish.py dwg/bigger-bedroom.dxf --version bigger-bedroom
    ~/.dwg-tools/bin/python check_furnish.py dwg/shifted-bedroom.dxf --version shifted-bedroom
+   ~/.dwg-tools/bin/python check_furnish.py dwg/naghams-changes.dxf --version naghams-changes
    ```
 5. Commit the DXF and the rebuilt files together, and push.
 
@@ -139,14 +140,15 @@ drawing change, so no rebuild (`build_geometry.py` on `dwg/shifted-bedroom.dxf` 
   0.81). `bed()` and `nightstand()` take sizes; Main and v9 keep the old ones (only the bed's
   foot rest is 1 cm narrower, to stay inside the bed's width).
 
-**Editing a room outside the suite:** edit it in one file (say `dwg/main.dxf`), copy it into the other two with
+**Editing a room outside the suite:** edit it in one file (say `dwg/main.dxf`), copy it into the others with
 `suite_merge.py` (BASE = the edited file, SUITE = OUT = the version to update; each keeps its own suite), check,
-then rebuild all three (§3 / §4):
+then rebuild all of them (§3 / §4):
 
 ```sh
 PY=~/.dwg-tools/bin/python
 $PY suite_merge.py dwg/main.dxf dwg/bigger-bedroom.dxf  dwg/bigger-bedroom.dxf
 $PY suite_merge.py dwg/main.dxf dwg/shifted-bedroom.dxf dwg/shifted-bedroom.dxf
+$PY suite_merge.py dwg/main.dxf dwg/naghams-changes.dxf dwg/naghams-changes.dxf
 $PY suite_merge.py --check dwg/*.dxf
 ```
 
@@ -191,6 +193,7 @@ bath end wall, which used to push 37 cm of wall into the doorway.
 | Main | *(none)* / `main` | `dwg/main.dxf` (suite from the designer's `master-bed186-v6-shoes2.dwg`, rest from `master-v12.dwg`) | `model.js`, `drawing.json`, `tour.json`, `spots.json` |
 | Bigger Master Bedroom | `bigger-bedroom` | `dwg/bigger-bedroom.dxf` (suite from `master-bed-v9.dwg`, rest from `master-v12.dwg`) | `model-bigger-bedroom.js`, `drawing-bigger-bedroom.json`, `tour-bigger-bedroom.json`, `spots-bigger-bedroom.json` |
 | Shifted Bedroom | `shifted-bedroom` | `dwg/shifted-bedroom.dxf` (all from `master-v12.dwg`) | `model-shifted-bedroom.js`, `drawing-shifted-bedroom.json`, `tour-shifted-bedroom.json`, `spots-shifted-bedroom.json` |
+| Nagham's Changes | `naghams-changes` | `dwg/naghams-changes.dxf` (a copy of `dwg/shifted-bedroom.dxf`, 2026-10-24) | `model-naghams-changes.js`, `drawing-naghams-changes.json`, `tour-naghams-changes.json`, `spots-naghams-changes.json` |
 | As-built | `as-built` | `dwg/as-built.dxf` (the surveyor's `as-built-original.dwg`, Sep 2026) | `model-as-built.js`, `drawing-as-built.json`, `tour-as-built.json`, `spots-as-built.json` (empty) |
 
 Bigger Master Bedroom (v9) folds the passage into the master toilet, which **needs façade approval**. Never present it
@@ -217,6 +220,18 @@ S=dwg/shifted-bedroom.dxf
 ~/.dwg-tools/bin/python build_geometry.py $S --out model-shifted-bedroom.js --tour tour-shifted-bedroom.json \
     --cut 191.0809,-112.944,191.2609,-112.724   # master shower niche stack in the back-wall build-out
 ~/.dwg-tools/bin/python build_drawing.py $S --model model-shifted-bedroom.js --out drawing-shifted-bedroom.json
+```
+
+Nagham's Changes (2026-10-24) starts as an exact copy of Shifted Bedroom: the DXF is a byte copy, the tour, spots and
+`drawing-naghams-changes.json` are copies of Shifted Bedroom's, and `furnish.js`, `spotnames.js` and `check_furnish.py`
+treat it like `shifted-bedroom`. Change its suite in `dwg/naghams-changes.dxf` only, then split its `furnish.js` branch
+from Shifted Bedroom's where the furniture differs.
+
+```sh
+N=dwg/naghams-changes.dxf
+~/.dwg-tools/bin/python build_geometry.py $N --out model-naghams-changes.js --tour tour-naghams-changes.json \
+    --cut 191.0809,-112.944,191.2609,-112.724   # same shower niche as Shifted Bedroom
+~/.dwg-tools/bin/python build_drawing.py $N --model model-naghams-changes.js --out drawing-naghams-changes.json
 ```
 
 As-built is the flat as it stands today, empty: the surveyor's "AS BUILT PLAN" (2026-10-24). It is a record, not a

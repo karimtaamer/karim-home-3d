@@ -30,6 +30,7 @@ export const WORDS = [
   [6.367, 7.336, "wardrobe", "shifted-bedroom"], [1.564, 4.55, "wardrobe", "shifted-bedroom"], [0.556, 5.561, "cupboard", "shifted-bedroom"],
   [3.517, 4.55, "dresser", "shifted-bedroom"], [0.556, 6.68, "vanity", "shifted-bedroom"], [0.556, 7.58, "toilet", "shifted-bedroom"],
   [0.836, 8.5033, "shower", "shifted-bedroom"], [2.041, 8.745, "shower", "shifted-bedroom"], [0.836, 8.7792, "shower", "shifted-bedroom"],
+  // Master suite, Nagham's Changes: added below as a copy of Shifted Bedroom's
   // Guest bathroom
   [12.324, 8.05, "bath"], [12.767, 9.18, "bath"], [14.66, 7.75, "vanity"], [13.642, 9.18, "toilet"],
   // Kitchen: the runs (west with the hob, north with the sink), the dishwasher column and the fridge
@@ -50,6 +51,8 @@ export const WORDS = [
   [25.14, 3.6, "bench"], [23.42, 1.78, "bench"], [23.4, 3.4, "bench"],
   [24.76, 7.1, "lounge"], [22.1, 6.3, "lounge"], [22.1, 7.9, "lounge"], [23.35, 7.1, "lounge"], [23.115, 9.27, "BBQ"],
 ];
+// Nagham's Changes starts as a copy of Shifted Bedroom: the same master-suite words.
+WORDS.push(...WORDS.filter(w => w[3] === "shifted-bedroom").map(([x, y, word]) => [x, y, word, "naghams-changes"]));
 
 // The word for a furniture group (a direct child of furnish's root) in this plan version, or null.
 export function wordFor(group, version) {

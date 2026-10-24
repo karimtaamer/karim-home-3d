@@ -425,7 +425,7 @@ export function furnish(scene, M, mat, version = "main") {
     item(5.015, 7.35, "E", towelRail);                // on the bedroom wall, opposite the WC
     item(6.245, 8.62, "W", showerWall);
     item(5.25, 9.02, "S", rainHead);                  // the shower opening stays open to the ceiling, as rendered
-  } else if (version === "shifted-bedroom") {
+  } else if (version === "shifted-bedroom" || version === "naghams-changes") {  // Nagham's Changes: a copy of it for now
     // Shifted Bedroom (master-v12.dwg): the bathroom moves to the west end, the bed's headboard goes on
     // its partition, the wardrobe runs along the kitchen wall and a desk sits on the south wall.
     item(2.159, 7.511, "E", bed(2.101, 1.991, 2.101));  // DWG bed outline 2.10 wide x 1.99 long, headboard inside it
@@ -566,7 +566,7 @@ export function furnish(scene, M, mat, version = "main") {
     });
   }
   // The wardrobe, dressing table and shoe display stay on the west and south walls in Main and v9.
-  if (version !== "shifted-bedroom") {
+  if (version !== "shifted-bedroom" && version !== "naghams-changes") {
     item(0.56, 6.75, "E", wardrobe(4.32));
     item(2.36, 4.55, "N", p => {  // dressing table with the backlit oval mirror
       p.box(-0.53, 0.53, 0.72, 0.76, 0, 0.5, mat.walnut);

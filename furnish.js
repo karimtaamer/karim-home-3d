@@ -730,21 +730,24 @@ export function furnish(scene, M, mat, version = "main") {
       for (let k = 1; k < n; k++) { const x = a + k * (b - a) / n; p.box(x - 0.002, x + 0.002, y0, y1, D, D + 0.003, shadowGap); }
     };
     item((XT + XE) / 2, WY, "N", tall(0.45, (p, w) => {
-      const aw = 0.2975;                              // 0.595 built-in appliances, white fillers either side
-      doors(p, -w, w, 0.1, 0.6, 2);                   // two-door cupboard under the oven
-      for (const s of [-1, 1]) p.box(s > 0 ? aw : -w, s > 0 ? w : -aw, 0.6, 1.65, D - f, D, mat.whiteLacquer);
-      p.box(-aw, aw, 0.6, 1.65, 0.02, D - 0.03, mat.blackSteel);                     // appliance housings
-      p.box(-aw, aw, 0.6, 1.195, D - 0.03, D - 0.005, mat.blackGlass);              // oven 0.60 niche, 0.60 to 1.20
-      p.box(-aw + 0.06, aw - 0.06, 0.66, 1.03, D - 0.005, D - 0.003, mat.smokedGlass);  // its window
-      p.box(-0.24, 0.24, 1.07, 1.085, D - 0.005, D + 0.03, mat.chrome);             // bar handle
-      p.box(-aw, aw, 1.115, 1.19, D - 0.005, D - 0.002, mat.blackSteel);            // control strip
+      // Single full-width fronts (no centre split, so the only vertical joint is at the tower's edges):
+      // a 0.90 pan drawer under the oven, then lift-up flaps to the ceiling.
+      doors(p, -w, w, 0.1, 0.6, 1);                   // 90 drawer under the oven
+      p.box(-w, w, 0.6, 1.65, 0.02, D - 0.03, mat.blackSteel);                       // appliance housing
+      p.box(-w, w, 0.6, 1.195, D - 0.03, D - 0.005, mat.blackGlass);                // 90 oven, 0.60 niche, 0.60 to 1.20
+      p.box(-w + 0.07, w - 0.07, 0.66, 1.03, D - 0.005, D - 0.003, mat.smokedGlass);  // its window
+      p.box(-0.36, 0.36, 1.07, 1.085, D - 0.005, D + 0.03, mat.chrome);             // bar handle
+      p.box(-w, w, 1.115, 1.19, D - 0.005, D - 0.002, mat.blackSteel);              // control strip
       p.box(-0.04, 0.04, 1.145, 1.16, D - 0.002, D - 0.001, mat.ledStrip);
-      p.box(-aw, aw, 1.2, 1.65, D - 0.03, D - 0.005, mat.blackGlass);               // microwave 0.45 niche, 1.20 to 1.65
-      p.box(-aw + 0.03, aw - 0.16, 1.25, 1.6, D - 0.005, D - 0.003, mat.smokedGlass);
-      p.box(aw - 0.13, aw - 0.03, 1.55, 1.565, D - 0.005, D - 0.002, mat.ledStrip);  // display
-      p.box(-w, w, 1.198, 1.202, D, D + 0.003, shadowGap);
-      doors(p, -w, w, 1.65, 2.25, 2);                 // two-door cupboards to the ceiling,
-      doors(p, -w, w, 2.25, H, 2);                    // jointed in line with the oak uppers
+      const mw = 0.275;                               // 0.55 microwave, centred, white panels either side
+      for (const s of [-1, 1]) p.box(s > 0 ? mw : -w, s > 0 ? w : -mw, 1.2, 1.65, D - f, D, mat.whiteLacquer);
+      p.box(-mw, mw, 1.2, 1.65, D - 0.03, D - 0.005, mat.blackGlass);               // microwave 0.45 niche, 1.20 to 1.65
+      p.box(-mw + 0.03, mw - 0.16, 1.25, 1.6, D - 0.005, D - 0.003, mat.smokedGlass);
+      p.box(mw - 0.13, mw - 0.03, 1.55, 1.565, D - 0.005, D - 0.002, mat.ledStrip);  // display
+      for (const y of [0.6, 1.198]) p.box(-w, w, y - 0.002, y + 0.002, D, D + 0.003, shadowGap);
+      doors(p, -w, w, 1.65, 2.25, 1);                 // lift-up flaps to the ceiling,
+      doors(p, -w, w, 2.25, H, 1);                    // jointed in line with the oak uppers
+      for (const s of [-1, 1]) p.box(s * 0.45 - 0.003, s * 0.45 + 0.003, 0.1, H, D - 0.004, D + 0.003, shadowGap);  // the joints at its edges
     }));
     // Pantry: its west 0.603 (to XJ, the hob run's front line) sits behind the hob run's end, so that part is a
     // fixed flush panel (blind corner, reached through the door, e.g. a corner pull-out); the east 0.589 opens:

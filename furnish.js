@@ -1126,7 +1126,10 @@ export function furnish(scene, M, mat, version = "main") {
     skirt.position.set(edge - splay / 2 - Math.sin(a) * 0.006, 0.04, (D0 + D1) / 2 + Math.cos(a) * 0.006);
     skirt.rotation.y = -a;
   });
-  item(18.86, 2.103, "N", p => sofa(p, 2.05, 1.02, mat.boucle, [mat.linenSlate, mat.linenBlush, mat.linenSlate]));  // DWG, clear of the pier
+  // Kareem's Changes: sofa, prints and split AC centred on the south wall's visible face, x 17.53 (TV-wall run)
+  // to 21.222 (east wall), so x 19.376; side table and plant each mid-way in the 0.82 m left either side.
+  const KC = version === "kareems-changes", SC = 19.376;
+  item(KC ? SC : 18.86, 2.103, "N", p => sofa(p, 2.05, 1.02, mat.boucle, [mat.linenSlate, mat.linenBlush, mat.linenSlate]));  // DWG, clear of the pier
   item(21.027, 4.165, "W", p => sofa(p, 2.0, 0.92, mat.boucle, [mat.linenSlate, mat.linenBlush]));  // centred on the DWG sofa, back on its back line, clear of the curtains
   item(19.1, 5.95, "S", p => {  // DWG armchair, as rendered: open walnut lounge frame, slate cushions, blush pillow
     for (const s of [-1, 1]) {
@@ -1145,11 +1148,16 @@ export function furnish(scene, M, mat, version = "main") {
     const top = p.cyl(0, 0, 0.515, 0.36, 0.42, mat.marbleTop, 40); top.scale.z = 0.6;
     for (const x of [-0.25, 0.25]) p.cyl(x, 0, 0.15, 0, 0.36, mat.walnut, 24);
   });
-  item(20.341, 2.687, "S", p => { p.cyl(0, 0, 0.205, 0.52, 0.56, mat.marbleTop, 32); p.cyl(0, 0, 0.11, 0, 0.52, mat.walnut, 24); });  // DWG side table
-  plant(17.6, 2.33, 1.6, 0.24);
+  // DWG side table (Kareem's: in the east corner, 0.10 clear of the curtain stack at y 2.76)
+  item(...(KC ? [SC + 1.436, 2.45] : [20.341, 2.687]), "S", p => { p.cyl(0, 0, 0.205, 0.52, 0.56, mat.marbleTop, 32); p.cyl(0, 0, 0.11, 0, 0.52, mat.walnut, 24); });
+  if (KC) plant(SC - 1.436, 2.45, 1.6, 0.24);  // clear of the TV-wall run (x 17.53)
+  else plant(17.6, 2.33, 1.6, 0.24);
   // Two 1.05 x 1.30 m framed prints as in render 11, 0.30 m apart and centred over the sofa, on the south
   // wall's built-out face (y 2.0705, flush with the pier: the recesses either side are filled to it).
-  for (const x of [18.195, 19.525]) art(x, 2.0705, "N", 1.0, 1.25, 1.62, x < 19 ? 0 : 1);
+  // Kareem's: under the centred AC (bottom 2.21) 1.25 m tall prints can't clear both it and the sofa back
+  // (0.86), so 1.00 x 0.90: frame 1.02 to 1.97, picture lights to 2.085, 0.125 under the AC.
+  if (KC) for (const x of [SC - 0.665, SC + 0.665]) art(x, 2.0705, "N", 1.0, 0.9, 1.495, x < SC ? 0 : 1);
+  else for (const x of [18.195, 19.525]) art(x, 2.0705, "N", 1.0, 1.25, 1.62, x < 19 ? 0 : 1);
   // Curtains either side of each slider (the sofa one 2.00 m, centred on the sofa): sheer on the track nearest
   // the glass, curtains stacked in front, both clear of the sofa back (x 21.027).
   for (const [y0, y1] of [[3.135, 5.195], [6.34, 8.08]]) {
@@ -1165,7 +1173,9 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(-(y1 - y0) / 2 - 0.375, (y1 - y0) / 2 + 0.375, M.ceiling - 0.03, M.ceiling, 0.02, 0.18, mat.applianceWhite, 0.005));
     // 1.5 hp split on the south wall's built-out face, east of the right-hand print (frame edge x 20.05),
     // 0.20 short of the east wall and clear of the curtain stack (y 2.76): 0.85 W x 0.29 H x 0.22 D, top 2.40.
-    ac(20.6, 2.0705, "N", 2.4, 0.85, 0.29, 0.22, true);
+    // Kareem's: centred on the wall over the sofa and prints, top raised to 2.50 (0.10 under the ceiling).
+    if (KC) ac(SC, 2.0705, "N", 2.5, 0.85, 0.29, 0.22, true);
+    else ac(20.6, 2.0705, "N", 2.4, 0.85, 0.29, 0.22, true);
   } else {
     // One plaster curtain box along the whole east wall. The ACs are concealed (ducted) units in metal
     // boxes on the terrace over each slider (see Terrace), each feeding a linear grille in the box face.

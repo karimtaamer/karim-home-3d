@@ -240,7 +240,17 @@ from Shifted Bedroom's where the furniture differs.
 Kareem's Changes (2026-10-25) starts as an exact copy of Nagham's Changes: the DXF, model, drawing, tour and spots
 are byte copies of Nagham's (comments updated), and `furnish.js`, `spotnames.js` and `check_furnish.py` treat it like
 `naghams-changes`. Change it in `dwg/kareems-changes.dxf` only, then split its `furnish.js` branch from Nagham's where
-the furniture differs. Rebuild it like Nagham's below with `N=dwg/kareems-changes.dxf` and the `-kareems-changes` outputs.
+the furniture differs. Rebuild it like Nagham's below with `N=dwg/kareems-changes.dxf` and the `-kareems-changes` outputs
+(same `--wall` / `--cut` / `--window` flags).
+
+Kareem's en-suite (2026-10-25): the bathroom door (frame, leaf, swing, wall ends) sits 0.16 further east, hinge DWG x
+192.4871, leaving a 5 cm wall nib to the partition (was 21) and the open leaf 11 cm off it; `doorsAsDrawn` follows. The
+vanity runs the whole west wall, south wall face to the shower partition (1.185, DWG y -115.4781 to -114.2931), 0.60
+deep (`2furni` outline `1336`), with the basin block re-centred on it (y -114.8856). Over it, in place of the backlit
+mirror, a mirrored medicine cabinet (dashed `2furni` outline, 0.80 x 0.30 on the 2 cm battens): two leaves hinged at
+the outer edges, 25 cm clear inside, three glass shelves, bottom 1.32 / top 2.07, an LED halo on the battens and a
+strip under it. `furnish.js` (`vanity(…, d, above)` and `medCabinet`), `spotnames.js` and `check_furnish.py` (master
+vanity, medicine cabinet) follow it.
 
 Its en-suite (2026-10-24) is rearranged to Nagham's sketch: the bathroom/bedroom partition (the headboard wall, still
 0.11) sits 14 cm further east (bathroom-side face DWG x 192.5965), and the bed and bedside tables moved with it (bed

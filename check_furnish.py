@@ -54,6 +54,10 @@ ITEMS = [
     ('appliance tower', {'naghams-changes', 'kareems-changes'}, ('outline', 8.1166, 5.9604, 90.0, 60.0), 'xy', {'whiteLacquer'}, 0.0),
     ('pantry', {'naghams-changes', 'kareems-changes'}, ('outline', 7.0707, 5.9604, 119.2, 60.0), 'xy', {'whiteLacquer'}, 0.0),
     ('master dresser', {'shifted-bedroom', 'naghams-changes', 'kareems-changes'}, ('outline', 3.517, 4.775, 200.0, 45.0), 'xy', {'walnut'}, 0.0),
+    # Kareem's en-suite: vanity wall to partition (its batten panel runs its length; the body is a GLB), and the
+    # medicine cabinet over it (dashed outline, 0.30 out from the 2 cm battens)
+    ('master vanity', {'kareems-changes'}, ('outline', 0.856, 6.7276, 60.0, 118.5), 'y', {'oakSlats'}, 0.0),
+    ('medicine cabinet', {'kareems-changes'}, ('outline', 0.726, 6.7276, 30.0, 80.0), 'xy', {'oakVeneer', 'mirror'}, 0.0),
 ]
 
 # A stand-in for three.js: real transforms and box sizes, everything else a do-nothing proxy.

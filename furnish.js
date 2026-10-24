@@ -351,18 +351,46 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-w / 2 + 0.02, w / 2 - 0.02, 0.37, 0.374, d, d + 0.003, mat.grille);
     for (const [lx, lz] of [[-w / 2 + 0.04, 0.05], [w / 2 - 0.04, 0.05], [-w / 2 + 0.04, d - 0.05], [w / 2 - 0.04, d - 0.05]]) p.cyl(lx, lz, 0.014, 0, 0.22, mat.walnut, 6);
   };
-  // centred: trough, mixer and mirror on the vanity's centreline (Nagham's Changes); otherwise 6 cm off it, as in the renders
-  const vanity = (w = 1.4, centred = false) => p => {  // DWG vanity 0.51 deep, w long (1.40 in Main and v9), round basin
+  // centred: trough, mixer and mirror on the vanity's centreline (Nagham's Changes); otherwise 6 cm off it, as in the renders.
+  // d: depth from the wall face; above: what hangs over the basin in place of the backlit mirror (Kareem's cabinet).
+  const vanity = (w = 1.4, centred = false, d = 0.52, above = null) => p => {  // DWG vanity 0.51 deep, w long (1.40 in Main and v9), round basin
     const h = w / 2, c = centred ? 0 : 0.06, t = centred ? 0.2365 : h - 0.34, r = h - 0.14;
     p.box(-h, h, 0, M.ceiling, 0, 0.02, mat.oakSlats);
-    p.model("models/mbath-vanity.glb", null, 0, 0.3, 0.02, { size: [w - 0.02, 0.56, 0.5] });  // from the renders
-    p.box(-h + 0.02, h - 0.02, 0.27, 0.29, 0.05, 0.44, mat.ledStrip);
+    p.model("models/mbath-vanity.glb", null, 0, 0.3, 0.02, { size: [w - 0.02, 0.56, d - 0.02] });  // from the renders
+    p.box(-h + 0.02, h - 0.02, 0.27, 0.29, 0.05, d - 0.08, mat.ledStrip);
     p.box(c - t, c + t, 0.855, 0.862, 0.12, 0.42, mat.ceramic, 0.003);  // integrated trough
     p.box(c - 0.04, c + 0.04, 1.0, 1.06, 0.02, 0.06, mat.chrome);               // wall mixer
     p.box(centred ? -0.015 : 0.04, centred ? 0.015 : 0.07, 1.02, 1.04, 0.06, 0.2, mat.chrome);  // spout
     p.model("models/plant-vase.glb", null, centred ? -h + 0.16 : -h + 0.2, 0.86, 0.12, { height: 0.38, cross: true });
+    if (above) return above(p);
     p.box(c - r, c + r, 1.15, 2.0, 0.02, 0.05, mat.ledStrip, 0.12);
     p.box(c - r + 0.03, c + r - 0.03, 1.18, 1.97, 0.03, 0.06, mat.mirror, 0.12);
+  };
+  // Mirrored medicine cabinet (Kareem's Changes), w wide from y0 to y1, hung on the 2 cm battens and 0.30 out from
+  // them: an oak carcass with 25 cm clear inside, `shelves` glass shelves evenly spaced, and two mirrored leaves
+  // hinged at the outer edges, meeting in the middle (opened `open` degrees; 0 = closed). A soft LED halo round the
+  // edge on the battens and a strip under the front, onto the basin.
+  const medCabinet = (w = 0.8, y0 = 1.32, y1 = 2.07, shelves = 3, open = 0) => p => {
+    const h = w / 2, b = 0.02, f = 0.285, t = 0.018;  // back on the battens, carcass front edge, board
+    p.box(-h - 0.02, h + 0.02, y0 - 0.02, y1 + 0.02, b, b + 0.006, mat.ledStrip, 0.02);  // halo
+    p.box(-h, h, y0, y1, b, b + 0.012, honeyOak);                                          // back, 25.3 cm to the front edge
+    for (const s of [-1, 1]) p.box(s < 0 ? -h : h - t, s < 0 ? -h + t : h, y0, y1, b, f, mat.oakVeneer);  // sides
+    for (const y of [y0, y1 - t]) p.box(-h, h, y, y + t, b, f, mat.oakVeneer);              // bottom and top
+    const bay = (y1 - y0 - 2 * t) / (shelves + 1);
+    for (let k = 0; k <= shelves; k++) {
+      const y = y0 + t + k * bay;  // the bottom, then each 8 mm glass shelf
+      if (k) p.box(-h + t, h - t, y - 0.008, y, b + 0.012, f - 0.01, mat.clearGlass);
+      p.model("models/mbath-bottles.glb", null, k % 2 ? 0.1 : -0.1, y, b + 0.05, { width: 0.3 });
+    }
+    p.box(-h + 0.03, h - 0.03, y0 - 0.006, y0, f - 0.05, f - 0.02, mat.ledStrip);           // under-cabinet strip
+    for (const s of [-1, 1]) {  // leaves: 26 mm oak-edged board with a 6 mm mirror, 3 mm clear of the carcass
+      const g = new THREE.Group(), q = part(g);
+      g.position.set(s * h, 0, f + 0.003);
+      g.rotation.y = s * open * Math.PI / 180;
+      p.g.add(g);
+      q.box(s < 0 ? 0 : -h + 0.0015, s < 0 ? h - 0.0015 : 0, y0, y1, 0, 0.026, mat.oakVeneer);
+      q.box(s < 0 ? 0.003 : -h + 0.0045, s < 0 ? h - 0.0045 : -0.003, y0 + 0.003, y1 - 0.003, 0.026, 0.032, mat.mirror);
+    }
   };
   const wardrobe = (w, door = 1.04) => p => {  // DWG wardrobe w long: smoked-glass sliding doors (about `door` m each) in a gypsum frame
     const h = w / 2, n = Math.max(1, Math.round((w - 0.16) / door));
@@ -503,7 +531,11 @@ export function furnish(scene, M, mat, version = "main") {
     // build --window),
     // porcelain-clad with a porcelain top ledge and a flush plate; wall-hung pan 0.54 long, centred.
     // Vanity 1.153 on the west wall, from its old south end to the partition, bowl centred.
-    item(0.556, 6.7435, "E", vanity(1.153, true));  // centre DWG y -114.8697, bowl, mixer and mirror on it
+    // Kareem's Changes: the bathroom door sits 0.16 further east, so the vanity runs the whole wall (1.185, south wall
+    // to the partition) and is 0.60 deep; the backlit mirror becomes a 0.80 x 0.75 mirrored medicine cabinet, 0.30
+    // out from the battens, bottom 1.32 (0.46 over the counter), three glass shelves, all centred on the bowl.
+    if (version === "kareems-changes") item(0.556, 6.7276, "E", vanity(1.185, true, 0.6, medCabinet()));  // centre DWG y -114.8856
+    else item(0.556, 6.7435, "E", vanity(1.153, true));  // centre DWG y -114.8697, bowl, mixer and mirror on it
     item(1.8037, 9.0201, "S", p => {  // WC bay 1.416..2.192 (local +x east)
       const h = 0.3878, d = 0.3, top = 1.12;
       p.box(-h, h, 0, top - 0.02, 0, d - 0.01, mat.stoneWall);                      // framed build-out, tiled

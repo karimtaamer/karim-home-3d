@@ -432,6 +432,12 @@ def main():
             fills.append(g)
     if fills:
         walls = unary_union([walls] + fills).buffer(0.002, join_style=2).buffer(-0.002, join_style=2)
+    # A part-height recess (niche, dashed in the drawing) is carved full height; furnish.js fills above and below it.
+    # Run the rectangle a little past the wall face: an edge exactly on it leaves a sliver that closes the recess.
+    for i, k in enumerate(sys.argv):
+        if k == "--cut":
+            x0, y0, x1, y1 = map(float, sys.argv[i + 1].split(","))
+            walls = walls.difference(box(x0, y0, x1, y1))
 
     # Floor: the flat's outline (walls + openings, small gaps bridged), with holes filled.
     solid = make_valid(unary_union([walls] + [g for _, g in openings])).buffer(0.005, join_style=2)

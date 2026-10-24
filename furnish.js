@@ -478,10 +478,11 @@ export function furnish(scene, M, mat, version = "main") {
     item(0.556, 6.68, "E", vanity(1.03));             // DWG vanity 0.52 x 1.03
     item(0.556, 7.58, "E", wc(-0.387, 0.416, true, { box: 0.34, pan: [0.36, 0.33, 0.47], cab: [1.4, 2.2] }));  // flush box 34 deep to 1.10; cabinet 1.40-2.20 flush above (30 cm inside, shelves 1.67 and 1.93), vanity to partition; pan 36 x 47 as the DWG block
     item(2.052, 7.113, "W", towelRail);               // east wall south of the WC, clear of the open door leaf and the shower entry
-    // Shower (DWG): 1.50 wide x 0.83 deep behind a 19 cm partition 0.90 long on the west, open 0.60 entry on
-    // the east. 3-way set on the west wall (rain arm, hand shower on a rail, thermostatic mixer and diverter);
-    // three lit niches recessed 10 cm into the partition's shower face, 0.80 wide, 1.00 to 1.90 m.
-    item(0.556, 8.62, "E", p => {
+    // Shower (DWG): 1.50 wide x 0.92 deep behind a 10 cm partition on the west, open 0.61 entry on the east. A 34 cm
+    // pier at the north-west column (flush with the WC flush box) holds a lit niche column facing the entry.
+    // 3-way set on the west wall between the partition and the pier (rain arm, hand shower on a rail, thermostatic
+    // mixer and diverter).
+    item(0.556, 8.4, "E", p => {
       p.cyl(0, 0.03, 0.075, 1.0, 1.02, mat.chrome, 32).rotation.x = Math.PI / 2;  // thermostatic mixer
       p.cyl(0, 0.045, 0.03, 1.0, 1.07, mat.chrome, 24).rotation.x = Math.PI / 2;
       p.cyl(0, 0.03, 0.06, 1.2, 1.22, mat.chrome, 32).rotation.x = Math.PI / 2;    // 3-way diverter
@@ -489,22 +490,25 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(-0.012, 0.012, 1.3, 2.12, 0.04, 0.06, mat.chrome);                      // riser to the arm
       p.box(-0.02, 0.02, 2.1, 2.14, 0, 0.42, mat.chrome);                            // wall arm, 0.42 out
       p.cyl(0, 0.42, 0.13, 2.08, 2.1, mat.chrome, 32);                                // rain head
-      p.box(-0.32, -0.3, 1.0, 1.9, 0.03, 0.05, mat.chrome);                          // hand-shower rail
-      for (const y of [1.0, 1.9]) p.box(-0.33, -0.29, y - 0.02, y + 0.02, 0, 0.05, mat.chrome);
-      p.box(-0.335, -0.285, 1.52, 1.58, 0.04, 0.08, mat.chrome);                     // slider holding the hand shower
-      p.cyl(-0.31, 0.11, 0.022, 1.42, 1.62, mat.chrome, 16);
-      p.cyl(-0.31, 0.11, 0.045, 1.62, 1.66, mat.chrome, 24);
+      p.box(0.17, 0.19, 1.0, 1.9, 0.03, 0.05, mat.chrome);                           // hand-shower rail, pier side
+      for (const y of [1.0, 1.9]) p.box(0.16, 0.2, y - 0.02, y + 0.02, 0, 0.05, mat.chrome);
+      p.box(0.155, 0.205, 1.52, 1.58, 0.04, 0.08, mat.chrome);                       // slider holding the hand shower
+      p.cyl(0.18, 0.11, 0.022, 1.42, 1.62, mat.chrome, 16);
+      p.cyl(0.18, 0.11, 0.045, 1.62, 1.66, mat.chrome, 24);
     });
     item(2.041, 8.745, "W", p => {  // teak fold-down seat on the east wall at the back, shown open: 0.45 wide x 0.35 deep, top 0.45 (DWG dashed)
       p.model("models/mbath-seat-teak.glb", mat.oakVeneer, 0, 0.35, 0, { size: [0.45, 0.1, 0.35] });
       p.model("models/mbath-seat-brackets.glb", mat.brushedNickel, 0, 0.35, 0, { size: [0.45, 0.1, 0.35] });
     });
-    item(1.006, 8.197, "N", p => {  // on the 1 cm stone lining of the partition's shower face: niches 0.80 wide (DWG dashed outline)
-      p.face(-0.4, 0.4, 1.0, 1.9, 0.002, mat.greyLacquer);  // the recess, read as a darker back
-      for (const y of [1.0, 1.3, 1.6, 1.9]) p.box(-0.4, 0.4, y - 0.02, y + 0.005, 0, 0.012, greyStone);
-      for (const y of [1.3, 1.6, 1.9]) p.box(-0.38, 0.38, y - 0.035, y - 0.025, 0.004, 0.012, mat.ledStrip);
-      for (const s of [-1, 1]) p.box(s * 0.4 - 0.008, s * 0.4 + 0.008, 0.98, 1.905, 0, 0.012, greyStone);
-      for (const y of [1.0, 1.3]) p.model("models/mbath-bottles.glb", null, 0, y + 0.005, 0.0, { width: 0.6 });
+    // Niche column in the pier's south face (DWG dashed): 0.24 wide x 0.15 deep, 0.60 to 2.10, five 30 cm
+    // compartments, an LED under each top. The model carves the slot full height (build --cut); stone fills it
+    // above and below. 5 cm of board and membrane stay between its back and the column.
+    item(0.7259, 8.7101, "S", p => {
+      p.box(-0.12, 0.12, 0, 0.6, -0.15, 0, mat.stoneWall);
+      p.box(-0.12, 0.12, 2.1, M.ceiling, -0.15, 0, mat.stoneWall);
+      for (const y of [0.9, 1.2, 1.5, 1.8]) p.box(-0.11, 0.11, y - 0.02, y, -0.14, 0, greyStone);
+      for (const y of [0.9, 1.2, 1.5, 1.8, 2.1]) p.box(-0.1, 0.1, y - 0.035, y - 0.025, -0.13, -0.11, mat.ledStrip);
+      for (const y of [0.6, 0.9, 1.5]) p.model("models/mbath-bottles.glb", null, 0, y, -0.13, { width: 0.18 });
     });
   } else {
     item(4.13, 7.62, "W", bed());  // headboard on the bathroom wall (DWG bed outline)

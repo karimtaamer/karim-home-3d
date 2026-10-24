@@ -150,6 +150,9 @@ that version's file only.
 - `--out FILE`: model file to write (default `model.js`).
 - `--tour FILE`: tour file to read (default `tour.json`).
 - `--wall x0,y0,x1,y1`: add a wall face line the DWG left out, in DWG coordinates. Repeatable.
+- `--cut x0,y0,x1,y1`: carve a rectangle out of the walls, full height (a niche the DWG draws dashed; the build
+  would otherwise fill it as a gap). `furnish.js` fills it above and below. DWG coordinates, repeatable. Run the
+  rectangle 2 cm past the wall face into the room: an edge exactly on the face leaves a sliver that closes it.
 - `--debug FILE.png`: write a debug render of the plan.
 
 What the scripts rely on in the DWG:
@@ -203,7 +206,8 @@ the bath end wall.
 
 ```sh
 S=dwg/shifted-bedroom.dxf
-~/.dwg-tools/bin/python build_geometry.py $S --out model-shifted-bedroom.js --tour tour-shifted-bedroom.json
+~/.dwg-tools/bin/python build_geometry.py $S --out model-shifted-bedroom.js --tour tour-shifted-bedroom.json \
+    --cut 191.0109,-112.9231,191.2509,-112.7531   # master shower niche column in the pier at the column
 ~/.dwg-tools/bin/python build_drawing.py $S --model model-shifted-bedroom.js --out drawing-shifted-bedroom.json
 ```
 

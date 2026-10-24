@@ -89,7 +89,7 @@ export class Vector2 { constructor(x = 0, y = 0) { this.x = x; this.y = y; } }
 export class GLTFLoader { loadAsync() { return new Promise(() => {}); } }
 export const mergeGeometries = () => P;
 export const Float32BufferAttribute = P, Shape = P, Path = P, ExtrudeGeometry = P, ShapeGeometry = P,
-  CylinderGeometry = P, CircleGeometry = P, PlaneGeometry = P, SphereGeometry = P, TorusGeometry = P,
+  CylinderGeometry = P, CircleGeometry = P, PlaneGeometry = P, SphereGeometry = P, TorusGeometry = P, CapsuleGeometry = P,
   CatmullRomCurve3 = P, Box3 = P, CanvasTexture = P, Color = P;
 """
 

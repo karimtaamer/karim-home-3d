@@ -293,7 +293,9 @@ def main():
         if g.area > 0.02:
             openings.append(("window", g))
     windows = unary_union([g for _, g in openings]) if openings else Polygon()
-    walls = walls.difference(windows.buffer(0.001, join_style=2))
+    # 4 mm margin: a window fitted a hair skew to its wall (2 mm over the guest WC's 0.98 m) would otherwise leave
+    # 1 mm wedges along both wall faces, which extrude into full-height sheets hiding part of the glass and frame.
+    walls = walls.difference(windows.buffer(0.004, join_style=2))
 
     # Doors: gaps the closing bridges. Walls must touch only the short ends (a notch filled along
     # a wall face touches a long side), and the gap must be door-sized or have a door swing nearby.

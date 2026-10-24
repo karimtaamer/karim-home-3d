@@ -358,8 +358,8 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-h + 0.2, h - 0.08, 1.15, 2.0, 0.02, 0.05, mat.ledStrip, 0.12);
     p.box(-h + 0.23, h - 0.11, 1.18, 1.97, 0.03, 0.06, mat.mirror, 0.12);
   };
-  const wardrobe = w => p => {  // DWG wardrobe w long: smoked-glass sliding doors (about 1.04 m each) in a gypsum frame
-    const h = w / 2, n = Math.max(1, Math.round((w - 0.16) / 1.04));
+  const wardrobe = (w, door = 1.04) => p => {  // DWG wardrobe w long: smoked-glass sliding doors (about `door` m each) in a gypsum frame
+    const h = w / 2, n = Math.max(1, Math.round((w - 0.16) / door));
     p.box(-h, h, 0, M.ceiling, 0, 0.6, mat.whiteLacquer);
     p.box(-h + 0.08, h - 0.08, 0.08, 2.5, 0.6, 0.62, mat.bronzeGlass);
     for (let k = 0; k <= n; k++) {
@@ -429,22 +429,51 @@ export function furnish(scene, M, mat, version = "main") {
       const m = mesh(curtainGeometry(0.55, 2.45), mat.curtain, p.g); m.position.set(0, 1.27, 0.12);
     });
     item(6.367, 7.336, "W", wardrobe(3.36));  // DWG wardrobe on the kitchen wall
-    item(1.665, 4.55, "N", wardrobe(2.1));    // DWG wardrobe on the south wall
+    item(1.564, 4.55, "N", wardrobe(1.895, 0.45));  // DWG wardrobe on the south wall, 20 cm shorter for the dresser: four ~43 cm sliding doors
     item(0.556, 5.561, "E", wardrobe(0.872));  // DWG cupboard by the bathroom door (0.87 long, its end overlaps the south wardrobe front as drawn)
-    item(3.617, 4.55, "N", p => {  // DWG desk 1.80 x 0.62: drawer pedestals, knee space, backlit mirror
-      p.box(-0.9, 0.9, 0.72, 0.76, 0, 0.6, mat.walnut);
-      for (const [x0, x1] of [[-0.9, -0.45], [0.45, 0.9]]) {
-        p.box(x0, x1, 0, 0.72, 0, 0.58, mat.walnut);
-        for (const y of [0.24, 0.48]) p.box(x0 + 0.01, x1 - 0.01, y - 0.002, y + 0.002, 0.58, 0.583, mat.grille);
-      }
-      p.pebble(0, 1.42, 1.04, 0.78, 0.012, mat.mirror, true);
+    // DWG dresser 2.00 x 0.45 x 0.75, east end on the lobby wall. Facing it (local -x = east = your left): three
+    // drawers under a lit open shelf column, knee space with one shallow drawer and a pouf, fluted cabinet with a
+    // glass-topped jewellery tray. Walnut body, pale oak top; backlit pebble mirror over the knee space.
+    item(3.517, 4.55, "N", p => {
+      const front = (x0, x1, y0, y1) => {  // drawer front with a slim brass pull
+        p.box(x0 + 0.002, x1 - 0.002, y0 + 0.002, y1 - 0.002, 0.43, 0.45, mat.walnut);
+        p.box((x0 + x1) / 2 - 0.06, (x0 + x1) / 2 + 0.06, y1 - 0.03, y1 - 0.02, 0.45, 0.46, mat.brass);
+      };
+      for (const [x0, x1] of [[-0.98, -0.52], [0.42, 0.98]]) p.box(x0, x1, 0, 0.05, 0.02, 0.4, shadowGap);  // recessed plinths
+      p.box(-1, -0.5, 0.05, 0.72, 0, 0.43, mat.walnut);              // drawer stack carcass
+      for (let k = 0; k < 3; k++) front(-1, -0.5, 0.05 + k * 0.2233, 0.05 + (k + 1) * 0.2233);
+      p.box(-0.5, 0.4, 0, 0.62, 0, 0.02, mat.walnut);                // knee space back panel
+      p.box(-0.5, 0.4, 0.62, 0.72, 0, 0.43, mat.walnut);             // shallow drawer over the knee space
+      front(-0.5, 0.4, 0.62, 0.72);
+      p.box(0.4, 1, 0.05, 0.6, 0, 0.43, mat.walnut);                 // fluted cabinet
+      for (let x = 0.42; x < 0.975; x += 0.025) p.box(x, x + 0.02, 0.07, 0.58, 0.43, 0.45, mat.walnut, 0.008);
+      p.box(0.4, 1, 0.6, 0.72, 0, 0.02, mat.walnut);                 // jewellery tray: walnut sides, oak lining, glass front
+      for (const x of [0.4, 0.98]) p.box(x, x + 0.02, 0.6, 0.72, 0, 0.45, mat.walnut);
+      p.box(0.42, 0.98, 0.6, 0.62, 0.02, 0.45, honeyOak);
+      p.box(0.43, 0.97, 0.705, 0.715, 0.03, 0.05, mat.ledStrip);
+      for (let x = 0.47; x < 0.95; x += 0.08) p.box(x, x + 0.04, 0.62, 0.635, 0.12, 0.3, mat.brass, 0.005);  // jewellery
+      p.box(0.42, 0.98, 0.6, 0.72, 0.44, 0.45, mat.clearGlass);
+      p.box(-1, 0.45, 0.72, 0.75, 0, 0.45, mat.oakVeneer);            // pale oak top, glass over the tray
+      p.box(0.95, 1, 0.72, 0.75, 0, 0.45, mat.oakVeneer);
+      p.box(0.45, 0.95, 0.72, 0.75, 0, 0.05, mat.oakVeneer);
+      p.box(0.45, 0.95, 0.72, 0.75, 0.4, 0.45, mat.oakVeneer);
+      p.box(0.45, 0.95, 0.735, 0.745, 0.05, 0.4, mat.clearGlass);
+      // Open shelf column on the drawer stack, 0.32 wide x 0.30 deep, counter to 2.45: walnut frame, oak lining, lit shelves
+      p.box(-1, -0.68, 0.75, 2.45, 0, 0.01, honeyOak);
+      for (const x of [-1, -0.7]) p.box(x, x + 0.02, 0.75, 2.45, 0, 0.3, mat.walnut);
+      p.box(-1, -0.68, 2.43, 2.45, 0, 0.3, mat.walnut);
+      for (const y of [1.09, 1.43, 1.77, 2.11]) p.box(-0.98, -0.7, y - 0.02, y, 0.01, 0.3, mat.walnut);
+      for (const y of [1.07, 1.41, 1.75, 2.09, 2.43]) p.box(-0.97, -0.71, y - 0.012, y - 0.002, 0.24, 0.26, mat.ledStrip);
+      p.model("models/mbath-bottles.glb", null, -0.84, 0.75, 0.04, { width: 0.24 });
+      p.model("models/mbath-bottles.glb", null, -0.84, 1.43, 0.04, { width: 0.22 });
+      p.model("models/plant-vase.glb", null, -0.84, 1.77, 0.08, { height: 0.3, cross: true });
+      p.model("models/plant-vase.glb", null, -0.58, 0.75, 0.1, { height: 0.4, cross: true });  // on the top, by the column
+      p.model("models/mbath-bottles.glb", null, 0.62, 0.75, 0.06, { width: 0.28 });
+      p.pebble(-0.05, 1.35, 1.1, 0.75, 0.012, mat.mirror, true);   // 1.10 wide x 0.75 tall, 0.98 to 1.73
+      p.cyl(-0.05, 0.25, 0.225, 0, 0.43, mat.boucle, 32);           // pouf 45 x 45, pushed in to 2.5 cm off the back panel
+      p.cyl(-0.05, 0.25, 0.215, 0.43, 0.45, mat.boucle, 32, 0.225);
     });
-    item(3.617, 5.75, "S", p => {  // DWG desk chair, pulled in to the desk
-      p.box(-0.24, 0.24, 0.42, 0.5, 0.06, 0.5, mat.boucle, 0.04);
-      p.box(-0.24, 0.24, 0.5, 0.85, 0, 0.07, mat.boucle, 0.03);
-      for (const [lx, lz] of [[-0.2, 0.1], [0.2, 0.1], [-0.2, 0.46], [0.2, 0.46]]) p.cyl(lx, lz, 0.014, 0, 0.42, mat.walnut, 6);
-    });
-    ac(3.617, 4.55, "N");
+    ac(3.567, 4.55, "N");  // over the mirror (knee-space centre)
     // Master bathroom: vanity and WC on the west wall, shower at the north end behind a glass screen
     item(0.556, 6.68, "E", vanity(1.03));             // DWG vanity 0.52 x 1.03
     item(0.556, 7.58, "E", wc(-0.387, 0.416, true, { box: 0.34, pan: [0.36, 0.33, 0.47], cab: [1.4, 2.2] }));  // flush box 34 deep to 1.10; cabinet 1.40-2.20 flush above (30 cm inside, shelves 1.67 and 1.93), vanity to partition; pan 36 x 47 as the DWG block

@@ -48,6 +48,9 @@ ITEMS = [
     ('nightstand south', {'shifted-bedroom'}, ('outline', 2.418, 6.231, 51.6, 46.6), 'xy', {'walnut'}, 0.0),
     ('bathroom-door cupboard', {'shifted-bedroom'}, ('outline', 0.863, 5.561, 61.8, 87.2), 'xy',
      {'whiteLacquer', 'bronzeGlass', 'walnut'}, 0.0),
+    ('south wardrobe', {'shifted-bedroom'}, ('outline', 1.564, 4.857, 189.9, 61.8), 'xy',
+     {'whiteLacquer', 'bronzeGlass'}, 0.0),
+    ('master dresser', {'shifted-bedroom'}, ('outline', 3.517, 4.775, 200.0, 45.0), 'xy', {'walnut'}, 0.0),
 ]
 
 # A stand-in for three.js: real transforms and box sizes, everything else a do-nothing proxy.

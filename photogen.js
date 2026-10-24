@@ -226,6 +226,37 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     return [...names];
   }
 
+  // The room the shot is of, which need not be the one you stand in (from the dining, looking into the
+  // reception, it is the reception): a grid of rays through the framed lens, each landing on the first opaque
+  // thing it meets (floor, wall, furniture, ceiling); the room it lands in (stepped back a little off the face,
+  // as a wall belongs to the side it is seen from) scores the ray's weight: how far it went (the floor at your
+  // feet fills the frame's foot but is little of what is shown), falling off from the frame's middle.
+  // The room with the most wins; nothing found, or a tie with where you stand, keeps that.
+  function viewedRoom(p, own) {
+    const eye = camera.clone();
+    eye.position.copy(p.pos); eye.fov = p.vfov; eye.aspect = W / H;
+    eye.updateProjectionMatrix(); eye.updateMatrixWorld();
+    const solid = [];
+    scene.traverse(o => o.isMesh && o.visible && !o.material.transparent && solid.push(o));
+    const score = new Map();
+    for (let i = 0; i <= 16; i++) for (let j = 0; j <= 10; j++) {
+      const u = -1 + i / 8, w = -1 + j / 5;
+      ray.setFromCamera(new THREE.Vector2(u, w), eye);
+      ray.far = 12;
+      const hit = ray.intersectObjects(solid, false)[0];
+      if (!hit) continue;
+      let r = null;
+      for (let d = hit.distance - 0.05; !r && d > hit.distance - 0.5 && d > 0; d -= 0.1) {
+        const q = ray.ray.at(d, new THREE.Vector3());
+        r = roomAt(q.x, -q.z);
+      }
+      if (r) score.set(r.name, { r, s: (score.get(r.name)?.s || 0) + hit.distance * Math.exp(-(u * u + w * w) / 0.72) });
+    }
+    let best = { r: own, s: score.get(own.name)?.s || 0 };
+    for (const x of score.values()) if (x.s > best.s) best = x;
+    return best.r;
+  }
+
   function plan(room, v) {
     // The DWG round the room, north up: walls, glazing, doors, furniture, and the camera with its view.
     const pts = room.rings.flat().concat([[v.x, v.y]]);
@@ -351,7 +382,8 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     reframe();
   };
   $(".go").onclick = () => {
-    const p = pose(), v = view(p), r = roomAt(v.x, v.y);
+    // Filed under the room the shot is of; where you stand only goes into the meta line and the rooms in shot.
+    const p = pose(), v = view(p), here = roomAt(v.x, v.y), r = viewedRoom(p, here);
     const caption = captionOf(r.name);
     const [x0, x1] = [Math.min(...r.rings.flat().map(p => p[0])), Math.max(...r.rings.flat().map(p => p[0]))];
     const [y0, y1] = [Math.min(...r.rings.flat().map(p => p[1])), Math.max(...r.rings.flat().map(p => p[1]))];
@@ -363,7 +395,7 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
       view: frame(p), cam: v.cam, room: r.name, caption, word, named: false, attempts: [], at: -1, busy: false,
       ctx: {
         room: { name: r.name, caption, area: r.area, width: x1 - x0, depth: y1 - y0, finish: r.finish },
-        seen: seen(v, r.name).map(n => ({ name: n, caption: captionOf(n) })),
+        seen: [...new Set([here.name, ...seen(v, r.name)])].filter(n => n !== r.name).map(n => ({ name: n, caption: captionOf(n) })),
         view: v.info, heights: { ceiling: M.ceiling, doorHead: M.doorHead, sill: M.sill, winHead: M.winHead, sliderHead: M.sliderHead },
       },
     };
@@ -371,7 +403,7 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     // Until the piece is known (from the picture, after the first attempt), a numbered name stands in.
     name.value = uniqueName(caption, word || "view", spotNames(r.name));
     notes.value = "";
-    $(".gen.meta").textContent = `${caption} · facing ${v.info.facing} · ${v.info.hfov.toFixed(0)}° lens`;
+    $(".gen.meta").textContent = `${caption}${here.name !== r.name ? ` (from ${captionOf(here.name)})` : ""} · facing ${v.info.facing} · ${v.info.hfov.toFixed(0)}° lens`;
     box.dataset.mode = "generate";
     drawThumbs();
     show(-1);

@@ -318,6 +318,8 @@ To add a version:
 
 ## 5. Editing the model by hand
 
+**Quick changes.** If the ask is a small furniture or fitting tweak (swap a mirror for a cabinet, move one piece a few centimetres, change a material), edit `furnish.js` for that piece and — when it is drawn on the plan — the matching `2furni` outline in that version's DXF only. Then run `check_furnish.py` for the version(s) you touched. Rebuild model/drawing only when the DXF walls or openings changed. Leave the full rebuild + multi-version screenshot pass for real layout work (walls, doors, room moves).
+
 **Furniture: `furnish.js`**
 - Each piece is built in its own frame: x across, y up, z out from the wall.
 - `item(x, y, facing, build)` puts its back-centre on a plan point, facing `N` / `E` / `S` / `W` into the room.

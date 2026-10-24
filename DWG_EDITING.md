@@ -82,6 +82,7 @@ leaf must open against a wall or into clear space.
   100–120 cm, in front of a WC or basin 60–70 cm, in front of an appliance door about 60 cm. Door swings must not hit
   furniture. A washer and dryer side by side need ≥ 120 cm plus gaps; otherwise stack them.
 - Keep the furniture in `furnish.js` and the drawing in step: same positions, same sizes.
+- **Quick furniture tweak:** change the `2furni` outline for that piece in the version's DXF, keep `furnish.js` in step, run `check_furnish.py`. Don't treat it like a wall-layout job.
 
 ## 5. Checks before rebuilding
 

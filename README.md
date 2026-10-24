@@ -203,6 +203,7 @@ bath end wall, which used to push 37 cm of wall into the doorway.
 | Bigger Master Bedroom | `bigger-bedroom` | `dwg/bigger-bedroom.dxf` (suite from `master-bed-v9.dwg`, rest from `master-v12.dwg`) | `model-bigger-bedroom.js`, `drawing-bigger-bedroom.json`, `tour-bigger-bedroom.json`, `spots-bigger-bedroom.json` |
 | Shifted Bedroom | `shifted-bedroom` | `dwg/shifted-bedroom.dxf` (all from `master-v12.dwg`) | `model-shifted-bedroom.js`, `drawing-shifted-bedroom.json`, `tour-shifted-bedroom.json`, `spots-shifted-bedroom.json` |
 | Nagham's Changes | `naghams-changes` | `dwg/naghams-changes.dxf` (a copy of `dwg/shifted-bedroom.dxf`, 2026-10-24) | `model-naghams-changes.js`, `drawing-naghams-changes.json`, `tour-naghams-changes.json`, `spots-naghams-changes.json` |
+| Kareem's Changes | `kareems-changes` | `dwg/kareems-changes.dxf` (a copy of `dwg/naghams-changes.dxf`, 2026-10-25) | `model-kareems-changes.js`, `drawing-kareems-changes.json`, `tour-kareems-changes.json`, `spots-kareems-changes.json` |
 | As-built | `as-built` | `dwg/as-built.dxf` (the surveyor's `as-built-original.dwg`, Sep 2026) | `model-as-built.js`, `drawing-as-built.json`, `tour-as-built.json`, `spots-as-built.json` (empty) |
 
 Bigger Master Bedroom (v9) folds the passage into the master toilet, which **needs façade approval**. Never present it
@@ -235,6 +236,11 @@ Nagham's Changes (2026-10-24) starts as an exact copy of Shifted Bedroom: the DX
 `drawing-naghams-changes.json` are copies of Shifted Bedroom's, and `furnish.js`, `spotnames.js` and `check_furnish.py`
 treat it like `shifted-bedroom`. Change its suite in `dwg/naghams-changes.dxf` only, then split its `furnish.js` branch
 from Shifted Bedroom's where the furniture differs.
+
+Kareem's Changes (2026-10-25) starts as an exact copy of Nagham's Changes: the DXF, model, drawing, tour and spots
+are byte copies of Nagham's (comments updated), and `furnish.js`, `spotnames.js` and `check_furnish.py` treat it like
+`naghams-changes`. Change it in `dwg/kareems-changes.dxf` only, then split its `furnish.js` branch from Nagham's where
+the furniture differs. Rebuild it like Nagham's below with `N=dwg/kareems-changes.dxf` and the `-kareems-changes` outputs.
 
 Its en-suite (2026-10-24) is rearranged to Nagham's sketch: the bathroom/bedroom partition (the headboard wall, still
 0.11) sits 14 cm further east (bathroom-side face DWG x 192.5965), and the bed and bedside tables moved with it (bed

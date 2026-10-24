@@ -430,12 +430,12 @@ export function furnish(scene, M, mat, version = "main") {
     item(5.015, 7.35, "E", towelRail);                // on the bedroom wall, opposite the WC
     item(6.245, 8.62, "W", showerWall);
     item(5.25, 9.02, "S", rainHead);                  // the shower opening stays open to the ceiling, as rendered
-  } else if (version === "shifted-bedroom" || version === "naghams-changes") {  // Nagham's Changes: a copy of it for now
+  } else if (version === "shifted-bedroom" || version === "naghams-changes" || version === "kareems-changes") {  // Nagham's Changes: a copy of it for now
     // Shifted Bedroom (master-v12.dwg): the bathroom moves to the west end, the bed's headboard goes on
     // its partition, the wardrobe runs along the kitchen wall and a desk sits on the south wall.
     // Nagham's Changes: the bathroom partition (the headboard wall) sits 14 cm further east, so the bed and
     // bedside tables do too (bed foot 1.40 from the wardrobe).
-    const NC = version === "naghams-changes", hb = NC ? 2.299 : 2.159;
+    const NC = version === "naghams-changes" || version === "kareems-changes", hb = NC ? 2.299 : 2.159;
     item(hb, 7.511, "E", bed(2.101, 1.991, 2.101));  // DWG bed outline 2.10 wide x 1.99 long, headboard inside it
     for (const y of [6.231, 8.79]) {  // DWG bedside tables 0.47 x 0.52 deep
       item(hb, y, "E", nightstand(0.466, 0.516));
@@ -657,7 +657,7 @@ export function furnish(scene, M, mat, version = "main") {
     });
   }
   // The wardrobe, dressing table and shoe display stay on the west and south walls in Main and v9.
-  if (version !== "shifted-bedroom" && version !== "naghams-changes") {
+  if (version !== "shifted-bedroom" && version !== "naghams-changes" && version !== "kareems-changes") {
     item(0.56, 6.75, "E", wardrobe(4.32));
     item(2.36, 4.55, "N", p => {  // dressing table with the backlit oval mirror
       p.box(-0.53, 0.53, 0.72, 0.76, 0, 0.5, mat.walnut);
@@ -807,12 +807,12 @@ export function furnish(scene, M, mat, version = "main") {
   // Nagham's Changes closes the upper corners: the west uppers (oak, LED, white to the ceiling) run on 0.25 to the
   // north uppers' front (y 8.74) and start at the pantry front (y 6.2604); the north uppers run on 0.26 past x 9.6
   // to the east run's upper front (x 9.86). The stone splash wraps both corners to the adjoining run's splash.
-  const KNC = version === "naghams-changes", UD = 0.35;
+  const KNC = version === "naghams-changes" || version === "kareems-changes", UD = 0.35;
   run(K.x0, (6.27 + K.y1 - K.front) / 2, "E", K.y1 - K.front - 6.27, { hob: 7.376 - (6.27 + K.y1 - K.front) / 2, hobW: 0.924,
     ...(KNC && { up: [6.27 - 6.2604, K.front - UD], splash: [0, K.front - 0.015] }) });
   run((K.x0 + 9.6) / 2, K.y1, "S", 9.6 - K.x0, { sink: 8.193 - (K.x0 + 9.6) / 2, sinkW: 0.877, window: [7.45 - (K.x0 + 9.6) / 2, 8.75 - (K.x0 + 9.6) / 2],
     ...(KNC && { up: [0, K.x1 - UD - 9.6], splash: [0, K.x1 - 0.015 - 9.6] }) });
-  if (version === "naghams-changes") {
+  if (version === "naghams-changes" || version === "kareems-changes") {
     // Nagham's Changes: the whole south run (DWG x 196.8797 west wall face to 198.9716) becomes floor-to-ceiling
     // joinery, 0.60 deep off the DWG wall face (y 5.6604): a 1.192 pantry from the west wall, then a 0.90
     // appliance tower (microwave over oven) at the east end. The hob run ends against the pantry's front.
@@ -1158,7 +1158,7 @@ export function furnish(scene, M, mat, version = "main") {
     });
     item(21.22, (y0 + y1) / 2, "W", p => { const m = mesh(curtainGeometry(y1 - y0, 2.45), mat.sheer, p.g); m.position.set(0, 1.25, 0.06); });
   }
-  const NCAC = version === "naghams-changes";  // Nagham's Changes: wall-mounted splits, no ducted AC
+  const NCAC = version === "naghams-changes" || version === "kareems-changes";  // Nagham's Changes: wall-mounted splits, no ducted AC
   if (NCAC) {
     // Slim ceiling-fixed double track over each slider (sheer and curtain runs), as long as the curtain stacks.
     for (const [y0, y1] of [[3.135, 5.195], [6.34, 8.08]]) item(21.222, (y0 + y1) / 2, "W", p =>

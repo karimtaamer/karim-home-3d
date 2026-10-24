@@ -60,6 +60,8 @@ WORDS.push(...WORDS.filter(w => w[3] === "shifted-bedroom" && !["bed", "toilet",
   ...WORDS.filter(w => w[3] === "shifted-bedroom" && w[2] === "bed").map(([x, y]) => [x + 0.14, y, "bed", "naghams-changes"]),
   [1.8037, 9.0201, "toilet", "naghams-changes"], [0.976, 8.8101, "shower", "naghams-changes"], [1.4059, 8.8101, "shower", "naghams-changes"], [0.556, 7.7951, "shower", "naghams-changes"],
   [0.556, 6.7435, "vanity", "naghams-changes"]);
+// Kareem's Changes starts as an exact copy of Nagham's Changes: the same words.
+WORDS.push(...WORDS.filter(w => w[3] === "naghams-changes").map(([x, y, word]) => [x, y, word, "kareems-changes"]));
 
 // The word for a furniture group (a direct child of furnish's root) in this plan version, or null.
 export function wordFor(group, version) {

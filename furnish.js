@@ -367,15 +367,17 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(x - 0.015, x + 0.015, 0.08, 2.5, 0.62, 0.635, mat.walnut);
     }
   };
-  const wc = (x0, x1, cabinet) => p => {  // wall-hung WC on a slatted wall and ledge running x0..x1, cabinet above
+  const wc = (x0, x1, cabinet, o = {}) => p => {  // wall-hung WC on a slatted wall and ledge running x0..x1, cabinet above
+    const d = o.box ?? 0.2, b1 = o.boxTo ?? x1;  // flush-box (ledge) depth from the wall; the box and cabinet end at b1
     p.box(x0, x1, 0, M.ceiling, 0, 0.02, mat.oakSlats);
-    p.box(x0, x1, 0, 1.1, 0.02, 0.2, mat.oakSlats);
-    p.model("models/wc-wallhung.glb", mat.ceramic, 0, 0.1, 0.2);
-    p.model("models/wc-spray.glb", mat.chrome, -0.33, 0.3, 0.2);  // hand spray on the ledge, shower side
-    p.box(-0.12, 0.12, 1.0, 1.08, 0.2, 0.21, mat.brass);
+    p.box(x0, b1, 0, 1.1, 0.02, d, mat.oakSlats);
+    p.model("models/wc-wallhung.glb", mat.ceramic, 0, 0.1, d, o.pan ? { size: o.pan } : {});
+    p.model("models/wc-spray.glb", mat.chrome, -0.33, 0.3, d);  // hand spray on the ledge, shower side
+    p.box(-0.12, 0.12, 1.0, 1.08, d, d + 0.01, mat.brass);
     if (cabinet) {
-      p.box(x0, x1, 1.65, 2.45, 0, 0.32, mat.oakVeneer);
-      p.box(x0 + 0.02, x1 - 0.02, 1.62, 1.64, 0.02, 0.3, mat.ledStrip);
+      const c = o.box ? d : 0.32;  // a deep flush box takes a cabinet flush with its front
+      p.box(x0, b1, 1.65, 2.45, 0, c, mat.oakVeneer);
+      p.box(x0 + 0.02, b1 - 0.02, 1.62, 1.64, 0.02, c - 0.02, mat.ledStrip);
     }
   };
   const towelRail = p => {  // towel radiator with a hanging towel, clear of the vanity top
@@ -444,11 +446,11 @@ export function furnish(scene, M, mat, version = "main") {
     ac(3.617, 4.55, "N");
     // Master bathroom: vanity and WC on the west wall, shower at the north end behind a glass screen
     item(0.556, 6.68, "E", vanity(1.03));             // DWG vanity 0.52 x 1.03
-    item(0.556, 7.58, "E", wc(-0.387, 0.416, true));  // between the vanity and the shower wall
+    item(0.556, 7.58, "E", wc(-0.387, 0.416, true, { box: 0.34, boxTo: 0.195, pan: [0.36, 0.33, 0.47] }));  // flush box 34 deep, cabinet flush above (30 cm inside); both end at the WC's north side; pan 36 x 47 as the DWG block
     item(2.052, 7.5, "W", towelRail);                 // on the partition, clear of the open door
-    // Shower (DWG): 1.50 wide x 0.84 deep behind an 18 cm partition 0.90 long on the east, open 0.60 entry on
+    // Shower (DWG): 1.50 wide x 0.78 deep behind a 24 cm partition 0.90 long on the east, open 0.60 entry on
     // the west. 3-way set on the west wall (rain arm, hand shower on a rail, thermostatic mixer and diverter);
-    // three lit niches recessed 10 cm into the partition's shower face, 0.80 wide, 1.00 to 1.90 m.
+    // three lit niches recessed 15 cm into the partition's shower face, 0.80 wide, 1.00 to 1.90 m.
     item(0.556, 8.62, "E", p => {
       p.cyl(0, 0.03, 0.075, 1.0, 1.02, mat.chrome, 32).rotation.x = Math.PI / 2;  // thermostatic mixer
       p.cyl(0, 0.045, 0.03, 1.0, 1.07, mat.chrome, 24).rotation.x = Math.PI / 2;
@@ -463,7 +465,7 @@ export function furnish(scene, M, mat, version = "main") {
       p.cyl(-0.31, 0.11, 0.022, 1.42, 1.62, mat.chrome, 16);
       p.cyl(-0.31, 0.11, 0.045, 1.62, 1.66, mat.chrome, 24);
     });
-    item(1.6015, 8.1875, "N", p => {  // on the 1 cm stone lining of the partition's shower face: niches 0.80 wide (DWG dashed outline)
+    item(1.6015, 8.247, "N", p => {  // on the 1 cm stone lining of the partition's shower face: niches 0.80 wide (DWG dashed outline)
       p.face(-0.4, 0.4, 1.0, 1.9, 0.002, mat.greyLacquer);  // the recess, read as a darker back
       for (const y of [1.0, 1.3, 1.6, 1.9]) p.box(-0.4, 0.4, y - 0.02, y + 0.005, 0, 0.012, greyStone);
       for (const y of [1.3, 1.6, 1.9]) p.box(-0.38, 0.38, y - 0.035, y - 0.025, 0.004, 0.012, mat.ledStrip);

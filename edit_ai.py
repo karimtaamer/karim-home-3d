@@ -5,7 +5,7 @@
 
 The page (edit-ai.js) freezes the 3D or 2D view, the user circles what to change (or picks Whole view), says what
 they want and may attach reference pictures. POST /api/edit-ai/chat sends that here; an OpenAI chat model with
-vision (EDIT_AI_MODEL, default gpt-5.2, key EDIT_AI_OPENAI_API_KEY, kept apart from Generate Photo Spot's
+vision (EDIT_AI_MODEL, default gpt-5.6-sol, key EDIT_AI_OPENAI_API_KEY, kept apart from Generate Photo Spot's
 OPENAI_API_KEY) works through tools: it greps and reads furnish.js / materials.js / the docs, edits them by exact
 search/replace, queries and edits the version's DXF (edit_ai_dxf.py), and the model and drawing are rebuilt from the
 DXF (build_geometry.py, build_drawing.py) whenever the plan changed, so the 3D and the 2D stay one.
@@ -36,14 +36,14 @@ ROOT = Path(__file__).resolve().parent
 LIVE = "edit-ai-live"  # the store's prefix, and the folder here
 BLOB = bool(photogen_blob.token())
 ON_VERCEL = bool(os.environ.get("VERCEL"))
-MODEL = os.environ.get("EDIT_AI_MODEL", "gpt-5.2")
+MODEL = os.environ.get("EDIT_AI_MODEL", "gpt-5.6-sol")
 RATE = int(os.environ.get("EDIT_AI_RATE", "20"))
 OPENAI_URL = os.environ.get("EDIT_AI_OPENAI_URL", "https://api.openai.com/v1/chat/completions")  # a test double can stand in
 MAX_STEPS = 16  # tool rounds per message
 MAX_IMAGE = 3_000_000  # bytes of a data URL
 MAX_REFS = 4
 # USD per million tokens (input, cached input, output), OpenAI list prices; only to tell the user what a message cost.
-PRICES = {"gpt-5.2": (1.75, 0.175, 14.0), "gpt-4.1": (2.0, 0.5, 8.0), "gpt-4.1-mini": (0.4, 0.1, 1.6), "gpt-4.1-nano": (0.1, 0.025, 0.4),
+PRICES = {"gpt-5.6-sol": (5.0, 0.5, 30.0), "gpt-4.1": (2.0, 0.5, 8.0), "gpt-4.1-mini": (0.4, 0.1, 1.6), "gpt-4.1-nano": (0.1, 0.025, 0.4),
           "gpt-4o": (2.5, 1.25, 10.0), "gpt-4o-mini": (0.15, 0.075, 0.6)}
 ORIGIN = (190.4049651574427, -121.6132067325871)  # DWG -> plan, the same for every version (model*.js "origin")
 
@@ -489,7 +489,7 @@ def plan_edits():
 def openai(messages, first=False):
     tools = [t for t in TOOLS if plan_edits() or not t["name"].startswith("dxf_")]
     req = urllib.request.Request(OPENAI_URL, method="POST", data=json.dumps({
-        "model": MODEL, "messages": messages, "temperature": 0.2, **({"tool_choice": "required"} if first else {}),
+        "model": MODEL, "messages": messages, **({"reasoning_effort": "none"} if MODEL.startswith(("gpt-5", "gpt-6")) else {"temperature": 0.2}), **({"tool_choice": "required"} if first else {}),
         "tools": [{"type": "function", "function": t} for t in tools]}).encode(),
         headers={"Authorization": f"Bearer {api_key()}", "Content-Type": "application/json"})
     try:

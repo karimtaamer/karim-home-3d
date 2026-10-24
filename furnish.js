@@ -712,7 +712,48 @@ export function furnish(scene, M, mat, version = "main") {
   // West run, hob: DWG hob block 0.924 wide centred at y 7.376. North run, sink: DWG sink block 0.877 wide at x 8.193.
   run(K.x0, (6.27 + K.y1 - K.front) / 2, "E", K.y1 - K.front - 6.27, { hob: 7.376 - (6.27 + K.y1 - K.front) / 2, hobW: 0.924 });
   run((K.x0 + 9.6) / 2, K.y1, "S", 9.6 - K.x0, { sink: 8.193 - (K.x0 + 9.6) / 2, sinkW: 0.877, window: [7.45 - (K.x0 + 9.6) / 2, 8.75 - (K.x0 + 9.6) / 2] });
-  run((K.x0 + 8.6) / 2, K.y0, "N", 8.6 - K.x0, { uppers: false });                   // south run
+  if (version === "naghams-changes") {
+    // Nagham's Changes: the south run's straight counter (DWG x 197.4826 to 198.9716, from the west run's
+    // front to the counter's end) becomes floor-to-ceiling joinery, 0.60 deep off the DWG wall face (y 5.6604):
+    // a 0.90 appliance tower (microwave over oven) and a 0.589 pantry. Only the corner square under the L stays.
+    const XT = 7.0776, XP = 7.9776, XE = 8.5666, WY = 5.6604, D = 0.6, f = 0.018, H = M.ceiling;
+    run((K.x0 + XT) / 2, K.y0, "N", XT - K.x0, { uppers: false });                    // corner of the L
+    const tall = (hw, build) => p => {               // carcass, recessed plinth, then the fronts from build
+      for (const s of [-1, 1]) p.box(s > 0 ? hw - f : -hw, s > 0 ? hw : -hw + f, 0, H, 0, D, mat.whiteLacquer);
+      p.box(-hw + f, hw - f, 0.1, H, 0, 0.02, mat.whiteLacquer);
+      p.box(-hw + f, hw - f, 0, 0.1, 0.06, D - 0.06, mat.darkTop);
+      p.box(-hw + f, hw - f, 0.02, 0.04, D - 0.08, D - 0.06, mat.ledStrip);
+      build(p, hw - f);
+    };
+    const doors = (p, a, b, y0, y1, n) => {          // flat white handleless fronts, n across, shadow gaps between
+      p.box(a, b, y0, y1, D - f, D, mat.whiteLacquer);
+      p.box(a, b, y1 - 0.002, y1 + 0.002, D, D + 0.003, shadowGap);
+      for (let k = 1; k < n; k++) { const x = a + k * (b - a) / n; p.box(x - 0.002, x + 0.002, y0, y1, D, D + 0.003, shadowGap); }
+    };
+    item((XT + XP) / 2, WY, "N", tall(0.45, (p, w) => {
+      const aw = 0.2975;                              // 0.595 built-in appliances, white fillers either side
+      doors(p, -w, w, 0.1, 0.6, 2);                   // two-door cupboard under the oven
+      for (const s of [-1, 1]) p.box(s > 0 ? aw : -w, s > 0 ? w : -aw, 0.6, 1.65, D - f, D, mat.whiteLacquer);
+      p.box(-aw, aw, 0.6, 1.65, 0.02, D - 0.03, mat.blackSteel);                     // appliance housings
+      p.box(-aw, aw, 0.6, 1.195, D - 0.03, D - 0.005, mat.blackGlass);              // oven 0.60 niche, 0.60 to 1.20
+      p.box(-aw + 0.06, aw - 0.06, 0.66, 1.03, D - 0.005, D - 0.003, mat.smokedGlass);  // its window
+      p.box(-0.24, 0.24, 1.07, 1.085, D - 0.005, D + 0.03, mat.chrome);             // bar handle
+      p.box(-aw, aw, 1.115, 1.19, D - 0.005, D - 0.002, mat.blackSteel);            // control strip
+      p.box(-0.04, 0.04, 1.145, 1.16, D - 0.002, D - 0.001, mat.ledStrip);
+      p.box(-aw, aw, 1.2, 1.65, D - 0.03, D - 0.005, mat.blackGlass);               // microwave 0.45 niche, 1.20 to 1.65
+      p.box(-aw + 0.03, aw - 0.16, 1.25, 1.6, D - 0.005, D - 0.003, mat.smokedGlass);
+      p.box(aw - 0.13, aw - 0.03, 1.55, 1.565, D - 0.005, D - 0.002, mat.ledStrip);  // display
+      p.box(-w, w, 1.198, 1.202, D, D + 0.003, shadowGap);
+      doors(p, -w, w, 1.65, 2.25, 2);                 // two-door cupboards to the ceiling,
+      doors(p, -w, w, 2.25, H, 2);                    // jointed in line with the oak uppers
+    }));
+    item((XP + XE) / 2, WY, "N", tall((XE - XP) / 2, (p, w) => {
+      doors(p, -w, w, 0.1, 2.25, 1);                  // pantry: tall door and a top door
+      doors(p, -w, w, 2.25, H, 1);
+    }));
+  } else {
+    run((K.x0 + 8.6) / 2, K.y0, "N", 8.6 - K.x0, { uppers: false });                 // south run
+  }
   // Tall column in the DWG dishwasher block (0.623 wide, y 7.815 to 8.438), floor to ceiling, as in
   // the designer's render: recessed plinth, base front to 0.6, raised dishwasher 0.6-1.42, open
   // dish-rack niche 1.42-1.82, flush cupboards to the ceiling. Fronts at F, flush with the fridge surround.

@@ -963,8 +963,8 @@ export function furnish(scene, M, mat, version = "main") {
     skirt.rotation.y = -a;
   });
   item(18.86, 2.103, "N", p => sofa(p, 2.05, 1.02, mat.boucle, [mat.linenSlate, mat.linenBlush, mat.linenSlate]));  // DWG, clear of the pier
-  item(21.027, 3.85, "W", p => sofa(p, 2.0, 0.92, mat.boucle, [mat.linenSlate, mat.linenBlush]));  // back on the DWG sofa's back line, clear of the curtains
-  item(19.1, 5.55, "S", p => {  // DWG armchair, as rendered: open walnut lounge frame, slate cushions, blush pillow
+  item(21.027, 4.165, "W", p => sofa(p, 2.0, 0.92, mat.boucle, [mat.linenSlate, mat.linenBlush]));  // centred on the DWG sofa, back on its back line, clear of the curtains
+  item(19.1, 5.95, "S", p => {  // DWG armchair, as rendered: open walnut lounge frame, slate cushions, blush pillow
     for (const s of [-1, 1]) {
       const x = s * 0.36;
       p.box(x - 0.025, x + 0.025, 0.56, 0.6, 0.04, 0.8, mat.walnut, 0.012);  // arm
@@ -976,19 +976,19 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-0.33, 0.33, 0.36, 0.88, 0.07, 0.21, mat.linenSlate, 0.05).rotation.x = -0.32;
     p.box(-0.06, 0.24, 0.46, 0.74, 0.2, 0.33, mat.linenBlush, 0.07).rotation.set(-0.3, 0, 0.2);
   });
-  rug(17.9, 2.4, 20.5, 5.0);
-  item(19.0, 3.7, "S", p => {  // oval marble coffee table on two walnut drums
-    const top = p.cyl(0, 0, 0.55, 0.36, 0.42, mat.marbleTop, 40); top.scale.z = 0.55;
+  rug(17.9, 2.906, 20.5, 5.506);  // centred on the coffee table
+  item(19.008, 4.206, "W", p => {  // DWG coffee table 1.03 x 0.62, long side along the sofa: oval marble top on two walnut drums
+    const top = p.cyl(0, 0, 0.515, 0.36, 0.42, mat.marbleTop, 40); top.scale.z = 0.6;
     for (const x of [-0.25, 0.25]) p.cyl(x, 0, 0.15, 0, 0.36, mat.walnut, 24);
   });
-  item(20.45, 2.34, "S", p => { p.cyl(0, 0, 0.25, 0.52, 0.56, mat.marbleTop, 32); p.cyl(0, 0, 0.13, 0, 0.52, mat.walnut, 24); });
+  item(20.341, 2.687, "S", p => { p.cyl(0, 0, 0.205, 0.52, 0.56, mat.marbleTop, 32); p.cyl(0, 0, 0.11, 0, 0.52, mat.walnut, 24); });  // DWG side table
   plant(17.6, 2.33, 1.6, 0.24);
   // Two 1.05 x 1.30 m framed prints as in render 11, 0.30 m apart and centred over the sofa, on the south
   // wall's built-out face (y 2.0705, flush with the pier: the recesses either side are filled to it).
   for (const x of [18.195, 19.525]) art(x, 2.0705, "N", 1.0, 1.25, 1.62, x < 19 ? 0 : 1);
   // Curtains either side of each slider (the sofa one 2.00 m, centred on the sofa): sheer on the track nearest
   // the glass, curtains stacked in front, both clear of the sofa back (x 21.027).
-  for (const [y0, y1] of [[2.82, 4.88], [6.34, 8.08]]) {
+  for (const [y0, y1] of [[3.135, 5.195], [6.34, 8.08]]) {
     for (const y of [y0 - 0.15, y1 + 0.15]) item(21.22, y, "W", p => {
       const m = mesh(curtainGeometry(0.45, 2.5), mat.curtain, p.g); m.position.set(0, 1.3, 0.14);
     });
@@ -997,7 +997,7 @@ export function furnish(scene, M, mat, version = "main") {
   // One plaster curtain box along the whole east wall. The ACs are concealed (ducted) units in metal
   // boxes on the terrace over each slider (see Terrace), each feeding a linear grille in the box face.
   item(21.222, (1.94 + 9.5) / 2, "W", p => p.box(-3.78, 3.78, 2.1, M.ceiling, 0, 0.3, mat.limewash));
-  for (const [y0, y1] of [[2.85, 4.85], [6.34, 8.08]]) item(21.222, (y0 + y1) / 2, "W", p => {
+  for (const [y0, y1] of [[3.165, 5.165], [6.34, 8.08]]) item(21.222, (y0 + y1) / 2, "W", p => {
     p.box(-(y1 - y0) / 2 + 0.1, (y1 - y0) / 2 - 0.1, 2.3, 2.36, 0.3, 0.302, mat.grille);
     for (let k = 1; k < 3; k++) p.box(-(y1 - y0) / 2 + 0.1, (y1 - y0) / 2 - 0.1, 2.3 + k * 0.02 - 0.002, 2.3 + k * 0.02, 0.302, 0.304, mat.applianceWhite);
   });
@@ -1077,7 +1077,7 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-0.68, -0.39, 0.93, 0.95, 0.3, 0.44, mat.chrome);
   });
   item(16.95, 9.5, "S", p => p.box(-1.0, 1.0, 2.5, 2.52, 0.02, 0.22, mat.ledStrip));
-  plant(21.0, 5.9, 1.7, 0.25);
+  plant(20.75, 5.77, 1.7, 0.25);  // in the pier between the sofa window and the slider, between their curtain stacks
 
   // --- Terrace: decking, L bench, lounge set, BBQ counter ----------
   const T = { x0: 21.47, x1: 24.76, y0: 1.78, y1: 9.4 };  // no pergola, per the client

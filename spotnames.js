@@ -40,8 +40,8 @@ export const WORDS = [
   // Entrance: the console by the door, the mirror wall facing it, the door
   [0, 3.6001, "console"], [8.512, 5.55, "mirror"], [9.365, 5.55, "mirror"], [9.28, 5.55, "mirror"], [8.48, 3.72, "door"],
   // Reception
-  [17.25, 3.67, "TV"], [18.86, 2.103, "sofa"], [21.027, 3.85, "sofa"], [19.1, 5.55, "armchair"],
-  [19.0, 3.7, "coffee table"], [20.45, 2.34, "side table"],
+  [17.25, 3.67, "TV"], [18.86, 2.103, "sofa"], [21.027, 4.165, "sofa"], [19.1, 5.95, "armchair"],
+  [19.008, 4.206, "coffee table"], [20.341, 2.687, "side table"],
   // Dining: table, chairs and lanterns all name the table
   [18.4, 7.6, "table"], [17.6, 7.6, "table"], [19.2, 7.6, "table"], [16.95, 7.6, "table"], [19.85, 7.6, "table"],
   ...[17.6, 18.4, 19.2].flatMap(x => [[x, 6.55, "table"], [x, 8.65, "table"]]),

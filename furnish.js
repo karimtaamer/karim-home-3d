@@ -730,22 +730,28 @@ export function furnish(scene, M, mat, version = "main") {
       for (let k = 1; k < n; k++) { const x = a + k * (b - a) / n; p.box(x - 0.002, x + 0.002, y0, y1, D, D + 0.003, shadowGap); }
     };
     item((XT + XE) / 2, WY, "N", tall(0.45, (p, w) => {
-      // Single full-width fronts (no centre split, so the only vertical joint is at the tower's edges):
-      // a 0.90 pan drawer under the oven, then lift-up flaps to the ceiling.
-      doors(p, -w, w, 0.1, 0.6, 1);                   // 90 drawer under the oven
-      p.box(-w, w, 0.6, 1.65, 0.02, D - 0.03, mat.blackSteel);                       // appliance housing
-      p.box(-w, w, 0.6, 1.195, D - 0.03, D - 0.005, mat.blackGlass);                // 90 oven, 0.60 niche, 0.60 to 1.20
-      p.box(-w + 0.07, w - 0.07, 0.66, 1.03, D - 0.005, D - 0.003, mat.smokedGlass);  // its window
-      p.box(-0.36, 0.36, 1.07, 1.085, D - 0.005, D + 0.03, mat.chrome);             // bar handle
-      p.box(-w, w, 1.115, 1.19, D - 0.005, D - 0.002, mat.blackSteel);              // control strip
-      p.box(-0.04, 0.04, 1.145, 1.16, D - 0.002, D - 0.001, mat.ledStrip);
-      const mw = 0.275;                               // 0.55 microwave, centred, white panels either side
-      for (const s of [-1, 1]) p.box(s > 0 ? mw : -w, s > 0 ? w : -mw, 1.2, 1.65, D - f, D, mat.whiteLacquer);
-      p.box(-mw, mw, 1.2, 1.65, D - 0.03, D - 0.005, mat.blackGlass);               // microwave 0.45 niche, 1.20 to 1.65
-      p.box(-mw + 0.03, mw - 0.16, 1.25, 1.6, D - 0.005, D - 0.003, mat.smokedGlass);
-      p.box(mw - 0.13, mw - 0.03, 1.55, 1.565, D - 0.005, D - 0.002, mat.ledStrip);  // display
-      for (const y of [0.6, 1.198]) p.box(-w, w, y - 0.002, y + 0.002, D, D + 0.003, shadowGap);
-      doors(p, -w, w, 1.65, 2.25, 1);                 // lift-up flaps to the ceiling,
+      // Owner's stack (cm from the floor): plinth 0-10, 90 pan drawer 10-76.5, oven 76.5-132.5, white rail
+      // 132.5-137, microwave 137-169.6 (turntable ~140), lift-up flaps 169.6-225 and 225-260. Single full-width
+      // fronts (no centre split), so the only vertical joints are at the tower's edges.
+      const O0 = 0.765, O1 = 1.325, M0 = 1.37, M1 = 1.696;
+      doors(p, -w, w, 0.1, O0, 1);                    // 90 pan drawer under the oven
+      // Oven: Purity 90 built-in, 89.5 W x 56 H x 60 D, centred; its fascia overlaps the carcass sides.
+      const ow = 0.4475;
+      p.box(-w, w, O0, O1, 0.02, D - 0.02, mat.blackSteel);                          // body in the carcass
+      p.box(-ow, ow, O0, O1, D - 0.02, D + 0.002, mat.blackGlass);                   // fascia
+      p.box(-ow + 0.07, ow - 0.07, O0 + 0.06, O0 + 0.40, D + 0.002, D + 0.004, mat.smokedGlass);  // its window
+      p.box(-0.36, 0.36, O0 + 0.43, O0 + 0.445, D + 0.002, D + 0.035, mat.chrome);   // bar handle
+      p.box(-ow, ow, O1 - 0.075, O1 - 0.005, D + 0.002, D + 0.004, mat.blackSteel);  // control strip
+      p.box(-0.04, 0.04, O1 - 0.048, O1 - 0.033, D + 0.004, D + 0.005, mat.ledStrip);
+      p.box(-w, w, O1, M0, D - f, D, mat.whiteLacquer);                              // 4.5 rail, oven clear of the microwave
+      // Microwave: 55.3 W x 32.6 H x 44 D, centred, front flush with the tower fronts, white panels either side.
+      const mw = 0.2765;
+      for (const s of [-1, 1]) p.box(s > 0 ? mw : -w, s > 0 ? w : -mw, M0, M1, D - f, D, mat.whiteLacquer);
+      p.box(-mw, mw, M0, M1, D - 0.44, D, mat.blackGlass);
+      p.box(-mw + 0.03, mw - 0.16, M0 + 0.03, M1 - 0.03, D, D + 0.002, mat.smokedGlass);
+      p.box(mw - 0.13, mw - 0.03, M1 - 0.05, M1 - 0.035, D, D + 0.002, mat.ledStrip);  // display
+      for (const y of [O0, O1, M0, M1]) p.box(-w, w, y - 0.002, y + 0.002, D, D + 0.003, shadowGap);
+      doors(p, -w, w, M1, 2.25, 1);                   // lift-up flaps to the ceiling,
       doors(p, -w, w, 2.25, H, 1);                    // jointed in line with the oak uppers
       for (const s of [-1, 1]) p.box(s * 0.45 - 0.003, s * 0.45 + 0.003, 0.1, H, D - 0.004, D + 0.003, shadowGap);  // the joints at its edges
     }));

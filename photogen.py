@@ -15,7 +15,14 @@ the plan version's spots file the page is showing, e.g. spots-bigger-bedroom.jso
 
 The key comes from OPENAI_API_KEY, or a line OPENAI_API_KEY=... in .env next to this file (git-ignored).
 OPENAI_IMAGE_MODEL picks the model (default gpt-image-2). Drafts are kept in renders/drafts/.
-PHOTOSPOT_PASSWORD, when set, has to come with every generate and approve (the page asks for it once).
+PHOTOSPOT_PASSWORD, when set, has to come with every generate, approve, edit, delete and name (the page asks once).
+PHOTOGEN_MOCK=1 (or --dry-run) makes no OpenAI calls: generate echoes the view, edit the render, name says "view".
+
+The Renders screen edits a saved render in words (edit: the render as image 1 with the board and the furniture
+renders, saved as a new spot "of" its first version with the next "version" number; the old one stays) and
+deletes generated ones (delete: image and spot entry; on Vercel also a marker, renders/ai-deleted/<file>/<id>.json,
+which hides a spot kept in git and keeps its id from being reused). A new spot with no named furniture piece
+in frame is named from its first attempt by a cheap vision model (name, OPENAI_NAME_MODEL, default gpt-4.1-nano).
 
 On Vercel api/photospot.py runs these same endpoints. There renders/ can't be written, so drafts, approved
 images and their spots go to Vercel Blob (photogen_blob.py, on when BLOB_READ_WRITE_TOKEN is set) under the
@@ -34,7 +41,11 @@ DRAFTS = RENDERS / "drafts"
 SPOTS_FILE = re.compile(r"^spots(-[a-z0-9-]+)?\.json$")  # spots.json and the plan versions' spots-<id>.json
 MODEL = os.environ.get("OPENAI_IMAGE_MODEL", "gpt-image-2")
 SIZE = "1536x1024"  # 3:2 landscape, the shape the viewer crops its screenshot to
-DRY = "--dry-run" in sys.argv
+DRY = "--dry-run" in sys.argv or os.environ.get("PHOTOGEN_MOCK") == "1"  # PHOTOGEN_MOCK=1: tests, no OpenAI calls
+NAME_MODEL = os.environ.get("OPENAI_NAME_MODEL", "gpt-4.1-nano")  # names a spot from its image when the model can't
+# USD per million tokens, OpenAI's list prices for gpt-image-1 (text in, image in, image out); gpt-image-2 is
+# assumed to cost the same until OpenAI's price page says otherwise. Only used to log what a call cost.
+PRICE = {"text": 5.0, "image": 10.0, "output": 40.0}
 SAME_ROOM, MAX_REFS = 2, 4  # whole designer renders sent for colour and light (more invites copying their layout)
 MAX_FURNITURE, MAX_IMAGES = 6, 16  # extra renders sent for their furniture; OpenAI edits take at most 16 images
 SOFT = {"LIVING ROOM", "RECEPTION", "MASTER BEDROOM", "DINING"}  # the rooms that show the fabrics and art best
@@ -82,14 +93,27 @@ def fetched(path):
 
 
 def blob_spots(name):
-    """The spots approved on Vercel for a spots file (and, for a plan version, the file it extends)."""
+    """The spots approved on Vercel for a spots file (and, for a plan version, the file it extends), less the deleted."""
     if not BLOB:
         return []  # on disk they are in the file itself
-    path = spots_path(name)
-    data = json.loads(path.read_text()) if path.exists() else []
+    data = read(name)
     base = [] if isinstance(data, list) else [s for s in blob_spots(data["extends"]) if s["room"] not in data.get("replaces", [])]
     own = [json.loads(photogen_blob.get(p)) for p in sorted(photogen_blob.names(f"renders/ai-spots/{name}/"))]
-    return base + own
+    gone = deleted(name)
+    return [s for s in base + own if s["id"] not in gone]
+
+
+def deleted(name):
+    """Ids deleted on Vercel from a spots file and the files it extends. Each leaves a marker, renders/ai-deleted/
+    <file>/<id>.json, so a spot kept in git (which Vercel can't rewrite) stays hidden and its id is never reused."""
+    if not BLOB:
+        return set()  # on disk a deleted spot leaves its file
+    return {Path(p).stem for f in chain(name) for p in photogen_blob.names(f"renders/ai-deleted/{f}/")}
+
+
+def live_spots(name):
+    """The page's extra spots: those approved on Vercel, plus {id, deleted} for each deleted one it should drop."""
+    return blob_spots(name) + [{"id": i, "deleted": True} for i in sorted(deleted(name))]
 
 
 def api_key():
@@ -110,26 +134,67 @@ def spots_path(name):
     return ROOT / name
 
 
+def read(name):
+    path = spots_path(name)
+    return json.loads(path.read_text()) if path.exists() else []
+
+
+def own(name):
+    """The spots a file lists itself (not those of the file it extends)."""
+    data = read(name)
+    return data if isinstance(data, list) else data["spots"]
+
+
+def chain(name):
+    """A spots file and the files it extends, nearest first."""
+    out, data = [name], read(name)
+    while isinstance(data, dict):
+        out.append(data["extends"])
+        data = read(data["extends"])
+    return out
+
+
 def spots(name="spots.json"):
     """A spots file as one list; a plan version's ({extends, replaces, spots}) is the file it extends,
     less the rooms it replaces, plus its own spots (as spots.js reads it)."""
-    path = spots_path(name)
-    data = json.loads(path.read_text()) if path.exists() else []
+    data = read(name)
     if isinstance(data, list):
         return data
     return [s for s in spots(data["extends"]) if s["room"] not in data.get("replaces", [])] + data["spots"]
 
 
-def add_spot(name, spot):
-    path = spots_path(name)
-    data = json.loads(path.read_text()) if path.exists() else []
-    items = (data if isinstance(data, list) else data["spots"]) + [spot]
+def write_spots(name, items):
+    path, data = spots_path(name), read(name)
     lines = "[\n  " + ",\n  ".join(json.dumps(s, ensure_ascii=False) for s in items) + "\n]"
     if isinstance(data, list):
         path.write_text(lines + "\n")
     else:  # keep the version's header, one spot per line as in spots.json
         head = json.dumps({k: v for k, v in data.items() if k != "spots"}, ensure_ascii=False, indent=2)[:-2]
         path.write_text(head + ',\n  "spots": ' + lines.replace("\n", "\n  ") + "\n}\n")
+
+
+def add_spot(name, spot):
+    write_spots(name, own(name) + [spot])
+
+
+def find(name, sid):
+    """-> (spot, the file that holds it) for a spot the page shows in this spots file."""
+    gone = deleted(name)
+    for f in chain(name):
+        for s in own(f) + ([json.loads(photogen_blob.get(p)) for p in photogen_blob.names(f"renders/ai-spots/{f}/{sid}.json")] if BLOB else []):
+            if s["id"] == sid and sid not in gone:
+                return s, f
+    raise ValueError("no such render")
+
+
+def next_id():
+    """ai-NN, numbered across every version's file, so images never share a name in renders/ (nor, on Vercel,
+    with a deleted one the Blob cache may still hold)."""
+    ids = {s["id"] for f in ROOT.glob("spots*.json") if SPOTS_FILE.match(f.name) for s in spots(f.name)}
+    if BLOB:
+        ids |= {Path(p).stem for p in photogen_blob.names("renders/ai-spots/") + photogen_blob.names("renders/ai-deleted/")}
+    n = 1 + max((int(i[3:]) for i in ids if re.fullmatch(r"ai-\d+", i)), default=0)
+    return f"ai-{n:02d}"
 
 
 def small(path):
@@ -169,11 +234,11 @@ def furniture(room, seen, name):
     items = json.loads(BRIEF.read_text()).get("furniture", []) if BRIEF.exists() else []
     rooms = list(dict.fromkeys(x for r in [room, *seen] for x in (r, STAND_IN.get(r, r))))
     try:
-        later = blob_spots(name)
+        later, gone = blob_spots(name), deleted(name)
     except Exception as e:  # without them the designer's renders still go
         print(f"[photogen] no approved spots from Blob: {e}", flush=True)
-        later = []
-    have = {s["photo"]: s for s in spots(name) + later}  # every previous render of this plan version
+        later, gone = [], set()
+    have = {s["photo"]: s for s in spots(name) + later if s["id"] not in gone}  # every previous render of this plan version
     rank = lambda s: rooms.index(s["room"]) if s["room"] in rooms else len(rooms)
     shown = {}
     for f in items:
@@ -213,6 +278,10 @@ def board():
         from PIL import Image, ImageDraw, ImageFont
     except ImportError:
         print("[photogen] no Pillow: sending no material board", flush=True)
+        return None
+    missing = [w["render"] for w in sw if not (ROOT / "renders" / w["render"]).exists()]
+    if missing:
+        print(f"[photogen] board renders missing ({', '.join(missing)}): sending no material board", flush=True)
         return None
     rows = -(-len(sw) // COLS)
     img = Image.new("RGB", (TILE * COLS, rows * (TILE + LABEL)), "white")
@@ -279,20 +348,7 @@ def prompt(ctx, refs, comments, revising, has_board):
                      "flush honey oak, the headboard the cream boucle, bedding, rugs and cushions their fabrics, "
                      "bathroom walls the oak slats and stone, corridor walls and trim the corridor finishes. Copy "
                      "their colour, grain, weave, texture and sheen closely.")
-    for s, w in refs:
-        here = " (this room)" if s["room"] == r["name"] else " (a room in shot)" if s["room"] in [x["name"] for x in seen] else ""
-        if w is None:
-            lines.append(f"{next(n)}. RENDER - the designer's render \"{s['caption']}\"{here}, from another angle. "
-                         "Use it only for the colour palette, the warmth and softness of the light and the render "
-                         "quality; ignore its layout and objects.")
-        elif s.get("ai"):
-            lines.append(f"{next(n)}. FURNITURE - render \"{s['caption']}\"{here}, an approved earlier photo of this "
-                         "apartment from another angle, shows its furniture as already chosen. Keep those pieces' "
-                         "designs and the render quality; do not copy its layout or camera.")
-        else:
-            lines.append(f"{next(n)}. FURNITURE - the designer's render \"{s['caption']}\"{here}, from another angle, "
-                         f"shows {'; '.join(w)}. Keep those pieces' designs, and use it for the colour palette, the "
-                         "light and the render quality; do not copy its layout or camera.")
+    lines += [ref_line(next(n), s, w, r["name"], [x["name"] for x in seen]) for s, w in refs]
     if furn:
         lines += ["", "Use the EXACT furniture shown in the FURNITURE reference images (same design, shape, fabric, "
                   "colour, wood and details) for the pieces standing where the VIEW's blocks are; do not substitute "
@@ -319,6 +375,47 @@ def prompt(ctx, refs, comments, revising, has_board):
     return "\n".join(lines)
 
 
+def ref_line(k, s, w, room, seen):
+    """Image k's line in a prompt: a whole render (s), sent for colour and light (w None) or its furniture too."""
+    here = " (this room)" if s["room"] == room else " (a room in shot)" if s["room"] in seen else ""
+    if w is None:
+        return (f"{k}. RENDER - the designer's render \"{s['caption']}\"{here}, from another angle. "
+                "Use it only for the colour palette, the warmth and softness of the light and the render "
+                "quality; ignore its layout and objects.")
+    if s.get("ai"):
+        return (f"{k}. FURNITURE - render \"{s['caption']}\"{here}, an approved earlier photo of this "
+                "apartment from another angle, shows its furniture as already chosen. Keep those pieces' "
+                "designs and the render quality; do not copy its layout or camera.")
+    return (f"{k}. FURNITURE - the designer's render \"{s['caption']}\"{here}, from another angle, "
+            f"shows {'; '.join(w)}. Keep those pieces' designs, and use it for the colour palette, the "
+            "light and the render quality; do not copy its layout or camera.")
+
+
+def edit_prompt(s, refs, instruction, earlier, has_board):
+    """A saved render revised in words: RENDER first (held closest), then BOARD and the FURNITURE renders."""
+    n = iter(range(2, 99))
+    lines = [
+        "Edit image 1 (RENDER), a finished photo of this apartment, as the client asks below. Change only what "
+        "the request asks for. Keep everything else exactly as it is: the same camera, angle, lens, framing and "
+        "composition, and every wall, opening, piece of furniture, light and object in the same place with the "
+        "same shape, size, material and colour. Keep the photorealistic render quality. No text, no labels, no people.",
+        "",
+        "Images, in order:",
+        f"1. RENDER - \"{s['caption']}\", the photo to revise.",
+    ]
+    if has_board:
+        lines.append(f"{next(n)}. BOARD - the designer's materials, cropped from their renders, each labelled with "
+                     "what it is for. Use these finishes for anything the request changes.")
+    lines += [ref_line(next(n), x, w, s["room"], []) for x, w in refs]
+    if any(w is not None for _, w in refs):
+        lines += ["", "A piece the request names takes its EXACT design from the FURNITURE images; do not copy their "
+                  "layout or camera."]
+    lines += ["", f"Room: {captionish(s['room'])}.", "", "The client's revision, to make now: " + instruction]
+    if earlier:
+        lines.append("Earlier revisions, already made - keep them: " + " | ".join(earlier))
+    return "\n".join(lines)
+
+
 def captionish(name):
     return {"TOILET 1": "Master bathroom", "TOILET 2": "Guest bathroom"}.get(name, name.capitalize())
 
@@ -335,13 +432,26 @@ def multipart(fields, files):
     return bytes(out), f"multipart/form-data; boundary={boundary}"
 
 
+def cost(usage):
+    """An images/edits usage block -> estimated USD (PRICE), or None without one."""
+    if not usage:
+        return None
+    d = usage.get("input_tokens_details") or {}
+    text, image = d.get("text_tokens", 0), d.get("image_tokens", usage.get("input_tokens", 0))
+    return round((text * PRICE["text"] + image * PRICE["image"] + usage.get("output_tokens", 0) * PRICE["output"]) / 1e6, 4)
+
+
 def edit(images, text):
+    """-> (PNG bytes, usage) from OpenAI image edit; the usage is logged with its estimated cost."""
     body, ctype = multipart({"model": MODEL, "prompt": text, "size": SIZE, "quality": "high", "n": "1"}, images)
     req = urllib.request.Request("https://api.openai.com/v1/images/edits", data=body, method="POST",
                                  headers={"Authorization": f"Bearer {api_key()}", "Content-Type": ctype})
     try:
         with urllib.request.urlopen(req, timeout=290 if BLOB else 600) as res:  # Vercel stops a call at 300 s
-            return base64.b64decode(json.load(res)["data"][0]["b64_json"])
+            out = json.load(res)
+            usage = out.get("usage")
+            print(f"[photogen] {MODEL} usage {json.dumps(usage)} ≈ ${cost(usage)}", flush=True)
+            return base64.b64decode(out["data"][0]["b64_json"]), usage
     except urllib.error.HTTPError as e:
         try:
             msg = json.load(e)["error"]["message"]
@@ -394,13 +504,99 @@ def generate(req):
     save(f"renders/drafts/{draft}-plan.png", plan, "image/png")
     text, images, refs, mats = request(ctx, view, vmime, vext, plan, comments, prev, req.get("spots", "spots.json"))
     print(f"[photogen] {draft}: {ctx['room']['caption']}, {len(images)} images{' (revision)' if prev else ''}", flush=True)
-    out = view if DRY else edit(images, text)
+    out, usage = (view, None) if DRY else edit(images, text)
     save(f"renders/drafts/{draft}.png", out, vmime if DRY else "image/png")
     save(f"renders/drafts/{draft}.json", json.dumps({"previous": prev, "comments": comments, "ctx": ctx, "cam": req.get("cam"),
                                                     "references": [s["photo"] for s, _ in refs],
                                                     "furniture": [s["photo"] for s, w in refs if w is not None],
-                                                    "board": mats and mats.name, "prompt": text}, indent=1).encode(), "application/json")
+                                                    "board": mats and mats.name, "prompt": text,
+                                                    "usage": usage, "usd": cost(usage)}, indent=1).encode(), "application/json")
     return {"draft": draft, "src": f"renders/drafts/{draft}.png"}
+
+
+def revise(req):
+    """{spots, id, instruction} -> {spot, usd}: a saved render edited in words, saved as its next version (a new
+    spot with the same room, caption and camera, "of" its first version), the earlier versions kept."""
+    name = req.get("spots", "spots.json")
+    s, home = find(name, req.get("id", ""))
+    instruction = (req.get("instruction") or "").strip()
+    if not instruction:
+        raise ValueError("write what should change")
+    first = s.get("of") or s["id"]
+    family = [x for x in spots(home) + blob_spots(home) if (x.get("of") or x["id"]) == first]
+    src = picture(s)
+    if not src:
+        raise ValueError("the render's image can't be read")
+    mime = "image/jpeg" if src.suffix.lower() in (".jpg", ".jpeg") else "image/png"
+    images = [(f"render{src.suffix.lower()}", src.read_bytes(), mime)]
+    mats = board()
+    if mats:
+        images.append((mats.name, mats.read_bytes(), "image/jpeg"))
+    used = []
+    for x, w in furniture(s["room"], [], name):
+        if x["photo"] == s["photo"] or len(used) >= MAX_FURNITURE or len(images) >= MAX_IMAGES:
+            continue
+        p = picture(x)
+        if p:
+            images.append((p.name, p.read_bytes(), "image/jpeg" if p.suffix.lower() in (".jpg", ".jpeg") else "image/png"))
+            used.append((x, w))
+    earlier = [x["edit"] for x in sorted(family, key=lambda x: x.get("version", 1)) if x.get("edit")]
+    text = edit_prompt(s, used, instruction, earlier, bool(mats))
+    print(f"[photogen] edit {s['id']}: {len(images)} images", flush=True)
+    out, usage = (images[0][1], None) if DRY else edit(images, text)
+    sid = next_id()
+    ext, omime = (src.suffix.lower().lstrip(".") or "png", mime) if DRY else ("png", "image/png")
+    slug = re.sub(r"[^A-Za-z0-9]+", "_", s["caption"]).strip("_") or "View"
+    version = 1 + max(x.get("version", 1) for x in family)
+    photo = f"renders/{sid}-{slug}-v{version}.{ext}"
+    save(photo, out, omime)
+    spot = {"id": sid, "room": s["room"], "caption": s["caption"], **({"cam": s["cam"]} if s.get("cam") else {}),
+            "photo": photo, "ai": True, "of": first, "version": version, "edit": instruction}
+    if BLOB:
+        save(f"renders/ai-spots/{home}/{sid}.json", json.dumps(spot, ensure_ascii=False).encode(), "application/json")
+    else:
+        add_spot(home, spot)
+    save(f"renders/drafts/{sid}-edit.json", json.dumps({"from": s["id"], "prompt": text, "references": [x["photo"] for x, _ in used],
+                                                        "usage": usage, "usd": cost(usage)}, indent=1).encode(), "application/json")
+    print(f"[photogen] edited {s['id']} as {photo}", flush=True)
+    return {"spot": spot, "usd": cost(usage)}
+
+
+def delete(req):
+    """{spots, id} -> {deleted: id}: a generated render gone for good, its image and its spot entry, on disk or in
+    Blob (where a marker also hides a spot kept in git). Designer renders can't be deleted here."""
+    name = req.get("spots", "spots.json")
+    s, home = find(name, req.get("id", ""))
+    if not s.get("ai"):
+        raise ValueError("designer renders can't be deleted here, only generated ones")
+    if BLOB:
+        save(f"renders/ai-deleted/{home}/{s['id']}.json", json.dumps(s, ensure_ascii=False).encode(), "application/json")
+        photogen_blob.delete([s["photo"]] + photogen_blob.names(f"renders/ai-spots/{home}/{s['id']}.json"))
+    else:
+        write_spots(home, [x for x in own(home) if x["id"] != s["id"]])
+        (ROOT / s["photo"]).unlink(missing_ok=True)
+    print(f"[photogen] deleted {s['id']} ({s['photo']})", flush=True)
+    return {"deleted": s["id"]}
+
+
+def name_from_image(req):
+    """{draft} -> {word}: what a generated view shows, in a word or two, from a cheap vision model (NAME_MODEL).
+    The page asks only when no named furniture piece is in frame."""
+    if not DRAFT_ID.match(req.get("draft", "")):
+        raise ValueError("bad draft id")
+    if DRY:
+        return {"word": "view"}
+    data = base64.b64encode(load(f"renders/drafts/{req['draft']}.png")).decode()
+    body = json.dumps({"model": NAME_MODEL, "max_tokens": 10, "messages": [{"role": "user", "content": [
+        {"type": "text", "text": "This is an interior photo of an apartment. Name the main piece of furniture or fixture "
+                                 "it is framed on, in one or two lowercase words (e.g. bed, wardrobe, dresser, sofa, "
+                                 "vanity, shower, window). Reply with the words only."},
+        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{data}", "detail": "low"}}]}]}).encode()
+    req = urllib.request.Request("https://api.openai.com/v1/chat/completions", data=body, method="POST",
+                                 headers={"Authorization": f"Bearer {api_key()}", "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=60) as res:
+        text = json.load(res)["choices"][0]["message"]["content"]
+    return {"word": " ".join(re.sub(r"[^a-z ]", "", text.lower()).split()[:2])[:20] or "view"}
 
 
 def approve(req):
@@ -409,10 +605,7 @@ def approve(req):
         raise ValueError("bad draft id")
     name = req.get("spots", "spots.json")
     spots_path(name)
-    # Numbered across every version's file, so their images never share a name in renders/.
-    ids = [s["id"] for f in ROOT.glob("spots*.json") if SPOTS_FILE.match(f.name) for s in spots(f.name) + blob_spots(f.name)]
-    n = 1 + max((int(i[3:]) for i in ids if re.fullmatch(r"ai-\d+", i)), default=0)
-    sid = f"ai-{n:02d}"
+    sid = next_id()
     slug = re.sub(r"[^A-Za-z0-9]+", "_", req["caption"]).strip("_") or "View"
     photo = f"renders/{sid}-{slug}.png"
     save(photo, load(f"renders/drafts/{req['draft']}.png"), "image/png")
@@ -459,7 +652,7 @@ class Handler(SimpleHTTPRequestHandler):
                                     "locked": bool(os.environ.get("PHOTOSPOT_PASSWORD"))})
         if act == "spots":
             try:
-                return self.reply(200, blob_spots(q.get("file", ["spots.json"])[0]))
+                return self.reply(200, live_spots(q.get("file", ["spots.json"])[0]))
             except ValueError as e:
                 return self.reply(400, {"error": str(e)})
         if act:
@@ -467,7 +660,7 @@ class Handler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
-        routes = {"generate": generate, "approve": approve}
+        routes = {"generate": generate, "approve": approve, "edit": revise, "delete": delete, "name": name_from_image}
         act, _ = self.action()
         if act not in routes:
             return self.reply(404, {"error": "not found"})

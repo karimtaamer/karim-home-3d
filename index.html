@@ -73,6 +73,25 @@
   #renders .rbox .rclose { top: 18px; right: 22px; font-size: 16px; }
   #renders .rprev { left: 22px; top: calc(50% - 22px); }
   #renders .rnext { right: 22px; top: calc(50% - 22px); }
+  /* Edit / Delete under the large render, each opening a sheet (touch-sized: 44 px buttons). */
+  #renders :is(.racts, .rsheet)[hidden] { display: none; }
+  #renders .racts { position: absolute; right: 22px; bottom: 12px; display: flex; gap: 8px; }
+  #renders .rbox :is(.racts, .rsheet) button { position: static; width: auto; min-height: 44px; padding: 0 18px; font: 500 13px Inter, sans-serif;
+    letter-spacing: .04em; border-radius: 999px; }
+  #renders .rsheet { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); width: min(460px, calc(100vw - 24px));
+    display: flex; flex-direction: column; gap: 10px; padding: 18px; border-radius: 16px; background: #f3eee5; color: #2b2622; box-shadow: 0 8px 30px #0008; }
+  #renders .rsheet label { display: flex; flex-direction: column; gap: 6px; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: #6d645b; }
+  #renders .rsheet textarea { min-height: 84px; font: 16px Inter, sans-serif; color: #2b2622; background: #fffaf3; border: 0; border-radius: 10px;
+    padding: 10px 12px; box-shadow: 0 0 0 1px #2b262226 inset; resize: vertical; }
+  #renders .rsheet p { margin: 0; font-size: 14px; }
+  #renders .rsheet .rnote { font-size: 12px; color: #6d645b; }
+  #renders .rerr { font-size: 12px; color: #b3412e; }
+  #renders .rerr:empty { display: none; }
+  #renders .rrow { display: flex; gap: 8px; }
+  #renders .rbox .rsheet button { background: #fffaf3; color: #2b2622; box-shadow: 0 0 0 1px #2b262226 inset; }
+  #renders .rbox .rsheet .rgo { background: #2b2622; color: #f3eee5; }
+  #renders .rbox .rsheet .rdanger { background: #b3412e; }
+  #renders .rbox .rsheet button:disabled { opacity: .5; }
   /* Tape measure over the 3D scene, and the 2D drawing (AutoCAD-dark, like model space). */
   .measure-overlay { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
   .measure-overlay svg { width: 100%; height: 100%; }
@@ -135,6 +154,8 @@
     #switcher .seg button { padding: 6px 10px; }
     #renders .rlist { padding: 96px 12px 28px; }
     #renders .rgrid { grid-template-columns: 1fr; }
+    #renders .racts { left: 12px; right: 12px; bottom: 54px; justify-content: center; }
+    #renders .rcap { left: 12px; right: 12px; text-align: center; }
     #drawing .dbar { top: 92px; left: 12px; right: 12px; }
     #drawing .dstatus { bottom: 44px; left: 12px; right: 12px; flex-direction: column; gap: 2px; }
     #drawing .dhelp { left: 12px; right: 12px; bottom: 14px; max-width: none; text-align: left; }
@@ -908,7 +929,19 @@ document.getElementById("clearMeasure").onclick = () => measure.clear();
 
 const drawing = createDrawing(document.getElementById("drawing"), version.drawing);
 const switcher = document.getElementById("switcher");
-const renders = createRenders(document.getElementById("renders"), viewpoints.map(v => ({ room: v.room, caption: v.caption })));
+// Edit (a new version) and delete go through Generate Photo Spot's backend, so they show only where it runs.
+const renders = createRenders(document.getElementById("renders"), viewpoints.map(v => ({ room: v.room, caption: v.caption })), {
+  can: () => photogen.ready(),
+  edit: async (s, instruction) => {
+    const { spot } = await photogen.call("edit", { spots: version.spots, id: s.id, instruction });
+    if (addSpot) showRenders(addSpot(spot));
+    return spot;
+  },
+  remove: async s => {
+    await photogen.call("delete", { spots: version.spots, id: s.id });
+    if (removeSpot) showRenders(removeSpot(s.id));
+  },
+});
 function showScreen(next) {
   if (next === showing) return;
   showing = next;
@@ -926,10 +959,11 @@ function showScreen(next) {
 switcher.querySelectorAll("[data-show]").forEach(b => (b.onclick = () => showScreen(b.dataset.show)));
 
 // --- Generate Photo Spot: a photoreal render of where you stand in Walk (photogen.js, photogen.py) --------
-let renderList = [], addSpot = null;
+let renderList = [], addSpot = null, removeSpot = null;
 const FLOOR_NAME = { wood: "warm oak", tile: "honed beige stone tiles", decking: "timber decking" };
 const photogen = createPhotoGen({
-  THREE, camera, scene, composer, renderer, M, spotsFile: version.spots,
+  THREE, camera, scene, composer, renderer, M, spotsFile: version.spots, version: version.id,
+  furniture: flat.furniture.root, solids: flat.solids,
   roomAt: (x, y) => {
     const r = flat.roomAt(x, y);
     return r && { name: r.name, area: r.area, rings: r.rings, finish: FLOOR_NAME[M.tour.finishes?.[r.name] || DEFAULT_FINISH[r.kind]] };
@@ -937,14 +971,13 @@ const photogen = createPhotoGen({
   captionOf: name => viewpoints.find(v => v.room === name)?.caption || name[0] + name.slice(1).toLowerCase(),
   isWalking: () => mode === "walk",
   freeMouse: () => walker.isLocked && walker.unlock(),
-  spotCount: room => renderList.filter(s => s.room === room).length,
+  spotNames: room => renderList.filter(s => s.room === room).map(s => s.caption),
   onSaved: spot => addSpot && showRenders(addSpot(spot)),
 });
 function showRenders(list) {
   renderList = list;
-  if (!list.length) return;
   renders.fill(list);
-  switcher.querySelector("[data-show=renders]").hidden = false;
+  if (list.length) switcher.querySelector("[data-show=renders]").hidden = false;
 }
 
 // --- Start: the drawing first, then the walls rise into the dollhouse ---------------------------
@@ -982,8 +1015,9 @@ if (cam?.length >= 6) {
 import("./spots.js").then(m => m.photoSpots({
   file: version.spots, THREE, gsap, camera, scene, toWorld, goRoom, FOV, EYE, UP, rooms: viewpoints.map(v => ({ room: v.room, caption: v.caption })),
   isWalking: () => mode === "walk", isBusy: () => !!(tween || glide),
-})).then(({ renders: list, add }) => {
+})).then(({ renders: list, add, remove }) => {
   addSpot = add;
+  removeSpot = remove;
   showRenders(list);
 });
 

@@ -3,7 +3,8 @@
 // Spots live in spots.json (cam = x,y,h,lookX,lookY,lookH,fov in plan metres, the model camera closest
 // to the render's angle; a render without one yet is only listed under Renders). The renders in renders/
 // are kept out of git; on the live site vercel.json serves renders/ from Vercel Blob (publish_renders.sh).
-// Spots approved in Generate Photo Spot (photogen.js, "ai": true) are added while the page is open.
+// Spots approved in Generate Photo Spot (photogen.js, "ai": true) are added while the page is open, as are
+// renders edited or deleted under Renders (an edit is a new version: "of" the first, with a "version" number).
 // A plan version's file is { extends: "spots.json", replaces: [rooms], spots: [...] }: the main plan's spots
 // except in the rooms the version redraws, plus its own.
 
@@ -21,7 +22,7 @@ export async function loadSpots(url) {
 }
 
 export async function photoSpots({ file, THREE, gsap, camera, scene, toWorld, goRoom, FOV, EYE, UP, rooms, isWalking, isBusy }) {
-  if (new URLSearchParams(location.search).has("clean")) return { renders: [], add: null };  // screenshots of the bare model stay bare
+  if (new URLSearchParams(location.search).has("clean")) return { renders: [], add: null, remove: null };  // screenshots of the bare model stay bare
   const base = new URL(".", import.meta.url);
   const place = s => ({
     ...s,
@@ -32,14 +33,19 @@ export async function photoSpots({ file, THREE, gsap, camera, scene, toWorld, go
     }),
     src: new URL(s.photo, base).href,
   });
-  // Plus the spots approved on the live site, which photogen.py keeps in Vercel Blob (none locally or offline).
+  // Plus the spots approved on the live site, which photogen.py keeps in Vercel Blob (none locally or offline),
+  // less those deleted there ({id, deleted}: a spot in git that the live site can't remove from the file).
   const approved = await fetch(new URL(`api/photospot/spots?file=${encodeURIComponent(file)}`, base))
     .then(r => (r.ok ? r.json() : []), () => []).catch(() => []);
-  const all = [...await loadSpots(new URL(file, base)), ...approved].map(place);
+  const gone = new Set(approved.filter(s => s.deleted).map(s => s.id));
+  const all = [...await loadSpots(new URL(file, base)), ...approved].filter(s => !gone.has(s.id)).map(place);
   // One at a time (the local Python server drops bursts); only a definite 404 hides a spot.
   const renders = [];
   for (const s of all) if (await fetch(s.src, { method: "HEAD" }).then(r => r.status !== 404, () => true)) renders.push(s);
-  const spots = renders.filter(s => s.cam);
+  // An edited render is a new version ("of" its first, numbered "version"): Walk stands in the latest of each.
+  const first = s => s.of || s.id;
+  const latest = () => renders.filter(s => s.cam && !renders.some(o => o !== s && first(o) === first(s) && (o.version || 1) > (s.version || 1)));
+  const spots = latest();
 
   // The render sits behind the UI, whole and centred on a dark backdrop: renders are shot from spots the
   // real rooms don't allow, so they can't line up with the model the way a photo of the model would.
@@ -178,14 +184,23 @@ export async function photoSpots({ file, THREE, gsap, camera, scene, toWorld, go
     if (p && planDist(p) < NEAR) return settle(p);
     offerHere(spots.find(s => planDist(s) < NEAR && angleTo(s.heading) < FACING) || null);
   })();
-  // A spot approved just now: on the floor, in the panel and under Renders straight away.
-  function add(raw) {
-    const s = place(raw);
-    renders.push(s);
-    spots.push(s);
-    mark(s);
+  // A spot approved, edited into a new version or deleted just now: on the floor, in the panel and under Renders straight away.
+  function refresh() {
+    spots.splice(0, spots.length, ...latest());
+    markers.clear();
+    spots.forEach(mark);
     fillPanel();
     return renders;
   }
-  return { renders, add };
+  function add(raw) {
+    renders.push(place(raw));
+    return refresh();
+  }
+  function remove(id) {
+    const i = renders.findIndex(s => s.id === id);
+    if (i >= 0) renders.splice(i, 1);
+    if (shown?.id === id) leave();
+    return refresh();
+  }
+  return { renders, add, remove };
 }

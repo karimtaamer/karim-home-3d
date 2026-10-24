@@ -19,11 +19,12 @@ def base():
     return f"https://{token().split('_')[3].lower()}.public.blob.vercel-storage.com/"
 
 
-def call(query, method="GET", body=None, headers=None):
-    req = urllib.request.Request(f"{API}/?{urllib.parse.urlencode(query)}", data=body, method=method, headers={
+def call(query, method="GET", body=None, headers=None, route="/"):
+    req = urllib.request.Request(f"{API}{route}?{urllib.parse.urlencode(query)}", data=body, method=method, headers={
         "authorization": f"Bearer {token()}", "x-api-version": VERSION, **(headers or {})})
     with urllib.request.urlopen(req, timeout=120) as res:
-        return json.load(res)
+        body = res.read()
+        return json.loads(body) if body.strip() else {}  # a delete can answer with no body
 
 
 def put(path, data, mime, overwrite=False):
@@ -38,6 +39,13 @@ def put(path, data, mime, overwrite=False):
 def get(path):
     with urllib.request.urlopen(base() + urllib.parse.quote(path), timeout=120) as res:
         return res.read()
+
+
+def delete(paths):
+    """Remove stored paths (renders/...) for good, as @vercel/blob's del() does."""
+    if paths:
+        call({}, "POST", json.dumps({"urls": [base() + urllib.parse.quote(p) for p in paths]}).encode(),
+             {"content-type": "application/json"}, "/delete")
 
 
 def names(prefix):

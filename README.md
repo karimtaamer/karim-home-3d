@@ -24,7 +24,8 @@ a 2D drawing view, a tape measure, the designer's renders as "photo spots", and 
 | `photogen-brief.json` | Finishes text and material-board swatches for Generate Photo Spot | Yes |
 | `spots.js`, `renders.js` | Photo-spot UI in Walk; the Renders gallery screen | Yes |
 | `drawing.js`, `measure.js` | 2D drawing view with object snaps; 3D tape measure | Yes |
-| `photogen.js` | Generate Photo Spot UI (screenshot, comment, approve) | Yes |
+| `photogen.js` | Generate Photo Spot UI (framing preview, screenshot, comment, approve) | Yes |
+| `spotnames.js` | Auto-names for new photo spots: furniture word per `furnish.js` piece, by its plan point | Yes (when a piece moves) |
 | `photogen.py` | Local dev server **and** the Generate Photo Spot backend (OpenAI calls) | Yes |
 | `api/photospot.py`, `photogen_blob.py` | The same backend as a Vercel function, storing files in Vercel Blob | Yes |
 | `publish_renders.sh` | Uploads renders, reference copies and the material board to Blob | Yes |
@@ -282,6 +283,16 @@ that view replaces the model.
 
 **Generate Photo Spot** (Walk view button)
 
+- **Framing first (2026-10-24).** The button opens a preview of the shot from where you stand. **+** steps back
+  along the view in 0.4 m steps (up to 3 m, stopping 0.3 m short of the first wall, tall piece or the room's edge;
+  never out through a doorway), then widens the lens 6° at a time to 112° across; **−** undoes that, then narrows
+  the lens. **Generate** sends that framing, and the spot is saved with it (camera position and `fov`).
+- **Auto-name.** The spot is named after the furniture piece it aims at, e.g. "Master bedroom dresser" ("… dresser 2"
+  if the room has one). `spotnames.js` maps each `furnish.js` piece's plan point to a word; rays across the frame
+  vote, the centre counting most. **If a piece moves in `furnish.js`, update its point in `spotnames.js`** (the
+  browser check in the photospot-v2 run tests every point). No named piece in frame: after the first attempt
+  `photogen.py` names it from the image with `gpt-4.1-nano` (`OPENAI_NAME_MODEL`), well under $0.001. The name
+  stays editable before saving.
 - **What gets sent.** `photogen.js` sends three things to `photogen.py`:
   - a screenshot of the model from where you stand;
   - a plan crop of the room drawn from the DWG;
@@ -305,7 +316,18 @@ that view replaces the model.
   - The geometry lock stays: the VIEW decides what stands where; only the pieces' designs come from the references.
   - **To add a piece:** add a `furniture` entry naming a render already in a `spots*.json` file. Nothing to publish: the whole 1024 px renders are already in Blob.
 - `photogen-brief.json` is re-read on every run, so edits to finishes and swatches apply immediately. After changing swatches, run `sh publish_renders.sh` so the live site gets the new board.
-- Test UI changes with `--dry-run`. Real runs cost OpenAI credits.
+- Test UI changes with `--dry-run` (or `PHOTOGEN_MOCK=1`). Real runs cost OpenAI credits.
+
+**Editing and deleting renders** (Renders screen, large view; only where Generate Photo Spot's backend runs)
+- **Edit:** write what should change. `photogen.py` sends the render as image 1, plus the material board and the
+  furniture renders, to the same image edit (about $0.30 at high quality, 1536×1024). The result is a **new version**:
+  a spot with the same room, caption and camera, `"of"` its first version, `"version": n` and the `"edit"` text. The
+  old one stays. Walk shows the latest version of each; Renders shows them all ("dresser · v2").
+- **Delete** (after a confirmation): generated renders only; the designer's renders stay. Locally it removes the
+  image and the `spots*.json` entry. On Vercel it deletes the Blob image and spot, and leaves a marker
+  `renders/ai-deleted/<spots file>/<id>.json`, which also hides a generated spot kept in git (remove that from git by
+  hand) and stops its id being reused.
+- Both need `PHOTOSPOT_PASSWORD` if it is set, like generating.
 
 **3D fixtures with Meshy**
 - `models/*.glb` were made with Meshy image-to-3D from render crops.
@@ -328,7 +350,9 @@ that view replaces the model.
 - **Vercel env vars:**
   - `OPENAI_API_KEY`
   - `BLOB_READ_WRITE_TOKEN`
-  - optional `PHOTOSPOT_PASSWORD`: if set, the page asks for it once before generate or approve. Currently unset.
+  - optional `PHOTOSPOT_PASSWORD`: if set, the page asks for it once before generate, approve, edit or delete.
+    Currently unset, so anyone with the link can delete generated renders: set it.
+  - optional `OPENAI_NAME_MODEL` (default `gpt-4.1-nano`): names a spot from its image when no furniture is in frame.
 - **Local secrets:** `.env` holds `OPENAI_API_KEY`. `.env.local` holds `BLOB_READ_WRITE_TOKEN` (from `vercel env pull`). Git and Vercel ignore both.
 - **Ignored files:**
   - `.gitignore`: `renders/`, `dist/`, `notes/compare/`, `.env*`, `.vercel`, `.sc/`, `.gstack/`.

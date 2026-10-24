@@ -4,11 +4,20 @@
 // style references. Comment to re-run it on the attempt shown; approve to save it as a photo spot.
 // The endpoints are photogen.py's: the local server, or api/photospot.py on Vercel; with neither (a plain
 // static server) the button stays hidden. If PHOTOSPOT_PASSWORD is set there, the page asks for it once.
+// The button first shows a preview of the shot from where you stand, with − / + to frame it: + widens it by
+// stepping back along the view (never through a wall or out of the room), then by a wider lens; − undoes
+// that and then narrows the lens. The spot is saved with that framing, and named after the furniture piece
+// it frames (spotnames.js), or failing that, by photogen.py from the generated image.
+
+import { framedWord, uniqueName } from "./spotnames.js";
 
 const W = 1536, H = 1024;  // the 3:2 frame photogen.py asks for
 const COMPASS = ["north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west"];
+// Framing: steps back of STEP m up to BACK m, CLEAR m short of any wall or tall piece behind; then the frame's
+// vertical lens in steps of LENS degrees, from FOV_MIN to FOV_MAX (about 50 to 112 degrees across at 3:2).
+const STEP = 0.4, BACK = 3, CLEAR = 0.3, LENS = 6, FOV_MIN = 34, FOV_MAX = 90;
 
-export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, spotsFile, roomAt, captionOf, isWalking, freeMouse, spotCount, onSaved }) {
+export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, spotsFile, version, furniture, solids, roomAt, captionOf, isWalking, freeMouse, spotNames, onSaved }) {
   const button = document.getElementById("photogen");
   let ready = "";
   fetch("api/photospot").then(r => (r.ok ? r.json() : null)).then(s => {
@@ -52,8 +61,16 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
       letter-spacing: .04em; background: #fffaf3; color: #2b2622; box-shadow: 0 0 0 1px #2b262226 inset; }
     #photogen-box .actions .approve { background: #2b2622; color: #f3eee5; }
     #photogen-box .actions button:disabled { opacity: .4; cursor: default; }
+    #photogen-box[data-mode=frame] :is(.gen, .thumbs), #photogen-box:not([data-mode=frame]) .frame { display: none; }
+    #photogen-box .zoom { display: flex; align-items: center; gap: 10px; }
+    #photogen-box .zoom button { width: 56px; height: 56px; border: 0; border-radius: 999px; font: 300 30px Inter, sans-serif; line-height: 1; cursor: pointer;
+      background: #fffaf3; color: #2b2622; box-shadow: 0 0 0 1px #2b262226 inset; touch-action: manipulation; }
+    #photogen-box .zoom button:disabled { opacity: .35; cursor: default; }
+    #photogen-box .zoom .lens { flex: 1; font-size: 12px; letter-spacing: .04em; color: #4a423b; text-align: center; }
+    #photogen-box .frame.actions button { min-height: 44px; padding: 0 20px; font-size: 13px; }
     @media (max-width: 760px) {
       #photogen-box { grid-template-columns: 1fr; grid-template-rows: auto 1fr; overflow-y: auto; }
+      #photogen-box[data-mode=frame] .stage { padding-bottom: 12px; }
       #photogen-box .stage { padding: 12px 12px 92px; }
       #photogen-box .stage > img { max-height: 46vh; }
       #photogen-box .thumbs { left: 12px; right: 12px; }
@@ -65,14 +82,18 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
   box.innerHTML = `
     <div class="stage"><img alt=""><div class="wait" hidden><div class="spin"></div><div class="status"></div></div><div class="thumbs"></div></div>
     <aside>
-      <h2>New photo spot</h2>
-      <p class="meta"></p>
-      <label>Name<input class="name"></label>
-      <label>Comments<textarea placeholder="What should change? e.g. warmer evening light, sofa in oatmeal bouclé, no rug"></textarea></label>
-      <ol></ol>
+      <h2 class="frame">Frame the shot</h2>
+      <p class="frame meta">Your view as the photo will frame it. Press + to take in more of the room.</p>
+      <div class="frame zoom"><button class="out-less" aria-label="Zoom in">−</button><span class="lens"></span><button class="out-more" aria-label="Zoom out">+</button></div>
+      <div class="frame actions"><button class="approve go">Generate</button><button class="cancel">Cancel</button></div>
+      <h2 class="gen">New photo spot</h2>
+      <p class="gen meta"></p>
+      <label class="gen">Name<input class="name"></label>
+      <label class="gen">Comments<textarea placeholder="What should change? e.g. warmer evening light, sofa in oatmeal bouclé, no rug"></textarea></label>
+      <ol class="gen"></ol>
       <div class="err"></div>
-      <div class="actions">
-        <button class="approve">Approve &amp; save</button>
+      <div class="gen actions">
+        <button class="approve save">Approve &amp; save</button>
         <button class="revise">Revise</button>
         <button class="cancel">Discard</button>
       </div>
@@ -86,39 +107,104 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
 
   // One sitting: the view it started from, and every attempt so far (each one's comments led to the next).
   let job = null;
+  // The framing being chosen: where you stand (pos), the most you can step back (room), how far back and the lens.
+  let shot = null;
 
-  function frame() {
-    // The model as you see it, without the photo-spot rings, cropped to 3:2 from the middle. It goes as the
-    // picture to edit, so its angle and every object in it stay put; only the finishes change.
+  function frame(p) {
+    // The model from pose p (or as you see it), without the photo-spot rings, drawn straight into a 3:2 frame at
+    // full size. It goes as the picture to edit, so its angle and every object in it stay put; only the finishes change.
     const rings = scene.getObjectByName("photo-spot-markers");
     const was = rings?.visible;
     if (rings) rings.visible = false;
+    const keep = { pos: camera.position.clone(), fov: camera.fov, aspect: camera.aspect };
+    const size = renderer.getSize(new THREE.Vector2()), pr = renderer.getPixelRatio();
+    if (p) camera.position.copy(p.pos);
+    camera.fov = p ? p.vfov : keep.fov;
+    camera.aspect = W / H;
+    camera.updateProjectionMatrix();
+    renderer.setPixelRatio(1); renderer.setSize(W, H, false);
+    composer.setPixelRatio(1); composer.setSize(W, H);
     composer.render();
-    const src = renderer.domElement, c = document.createElement("canvas");
+    const c = document.createElement("canvas");
     c.width = W; c.height = H;
-    const k = Math.min(src.width / W, src.height / H), sw = W * k, sh = H * k;
-    c.getContext("2d").drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 0, 0, W, H);
+    c.getContext("2d").drawImage(renderer.domElement, 0, 0, W, H);
+    renderer.setPixelRatio(pr); renderer.setSize(size.x, size.y, false);
+    composer.setPixelRatio(pr); composer.setSize(size.x, size.y);
+    camera.position.copy(keep.pos); camera.fov = keep.fov; camera.aspect = keep.aspect;
+    camera.updateProjectionMatrix();
     if (rings) rings.visible = was;
     return c.toDataURL("image/jpeg", 0.92);  // a PNG this size can pass Vercel's 4.5 MB request limit
   }
 
-  function view() {
-    const dir = camera.getWorldDirection(new THREE.Vector3());
-    const x = camera.position.x, y = -camera.position.z, h = camera.position.y;
-    // The lens of the 3:2 crop: the screen's height is kept unless the screen is narrower than 3:2.
+  // The lens of the screen's middle 3:2: its height is kept unless the screen is narrower than 3:2.
+  function screenFov() {
     const tv = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2), a = innerWidth / innerHeight;
-    const th = a >= W / H ? tv * (W / H) : tv * a, tv2 = th / (W / H);
+    const th = a >= W / H ? tv * (W / H) : tv * a;
+    return THREE.MathUtils.radToDeg(2 * Math.atan(th / (W / H)));
+  }
+
+  function view(p) {
+    const dir = camera.getWorldDirection(new THREE.Vector3());
+    const x = p.pos.x, y = -p.pos.z, h = p.pos.y;
+    const tv = Math.tan(THREE.MathUtils.degToRad(p.vfov) / 2), th = tv * (W / H);
     const deg = r => THREE.MathUtils.radToDeg(r);
     const heading = (deg(Math.atan2(dir.x, -dir.z)) + 360) % 360, pitch = deg(Math.asin(dir.y));
     return {
       x, y, h, heading,
-      cam: [x, y, h, x + dir.x * 3, y - dir.z * 3, h + dir.y * 3, deg(2 * Math.atan(tv2))],
+      cam: [x, y, h, x + dir.x * 3, y - dir.z * 3, h + dir.y * 3, p.vfov],
       info: {
-        height: h, facing: COMPASS[Math.round(heading / 45) % 8], hfov: deg(2 * Math.atan(th)), vfov: deg(2 * Math.atan(tv2)),
+        height: h, facing: COMPASS[Math.round(heading / 45) % 8], hfov: deg(2 * Math.atan(th)), vfov: p.vfov,
         tilt: Math.abs(pitch) < 3 ? "level" : `${Math.abs(pitch).toFixed(0)} degrees ${pitch > 0 ? "up" : "down"}`,
       },
     };
   }
+
+  // How far back along the view you can step: to CLEAR short of the first wall (or tall piece, at eye height)
+  // behind, and only while still in the room you stand in (a doorway behind doesn't lead out of it).
+  const back = new THREE.Raycaster();
+  function room(pos) {
+    const dir = camera.getWorldDirection(new THREE.Vector3()).setY(0).normalize().negate();
+    const tall = [];
+    furniture.traverse(o => o.isMesh && o.visible && tall.push(o));
+    let far = BACK + CLEAR;
+    for (const [h, list] of [[1.2, solids], [pos.y, solids], [pos.y, tall]]) {
+      back.set(new THREE.Vector3(pos.x, h, pos.z), dir);
+      back.far = far;
+      far = Math.min(far, back.intersectObjects(list, false)[0]?.distance ?? far);
+    }
+    // The room's edge counts as a wall too (glazing doesn't stop the rays).
+    const own = roomAt(pos.x, -pos.z)?.name;
+    let edge = 0;
+    while (edge < far && roomAt(pos.x + dir.x * (edge + 0.05), -(pos.z + dir.z * (edge + 0.05)))?.name === own) edge += 0.05;
+    return { dir, max: Math.max(0, Math.min(BACK, Math.min(far, edge) - CLEAR)) };
+  }
+  const pose = () => ({ pos: shot.pos.clone().addScaledVector(shot.room.dir, shot.back), vfov: shot.vfov });
+  function reframe() {
+    stage.src = frame(pose());
+    const hfov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(shot.vfov) / 2) * (W / H)));
+    $(".lens").textContent = `${hfov.toFixed(0)}° lens${shot.back > 0.01 ? ` · ${shot.back.toFixed(1)} m back` : ""}`;
+    $(".out-more").disabled = shot.back >= shot.room.max - 0.01 && shot.vfov >= FOV_MAX;
+    $(".out-less").disabled = shot.back <= 0.01 && shot.vfov <= shot.min;
+  }
+  // + steps back while there's room, then widens the lens; − narrows back to where you started, then steps in, then zooms.
+  function zoomOut() {
+    if (shot.back < shot.room.max - 0.01) shot.back = Math.min(shot.room.max, shot.back + STEP);
+    else shot.vfov = Math.min(FOV_MAX, shot.vfov + LENS);
+    reframe();
+  }
+  function zoomIn() {
+    if (shot.vfov > shot.start + 0.01) shot.vfov = Math.max(shot.start, shot.vfov - LENS);
+    else if (shot.back > 0.01) shot.back = Math.max(0, shot.back - STEP);
+    else shot.vfov = Math.max(shot.min, shot.vfov - LENS);
+    reframe();
+  }
+  $(".out-more").onclick = zoomOut;
+  $(".out-less").onclick = zoomIn;
+  $(".stage").addEventListener("wheel", e => {
+    if (box.dataset.mode !== "frame") return;
+    e.preventDefault();
+    (e.deltaY > 0 ? zoomOut : zoomIn)();
+  }, { passive: false });
 
   // Other rooms in shot (through doors and openings): rays fanned across the lens at waist height,
   // each sampled for rooms up to the first solid thing it meets.
@@ -194,7 +280,7 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
   }
   function sync() {
     const on = !!job && !job.busy && job.at >= 0;
-    $(".approve").disabled = !on || !name.value.trim();
+    $(".save").disabled = !on || !name.value.trim();
     $(".revise").disabled = !on || !notes.value.trim();
     list.innerHTML = "";
     for (const c of job?.attempts[job.at]?.comments || []) {  // what led to the attempt shown
@@ -203,7 +289,8 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
       list.appendChild(li);
     }
   }
-  name.oninput = notes.oninput = sync;
+  notes.oninput = sync;
+  name.oninput = () => { if (job) job.named = true; sync(); };  // a name typed in is never replaced
 
   async function call(path, body, retry = true) {
     const r = await fetch(`api/photospot/${path}`, {
@@ -234,24 +321,46 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
       notes.value = "";
       drawThumbs();
       show(job.attempts.length - 1);
+      // No named piece in frame: name it from the picture (a cheap vision call), once, unless a name was typed.
+      if (!job.word && !job.named) {
+        const sitting = job, { word } = await call("name", { draft: out.draft }).catch(() => ({}));
+        sitting.word = word;
+        if (word && job === sitting && !job.named) name.value = uniqueName(job.caption, word, spotNames(job.room));
+      }
     } catch (e) {
       err.textContent = e.message;
     } finally {
       clearInterval(tick);
-      job.busy = false; wait.hidden = true; status.textContent = ""; sync();
+      if (job) job.busy = false;  // unless discarded meanwhile
+      wait.hidden = true; status.textContent = ""; sync();
     }
   }
 
+  // First the preview, framed with − / +; Generate starts the sitting from the framing chosen.
   button.onclick = () => {
     if (!isWalking()) return;
     freeMouse();
-    const v = view(), r = roomAt(v.x, v.y);
-    if (!r) { alert("Stand inside a room to make a photo spot."); return; }
+    const pos = camera.position.clone();
+    if (!roomAt(pos.x, -pos.z)) { alert("Stand inside a room to make a photo spot."); return; }
+    const start = screenFov();
+    shot = { pos, room: room(pos), back: 0, vfov: start, start, min: Math.min(FOV_MIN, start) };
+    job = null;
+    err.textContent = "";
+    box.dataset.mode = "frame";
+    box.hidden = false;
+    reframe();
+  };
+  $(".go").onclick = () => {
+    const p = pose(), v = view(p), r = roomAt(v.x, v.y);
     const caption = captionOf(r.name);
     const [x0, x1] = [Math.min(...r.rings.flat().map(p => p[0])), Math.max(...r.rings.flat().map(p => p[0]))];
     const [y0, y1] = [Math.min(...r.rings.flat().map(p => p[1])), Math.max(...r.rings.flat().map(p => p[1]))];
+    // The piece in frame names the spot, seen from the framed camera.
+    const eye = camera.clone();
+    eye.position.copy(p.pos);
+    const word = framedWord({ THREE, camera: eye, root: furniture, solids, version, hfov: v.info.hfov, vfov: v.info.vfov });
     job = {
-      view: frame(), cam: v.cam, room: r.name, attempts: [], at: -1, busy: false,
+      view: frame(p), cam: v.cam, room: r.name, caption, word, named: false, attempts: [], at: -1, busy: false,
       ctx: {
         room: { name: r.name, caption, area: r.area, width: x1 - x0, depth: y1 - y0, finish: r.finish },
         seen: seen(v, r.name).map(n => ({ name: n, caption: captionOf(n) })),
@@ -259,17 +368,18 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
       },
     };
     job.plan = plan(r, v);
-    name.value = `${caption} ${spotCount(r.name) + 1}`;
+    // Until the piece is known (from the picture, after the first attempt), a numbered name stands in.
+    name.value = uniqueName(caption, word || "view", spotNames(r.name));
     notes.value = "";
-    $(".meta").textContent = `${caption} · facing ${v.info.facing} · ${v.info.hfov.toFixed(0)}° lens`;
+    $(".gen.meta").textContent = `${caption} · facing ${v.info.facing} · ${v.info.hfov.toFixed(0)}° lens`;
+    box.dataset.mode = "generate";
     drawThumbs();
     show(-1);
-    box.hidden = false;
     run();
   };
   $(".revise").onclick = () => run(notes.value.trim());
-  $(".cancel").onclick = () => { box.hidden = true; job = null; };
-  $(".approve").onclick = async () => {
+  box.querySelectorAll(".cancel").forEach(b => (b.onclick = () => { box.hidden = true; job = null; shot = null; }));
+  $(".save").onclick = async () => {
     const a = job.attempts[job.at];
     job.busy = true; sync();
     try {
@@ -283,6 +393,8 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
   };
 
   const api = {
+    call,  // the Renders screen's edit and delete go through the same password
+    ready: () => !!ready,
     // Usable in Walk only: that is where a photo spot is stood in.
     sync() {
       button.disabled = !isWalking();

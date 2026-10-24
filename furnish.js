@@ -489,7 +489,7 @@ export function furnish(scene, M, mat, version = "main") {
     // Shower (DWG): 1.22 wide x 0.92 deep behind a 10 cm partition on the west, open 0.61 entry on the east. The back
     // (west) wall is built out 28 cm, flush with the column's inner face, from the column to the partition: the 3-way
     // set on the wall centreline (rain arm, thermostatic mixer and diverter), a hand shower on a fixed holder 11 cm
-    // clear of the mixer on the column side, and a stack of lit niches 10 cm clear of the mixer on the partition side.
+    // clear of the mixer on the partition side, and a stack of lit niches 10 cm clear of the mixer on the column side.
     item(0.836, 8.5033, "E", p => {
       p.cyl(0, 0.03, 0.075, 1.0, 1.02, mat.chrome, 32).rotation.x = Math.PI / 2;  // thermostatic mixer
       p.cyl(0, 0.045, 0.03, 1.0, 1.07, mat.chrome, 24).rotation.x = Math.PI / 2;
@@ -498,7 +498,7 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(-0.012, 0.012, 1.3, 2.12, 0.04, 0.06, mat.chrome);                      // riser to the arm
       p.box(-0.02, 0.02, 2.1, 2.14, 0, 0.42, mat.chrome);                            // wall arm, 0.42 out
       p.cyl(0, 0.42, 0.13, 2.08, 2.1, mat.chrome, 32);                                // rain head
-      const hx = 0.21;                                                                // hand shower, column side
+      const hx = -0.21;                                                               // hand shower, partition side
       p.cyl(hx, 0.01, 0.022, 0.91, 0.93, mat.chrome, 24).rotation.x = Math.PI / 2;   // wall outlet, elbow down
       p.box(hx - 0.008, hx + 0.008, 0.905, 0.935, 0.01, 0.043, mat.chrome);
       p.cyl(hx, 0.035, 0.008, 0.87, 0.92, mat.chrome, 12);
@@ -511,7 +511,7 @@ export function furnish(scene, M, mat, version = "main") {
       const r = 0.045, yU = 0.62;
       const u = mesh(new THREE.TorusGeometry(r, 0.006, 8, 24, Math.PI), mat.chrome, p.g);
       u.position.set(hx, yU, 0.035); u.rotation.z = Math.PI;
-      for (const [x0, y1] of [[r, 0.87], [-r, 0.97]]) {
+      for (const [x0, y1] of [[-r, 0.87], [r, 0.97]]) {
         const L = Math.hypot(x0, y1 - yU);
         p.cyl(hx + x0 / 2, 0.035, 0.006, (yU + y1 - L) / 2, (yU + y1 + L) / 2, mat.chrome, 8).rotation.z = Math.atan2(x0, y1 - yU);
       }
@@ -520,11 +520,11 @@ export function furnish(scene, M, mat, version = "main") {
       p.model("models/mbath-seat-teak.glb", mat.oakVeneer, 0, 0.35, 0, { size: [0.45, 0.1, 0.35] });
       p.model("models/mbath-seat-brackets.glb", mat.brushedNickel, 0, 0.35, 0, { size: [0.45, 0.1, 0.35] });
     });
-    // Niche stack in the back-wall build-out (DWG dashed), partition side, 3 cm tile return to the partition: four
+    // Niche stack in the back-wall build-out (DWG dashed), column side, 3 cm tile return to the column: four
     // niches 0.20 wide x 0.15 deep x 0.25 clear, floors 0.95 / 1.28 / 1.61 / 1.94 with 8 cm stone bands, a warm LED
     // under each top (sills laid with a slight fall inward). The model carves a slot 1 cm oversize full height (build
     // --cut) so the stone lining finishes it at 20 x 15; stone fills it below, between and above.
-    item(0.836, 8.2279, "E", p => {
+    item(0.836, 8.7792, "E", p => {
       const floors = [0.95, 1.28, 1.61, 1.94], c = 0.25;
       p.box(-0.105, 0.105, 0, floors[0], -0.155, 0, mat.stoneWall);  // 5 mm into the lining: no shared faces
       for (const y of floors.slice(1)) p.box(-0.105, 0.105, y - 0.08, y, -0.155, 0, mat.stoneWall);

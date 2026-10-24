@@ -224,7 +224,7 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(-w * 0.25, w * 0.25, zc + h / 2 + 0.04, zc + h / 2 + 0.08, 0.06, 0.13, mat.brass, 0.015);
     }
   });
-  const ac = (x, y, facing) => item(x, y, facing, p => p.box(-0.45, 0.45, 2.2, 2.5, 0, 0.22, mat.applianceWhite, 0.04));
+  const ac = (x, y, facing, top = 2.5) => item(x, y, facing, p => p.box(-0.45, 0.45, top - 0.3, top, 0, 0.22, mat.applianceWhite, 0.04));
   const sconce = (x, y, facing, z = 1.8) => item(x, y, facing, p => {
     p.box(-0.04, 0.04, z - 0.14, z + 0.14, 0, 0.03, mat.brass);
     p.cyl(0, 0.08, 0.05, z - 0.1, z + 0.12, mat.lampShade, 20);
@@ -322,7 +322,7 @@ export function furnish(scene, M, mat, version = "main") {
   plant(5.9, 1.08, 1.35, 0.2);   // beside the TV console
   art(3.62, 0.548, "N", 0.9, 1.25, 1.62, 0);  // large abstracts on both side walls, picture lights above
   art(4.35, 4.443, "S", 0.75, 1.0, 1.48, 1);
-  ac(4.0, 4.443, "S");  // split AC high on the door wall, by the window corner
+  ac(2.945, 1.2, "E", 2.38);  // split AC high on the window wall, between the south wall and the left curtain, under the cove
   for (const y of [2.0, 3.59]) item(2.94, y, "E", p => { const m = mesh(curtainGeometry(0.5, 2.45), mat.curtain, p.g); m.position.set(0, 1.27, 0.06); });
 
   // --- Master bedroom and bathroom: the same pieces in both plan versions, placed per version -----
@@ -446,9 +446,30 @@ export function furnish(scene, M, mat, version = "main") {
     item(0.556, 6.68, "E", vanity(1.03));             // DWG vanity 0.52 x 1.03
     item(0.556, 7.58, "E", wc(-0.387, 0.416, true));  // between the vanity and the shower wall
     item(2.052, 7.5, "W", towelRail);                 // on the partition, clear of the open door
-    item(0.556, 8.57, "E", showerWall);
-    item(1.3, 9.02, "S", rainHead);
-    item(1.66, 8.056, "S", p => p.box(-0.39, 0.39, 0, 2.0, -0.005, 0.005, mat.clearGlass));  // dashed screen in the DWG
+    // Shower (DWG): 1.50 wide x 0.84 deep behind an 18 cm partition 0.90 long on the east, open 0.60 entry on
+    // the west. 3-way set on the west wall (rain arm, hand shower on a rail, thermostatic mixer and diverter);
+    // three lit niches recessed 10 cm into the partition's shower face, 0.80 wide, 1.00 to 1.90 m.
+    item(0.556, 8.62, "E", p => {
+      p.cyl(0, 0.03, 0.075, 1.0, 1.02, mat.chrome, 32).rotation.x = Math.PI / 2;  // thermostatic mixer
+      p.cyl(0, 0.045, 0.03, 1.0, 1.07, mat.chrome, 24).rotation.x = Math.PI / 2;
+      p.cyl(0, 0.03, 0.06, 1.2, 1.22, mat.chrome, 32).rotation.x = Math.PI / 2;    // 3-way diverter
+      p.cyl(0, 0.045, 0.025, 1.2, 1.26, mat.chrome, 24).rotation.x = Math.PI / 2;
+      p.box(-0.012, 0.012, 1.3, 2.12, 0.04, 0.06, mat.chrome);                      // riser to the arm
+      p.box(-0.02, 0.02, 2.1, 2.14, 0, 0.42, mat.chrome);                            // wall arm, 0.42 out
+      p.cyl(0, 0.42, 0.13, 2.08, 2.1, mat.chrome, 32);                                // rain head
+      p.box(-0.32, -0.3, 1.0, 1.9, 0.03, 0.05, mat.chrome);                          // hand-shower rail
+      for (const y of [1.0, 1.9]) p.box(-0.33, -0.29, y - 0.02, y + 0.02, 0, 0.05, mat.chrome);
+      p.box(-0.335, -0.285, 1.52, 1.58, 0.04, 0.08, mat.chrome);                     // slider holding the hand shower
+      p.cyl(-0.31, 0.11, 0.022, 1.42, 1.62, mat.chrome, 16);
+      p.cyl(-0.31, 0.11, 0.045, 1.62, 1.66, mat.chrome, 24);
+    });
+    item(1.6015, 8.1875, "N", p => {  // on the 1 cm stone lining of the partition's shower face: niches 0.80 wide (DWG dashed outline)
+      p.face(-0.4, 0.4, 1.0, 1.9, 0.002, mat.greyLacquer);  // the recess, read as a darker back
+      for (const y of [1.0, 1.3, 1.6, 1.9]) p.box(-0.4, 0.4, y - 0.02, y + 0.005, 0, 0.012, greyStone);
+      for (const y of [1.3, 1.6, 1.9]) p.box(-0.38, 0.38, y - 0.035, y - 0.025, 0.004, 0.012, mat.ledStrip);
+      for (const s of [-1, 1]) p.box(s * 0.4 - 0.008, s * 0.4 + 0.008, 0.98, 1.905, 0, 0.012, greyStone);
+      for (const y of [1.0, 1.3]) p.model("models/mbath-bottles.glb", null, 0, y + 0.005, 0.0, { width: 0.6 });
+    });
   } else {
     item(4.13, 7.62, "W", bed());  // headboard on the bathroom wall (DWG bed outline)
     for (const y of [8.8, 6.45]) {

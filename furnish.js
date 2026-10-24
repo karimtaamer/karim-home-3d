@@ -39,6 +39,7 @@ export function furnish(scene, M, mat, version = "main") {
   const root = new THREE.Group();
   const ceilingBits = new THREE.Group();  // shown only with the ceiling (downlights, grilles)
   scene.add(root, ceilingBits);
+  if (version === "as-built") return { root, ceilingBits, setReveal() {} };  // the empty flat as it stands today
 
   function mesh(geo, material, parent, uv = true) {
     if (uv) metreUVs(geo);

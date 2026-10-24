@@ -1,0 +1,14 @@
+{
+  "_comment": "The As-built version (dwg/as-built.dxf, the surveyor's AS BUILT PLAN of the empty flat, moved onto the design frame): tour.json with these seeds swapped in by name. The survey has no room names, so every room gets a seed here (names as on the old furnished plan in the same DWG). The suite lobby is its own room: an open 1.03 m doorway joins it to the bedroom.",
+  "extends": "tour.json",
+  "seeds": [
+    {"name": "MASTER BEDROOM", "at": [192.8, -114.8]},
+    {"name": "LOBBY", "at": [195.6, -116.0]},
+    {"name": "TOILET 1", "at": [195.6, -113.5]},
+    {"name": "KITCHEN", "at": [198.6, -114.0]},
+    {"name": "LAUNDRY", "at": [202.2, -113.5]},
+    {"name": "TOILET 2", "at": [204.3, -113.5]},
+    {"name": "LIVING ROOM", "at": [194.9, -119.2]},
+    {"name": "TERRACE", "at": [213.7, -116.0]}
+  ]
+}

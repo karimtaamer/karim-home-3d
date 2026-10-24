@@ -34,7 +34,7 @@ a 2D drawing view, a tape measure, the designer's renders as "photo spots", and 
 | `dwg/main.dxf`, `dwg/bigger-bedroom.dxf`, `dwg/shifted-bedroom.dxf` | The plan drawing for each version: the only build sources (§3) | Yes, see `DWG_EDITING.md` |
 | `suite_merge.py` | One plan everywhere except the master suite, taken from another; `--check` compares the versions (§3) | Yes |
 | `check_furnish.py` | Runs `furnish.js` in node and compares its key pieces (kitchen appliances, laundry, entrance, coffee corner, guest WC counter, v12 bed/nightstands/cupboard) with the version's DXF; flags > 2 cm (§3) | Yes |
-| `*-bigger-bedroom.*`, `*-shifted-bedroom.*` | The other plan versions (see §4) | Same rules as the main files |
+| `*-bigger-bedroom.*`, `*-shifted-bedroom.*`, `*-as-built.*` | The other plan versions (see §4); `dwg/as-built.dxf` is the survey of the empty flat | Same rules as the main files |
 | `models/*.glb` | Fixtures made from the renders with Meshy (image-to-3D) | Replace only |
 | `textures/` | Poly Haven PBR scans (CC0, see `CREDITS.txt`) | Add only |
 | `renders/` | Designer renders and approved AI renders (**git-ignored**, served from Blob live) | Add files |
@@ -82,7 +82,8 @@ P=dwg/main.dxf
 
 **One drawing per version, in `dwg/` (2026-10-23).** These three DXFs are the only build sources: edit them in
 place and commit them. They are identical outside the master suite and differ only inside it.
-`~/.dwg-tools/bin/python suite_merge.py --check dwg/*.dxf` must print `outside the suite: identical` after any edit.
+`~/.dwg-tools/bin/python suite_merge.py --check dwg/*.dxf` must print `outside the suite: identical` after any edit
+(it skips `dwg/as-built.dxf`, the survey of the flat as it stands, §4).
 
 **Changing the plan, step by step** (anyone with repo access):
 1. Pull, then edit the version's file in `dwg/` (AutoCAD, DraftSight, LibreCAD or ezdxf). Save it back **as DXF,
@@ -190,6 +191,7 @@ bath end wall, which used to push 37 cm of wall into the doorway.
 | Main | *(none)* / `main` | `dwg/main.dxf` (suite from the designer's `master-bed186-v6-shoes2.dwg`, rest from `master-v12.dwg`) | `model.js`, `drawing.json`, `tour.json`, `spots.json` |
 | Bigger Master Bedroom | `bigger-bedroom` | `dwg/bigger-bedroom.dxf` (suite from `master-bed-v9.dwg`, rest from `master-v12.dwg`) | `model-bigger-bedroom.js`, `drawing-bigger-bedroom.json`, `tour-bigger-bedroom.json`, `spots-bigger-bedroom.json` |
 | Shifted Bedroom | `shifted-bedroom` | `dwg/shifted-bedroom.dxf` (all from `master-v12.dwg`) | `model-shifted-bedroom.js`, `drawing-shifted-bedroom.json`, `tour-shifted-bedroom.json`, `spots-shifted-bedroom.json` |
+| As-built | `as-built` | `dwg/as-built.dxf` (the surveyor's `as-built-original.dwg`, Sep 2026) | `model-as-built.js`, `drawing-as-built.json`, `tour-as-built.json`, `spots-as-built.json` (empty) |
 
 Bigger Master Bedroom (v9) folds the passage into the master toilet, which **needs façade approval**. Never present it
 as settled.
@@ -215,6 +217,21 @@ S=dwg/shifted-bedroom.dxf
 ~/.dwg-tools/bin/python build_geometry.py $S --out model-shifted-bedroom.js --tour tour-shifted-bedroom.json \
     --cut 191.0809,-112.944,191.2609,-112.724   # master shower niche stack in the back-wall build-out
 ~/.dwg-tools/bin/python build_drawing.py $S --model model-shifted-bedroom.js --out drawing-shifted-bedroom.json
+```
+
+As-built is the flat as it stands today, empty: the surveyor's "AS BUILT PLAN" (2026-10-24). It is a record, not a
+design, so the master-suite rule below doesn't apply to it and `suite_merge.py --check` skips `dwg/as-built*.dxf`.
+`furnish()` returns before building anything for it (no furniture, joinery or fittings), and `spots-as-built.json`
+is an empty list (no photo spots, no Renders tab). `dwg/as-built.dxf` came from the DWG through ODA File Converter
+(DXF 2018), cut down to the as-built plan (the DWG also holds an old furnished plan, the title block and a logo;
+the survey's `_DIM` dimensions are kept and show in the Drawing tab) and moved by (-0.054080, -87.082745) m onto
+the design frame, so its walls line up with Main's and the model origin is the same. Layer names were already the
+build's (`1wall`, `Windows`, `3door`). It has no room names, so `tour-as-built.json` seeds every room.
+
+```sh
+A=dwg/as-built.dxf
+~/.dwg-tools/bin/python build_geometry.py $A --out model-as-built.js --tour tour-as-built.json
+~/.dwg-tools/bin/python build_drawing.py $A --model model-as-built.js --out drawing-as-built.json
 ```
 
 **Rule: a version may differ from Main only in the master suite.** Any other DWG difference is a mistake to

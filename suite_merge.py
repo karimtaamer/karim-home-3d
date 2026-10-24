@@ -3,12 +3,14 @@
 
 Run with the DWG venv: ~/.dwg-tools/bin/python suite_merge.py BASE.dxf SUITE.dxf OUT.dxf [--dry]
   e.g. after a shared-room edit in dwg/main.dxf: BASE = dwg/main.dxf, SUITE = OUT = dwg/bigger-bedroom.dxf.
-       suite_merge.py --check dwg/*.dxf   lists entities that differ between the files outside the suite.
+       suite_merge.py --check dwg/*.dxf   lists entities that differ between the files outside the suite
+                                              (skips dwg/as-built*.dxf, the survey of the flat as it stands).
 
 Inside the suite zone (DWG x 190.6 to 196.78, y -117.25 to -112.15) SUITE's entities replace BASE's. Entities
 touching the zone edge that differ between the two files (wall faces running out of the suite) are swapped too
 and listed. --dry only lists them. Blocks with the same name are kept from BASE (check they match).
 """
+import os
 import sys
 from collections import Counter
 from ezdxf import recover, xref, bbox as ebbox
@@ -63,6 +65,8 @@ def outside(doc):
 
 
 def check(paths):
+    # The as-built survey (dwg/as-built*.dxf) is the flat as it stands, not a design version: it isn't compared.
+    paths = [p for p in paths if not os.path.basename(p).startswith('as-built')]
     ref = outside(recover.readfile(paths[0])[0])
     bad = 0
     for p in paths[1:]:

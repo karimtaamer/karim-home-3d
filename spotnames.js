@@ -64,7 +64,7 @@ WORDS.push(...WORDS.filter(w => w[3] === "shifted-bedroom" && !["bed", "toilet",
 WORDS.push(...WORDS.filter(w => w[3] === "naghams-changes" && w[2] !== "vanity").map(([x, y, word]) => [x, y, word, "kareems-changes"]),
   // except the reception's south sofa and side table, re-centred under the split AC, and the longer master vanity
   // (with its medicine cabinet), re-centred on the wall
-  [19.502, 2.103, "sofa", "kareems-changes"], [20.8745, 2.45, "side table", "kareems-changes"],
+  [19.342, 2.103, "sofa", "kareems-changes"], [20.7945, 2.45, "side table", "kareems-changes"],
   [0.556, 6.7276, "vanity", "kareems-changes"]);
 
 // The word for a furniture group (a direct child of furnish's root) in this plan version, or null.

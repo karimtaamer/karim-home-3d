@@ -264,12 +264,27 @@ strip under it. `furnish.js` (`vanity(…, d, above)` and `medCabinet`), `spotna
 vanity, medicine cabinet) follow it.
 
 Kareem's Changes, Nagham call (2026-10-25):
-- **Reception TV wall:** in block `hfgbv` its front linework moved 0.2907 east. The TV box face (DWG x 208.2672, plan
-  17.862) is now flush with the reception column's face as the 3D model builds it, and the run sits 0.08 behind it.
-  In 3D, `furnish.js` uses depths 0.6122 / 0.5322 (were 0.36 / 0.28), so the two tall oak niches are 25 cm deeper.
-  The sofa, prints, AC, side table and plant are re-centred on the shorter south wall (x 19.502). **Note:** the DXF
-  and the as-built survey draw that column only to DWG x 207.947. The extra 0.32 the 3D column shows comes from
-  `build_geometry.py`'s corner-square step (every version has it). Measure on site before the joinery is made.
+- **Reception TV wall (corrected the same evening, Karim t294):** the TV box face is flush with the reception column
+  as the DXF and the as-built survey draw it: DWG x 207.9471, plan 17.542, one continuous surface. In block
+  `hfgbv` the front linework sits 0.3202 west of the Nagham-call position (DWG 208.2672 was the inflated 3D column
+  face, not the real one), so in 2D the library is 28 cm deep from the wall face (DWG 207.6672) and the TV symbol
+  stays on its face. In 3D, `furnish.js` uses depths 0.2922 (TV box) / 0.2122 (run, the tall niches) from x 17.25,
+  so the run is 0.08 behind the box (x 17.462). The sofa, prints, AC, side table and plant are centred on the
+  south wall's visible face from the run to the east wall (x 19.342, side pieces 1.4525 off it).
+  The 3D column used to stand out to plan 17.862: `build_geometry.py`'s corner-square step adds a 0.32 block off
+  its face because the DXF draws the column twice (once to x 207.6371 and once into the wall to 207.3903, sharing
+  the face end). Main / Karim's build carves that block off with `--cut 207.9471,-116.2418,208.2871,-115.8818`, so
+  the 3D column face is 17.542 too. The other versions (Nagham's, As-built, old Main) still show the inflated column
+  in Walk; a general fix in `pair_walls` (skip overlapping collinear pieces) also changed small corners elsewhere,
+  so it was not made. Build Main / Karim's with:
+
+  ```sh
+  K=dwg/kareems-changes.dxf
+  ~/.dwg-tools/bin/python build_geometry.py $K --out model-kareems-changes.js --tour tour-kareems-changes.json \
+      --wall 190.9609,-112.8031,190.9609,-112.3428 --cut 191.0309,-114.2431,191.7309,-114.0731 \
+      --window 192.2087,-112.47,1.5,2.1,frosted --cut 207.9471,-116.2418,208.2871,-115.8818
+  ~/.dwg-tools/bin/python build_drawing.py $K --model model-kareems-changes.js --out drawing-kareems-changes.json
+  ```
 - **Guest WC:** the door is hinged on the east jamb (DWG x 204.366) and opens inwards against the vanity
   (`doorsAsDrawn`). The 0.26 build-out on the south wall (`1wall` lines and its niche block) is gone. The glass is
   back over the door end (DWG y -114.413 to -113.513), south of the WC, with the rain head over it. The niche

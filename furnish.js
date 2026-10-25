@@ -1396,9 +1396,9 @@ export function furnish(scene, M, mat, version = "main") {
     // holding two tall rounded oak-lined niches (south), and a lit rounded oak recess under the TV.
     // North end (local x 1.72) meets the reception column at plan y 5.3914 — keep that edge flat/flush.
     const KC = version === "kareems-changes";
-    // Kareem's (Nagham call, 25 Oct): the TV box comes out flush with the column's face (plan x 17.862), the run
-    // 0.08 behind it, so the tall niches are 25 cm deeper (0.53).
-    const H = M.ceiling, edge = -0.46, D0 = KC ? 0.5322 : 0.28, D1 = KC ? 0.6122 : 0.36;  // run depth, TV box depth
+    // Kareem's: the TV box face is flush with the reception column's face as the DXF and survey draw it (plan x
+    // 17.542, DWG 207.9471), one continuous surface; the run (tall niches) 0.08 behind it at 17.462.
+    const H = M.ceiling, edge = -0.46, D0 = KC ? 0.2122 : 0.28, D1 = KC ? 0.2922 : 0.36;  // run depth, TV box depth
     const dz0 = D0 - 0.28, dz1 = D1 - 0.36;  // shelf styling keeps its distance from the fronts
     // Kareem's: TV 166.8 x 95.8 x 7.7 cm in a flat rectangular opening centred over the niche (render).
     const TW = KC ? 1.668 : 1.50, TH = KC ? 0.958 : 0.85, TD = KC ? 0.077 : 0.03;
@@ -1453,10 +1453,10 @@ export function furnish(scene, M, mat, version = "main") {
     skirt.position.set(edge - splay / 2 - Math.sin(a) * 0.006, 0.04, (D0 + D1) / 2 + Math.cos(a) * 0.006);
     skirt.rotation.y = -a;
   });
-  // Kareem's Changes: sofa, prints and split AC centred on the south wall's visible face, x 17.782 (TV-wall run,
-  // out to the column since 25 Oct) to 21.222 (east wall), so x 19.502; side table and plant each mid-way in the
-  // 0.695 m left either side (1.3725 from the centre).
-  const KC = version === "kareems-changes", SC = 19.502, SO = 1.3725;
+  // Kareem's Changes: sofa, prints and split AC centred on the south wall's visible face, x 17.462 (TV-wall run,
+  // 0.08 behind the column-flush TV box) to 21.222 (east wall), so x 19.342; side table and plant each mid-way in
+  // the 0.855 m left either side (1.4525 from the centre).
+  const KC = version === "kareems-changes", SC = 19.342, SO = 1.4525;
   item(KC ? SC : 18.86, 2.103, "N", p => sofa(p, 2.05, 1.02, mat.boucle, [mat.linenSlate, mat.linenBlush, mat.linenSlate]));  // DWG, clear of the pier
   item(21.027, 4.165, "W", p => sofa(p, 2.0, 0.92, mat.boucle, [mat.linenSlate, mat.linenBlush]));  // centred on the DWG sofa, back on its back line, clear of the curtains
   item(19.1, 5.95, "S", p => {  // DWG armchair, as rendered: open walnut lounge frame, slate cushions, blush pillow
@@ -1478,7 +1478,7 @@ export function furnish(scene, M, mat, version = "main") {
   });
   // DWG side table (Kareem's: in the east corner, 0.10 clear of the curtain stack at y 2.76)
   item(...(KC ? [SC + SO, 2.45] : [20.341, 2.687]), "S", p => { p.cyl(0, 0, 0.205, 0.52, 0.56, mat.marbleTop, 32); p.cyl(0, 0, 0.11, 0, 0.52, mat.walnut, 24); });
-  if (KC) plant(SC - SO, 2.45, 1.6, 0.24);  // clear of the TV-wall run (x 17.782)
+  if (KC) plant(SC - SO, 2.45, 1.6, 0.24);  // clear of the TV-wall run (x 17.462)
   else plant(17.6, 2.33, 1.6, 0.24);
   // Two 1.05 x 1.30 m framed prints as in render 11, 0.30 m apart and centred over the sofa, on the south
   // wall's built-out face (y 2.0705, flush with the pier: the recesses either side are filled to it).

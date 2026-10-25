@@ -1601,8 +1601,9 @@ export function furnish(scene, M, mat, version = "main") {
   // splayed back into the wall like the TV wall, then a walnut sideboard under a backlit pebble mirror.
   item(14.79, 8.0, "E", p => {  // local x = plan y - 8, z = plan x - 14.79
     // Kareem's: the niche is the reception TV wall's tall niche (0.34 wide, 0.42-2.2 high, r 0.13, shelves 0.86 /
-    // 1.3 / 1.74, LED 2.1), so the two rooms read as one family. The mass face takes the TV run's 0.07 / 0.34 / 0.07
-    // (corner to splay start). Karim t331: the splay is a soft S-curve at the TV wall's slope, not a 36° chamfer: the
+    // 1.3 / 1.74, LED 2.1), so the two rooms read as one family. Karim t332: centred on the mass as it reads, not
+    // on the flat face alone: the r 0.2 corner reads as face (~0.16 in the dining view), so the niche sits 0.02 / 0.34 / 0.12 on the flat face and the corner is r 0.12 (was 0.20),
+    // so left/right plaster reads ~equal on the elevated bit. Karim t331: the splay is a soft S-curve at the TV wall's slope, not a 36° chamfer: the
     // step drops to 0.18 (mass front x 15.152, panel face x 14.972) over a 0.45 run, 21.8° chord and 25° at its
     // steepest, tangent to the mass and the panel. Panel 1.56 wide (was 1.46); sideboard 0.40 deep, 0.22 proud of the mass.
     const BK = version === "kareems-changes";
@@ -1610,13 +1611,16 @@ export function furnish(scene, M, mat, version = "main") {
     const B = BK ? P + 0.4 : F, dz = B - 0.462;  // sideboard front; its styling keeps its distance from the front
     const S = -1.213, C = -1.013, N = 1.477;  // y 6.79, corner, 9.48
     const E = BK ? -0.533 : -0.347, K = BK ? -0.083 : 0.103;  // splay y 7.467-7.917 (Kareem's), 7.65-8.10 (45 cm)
-    const niche = BK ? [-0.943, -0.603, 0.42, 2.2, 0.13] : [-0.883, -0.474, 0.45, 2.25, 0.13], deep = 0.25;
+    const niche = BK ? [-0.993, -0.653, 0.42, 2.2, 0.13] : [-0.883, -0.474, 0.45, 2.25, 0.13], deep = 0.25;
     const dn = (niche[0] + niche[1]) / 2 + 0.6785;  // styling follows its niche
     const face = new THREE.Shape([new THREE.Vector2(C, 0), new THREE.Vector2(E, 0), new THREE.Vector2(E, H), new THREE.Vector2(C, H)]);
     face.holes.push(roundRect(new THREE.Path(), ...niche));
     mesh(new THREE.ExtrudeGeometry(face, { depth: F, bevelEnabled: false, curveSegments: 12 }), mat.limewash, p.g);
-    p.box(S, C, 0, H, 0, F - 0.2, mat.limewash);
-    p.cyl(C, F - 0.2, 0.2, 0, H, mat.limewash, 32);  // the DWG's rounded front corner
+    // Kareem's: smaller corner (r 0.12) so the niche centred on the elevated face reads even (Karim t332);
+    // other versions keep the DWG's r 0.20.
+    const cr = BK ? 0.12 : 0.2;
+    p.box(S, C, 0, H, 0, F - cr, mat.limewash);
+    p.cyl(C, F - cr, cr, 0, H, mat.limewash, 32);  // rounded front corner
     const a = BK ? 0.15 * (K - E) : 0;  // bezier handles along the mass and panel faces (0 = the straight splay)
     const plan = new THREE.Shape().moveTo(E, 0).lineTo(E, -F).bezierCurveTo(E + a, -F, K - a, -P, K, -P).lineTo(N, -P).lineTo(N, 0);
     const splay = new THREE.ExtrudeGeometry(plan, { depth: H, bevelEnabled: false, curveSegments: BK ? 24 : 1 });

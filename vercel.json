@@ -25,7 +25,7 @@
     },
     "api/edit-ai.py": {
       "maxDuration": 300,
-      "excludeFiles": "{models,textures,notes,dist,renders,docs}/**"
+      "excludeFiles": "{models,textures,notes,dist,renders,docs/pdf}/**"
     }
   }
 }

@@ -72,7 +72,8 @@ VERSIONS = {
                  "tour": "tour-as-built.json", "flags": []},
 }
 SHARED = ["furnish.js", "materials.js"]  # loaded by the page through the live overrides; shared by every version
-DOCS = ["README.md", "DWG_EDITING.md", "CLAUDE.md"]  # read-only context
+DOCS = ["README.md", "DWG_EDITING.md", "CLAUDE.md",  # read-only context
+        "docs/edit-ai/when-2d-needed.md", "docs/edit-ai/3d-only-patterns.md"]  # decision notes: does an edit need the plan?
 MIME = {".js": "text/javascript; charset=utf-8", ".json": "application/json", ".dxf": "application/dxf"}
 
 
@@ -907,6 +908,15 @@ Keep the room usable: ~70 cm clear in front of wardrobe / cabinet fronts and doo
 walkway from the room's door to the bed and between pieces you walk past; a new chair or table never goes in front of \
 the wardrobe doors or in a door's swing, and a freestanding piece (chair, sofa, table) faces into the room or toward \
 what it serves (TV, table, window), never its back to the room's middle.
+- When the plan (2D) is needed: floor-standing furniture and joinery, wall-fixed pieces reaching ~30 cm+ into the room \
+below head height (~1.5 m), walls, doors, windows, new partitions, and any piece that already has a 2furni outline when \
+its position or footprint changes. 3D-ONLY (furnish.js only, no DXF edit, no plan match needed): height; colour / \
+finish; lights (pendant, sconce, LED cove); thin art / mirrors / TVs; AC units (ac(...)); plaster curtain boxes, AC \
+bulkheads, ceiling boxes, soffits and ducted grille faces, i.e. anything whose lowest part stays above head height, \
+including making it deeper from the wall (\"make this 1 m from the wall\" on a curtain / AC box = its box z1 and the \
+grille faces on its front); pieces with no outline under them (furniture_near shows none). For those, edit furnish.js, \
+run check and reply: never invent a 2furni outline for them and never discard because nothing on the plan matches. \
+Unsure? read_file docs/edit-ai/when-2d-needed.md and docs/edit-ai/3d-only-patterns.md (project decision notes).
 - Keep 3D and 2D together: a piece drawn on the plan (2furni) that you move or resize in furnish.js gets exactly the \
 same change in the DXF (furniture_near gives its outline's handle: dxf_edit move_piece / resize_piece), and a DXF \
 furniture change gets the same change in furnish.js. A TV, mirror or art that already has a plan outline (even one \
@@ -1369,7 +1379,12 @@ def chat(req):
                     continue
                 if ws.changed and (nudged >= 3 or step >= MAX_STEPS - 3):  # out of second looks: never save 2D and 3D apart
                     last_ = review(ws, message, reply)
-                    if last_ and last_.startswith("Check 2D vs 3D"):
+                    if last_ and last_.startswith("Check 2D vs 3D") and not ws.dxf_furni and not ws.pieces \
+                            and "furnish.js" in ws.orig and three_d_only(ws, ws.orig["furnish.js"].decode(), ws.text("furnish.js")):
+                        # Only 3D-only pieces changed (AC, curtain / AC box, bulkhead, high fitting, nothing on the plan):
+                        # nothing to keep in step with the 2D, so save the 3D edit instead of throwing it away.
+                        trace.append({"tool": "(review, final: 3D-only, kept)", "args": "", "out": last_[:700]})
+                    elif last_ and last_.startswith("Check 2D vs 3D"):
                         trace.append({"tool": "(review, final)", "args": "", "out": last_[:700]})
                         ws.changed.clear()
                         reply = ("I couldn't finish this with the 2D plan and the 3D model matching, so I left both as they "
@@ -1847,6 +1862,115 @@ def unplanned(ws, f0, f1, new_items):
     return None
 
 
+# 3D-only pieces: what the plan (2furni) doesn't draw, so a change to them needs no DXF edit and no 2D vs 3D check.
+# See docs/edit-ai/when-2d-needed.md. Head height: a fitting whose lowest part is above it doesn't take floor room.
+HEAD_HEIGHT = 1.5
+HEAD = re.compile(r"\b(item|rug|plant|art|ac|sconce|pendant)\(|\bfor \(const\b")
+OVERHEAD_CALL = re.compile(r"^\s*(?:if \([^)]*\)\s*|else\s+)?(ac|pendant|sconce)\(")  # AC units, ceiling / wall lights
+_MV = type("M", (), {"ceiling": 2.6, "winHead": 2.1, "sill": 0.9})()  # rough heights: enough to tell high from low
+
+
+def _piece_at(L, j, version):
+    """(head line no, block text) of the placed piece (item / ac / pendant ... call, or a for-loop of them) whose code
+    covers 0-based line j of furnish.js lines L, or None (a builder definition, a const, top-level code)."""
+    for h in range(j, max(-1, j - 40), -1):
+        if not HEAD.search(L[h]):
+            continue
+        blk, dep, end = "", 0, h
+        for k in range(h, min(h + 60, len(L))):
+            blk += L[k] + "\n"
+            dep += L[k].count("(") - L[k].count(")") + L[k].count("{") - L[k].count("}")
+            end = k
+            if dep <= 0:
+                break
+        return (h + 1, blk) if end >= j else None
+    return None
+
+
+def _lowest(blk, version):
+    """The lowest readable height (box y0 / cyl y0) a piece's code builds at, or None."""
+    env, low = {"version": version, "M": _MV}, None
+    for s_ in PRIM.finditer(blk):
+        a = [t.strip() for t in s_[2].split(",")]
+        try:
+            y0 = js_num(a[2] if s_[1] == "box" else a[3], env)
+        except Exception:
+            continue
+        low = y0 if low is None else min(low, y0)
+    return low
+
+
+def _has_outline(ws, src, blk, version):
+    """Whether a 2furni outline lies under the piece's (x, y) in the DXF file src; None if the position can't be read."""
+    m = re.search(r"\b(?:item|rug|plant|art|ac|sconce|pendant)\(\s*([^,]+?)\s*,\s*([^,]+?)\s*,", blk)
+    try:
+        px, py = js_num(m[1], {"version": version}), js_num(m[2], {"version": version})
+    except Exception:
+        return None
+    code, q = run([dwg_python(), str(ROOT / "edit_ai_dxf.py"), "query", str(src), f"--origin={ORIGIN[0]},{ORIGIN[1]}",
+                   f"--bbox={px - 0.05},{py - 0.05},{px + 0.05},{py + 0.05}", "--layers=2furni,2 furni", "--limit", "400"],
+                  timeout=90)
+    try:
+        ents = json.loads(q).get("entities", [])
+    except ValueError:
+        return None
+    for d in ents:
+        ps = d.get("points") or []
+        if d["type"] == "LWPOLYLINE" and len(ps) >= 4:
+            xs, ys = [p_[0] for p_ in ps], [p_[1] for p_ in ps]
+            if min(xs) - 0.15 <= px <= max(xs) + 0.15 and min(ys) - 0.15 <= py <= max(ys) + 0.15 \
+                    and (max(xs) - min(xs)) * (max(ys) - min(ys)) >= 0.04:
+                return True
+    return False
+
+
+def three_d_only(ws, f0, f1):
+    """True when every furnish.js piece this message changed is one the plan doesn't draw: an AC unit, pendant or
+    sconce; a fitting whose lowest part stays above head height before and after (plaster curtain / AC boxes,
+    bulkheads, ceiling grilles, coves, high shelves); or a piece with no 2furni outline under it. Such edits (depth
+    from the wall, height, finish) are 3D-only. False when any changed piece is drawn on the plan, a builder or
+    shared const changed, or the change can't be read."""
+    if f0 == f1:
+        return False
+    def bare(l):
+        return re.sub(r"\s+", "", re.sub(r"\s//.*$", "", l))
+    L0, L1 = f0.splitlines(), f1.splitlines()
+    pairs = []  # (old 0-based line, new 0-based line) of each changed code line
+    for tag_, i0, i1, j0, j1 in difflib.SequenceMatcher(None, L0, L1, autojunk=False).get_opcodes():
+        if tag_ in ("replace", "delete"):
+            pairs += [(i, j0 + min(i - i0, max(0, j1 - j0 - 1)) if j1 > j0 else None) for i in range(i0, i1)
+                      if bare(L0[i]) and (tag_ == "delete" or bare(L0[i]) not in {bare(n_) for n_ in L1[j0:j1]})]
+        elif tag_ == "insert":
+            pass  # a new line on its own is a new piece: unplanned() looks after it
+    if not pairs:
+        return False
+    src, seen = None, set()
+    for i, j in pairs:
+        old = _piece_at(L0, i, ws.v)
+        if not old:
+            return False  # a builder / const / shared code: many pieces may change
+        if old[0] in seen:
+            continue
+        seen.add(old[0])
+        head = L0[old[0] - 1]
+        if OVERHEAD_CALL.search(head):
+            continue
+        new = _piece_at(L1, j, ws.v) if j is not None else None
+        lo0, lo1 = _lowest(old[1], ws.v), (_lowest(new[1], ws.v) if new else None)
+        if lo0 is not None and lo0 >= HEAD_HEIGHT and (new is None or (lo1 is not None and lo1 >= HEAD_HEIGHT)):
+            continue  # stays overhead: a curtain / AC box, bulkhead, grille, cove
+        if lo0 is not None and lo0 >= HEAD_HEIGHT and lo1 is not None and lo1 < HEAD_HEIGHT:
+            return False  # came down below head height: it now takes room the plan should show
+        if not plan_edits():
+            return False
+        if src is None:
+            src = ws.tmp / "plan-3d-only.dxf"
+            src.write_bytes(ws.orig.get(ws.cfg["dxf"]) or ws.read(ws.cfg["dxf"]))
+        if _has_outline(ws, src, old[1], ws.v) is not False:
+            return False  # drawn on the plan (or position unreadable): keep 2D and 3D in step
+    return True
+
+
 def review(ws, message, reply):
     """What to point out to the model before its edits are saved, or None."""
     if not ws.changed:
@@ -1983,7 +2107,8 @@ def review(ws, message, reply):
     if (off_ := resized_off_plan(ws, f0, f1)):  # a resized 3D piece now past its outline or over its neighbour
         return off_ + tail
     in_window = lambda px, py: any(abs(px - wx) <= hw and abs(py - wy) <= 0.3 for wx, wy, hw in getattr(ws, "win_moved", []))
-    gone = [(i, px, py, line) for i, px, py, line in placed_lines(ws, f0)
+    only3d = bool(ops) and not ws.dxf_furni and three_d_only(ws, f0, f1)  # AC / curtain box / bulkhead / no outline: no 2D
+    gone = [] if only3d else [(i, px, py, line) for i, px, py, line in placed_lines(ws, f0)
             if bare(line) not in now and not in_window(px, py) and any(len(seg.strip()) > 8 and seg.strip() in line for o in ops for seg in o["old"].splitlines())]
     if gone and plan_edits():
         src = ws.tmp / "plan-before.dxf"
@@ -2017,7 +2142,7 @@ def review(ws, message, reply):
     loop_ops = [o for o in ops if any(re.search(r"\bfor \(const|\bitem\(|\brug\(", l) and bare(l) in was
                                       and bare(l) not in {bare(n_) for n_ in o["new"].splitlines()}
                                       for l in o["old"].splitlines())]
-    if loop_ops and not ws.dxf_furni and not gone:
+    if loop_ops and not ws.dxf_furni and not gone and not only3d:
         return ("Check 2D vs 3D: you moved or resized furniture in furnish.js but nothing on the plan (2furni). If the "
                 "piece is drawn on the plan (furniture_near lists the outlines there), give its outline exactly the same "
                 "change now with dxf_edit move_piece / resize_piece; things not drawn on the plan, and changes of height or "

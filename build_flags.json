@@ -8,8 +8,7 @@
   "kareems-changes": {
     "dxf": "dwg/kareems-changes.dxf", "model": "model-kareems-changes.js", "drawing": "drawing-kareems-changes.json", "tour": "tour-kareems-changes.json",
     "flags": ["--wall", "190.9609,-112.8031,190.9609,-112.3428", "--cut", "191.0309,-114.2431,191.7309,-114.0731",
-              "--window", "192.2087,-112.47,1.5,2.1,frosted", "--cut", "207.9471,-116.2418,208.2871,-115.8818",
-              "--cut", "202.992,-112.447,203.192,-112.357", "--cut", "203.272,-112.447,203.472,-112.357"]
+              "--window", "192.2087,-112.47,1.5,2.1,frosted", "--cut", "207.9471,-116.2418,208.2871,-115.8818"]
   },
   "as-built": {
     "dxf": "dwg/as-built.dxf", "model": "model-as-built.js", "drawing": "drawing-as-built.json", "tour": "tour-as-built.json",

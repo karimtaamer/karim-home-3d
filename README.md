@@ -156,7 +156,7 @@ $PY suite_merge.py --check dwg/kareems-changes.dxf dwg/naghams-changes.dxf
 ```
 
 Since 2026-10-25 Kareem's plan (Main) also differs from Nagham's outside the suite on purpose: the reception TV wall,
-the guest WC (door, glass, build-out, niches) and the Edit AI moves (dining desks, ACs). So `--check` lists those.
+the guest WC (door, glass, fittings, build-out, niches) and the Edit AI moves (dining desks, ACs). So `--check` lists those.
 Copy a shared-room edit across only where both plans should have it.
 
 A merge can reorder the lines in the built model file without changing the geometry. **Editing the suite:** edit
@@ -315,6 +315,20 @@ Kareem's Changes, client batch (2026-10-25, Main / Karim's only):
 - **Laundry (t305):** the window behind the washer is gone (its five `Windows` lines; the wall faces already ran
   through). The washer stands on a 0.76 oak base (basket shelf over a drawer), its top at the upper's underside
   (1.60), framed by oak panels.
+- **Guest WC shower redo (Karim, same evening; supersedes t301's fixtures and niches):** every fitting is on the
+  shower's **south** wall (the door-end wall, plan y 6.891, flush with the WC's south wall, no build-out): concealed
+  mixer plate at 1.05 and spout centred between the plank wall and the glass (plan x 12.725), hand spray 25 cm west of
+  it, and a 25 cm brass head on a 35 cm wall arm at 2.25 (`2furni` circle, DWG 203.130, -114.3726; the ceiling rain head
+  and the plank-wall fittings are gone). The glass still starts at that wall. The **north** wall gets a 12 cm stone
+  build-out (`2furni`, DWG x 202.722-203.622, face y -112.547) standing on the deck, with two niches 0.25 wide x 1.20
+  high (0.90-2.10) x 10.5 cm deep (dashed), walnut-lined all round including the back (9.3 cm clear), five walnut
+  shelves and an LED under the top. Nothing is cut into the 8 cm wall any more: the two niche `--cut`s are out of
+  `build_flags.json`.
+- **Doors (Karim, same evening):** the guest WC door is hinged on its **west** jamb (DWG x 203.678; arc, `_DIM` leaf and
+  pin mirrored) and opens inwards toward the shower, its open leaf 11 cm east of the glass, clear of the vanity. The
+  laundry door (hinge DWG 202.45, -114.72, east jamb) already swung inwards in the DWG, but the 3D opened it into the
+  corridor; it is now in `doorsAsDrawn`, so it stands and opens into the laundry. Both stay openable (`guest-wc-door`,
+  `passage-door`).
 
 Its en-suite (2026-10-24) is rearranged to Nagham's sketch: the bathroom/bedroom partition (the headboard wall, still
 0.11) sits 14 cm further east (bathroom-side face DWG x 192.5965), and the bed and bedside tables moved with it (bed

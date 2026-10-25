@@ -1535,7 +1535,10 @@ export function furnish(scene, M, mat, version = "main") {
   item(14.79, 8.0, "E", p => {  // local x = plan y - 8, z = plan x - 14.79
     const H = M.ceiling, F = 0.462, P = 0.062;  // mass front (x 15.25), wall panel face (x 14.85)
     const S = -1.213, C = -1.013, E = -0.347, K = 0.103, N = 1.477;  // y 6.79, corner, 7.65, 8.10 (45 cm splay), 9.48
-    const niche = [-0.883, -0.474, 0.45, 2.25, 0.13], deep = 0.25;
+    // Kareem's: the niche is the reception TV wall's tall niche (0.34 wide, 0.42-2.2 high, r 0.13, shelves 0.86 /
+    // 1.3 / 1.74, LED 2.1), centred where the old 0.41 x 1.80 one was, so the two rooms read as one family.
+    const BK = version === "kareems-changes";
+    const niche = BK ? [-0.8485, -0.5085, 0.42, 2.2, 0.13] : [-0.883, -0.474, 0.45, 2.25, 0.13], deep = 0.25;
     const face = new THREE.Shape([new THREE.Vector2(C, 0), new THREE.Vector2(E, 0), new THREE.Vector2(E, H), new THREE.Vector2(C, H)]);
     face.holes.push(roundRect(new THREE.Path(), ...niche));
     mesh(new THREE.ExtrudeGeometry(face, { depth: F, bevelEnabled: false, curveSegments: 12 }), mat.limewash, p.g);
@@ -1550,13 +1553,14 @@ export function furnish(scene, M, mat, version = "main") {
     ring.holes.push(roundRect(new THREE.Path(), x0 + 0.018, x1 - 0.018, y0 + 0.018, y1 - 0.018, r - 0.018));
     mesh(new THREE.ExtrudeGeometry(ring, { depth: F, bevelEnabled: false, curveSegments: 12 }), honeyOak, p.g);
     mesh(new THREE.ExtrudeGeometry(roundRect(new THREE.Shape(), x0, x1, y0, y1, r), { depth: F - deep, bevelEnabled: false, curveSegments: 12 }), honeyOak, p.g);
-    for (const y of [0.85, 1.25, 1.65, 1.95]) {
+    for (const y of BK ? [0.86, 1.3, 1.74] : [0.85, 1.25, 1.65, 1.95]) {
       p.box(x0 + 0.015, x1 - 0.015, y, y + 0.025, F - deep, F - 0.01, honeyOak);
       p.box(x0 + 0.03, x1 - 0.03, y - 0.012, y, F - deep + 0.03, F - 0.03, mat.ledStrip);
     }
-    p.box(x0 + 0.06, x1 - 0.06, 2.14, 2.152, F - deep + 0.03, F - 0.03, mat.ledStrip);
-    p.cyl(-0.76, F - 0.12, 0.05, 0.875, 1.08, mat.linenSage, 16, 0.065); p.cyl(-0.6, F - 0.12, 0.04, 1.275, 1.42, mat.planter, 16);
-    for (let k = 0; k < 4; k++) p.box(-0.8 + k * 0.03, -0.775 + k * 0.03, 1.675, 1.86 - (k % 2) * 0.03, F - 0.2, F - 0.04, k % 2 ? mat.linenBlush : mat.walnut);
+    const ly = BK ? 2.1 : 2.14, sy = BK ? [0.885, 1.325, 1.765] : [0.875, 1.275, 1.675];  // top LED, styled shelf tops
+    p.box(x0 + 0.06, x1 - 0.06, ly, ly + 0.012, F - deep + 0.03, F - 0.03, mat.ledStrip);
+    p.cyl(-0.76, F - 0.12, 0.05, sy[0], sy[0] + 0.205, mat.linenSage, 16, 0.065); p.cyl(-0.6, F - 0.12, 0.04, sy[1], sy[1] + 0.145, mat.planter, 16);
+    for (let k = 0; k < 4; k++) p.box(-0.8 + k * 0.03, -0.775 + k * 0.03, sy[2], sy[2] + 0.185 - (k % 2) * 0.03, F - 0.2, F - 0.04, k % 2 ? mat.linenBlush : mat.walnut);
     // Walnut sideboard from the mass to the corner, front in line with the mass (DWG x 15.25).
     p.box(E, N - 0.02, 0.12, 0.8, P, F, mat.walnut);
     fronts(p, E, N - 0.02, 0.12, 0.8, F, 0.45);

@@ -640,7 +640,7 @@ def tool(ws, name, a):
         if v == "as-built" and not ws.allow_as_built:
             return "As-built is the survey of the flat as it stands; it can't be edited from another version."
         out_path = ws.tmp / "plan-next.dxf"
-        rugs = {";".join(m_[1:5]) for t_ in {ws.text("furnish.js"), (ws.orig.get("furnish.js") or b"").decode()}
+        rugs = {";".join(m_.groups()) for t_ in {ws.text("furnish.js"), (ws.orig.get("furnish.js") or b"").decode()}
                 for m_ in RUG.finditer(t_)}
         code, out = run([dwg_python(), str(ROOT / "edit_ai_dxf.py"), "edit", str(ws.dxf()), str(out_path),
                          f"--origin={ORIGIN[0]},{ORIGIN[1]}", "--soft=" + ";".join(r_.replace(";", ",") for r_ in rugs)],

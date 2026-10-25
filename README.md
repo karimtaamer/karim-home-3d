@@ -279,6 +279,15 @@ Kareem's Changes, Nagham call (2026-10-25):
   heater with its pipes and valves. One oak door, openable.
 - **Kitchen pantry:** its two doors open (interact.js, id `pantry`), hinged on the hob-run side, with shelves inside.
 - **Master en-suite:** the towel hooks are 15 cm higher (1.45).
+- **Living-room TV wall flush with the column (Karim t288).** This is the wall between the living room and the
+  entrance corridor, at the column by the living-room door. Both faces of the wall are now one line with the column:
+  - Corridor side (the gallery wall with the three framed prints and picture lights): `1wall` `D2E` runs at DWG
+    x 196.9107 from the column top to the hall's south wall (y -118.0131). This fills the 0.2068 notch under the
+    column; the hall face `D31` starts there and the column-bottom line is gone.
+  - Living side: `D47` sits on the column's west face (x 196.5429, 2 cm west of before) from the column top to the
+    south wall.
+  - The TV unit outlines and, in 3D, the limewash panel and console moved back 2 cm onto it.
+  - Checked by sampling the built walls every 1 cm: one x on each face, 0.00 mm spread.
 
 Its en-suite (2026-10-24) is rearranged to Nagham's sketch: the bathroom/bedroom partition (the headboard wall, still
 0.11) sits 14 cm further east (bathroom-side face DWG x 192.5965), and the bed and bedside tables moved with it (bed

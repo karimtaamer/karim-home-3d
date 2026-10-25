@@ -385,8 +385,11 @@ export function furnish(scene, M, mat, version = "main") {
     p.cyl(0.05, 0.12, 0.05, 0.42, 0.6, mat.planter, 16, 0.04);
     p.box(0.02, 0.22, 0.42, 0.48, 0.3, 0.48, mat.oatmeal);
   });
-  item(6.15, 2.25, "W", p => p.box(-1.75, 1.75, 0, M.ceiling, 0, 0.012, mat.limewashTaupe));
-  item(6.16, 2.25, "W", p => {  // DWG TV unit on the east wall: floating walnut console, 3 drawers, light top
+  // Kareem's (Karim t288): the TV wall's face is on the column's (plan x 6.1379, 2 cm west), coplanar with it, so the
+  // limewash panel and the console move back onto it.
+  const LKC = version === "kareems-changes";
+  item(LKC ? 6.1379 : 6.15, 2.25, "W", p => p.box(-1.75, 1.75, 0, M.ceiling, 0, 0.012, mat.limewashTaupe));
+  item(LKC ? 6.1396 : 6.16, 2.25, "W", p => {  // DWG TV unit on the east wall: floating walnut console, 3 drawers, light top
     p.box(-0.87, 0.87, 0.45, 0.72, 0, 0.4, mat.walnut);
     fronts(p, -0.87, 0.87, 0.45, 0.72, 0.4, 0.58);
     p.box(-0.87, 0.87, 0.72, 0.75, 0, 0.42, mat.stoneTable);

@@ -72,7 +72,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     #edit-ai.chatting .ink { pointer-events: none; }
     #edit-ai .tint { position: absolute; inset: 0; pointer-events: none; box-shadow: 0 0 0 4px #e7b866 inset; }
     #edit-ai .ask { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-      justify-content: center; max-width: calc(100vw - 24px); padding: 9px 10px 9px 16px; border-radius: 999px; background: #fffaf3f2; box-shadow: 0 4px 18px #0003; }
+      justify-content: center; max-width: min(340px, calc(100vw - 24px)); padding: 10px 10px 10px 16px; border-radius: 999px; background: #fffaf3f2; box-shadow: 0 4px 18px #0003; }
     #edit-ai.chatting .ask { display: none; }
     #edit-ai button { font: inherit; cursor: pointer; border: 0; border-radius: 999px; padding: 7px 13px; background: #2b262212; color: #2b2622; }
     #edit-ai button.go { background: #2b2622; color: #fffaf3; }
@@ -137,7 +137,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     @media (max-width: 760px) { #edit-ai .demo { top: 168px; width: 160px; } }
     @media (prefers-reduced-motion: reduce) { #edit-ai .demo .hand, #edit-ai .demo .loop, #edit-ai .demo .pick { animation: none; stroke-dashoffset: 0; } }
     #edit-ai-toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 6; display: flex; gap: 8px; align-items: center;
-      max-width: calc(100vw - 24px); padding: 9px 10px 9px 16px; border-radius: 16px; background: #2b2622f2; color: #f3eee5; font: 12.5px Inter, sans-serif;
+      max-width: min(340px, calc(100vw - 24px)); padding: 10px 10px 10px 16px; border-radius: 16px; background: #2b2622f2; color: #f3eee5; font: 12.5px Inter, sans-serif;
       box-shadow: 0 6px 20px #0004; }
     #edit-ai-toast span { flex: 1; }
     #edit-ai-toast button { font: inherit; border: 0; border-radius: 999px; padding: 6px 12px; cursor: pointer; background: #f3eee5; color: #2b2622; }
@@ -400,7 +400,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
       store.setItem(histKey, JSON.stringify(history));
       area.value = ""; refs = []; showRefs();
       say("bot", res.reply);
-      const cost = res.usd != null ? ` · $${res.usd.toFixed(3)}` : "";
+      const cost = res.usd != null ? ` · ${egp(res.usd)}` : "";
       if (!res.changed?.length) { say("note", `No change made${cost}`); return; }
       say("note", `Applying the change${cost}…`);
       await apply(res, cost);
@@ -412,6 +412,9 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
       $(".send").disabled = false;
     }
   }
+  // USD→EGP: CBE rate ~24 Oct 2026
+  const USD_EGP = 55.25;
+  function egp(usd) { const v = usd * USD_EGP; return `Cost: EGP ${v.toFixed(v < 0.1 ? 3 : 2)}`; }
   async function apply(res, cost) {
     // Make sure the new code loads before showing it; a version that doesn't is undone on the spot.
     const fresh = await liveFiles(live.version);
@@ -462,9 +465,9 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     toast(`The last Edit AI change didn't load (${[...new Set(live.broken)].join(", ")}); showing the code before it.`,
       [["Undo it", undoAndReload], ["×", () => document.getElementById("edit-ai-toast").remove(), true]], true);
   } else if (applied?.version === live.version) {
-    const t = toast(applied.undone ? "Edit AI change undone." : `${applied.reply}${applied.cost || ""}`,
+    const t = toast(applied.undone ? "Edit AI change undone." : `Your edit is done.${applied.cost || ""}`,
       applied.undone ? [["×", () => t.remove(), true]]
-        : [["Undo", undoAndReload], ["Edit more", () => (t.remove(), open())], ["×", () => t.remove(), true]]);
+        : [["Undo", undoAndReload], ["×", () => t.remove(), true]]);
     if (applied.undone) setTimeout(() => t.remove(), 4000);
   }
   return { open, close };

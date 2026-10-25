@@ -182,6 +182,8 @@ export function makeMaterials(clip) {
     brushedNickel: std({ color: 0xc8c2b8, metalness: 1, roughness: 0.32 }),
     blackSteel: std({ color: 0x1d1c1b, metalness: 0.6, roughness: 0.35 }),
     blackGlass: std({ color: 0x0c0c0d, metalness: 0.2, roughness: 0.08 }),
+    chairBlack: std({ color: 0x161514, metalness: 0.05, roughness: 0.42 }),
+    chairBlackFabric: std({ color: 0x1e1e20, metalness: 0, roughness: 0.95 }),
     smokedGlass: std({ color: 0x3b2b22, metalness: 0.3, roughness: 0.08, transparent: true, opacity: 0.85 }),
     displayGlass: std({ color: 0x8a6a52, metalness: 0.2, roughness: 0.05, transparent: true, opacity: 0.22 }),
     mirror: std({ color: 0xe9e5de, metalness: 0.65, roughness: 0.14, envMapIntensity: 1.6 }),

@@ -1527,15 +1527,17 @@ export function furnish(scene, M, mat, version = "main") {
   item(KC ? SC : 18.86, 2.103, "N", p => sofa(p, 2.05, 1.02, mat.boucle, [mat.linenSlate, mat.linenBlush, mat.linenSlate]));  // DWG, clear of the pier
   item(21.027, 4.165, "W", p => sofa(p, 2.0, 0.92, mat.boucle, [mat.linenSlate, mat.linenBlush]));  // centred on the DWG sofa, back on its back line, clear of the curtains
   item(19.1, 5.95, "S", p => {  // DWG armchair, as rendered: open walnut lounge frame, slate cushions, blush pillow
+    const cw = version === "kareems-changes" ? mat.chairBlack : mat.walnut;  // frame: black for Karim's version
+    const cf = version === "kareems-changes" ? mat.chairBlackFabric : mat.linenSlate;  // upholstery: black
     for (const s of [-1, 1]) {
       const x = s * 0.36;
-      p.box(x - 0.025, x + 0.025, 0.56, 0.6, 0.04, 0.8, mat.walnut, 0.012);  // arm
-      p.box(x - 0.025, x + 0.025, 0, 0.58, 0.68, 0.73, mat.walnut, 0.012).rotation.x = -0.1;  // front leg
-      p.box(x - 0.025, x + 0.025, 0, 0.66, 0.06, 0.11, mat.walnut, 0.012).rotation.x = 0.15;  // back leg
-      p.box(x - 0.02, x + 0.02, 0.2, 0.25, 0.1, 0.74, mat.walnut, 0.01);  // seat rail
+      p.box(x - 0.025, x + 0.025, 0.56, 0.6, 0.04, 0.8, cw, 0.012);  // arm
+      p.box(x - 0.025, x + 0.025, 0, 0.58, 0.68, 0.73, cw, 0.012).rotation.x = -0.1;  // front leg
+      p.box(x - 0.025, x + 0.025, 0, 0.66, 0.06, 0.11, cw, 0.012).rotation.x = 0.15;  // back leg
+      p.box(x - 0.02, x + 0.02, 0.2, 0.25, 0.1, 0.74, cw, 0.01);  // seat rail
     }
-    p.box(-0.33, 0.33, 0.25, 0.39, 0.14, 0.74, mat.linenSlate, 0.05).rotation.x = -0.08;
-    p.box(-0.33, 0.33, 0.36, 0.88, 0.07, 0.21, mat.linenSlate, 0.05).rotation.x = -0.32;
+    p.box(-0.33, 0.33, 0.25, 0.39, 0.14, 0.74, cf, 0.05).rotation.x = -0.08;
+    p.box(-0.33, 0.33, 0.36, 0.88, 0.07, 0.21, cf, 0.05).rotation.x = -0.32;
     p.box(-0.06, 0.24, 0.46, 0.74, 0.2, 0.33, mat.linenBlush, 0.07).rotation.set(-0.3, 0, 0.2);
   });
   rug(17.9, 2.906, 20.5, 5.506);  // centred on the coffee table

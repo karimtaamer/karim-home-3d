@@ -44,7 +44,7 @@ RESPONSES_URL = os.environ.get("EDIT_AI_OPENAI_RESPONSES_URL", "https://api.open
 RESPONSES_MODELS = ("gpt-6.1", "gpt-6-astra")
 # Extra models a request may pick with "model" (comma-separated, e.g. for an A/B run); empty = only MODEL.
 ALLOWED_MODELS = {m.strip() for m in os.environ.get("EDIT_AI_MODELS", "").split(",") if m.strip()} | {MODEL}
-MAX_STEPS = 20  # tool rounds per message
+MAX_STEPS = 36  # tool rounds per message (was 20; hard openable/plan builds were dying early)
 MAX_IMAGE = 3_000_000  # bytes of a data URL
 MAX_REFS = 4
 # USD per million tokens (input, cached input, output), OpenAI list prices; only to tell the user what a message cost.

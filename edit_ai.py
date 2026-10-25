@@ -1218,6 +1218,55 @@ def review(ws, message, reply):
                             f"({L1[j - 1].strip()[:100]}) at {ax2} {round(b[0], 2)}..{round(b[1], 2)}, height {round(b[2], 2)}.."
                             f"{round(b[3], 2)} on the same wall. Taken stretches of this wall ({ax2}): {spans}. Move it along to a free "
                             "stretch (make it smaller if none is wide enough, and say so), with its plan outline to match." + tail)
+    # Parts of another piece (a bed's pillow lines) moved on their own, or "at the foot of the bed" not at its foot.
+    def outlines_before(bx):
+        src = ws.tmp / "plan-before2.dxf"
+        src.write_bytes(ws.orig.get(ws.cfg["dxf"]) or ws.read(ws.cfg["dxf"]))
+        code, q = run([dwg_python(), str(ROOT / "edit_ai_dxf.py"), "query", str(src), f"--origin={ORIGIN[0]},{ORIGIN[1]}",
+                       "--bbox=" + ",".join(str(round(v_, 4)) for v_ in bx), "--layers=2furni,2 furni", "--limit", "400"], timeout=90)
+        try:
+            ents = json.loads(q).get("entities", [])
+        except ValueError:
+            return []
+        out = []
+        for d in ents:
+            ps = d.get("points") or []
+            if d["type"] == "LWPOLYLINE" and len(ps) >= 4:
+                xs, ys = [p_[0] for p_ in ps], [p_[1] for p_ in ps]
+                out.append((d["handle"], (min(xs), min(ys), max(xs), max(ys))))
+        return out
+    rug_boxes = [tuple(float(v_) for v_ in m_.groups()) for m_ in RUG.finditer(f0)]
+    is_rug = lambda c_: any(all(abs(c_[k] - r_[k]) < 0.05 for k in range(4)) for r_ in rug_boxes)
+    if ws.pieces:
+        for h, b in list(ws.pieces.items())[:6]:
+            for h2, c in outlines_before((b[0] - 0.05, b[1] - 0.05, b[2] + 0.05, b[3] + 0.05)):
+                if h2 != h and h2 not in ws.pieces and not is_rug(c) and (c[2] - c[0]) * (c[3] - c[1]) > 2 * (b[2] - b[0]) * (b[3] - b[1]) + 0.05 \
+                        and c[0] - 0.01 <= b[0] and b[2] <= c[2] + 0.01 and c[1] - 0.01 <= b[1] and b[3] <= c[3] + 0.01:
+                    return (f"Check the plan: you moved or resized {h} (x {round(b[0], 3)}..{round(b[2], 3)}, y {round(b[1], 3)}.."
+                            f"{round(b[3], 3)}), which is a part drawn inside piece {h2} (x {round(c[0], 3)}..{round(c[2], 3)}, y "
+                            f"{round(c[1], 3)}..{round(c[3], 3)}, e.g. a bed's pillow line) while {h2} itself stayed. Don't move parts "
+                            f"of a piece the user didn't ask about: call discard and redo the change without touching {h} (if the "
+                            "piece the user meant already touches its neighbour, say so instead of forcing it)." + tail)
+    if re.search(r"\bfoot of (the |my )?bed|\bend of (the |my )?bed|رجل السرير|اخر السرير|آخر السرير", message, re.I) and ws.new_outlines:
+        beds = [(i, px, py, l) for i, px, py, l in placed_lines(ws, f1) if re.search(r"\bbed\(", l) and ITEM.search(l)]
+        if beds:
+            i, px, py, l = beds[0]
+            fb = ITEM.search(l)[3]
+            hold = [c for h2, c in outlines_before((px - 0.05, py - 0.05, px + 0.05, py + 0.05))
+                    if c[0] - 0.05 <= px <= c[2] + 0.05 and c[1] - 0.05 <= py <= c[3] + 0.05]
+            if hold:
+                c = max(hold, key=lambda c_: (c_[2] - c_[0]) * (c_[3] - c_[1]))
+                foot, sgn = {"S": (c[1], -1), "N": (c[3], 1), "E": (c[2], 1), "W": (c[0], -1)}[fb]
+                for pts in ws.new_outlines:
+                    xs, ys = [q_[0] for q_ in pts], [q_[1] for q_ in pts]
+                    near = {"S": max(ys), "N": min(ys), "E": min(xs), "W": max(xs)}[fb]
+                    gap = (near - foot) * sgn
+                    if gap > 0.15 or gap < -0.01:
+                        ax2 = "y" if fb in "NS" else "x"
+                        return (f"Check the placement: the user asked for it at the foot of the bed, whose foot edge is at {ax2} "
+                                f"{round(foot, 3)}, but your new outline's near edge is at {ax2} {round(near, 3)} ({round(abs(gap) * 100)} cm "
+                                f"{'away from' if gap > 0 else 'inside'} the bed). Set it 5-10 cm off the foot (near edge at {ax2} "
+                                f"{round(foot + sgn * 0.05, 3)}), in 3D and on the plan, sitting over the rug end is fine." + tail)
     # A resized / moved plan piece: a new or changed item line standing on it sits at the middle of its back.
     if ws.pieces:
         cur_ = ws.tmp / "plan-pieces.dxf"
@@ -1348,7 +1397,24 @@ def review(ws, message, reply):
         wspans = [(min(ts), max(ts)) for wo in wins
                   for ds in [[(px - x) * fx + (py - y) * fy for px, py in wo]]
                   for ts in [[(px - x) * ux + (py - y) * uy for px, py in wo]] if min(ds) < 0.05 and max(ds) > -0.6]
+        sg_, o_ = ux + uy, (x if ux else y)
+        for i2, line2 in new_items:  # the same paint job split over several items on this wall counts as one
+            m2 = ITEM.search(line2)
+            if i2 == i or m2[3] != f or abs(float(m2[2] if f in "NS" else m2[1]) - (y if f in "NS" else x)) > 0.03:
+                continue
+            o2, blk2, dep2 = float(m2[1] if f in "NS" else m2[2]), "", 0
+            for k in range(i2 - 1, min(i2 + 40, len(L1))):
+                blk2 += L1[k] + "\n"
+                dep2 += L1[k].count("(") - L1[k].count(")")
+                if dep2 <= 0:
+                    break
+            for b_ in PANEL.finditer(blk2):
+                a2, c2 = sorted(((o2 + sg_ * float(b_[1]) - o_) * sg_, (o2 + sg_ * float(b_[2]) - o_) * sg_))
+                boxes.append((a2, c2, b_[4], b_[3]))
         lo_b, hi_b = min(bx[0] for bx in boxes), max(bx[1] for bx in boxes)
+        if re.search(r"\b(paint|colou?r|wall|finish|limewash|wallpaper)|دهان|لون|حيط", message, re.I) \
+                and not re.search(r"\b(strip|band|stripe|half|part|panel|section|accent)\b|نص|جزء", message, re.I):
+            lo_b, hi_b = w0, w1  # a whole-wall finish runs corner to corner
         bare = []
         t = max(w0, lo_b) + 0.05
         while t < min(w1, hi_b) - 0.05:  # a one-wall paint job leaves no bare bands between its ends

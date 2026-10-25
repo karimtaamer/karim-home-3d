@@ -678,7 +678,8 @@ def tool(ws, name, a):
                     notes.append(lost)
             except Exception as e:
                 notes.append(str(e))
-        return "\n".join(notes) or ("no syntax problems" if shutil.which("node") else "no node here, syntax can't be checked; be careful")
+        return "\n".join(notes) or ("no syntax problems" if shutil.which("node") else
+                                    "no syntax problems found (brackets, strings and templates balance; full JS parse not available here)")
     if name == "discard":
         ws.discard()
         return "every edit of this message is thrown away; nothing will be saved unless you edit again"

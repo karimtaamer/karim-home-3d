@@ -736,10 +736,12 @@ export function furnish(scene, M, mat, version = "main") {
     // Towel radiator on the east wall, 0.29 south of the pan front (DWG y -113.725..-114.175), and three
     // champagne-bronze towel hooks at 1.30 on the 0.61 of plain wall between it and the open door leaf.
     item(2.192, 7.6632, "W", towelRail);
+    // Kareem's (Nagham call, 25 Oct): hooks raised 15 cm, to 1.45.
+    const hk = version === "kareems-changes" ? 0.15 : 0;
     for (const y of [-114.33, -114.48, -114.63]) item(2.192, y + 121.6132, "W", p => {
-      p.cyl(0, 0.014, 0.018, 1.296, 1.304, champagne, 32).rotation.x = Math.PI / 2;  // rosette on the lining
-      p.cyl(0, 0.045, 0.006, 1.27, 1.33, champagne, 16).rotation.x = Math.PI / 2;    // arm, 6 cm out
-      p.cyl(0, 0.075, 0.009, 1.3, 1.325, champagne, 16);                              // upturned tip
+      p.cyl(0, 0.014, 0.018, 1.296 + hk, 1.304 + hk, champagne, 32).rotation.x = Math.PI / 2;  // rosette on the lining
+      p.cyl(0, 0.045, 0.006, 1.27 + hk, 1.33 + hk, champagne, 16).rotation.x = Math.PI / 2;    // arm, 6 cm out
+      p.cyl(0, 0.075, 0.009, 1.3 + hk, 1.325 + hk, champagne, 16);                              // upturned tip
     });
     // Niche in the shower face of the 0.20 solid partition (DWG dashed), centred on the 0.84 width: cut 0.70 wide x
     // 0.15 deep rough (0.05 of wall left behind it on the vanity side), finished 0.67 x 0.135 in porcelain. Three
@@ -913,10 +915,39 @@ export function furnish(scene, M, mat, version = "main") {
   // Local +x is north. The door is at the south end, so the opening is there (0.80) and the fixed screen covers the
   // north end by the WC. Rain shower over the screen end; the grooved plank wall and the niche end leave no clean
   // run for a hand-shower rail, so a low brass mixer with a bath spout sits mid-wall, in reach from the opening.
+  // Kareem's (Nagham call, 25 Oct): the south build-out is gone (plank wall to the south wall face, plan y 6.883),
+  // the glass is back over the door end, south of the WC, so the opening is by the WC; mixer and rain head are
+  // concealed (flush trim plate, rain head flush in the ceiling), with a hand spray on a wall outlet and a low spout.
+  const GKC = version === "kareems-changes";
   const bath = item(12.324, 8.05, "E", p => {  // wood-look plank wall, stone-clad bath, framed screen at the WC end
-    p.box(-1.08, 1.08, 0, M.ceiling, 0, 0.02, mat.woodTile);
+    p.box(GKC ? -1.167 : -1.08, 1.08, 0, M.ceiling, 0, 0.02, mat.woodTile);
     p.box(-0.85, 0.85, 0, 0.55, 0.02, 0.75, mat.stoneWall);
     p.box(-0.78, 0.78, 0.52, 0.56, 0.08, 0.7, mat.ceramic);
+    if (GKC) {
+      const g0 = -0.85, g1 = 0.05, z = 0.73;  // fixed screen on the rim over the south (door) end, black frame all round
+      p.box(g0, g1, 0.56, 2.3, z, z + 0.01, mat.clearGlass);
+      for (const [a, b, c, d] of [[g0, g1, 2.28, 2.31], [g0, g1, 0.55, 0.58], [g0, g0 + 0.025, 0.55, 2.31], [g1 - 0.025, g1, 0.55, 2.31]])
+        p.box(a, b, c, d, z - 0.012, z + 0.022, mat.blackSteel);
+      p.box(-0.4 - 0.15, -0.4 + 0.15, M.ceiling - 0.006, M.ceiling, 0.23, 0.53, mat.chrome, 0.003);  // 30 cm rain head flush in the ceiling
+      // Concealed thermostatic mixer: only its square trim plate and two knobs on the plank wall, at 1.05, mid-bath
+      const mx = 0.15;
+      p.box(mx - 0.09, mx + 0.09, 0.96, 1.14, 0.02, 0.028, mat.brass, 0.004);
+      for (const y of [1.0, 1.1]) { const k = p.cyl(mx, 0.04, 0.024, y - 0.015, y + 0.015, mat.brass, 20); k.rotation.x = Math.PI / 2; k.position.y = y; }
+      // Hand spray: wall outlet elbow and holder north of the mixer, the spray parked in it, its hose looping down
+      const hx = 0.42;
+      p.cyl(hx, 0.03, 0.02, 1.1, 1.13, mat.brass, 16).rotation.x = Math.PI / 2;
+      p.box(hx - 0.02, hx + 0.02, 1.16, 1.2, 0.02, 0.07, mat.brass, 0.006);
+      p.cyl(hx, 0.07, 0.016, 1.02, 1.24, mat.brass, 16, 0.012);
+      p.cyl(hx, 0.07, 0.03, 1.24, 1.27, mat.brass, 20, 0.022);
+      p.cyl(hx, 0.07, 0.007, 0.75, 1.02, mat.chrome, 8);
+      // Bottom tap (حنفيه): a short concealed spout over the rim, under the mixer
+      p.box(mx - 0.02, mx + 0.02, 0.66, 0.69, 0.02, 0.17, mat.brass, 0.008);
+      for (const x of [-0.62, -0.32]) {  // towels hung on the screen
+        p.box(x - 0.1, x + 0.1, 1.2, 1.85, z + 0.025, z + 0.05, mat.boucle, 0.01);
+        p.box(x - 0.012, x + 0.012, 1.84, 1.9, z + 0.02, z + 0.05, mat.blackSteel);
+      }
+      return;
+    }
     const g0 = -0.05, g1 = 0.85, z = 0.73;  // fixed screen on the rim, black frame all round
     p.box(g0, g1, 0.56, 2.3, z, z + 0.01, mat.clearGlass);
     for (const [a, b, c, d] of [[g0, g1, 2.28, 2.31], [g0, g1, 0.55, 0.58], [g0, g0 + 0.025, 0.55, 2.31], [g1 - 0.025, g1, 0.55, 2.31]])
@@ -1086,8 +1117,28 @@ export function furnish(scene, M, mat, version = "main") {
       const j = (XW + XT) / 2 - XJ;                   // the joint, in local x
       p.box(j, w, 0.1, H, D - f, D, fin); // blind panel
       p.box(j - 0.002, j + 0.002, 0.1, H, D, D + 0.003, shadowGap);
-      doors(p, -w, j, 0.1, 2.25, 1);
-      doors(p, -w, j, 2.25, H, 1);
+      if (version !== "kareems-changes") {
+        doors(p, -w, j, 0.1, 2.25, 1);
+        doors(p, -w, j, 2.25, H, 1);
+        return;
+      }
+      // Kareem's: the pantry opens (interact.js). Both doors hinge on the joint side (plan x 7.0776, the hob run's
+      // front line), so open (85 degrees) they stand by the hob run's end, clear of the tower. Inside: four shelves and some jars.
+      const c = new THREE.Group(), q = part(c), leaves = [];
+      p.g.add(c);
+      for (const y of [0.55, 1.0, 1.45, 1.9, 2.25]) q.box(-w, j, y, y + f, 0.02, D - f - 0.01, fin);  // shelves (2.25: under the top door)
+      for (const [x, y, r, h, m] of [[-0.45, 1.0, 0.05, 0.2, mat.clearGlass], [-0.3, 1.0, 0.045, 0.16, mat.clearGlass], [-0.15, 1.45, 0.06, 0.22, mat.clearGlass],
+        [-0.4, 1.45, 0.05, 0.18, mat.planter], [-0.25, 0.55, 0.09, 0.3, mat.oatmeal], [-0.42, 1.9, 0.05, 0.2, mat.clearGlass]])
+        q.cyl(x, 0.3, r, y + f, y + f + h, m, 20);
+      for (const [y0, y1] of [[0.1, 2.25], [2.25, H]]) {
+        const g = new THREE.Group(), dq = part(g);
+        g.position.set(j, 0, D - f);
+        c.add(g);
+        dq.box(-w - j + 0.0015, -0.002, y0, y1 - 0.002, 0, f, fin);
+        dq.box(-w - j + 0.0015, -0.002, y1 - 0.002, y1 + 0.002, f, f + 0.003, shadowGap);
+        leaves.push({ obj: g, axis: "y", open: 85 * Math.PI / 180 });  // hinge on the leaf's +x edge: positive turns the free edge out (+z); 85 keeps it off the counter's end
+      }
+      c.userData.openable = { id: "pantry", label: "Pantry", leaves, anchor: new THREE.Vector3((j - w) / 2, 1.2, D + 0.06), reach: 1.8, duration: 0.6 };
     }));
   } else {
     run((K.x0 + 8.6) / 2, K.y0, "N", 8.6 - K.x0, { uppers: false });                 // south run
@@ -1157,8 +1208,38 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-cw, cw, 0.1, 0.88, 0, 0.6, mat.oakVeneer);
     for (const y of [0.36, 0.62]) p.box(-cw + 0.01, cw - 0.01, y - 0.002, y + 0.002, 0.6, 0.603, mat.walnut);
     p.box(-cw, cw, 0.88, 0.92, 0, 0.62, mat.marbleTop);
-    p.box(-cw, cw, 1.6, 2.5, 0, 0.35, mat.oakVeneer);
-    p.box(-cw, cw, 1.58, 1.6, 0.05, 0.3, mat.ledStrip);
+    if (version !== "kareems-changes") {
+      p.box(-cw, cw, 1.6, 2.5, 0, 0.35, mat.oakVeneer);
+      p.box(-cw, cw, 1.58, 1.6, 0.05, 0.3, mat.ledStrip);
+      return;
+    }
+    // Kareem's (Nagham call, 25 Oct): the water heater lives in this upper (the left one, not over the washer). The
+    // cabinet is 0.45 deep, 10 cm proud of the old 0.35 upper, for the pipes behind the heater: an oak carcass, a 40 L
+    // vertical electric heater (0.36 round x 0.64) on the back, its pipes and valves under it, and one oak door
+    // hinged on the left (it opens 88 degrees, up to the tall joinery's face), marked openable (interact.js).
+    const c = new THREE.Group(), q = part(c), D = 0.45, t = 0.018, y0 = 1.6, y1 = 2.5;
+    p.g.add(c);
+    for (const s of [-1, 1]) q.box(s < 0 ? -cw : cw - t, s < 0 ? -cw + t : cw, y0, y1, 0, D - 0.02, mat.oakVeneer);  // sides
+    for (const y of [y0, y1 - t]) q.box(-cw, cw, y, y + t, 0, D - 0.02, mat.oakVeneer);                            // bottom, top
+    q.box(-cw + t, cw - t, y0 + t, y1 - t, 0, 0.01, honeyOak);                                                     // back
+    q.box(-cw, cw, y0 - 0.02, y0, 0.05, D - 0.05, mat.ledStrip);                                                   // strip onto the counter
+    const hz = 0.01 + 0.03 + 0.18;  // heater centre: 3 cm of pipes behind it, its front 3 cm inside the door
+    q.cyl(0, hz, 0.18, y0 + 0.2, y0 + 0.82, mat.applianceWhite, 40);
+    q.cyl(0, hz, 0.17, y0 + 0.82, y0 + 0.84, mat.applianceWhite, 40, 0.18);
+    q.cyl(0, hz + 0.18, 0.025, y0 + 0.5, y0 + 0.53, mat.grille, 20).rotation.x = Math.PI / 2;  // thermostat dial
+    for (const [x, m] of [[-0.07, mat.chrome], [0.07, mat.brass]]) {  // cold in, hot out: down from its base to valves
+      q.cyl(x, hz, 0.011, y0 + t, y0 + 0.2, m, 12);
+      q.box(x - 0.02, x + 0.02, y0 + 0.08, y0 + 0.11, hz - 0.02, hz + 0.02, mat.chrome, 0.005);
+      q.cyl(x, 0.02, 0.011, y0 + t, y0 + 0.06, m, 12);
+    }
+    q.cyl(0.17, 0.02, 0.008, y0 + 0.3, y0 + 0.86, mat.applianceWhite, 8);  // supply cable down the back corner
+    const door = new THREE.Group(), dq = part(door);
+    door.position.set(-cw, 0, D - 0.02);
+    c.add(door);
+    dq.box(0.0015, 2 * cw - 0.0015, y0, y1, 0, 0.02, mat.oakVeneer);
+    dq.box(2 * cw - 0.04, 2 * cw - 0.025, y0 + 0.02, y0 + 0.18, 0.02, 0.035, mat.walnut, 0.004);  // finger pull, low on the free edge
+    c.userData.openable = { id: "laundry-heater", label: "Water heater cupboard", leaves: [{ obj: door, axis: "y", open: -88 * Math.PI / 180 }],  // stops short of the tall joinery's face
+      anchor: new THREE.Vector3(0, 2.0, D + 0.06), reach: 1.8, duration: 0.6 };
   });
   item(11.835, 9.18, "S", p => {  // DWG stacked washer and dryer 0.60 x 0.60 (x 11.535 to 12.135)
     p.box(-0.3, 0.3, 0, 0.42, 0, 0.6, mat.oakVeneer);
@@ -1311,8 +1392,11 @@ export function furnish(scene, M, mat, version = "main") {
   item(17.25, 3.67, "E", p => {  // per render 10: a plaster TV box standing proud of a built-out run
     // holding two tall rounded oak-lined niches (south), and a lit rounded oak recess under the TV.
     // North end (local x 1.72) meets the reception column at plan y 5.3914 — keep that edge flat/flush.
-    const H = M.ceiling, edge = -0.46, D0 = 0.28, D1 = 0.36;  // run depth, TV box depth
     const KC = version === "kareems-changes";
+    // Kareem's (Nagham call, 25 Oct): the TV box comes out flush with the column's face (plan x 17.862), the run
+    // 0.08 behind it, so the tall niches are 25 cm deeper (0.53).
+    const H = M.ceiling, edge = -0.46, D0 = KC ? 0.5322 : 0.28, D1 = KC ? 0.6122 : 0.36;  // run depth, TV box depth
+    const dz0 = D0 - 0.28, dz1 = D1 - 0.36;  // shelf styling keeps its distance from the fronts
     // Kareem's: TV 166.8 x 95.8 x 7.7 cm in a flat rectangular opening centred over the niche (render).
     const TW = KC ? 1.668 : 1.50, TH = KC ? 0.958 : 0.85, TD = KC ? 0.077 : 0.03;
     const slab = (x0, x1, d, holes) => {
@@ -1351,11 +1435,11 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(x0 + 0.06, x1 - 0.06, 2.1, 2.112, 0.04, D0 - 0.03, mat.ledStrip);
     }
     // Shelf styling as rendered: vases, books, a bowl.
-    p.cyl(-1.42, 0.15, 0.045, 1.765, 1.97, mat.linenSage, 16, 0.065); p.cyl(-0.94, 0.15, 0.035, 1.765, 1.99, mat.linenSlate, 16, 0.06);
-    for (const [x, y] of [[-1.47, 1.325], [-0.99, 0.885], [-1.0, 1.325]]) for (let k = 0; k < 4; k++) p.box(x + k * 0.03, x + k * 0.03 + 0.025, y, y + 0.2 - (k % 2) * 0.03, 0.06, 0.24, k % 2 ? mat.linenBlush : mat.walnut);
-    p.cyl(-1.42, 0.15, 0.05, 0.445, 0.6, mat.planter, 16);
-    p.box(0.95, 1.15, 0.345, 0.4, 0.08, 0.26, mat.whiteLacquer);
-    p.cyl(0.2, 0.15, 0.05, 0.345, 0.52, mat.clearGlass, 16);
+    p.cyl(-1.42, 0.15 + dz0, 0.045, 1.765, 1.97, mat.linenSage, 16, 0.065); p.cyl(-0.94, 0.15 + dz0, 0.035, 1.765, 1.99, mat.linenSlate, 16, 0.06);
+    for (const [x, y] of [[-1.47, 1.325], [-0.99, 0.885], [-1.0, 1.325]]) for (let k = 0; k < 4; k++) p.box(x + k * 0.03, x + k * 0.03 + 0.025, y, y + 0.2 - (k % 2) * 0.03, 0.06 + dz0, 0.24 + dz0, k % 2 ? mat.linenBlush : mat.walnut);
+    p.cyl(-1.42, 0.15 + dz0, 0.05, 0.445, 0.6, mat.planter, 16);
+    p.box(0.95, 1.15, 0.345, 0.4, 0.08 + dz1, 0.26 + dz1, mat.whiteLacquer);
+    p.cyl(0.2, 0.15 + dz1, 0.05, 0.345, 0.52, mat.clearGlass, 16);
     // TV centred over the niche; on Kareem's it sits in the opening so the face reads flat with the plaster.
     const z0 = KC ? D1 - TD : D1, z1 = KC ? D1 : D1 + TD;
     p.box(tvX0, tvX1, tvY0, tvY1, z0, z1, mat.blackSteel);
@@ -1366,9 +1450,10 @@ export function furnish(scene, M, mat, version = "main") {
     skirt.position.set(edge - splay / 2 - Math.sin(a) * 0.006, 0.04, (D0 + D1) / 2 + Math.cos(a) * 0.006);
     skirt.rotation.y = -a;
   });
-  // Kareem's Changes: sofa, prints and split AC centred on the south wall's visible face, x 17.53 (TV-wall run)
-  // to 21.222 (east wall), so x 19.376; side table and plant each mid-way in the 0.82 m left either side.
-  const KC = version === "kareems-changes", SC = 19.376;
+  // Kareem's Changes: sofa, prints and split AC centred on the south wall's visible face, x 17.782 (TV-wall run,
+  // out to the column since 25 Oct) to 21.222 (east wall), so x 19.502; side table and plant each mid-way in the
+  // 0.695 m left either side (1.3725 from the centre).
+  const KC = version === "kareems-changes", SC = 19.502, SO = 1.3725;
   item(KC ? SC : 18.86, 2.103, "N", p => sofa(p, 2.05, 1.02, mat.boucle, [mat.linenSlate, mat.linenBlush, mat.linenSlate]));  // DWG, clear of the pier
   item(21.027, 4.165, "W", p => sofa(p, 2.0, 0.92, mat.boucle, [mat.linenSlate, mat.linenBlush]));  // centred on the DWG sofa, back on its back line, clear of the curtains
   item(19.1, 5.95, "S", p => {  // DWG armchair, as rendered: open walnut lounge frame, slate cushions, blush pillow
@@ -1389,8 +1474,8 @@ export function furnish(scene, M, mat, version = "main") {
     for (const x of [-0.25, 0.25]) p.cyl(x, 0, 0.15, 0, 0.36, mat.walnut, 24);
   });
   // DWG side table (Kareem's: in the east corner, 0.10 clear of the curtain stack at y 2.76)
-  item(...(KC ? [SC + 1.436, 2.45] : [20.341, 2.687]), "S", p => { p.cyl(0, 0, 0.205, 0.52, 0.56, mat.marbleTop, 32); p.cyl(0, 0, 0.11, 0, 0.52, mat.walnut, 24); });
-  if (KC) plant(SC - 1.436, 2.45, 1.6, 0.24);  // clear of the TV-wall run (x 17.53)
+  item(...(KC ? [SC + SO, 2.45] : [20.341, 2.687]), "S", p => { p.cyl(0, 0, 0.205, 0.52, 0.56, mat.marbleTop, 32); p.cyl(0, 0, 0.11, 0, 0.52, mat.walnut, 24); });
+  if (KC) plant(SC - SO, 2.45, 1.6, 0.24);  // clear of the TV-wall run (x 17.782)
   else plant(17.6, 2.33, 1.6, 0.24);
   // Two 1.05 x 1.30 m framed prints as in render 11, 0.30 m apart and centred over the sofa, on the south
   // wall's built-out face (y 2.0705, flush with the pier: the recesses either side are filled to it).

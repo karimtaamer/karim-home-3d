@@ -254,6 +254,23 @@ the outer edges, 25 cm clear inside, three glass shelves, bottom 1.32 / top 2.07
 strip under it. `furnish.js` (`vanity(…, d, above)` and `medCabinet`), `spotnames.js` and `check_furnish.py` (master
 vanity, medicine cabinet) follow it.
 
+Kareem's Changes, Nagham call (2026-10-25):
+- **Reception TV wall:** in block `hfgbv` its front linework moved 0.2907 east. The TV box face (DWG x 208.2672, plan
+  17.862) is now flush with the reception column's face as the 3D model builds it, and the run sits 0.08 behind it.
+  In 3D, `furnish.js` uses depths 0.6122 / 0.5322 (were 0.36 / 0.28), so the two tall oak niches are 25 cm deeper.
+  The sofa, prints, AC, side table and plant are re-centred on the shorter south wall (x 19.502). **Note:** the DXF
+  and the as-built survey draw that column only to DWG x 207.947. The extra 0.32 the 3D column shows comes from
+  `build_geometry.py`'s corner-square step (every version has it). Measure on site before the joinery is made.
+- **Guest WC:** the door is hinged on the east jamb (DWG x 204.366) and opens inwards against the vanity
+  (`doorsAsDrawn`). The 0.26 build-out on the south wall (`1wall` lines and its niche block) is gone. The glass is
+  back over the door end (DWG y -114.413 to -113.513), south of the WC, with the rain head over it. The niche
+  build-out is drawn on the north wall (`2furni`). In 3D: concealed mixer (trim plate only), rain head flush in the
+  ceiling, hand spray on a wall outlet, low spout.
+- **Laundry:** the counter's upper cabinet (left, not over the washer) is 0.45 deep and holds a 40 L electric water
+  heater with its pipes and valves. One oak door, openable.
+- **Kitchen pantry:** its two doors open (interact.js, id `pantry`), hinged on the hob-run side, with shelves inside.
+- **Master en-suite:** the towel hooks are 15 cm higher (1.45).
+
 Its en-suite (2026-10-24) is rearranged to Nagham's sketch: the bathroom/bedroom partition (the headboard wall, still
 0.11) sits 14 cm further east (bathroom-side face DWG x 192.5965), and the bed and bedside tables moved with it (bed
 foot 1.40 from the wardrobe front). Shower in the north-west corner, 0.84 wide inside x 1.29 deep, in front of a

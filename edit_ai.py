@@ -867,9 +867,11 @@ the piece. Never put it behind the camera, out of frame or in another room becau
 nothing in view fits, use the nearest free spot in this room and say where it went.
 - Two or more red marks with a move / put / relocate / shift request (\"put it here\", \"move this there\"): it is a \
 from -> to move, not two additions. Mark 1 (drawn first) is the piece to move, Mark 2 is where it goes (the context \
-below lists each mark). Move that piece (3D line and its plan outline together) to Mark 2, keeping its size, height on \
-the wall and orientation (re-face it only if it moves onto a different wall) unless the user asks otherwise; nothing \
-stays behind at Mark 1.
+below lists each mark). Move that piece (3D line and its plan outline together) to Mark 2, keeping its size and \
+orientation (re-face it only if it moves onto a different wall); nothing stays behind at Mark 1. Height: if Mark 2's \
+centre hit gives a height ("... m up" on a wall or furniture surface), put the piece at that height, since drawing \
+Mark 2 higher or lower IS the user asking for a new height; only if Mark 2 is on the floor / has no useful height keep \
+the piece's current height. Never ignore a clear vertical difference between Mark 1 and Mark 2 on a wall.
 - \"At the foot of / beside / in front of\" a piece: line the new piece up with that piece's plan outline (centred on \
 it unless told otherwise) and set it 5-10 cm off it, not across the room. At the foot of a bed whose headboard faces \
 "S" (foot edge at y = F): item(bed centre x, F - 0.05, "S", ...), i.e. the new piece's back toward the bed and its \
@@ -1044,7 +1046,8 @@ def context_text(ctx, aspect=None, rings=None):
                 lines.append("  (nothing solid under it)")
         lines.append("Convention: Mark 1 is the thing to move (or the source); Mark 2 and later are where it goes. If the "
                      "request is a move / put / relocate (\"put it here\", \"move this there\"), move the piece at Mark 1 to "
-                     "Mark 2 (on a wall at the same height unless the user says otherwise), keep its size and orientation, "
+                     "Mark 2 at Mark 2's height (its centre hit's \"m up\") when that hit has one, keeping the current height only "
+                     "when Mark 2 doesn't imply one (floor / no height), keep its size and orientation, "
                      "and move its plan outline with it. Don't add a second copy at Mark 2 or treat both marks as \"add here\".")
         return "\n".join(lines)
     if c.get("highlightBox"):
@@ -1456,7 +1459,8 @@ def two_mark_move(ws, message, f0, f1):
         return (f"Check the move: the user drew two marks and asked to move / put something there. Mark 1 (the piece) is "
                 f"around plan {fmt(a)}, Mark 2 (where it goes) around {fmt(b)}, but the nearest line you changed (furnish.js "
                 f"line {i}: {l.strip()[:110]}) is at ({px}, {py}), {round(math.hypot(px - b[0], py - b[1]), 1)} m from Mark 2. "
-                "Move the piece at Mark 1 to Mark 2 (same size, height and orientation unless asked; plan outline too), "
+                "Move the piece at Mark 1 to Mark 2 (same size and orientation; match Mark 2's height when Mark 2's hit has "
+                "one, otherwise keep its height; plan outline too), "
                 "or if you read the marks differently, say how.")
     if len(placed_lines(ws, f1)) > len(old) and left:
         ws.move_nudged = True

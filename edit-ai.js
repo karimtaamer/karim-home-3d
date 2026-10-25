@@ -116,7 +116,8 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
       filter: drop-shadow(0 10px 24px #0005); animation: eai-in .4s ease-out; }
     #edit-ai .demo[hidden], #edit-ai.chatting .demo { display: none; }
     #edit-ai .demo svg { display: block; width: 100%; height: auto; overflow: visible; }
-    #edit-ai .demo .cap { margin-top: 8px; text-align: center; font: 600 11px Inter, sans-serif; letter-spacing: .04em; color: #fffaf3; text-shadow: 0 1px 4px #000a; }
+    #edit-ai .demo .cap { margin-top: 8px; text-align: center; font: 600 11px Inter, sans-serif; letter-spacing: .04em; color: #fffaf3; text-shadow: 0 1px 4px #000a; line-height: 1.35; }
+    #edit-ai .demo .cap .or { display: block; margin-top: 2px; font-weight: 500; font-size: 10px; letter-spacing: .02em; opacity: .9; }
     #edit-ai .demo .loop { fill: none; stroke: ${INK}; stroke-width: 3.2; stroke-linecap: round; stroke-dasharray: 190; stroke-dashoffset: 190;
       animation: eai-draw 3.2s ease-in-out infinite; }
     #edit-ai .demo .hand { animation: eai-hand 3.2s ease-in-out infinite; filter: drop-shadow(0 3px 4px #0006); }
@@ -181,7 +182,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
         <path d="M10 2 C 10 -2, 17 -2, 17 2 L 17 30 L 18 22 C 18 18, 25 18, 25 22 L 25 32 L 26 26 C 26 22, 33 22, 33 26 L 33 36 L 34 31 C 34 27, 41 27, 41 31 L 41 52 C 41 66, 33 74, 22 74 C 12 74, 6 68, 3 58 L -4 40 C -6 35, 0 32, 4 36 L 10 46 Z"
           fill="#efbb92" stroke="#5c3a22" stroke-width="2" stroke-linejoin="round"/>
         <path d="M17 30 L17 40 M25 32 L25 41 M33 36 L33 43" stroke="#8a5d3b" stroke-width="1" stroke-linecap="round" fill="none"/></g></g>
-    </svg><div class="cap">Circle what to change</div></div>
+    </svg><div class="cap">Circle like this<br><span class="or">or tap Whole view</span></div></div>
     <button class="x" title="Close">×</button>
     <aside class="chat" hidden>
       <header><h2>Edit AI</h2><span class="meta"></span><button class="redo" title="Circle something else">Re-mark</button></header>

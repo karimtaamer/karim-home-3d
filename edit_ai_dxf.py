@@ -5,6 +5,10 @@ own on Vercel). edit_ai.py calls it; coordinates in and out are plan metres in m
     edit_ai_dxf.py query IN.dxf --origin ox,oy --bbox x0,y0,x1,y1 [--layers 1wall,2furni]   -> JSON list of entities
     edit_ai_dxf.py edit  IN.dxf OUT.dxf --origin ox,oy  < ops.json                          -> JSON report
 
+`query` also lists what furniture blocks hold (not door blocks): handle "INSERT/ENTITY", "inside_block": its name,
+layer the entity's own. An edit op given such a handle explodes that INSERT into model space first (once per call) and
+works on the new entity; the report's "handles_remapped" gives virtual -> new handles.
+
 Edit ops (a JSON list), handles as `query` gives them:
     {"op": "move", "handles": [...], "dx": 0.1, "dy": 0}          translate entities (blocks move by their insert)
     {"op": "copy", "handles": [...], "dx": 0.1, "dy": 0}          copies, translated; reports the new handles
@@ -44,7 +48,7 @@ from ezdxf import recover
 from shapely.geometry import LineString
 from shapely.ops import unary_union
 
-WINDOW_LAYER, WALL_LAYER = "Windows", "1wall"
+WINDOW_LAYER, WALL_LAYER, DOOR_LAYER = "Windows", "1wall", "3door"
 FURNI = ("2furni", "2 furni")
 DOOR_PART_LAYERS = {"1wall", "3door", "_DIM"}
 
@@ -55,9 +59,41 @@ def r(v):
     return round(v, 4)
 
 
-def describe(e, ox, oy):
+def block_children(ins):
+    """(source handle, entity in model-space coordinates) for each entity of an INSERT's block."""
+    m = ins.matrix44()
+    for src in ins.doc.blocks[ins.dxf.name]:
+        if src.dxftype() in ("ATTDEF", "ATTRIB"):
+            continue
+        try:
+            v = src.copy()
+            v.transform(m)
+        except Exception:
+            continue
+        yield src.dxf.handle, v
+
+
+def walk_msp(msp, depth=3):
+    """Model space plus what furniture blocks hold: (entity, handle, layer, block name). An entity inside a block gets
+    a virtual handle "INSERT/ENTITY" (nested: "A/B/C") and its own layer (layer 0 takes the insert's, as drawn).
+    Door blocks (3door) are left whole: move_door refuses them anyway."""
+    def walk(ents, prefix, parent_layer, block, d):
+        for h, e in ents:
+            layer = e.dxf.get("layer", "0")
+            if layer == "0" and parent_layer:
+                layer = parent_layer
+            vh = f"{prefix}/{h}" if prefix else h
+            yield e, vh, layer, block
+            if e.dxftype() == "INSERT" and d < depth and layer != DOOR_LAYER:
+                yield from walk(block_children(e), vh, layer if layer != "0" else None, e.dxf.name, d + 1)
+    yield from walk(((e.dxf.handle, e) for e in msp), "", None, None, 0)
+
+
+def describe(e, ox, oy, handle=None, layer=None, block=None):
     t = e.dxftype()
-    d = {"handle": e.dxf.handle, "type": t, "layer": e.dxf.layer}
+    d = {"handle": handle or e.dxf.handle, "type": t, "layer": layer or e.dxf.layer}
+    if block:
+        d["inside_block"] = block
     P = lambda p: [r(p[0] - ox), r(p[1] - oy)]
     if t == "LINE":
         d["points"] = [P(e.dxf.start), P(e.dxf.end)]
@@ -103,10 +139,10 @@ def query(a):
     b = [min(b[0], b[2]), min(b[1], b[3]), max(b[0], b[2]), max(b[1], b[3])]
     layers = set(a.layers.split(",")) if a.layers else None
     out = []
-    for e in doc.modelspace():
-        if layers and e.dxf.layer not in layers:
+    for e, h, layer, block in walk_msp(doc.modelspace()):
+        if layers and layer not in layers:
             continue
-        d = describe(e, ox, oy)
+        d = describe(e, ox, oy, h, layer, block)
         if d and in_box(d, b):
             if len(d.get("points", [])) > 8:  # curves drawn as many short segments: their extent is enough to pick them
                 ps = d.pop("points")
@@ -239,7 +275,10 @@ def recut_walls(msp, c, u, n, t0, t1, n0, n1, c2, w2):
 
 
 def ext_of(e):
-    from ezdxf import bbox as _bbox
+    from ezdxf import bbox as _bbox, path as _path
+    if e.dxftype() == "LWPOLYLINE" and len(e):  # its drawn line, not widened by a polyline width (sizes come out exact)
+        ps = list(_path.make_path(e).flattening(0.001)) or [e.get_points("xy")[0]]
+        return (min(p[0] for p in ps), min(p[1] for p in ps), max(p[0] for p in ps), max(p[1] for p in ps))
     x = _bbox.extents([e])
     if not x.has_data:
         return None
@@ -466,7 +505,42 @@ def edit(a):
     soft = [(t[0] + ox, t[1] + oy, t[2] + ox, t[3] + oy) for t in soft]
     pieces0 = {}  # furniture outlines touched: their extent before
 
+    vmap = {}  # virtual handle "INSERT/ENTITY" -> the real one, once that block is exploded
+
+    def real(h):
+        """A handle as query gave it; one inside a block explodes that INSERT into model space (once) first."""
+        if not isinstance(h, str) or "/" not in h:
+            return h
+        if h in vmap:
+            return vmap[h]
+        parent = h.rpartition("/")[0]
+        ins = doc.entitydb.get(real(parent))
+        if ins is None or not ins.is_alive or ins.dxftype() != "INSERT":
+            raise ValueError(f"no block {parent} for handle {h} (exploded by an earlier edit? dxf_query again for its "
+                             "model-space handle)")
+        if ins.dxf.layer == DOOR_LAYER:
+            raise ValueError(f"{h} is inside a door block (INSERT): it can't be moved or resized here: tell the user it "
+                             "needs the engineer")
+        kids = [(f"{parent}/{sh}", v.dxftype(), ext_of(v)) for sh, v in block_children(ins)]
+        layer, name = ins.dxf.layer, ins.dxf.name
+        got = []
+        for e in ins.explode():
+            if e.dxf.get("layer", "0") == "0" and layer != "0":
+                e.dxf.layer = layer  # as it was drawn: block content on layer 0 takes the insert's layer
+            b = ext_of(e)
+            best = min((k for k in kids if k[1] == e.dxftype() and k[0] not in vmap),
+                       key=lambda k: max(abs(k[2][i] - b[i]) for i in range(4)) if k[2] and b else 9e9, default=None)
+            if best is not None:
+                vmap[best[0]] = e.dxf.handle
+                got.append(e.dxf.handle)
+        log.append(f"block {name} ({parent}) exploded into {len(got)} model-space entities; use the new handles from now "
+                   f"on (handles_remapped)")
+        if h not in vmap:
+            raise ValueError(f"no entity {h} in block {name}")
+        return vmap[h]
+
     def get(h):
+        h = real(h)
         touched.add(h)
         e = doc.entitydb.get(h)
         if e is None or not e.is_alive or e.get_layout() is None or e.get_layout().name != msp.name:
@@ -486,6 +560,11 @@ def edit(a):
 
     for o in ops:
         k = o.get("op")
+        for key in ("handle", "centre_on"):  # virtual handles -> real ones up front, so every op and log line uses those
+            if o.get(key):
+                o[key] = [real(h) for h in o[key]] if isinstance(o[key], list) else real(o[key])
+        if o.get("handles"):
+            o["handles"] = [real(h) for h in o["handles"]]
         if k == "move":
             for h in o["handles"]:
                 get(h).translate(float(o["dx"]), float(o["dy"]), 0)
@@ -741,6 +820,7 @@ def edit(a):
     print(json.dumps({"log": log, "new_handles": new, "layer_count_change": delta,
                       "removed_zero_length": zero, "audit_errors": len(auditor.errors),
                       "furniture_changed": bool(layers_hit & set(FURNI)),
+                      **({"handles_remapped": vmap} if vmap else {}),
                       **({"pieces_changed": pieces} if pieces else {}),
                       **({"clashes_checked": check, "clashes": clash} if check else {}),
                       **({"windows_moved": moved} if moved else {}), **({"warnings": warnings} if warnings else {})}))

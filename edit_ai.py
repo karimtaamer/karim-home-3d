@@ -590,13 +590,17 @@ TOOLS = [
      "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old": {"type": "string"}, "new": {"type": "string"}},
                     "required": ["path", "old", "new"]}},
     {"name": "furniture_near", "description": "furnish.js lines that place an item( x, y, ...) within `radius` m of a plan point, to find the code of a piece you see, "
-                                              "plus the plan's furniture outlines (2furni) there, with handles for move_piece / resize_piece.",
+                                              "plus the plan's furniture outlines (2furni) there, with handles for move_piece / resize_piece. "
+                                              "An outline stored inside a block has a handle INSERT/ENTITY (e.g. A25/A28): use it as usual, "
+                                              "the edit explodes the block for you.",
      "parameters": {"type": "object", "properties": {"x": {"type": "number"}, "y": {"type": "number"}, "radius": {"type": "number"}},
                     "required": ["x", "y"]}},
     {"name": "plan_rooms", "description": "The version's rooms: name, label position and floor extent in plan metres, plus ceiling/door/window heights.",
      "parameters": {"type": "object", "properties": {}}},
     {"name": "dxf_query", "description": "Entities of the version's plan DXF inside a box (plan metres), optionally only some layers "
-                                        "(1wall, Windows, 3door, 2furni, Glass, _DIM, ISLAK). Gives handles for dxf_edit.",
+                                        "(1wall, Windows, 3door, 2furni, Glass, _DIM, ISLAK). Gives handles for dxf_edit. What furniture "
+                                        "blocks hold is listed too, with a handle INSERT/ENTITY and inside_block: move_piece / resize_piece / "
+                                        "set_points / move / delete take it (the block is exploded; the result's handles_remapped gives the new handles).",
      "parameters": {"type": "object", "properties": {"x0": {"type": "number"}, "y0": {"type": "number"}, "x1": {"type": "number"}, "y1": {"type": "number"},
                                                      "layers": {"type": "string", "description": "comma-separated"}},
                     "required": ["x0", "y0", "x1", "y1"]}},
@@ -687,12 +691,13 @@ def tool(ws, name, a):
                 code, q = run([dwg_python(), str(ROOT / "edit_ai_dxf.py"), "query", str(ws.dxf()), f"--origin={ORIGIN[0]},{ORIGIN[1]}",
                                f"--bbox={x - rad},{y - rad},{x + rad},{y + rad}", "--layers=2furni,2 furni", "--limit", "400"], timeout=90)
                 for d in json.loads(q).get("entities", []):
-                    ps = d.get("points") or []
-                    if d["type"] == "LWPOLYLINE" and len(ps) >= 4:
+                    ps = d.get("points") or ([d["bbox"][:2], d["bbox"][2:]] if d.get("bbox") else [])  # long ones come as a bbox
+                    if d["type"] == "LWPOLYLINE" and (len(ps) >= 4 or d.get("n_points", 0) >= 4):
                         xs, ys = [p[0] for p in ps], [p[1] for p in ps]
                         if (max(xs) - min(xs)) * (max(ys) - min(ys)) >= 0.04:
                             boxes.append((min(xs), min(ys), max(xs), max(ys)))
-                            pieces.append(f"{d['handle']}: x {min(xs)}..{max(xs)}, y {min(ys)}..{max(ys)}")
+                            pieces.append(f"{d['handle']}: x {min(xs)}..{max(xs)}, y {min(ys)}..{max(ys)}"
+                                          + (f" (in block {d['inside_block']})" if d.get("inside_block") else ""))
             except Exception:
                 pass
         out = []
@@ -875,7 +880,10 @@ the wardrobe doors or in a door's swing, and a freestanding piece (chair, sofa, 
 what it serves (TV, table, window), never its back to the room's middle.
 - Keep 3D and 2D together: a piece drawn on the plan (2furni) that you move or resize in furnish.js gets exactly the \
 same change in the DXF (furniture_near gives its outline's handle: dxf_edit move_piece / resize_piece), and a DXF \
-furniture change gets the same change in furnish.js. Move only the pieces asked for (plus their group, below): \
+furniture change gets the same change in furnish.js. A TV, mirror or art that already has a plan outline (even one \
+inside a block: handle INSERT/ENTITY) gets that outline resized too; never call a piece "built-in, no outline" without \
+checking furniture_near / dxf_query there. A wall-hung piece's width runs along its wall: plan y when it faces E/W, plan \
+x when it faces N/S; hit the exact size asked (outline x1-x0 / y1-y0). Move only the pieces asked for (plus their group, below): \
 other neighbours stay unless the user wants them to follow, and then they move in both furnish.js and the DXF. A resize that leaves \
 a neighbour overlapping or with an odd gap (bedside tables beside a narrower bed) moves that neighbour too, both views. A wall moved in the DXF must keep \
 both faces, close its junctions exactly (snap endpoints to existing ones within 0.1 mm), and the furniture against it \

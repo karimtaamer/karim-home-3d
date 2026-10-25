@@ -1058,6 +1058,11 @@ const renders = createRenders(document.getElementById("renders"), viewpoints.map
     await photogen.call("delete", { spots: version.spots, id: s.id });
     if (removeSpot) showRenders(removeSpot(s.id));
   },
+  upload: async (room, { image, caption }) => {  // Upload photo: the client's own picture, filed under that room
+    const spot = await photogen.call("upload", { spots: version.spots, room, caption, image });
+    if (addSpot) showRenders(addSpot(spot));
+    return spot;
+  },
 });
 function showScreen(next) {
   if (next === showing) return;
@@ -1104,6 +1109,7 @@ const interact = createInteract({
   isActive: () => mode === "walk" && showing === "model" && !tween && !glide && !measure.active && !move.active
     && document.getElementById("photogen-box")?.hidden !== false && !(+document.getElementById("photo")?.style.opacity > 0),
 });
+if (params.has("debug")) window.__interact = interact;  // headless checks: the openables list
 
 // --- Start: Walk inside by default (Top via chip or ?view=top); legacy ?view=dollhouse → Walk too -----
 const startRoom = params.get("room") && viewpoints.find(v => v.caption.toLowerCase().startsWith(params.get("room").toLowerCase()));

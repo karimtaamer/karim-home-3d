@@ -26,13 +26,15 @@ the plan version's spots file the page is showing, e.g. spots-naghams-changes.js
 
 The key comes from OPENAI_API_KEY, or a line OPENAI_API_KEY=... in .env next to this file (git-ignored).
 OPENAI_IMAGE_MODEL picks the model (default gpt-image-2). Drafts are kept in renders/drafts/.
-PHOTOSPOT_PASSWORD, when set, has to come with every generate, approve, edit, delete and name (the page asks once).
+PHOTOSPOT_PASSWORD, when set, has to come with every generate, approve, edit, delete, name and upload (the page asks once).
 PHOTOGEN_MOCK=1 (or --dry-run) makes no OpenAI calls: generate echoes the view, edit the render, name says "view".
 
 The Renders screen edits a saved render the same way, marks and notes (edit: the render as image 1, MARKED next,
 with the board and the furniture renders; or an older page's instruction in words), saved as a new spot "of" its first version with the next "version" number; the old one stays) and
 deletes generated ones (delete: image and spot entry; on Vercel also a marker, renders/ai-deleted/<file>/<id>.json,
-which hides a spot kept in git and keeps its id from being reused). A new spot with no named furniture piece
+which hides a spot kept in git and keeps its id from being reused). Upload files the client's own photo under a
+room (upload: a JPEG, PNG or WebP data URL the page has already shrunk; a spot "up-NN" with no cam and "user": true,
+saved where approved spots go, and deletable like them). A new spot with no named furniture piece
 in frame is named from its first attempt by a cheap vision model (name, OPENAI_NAME_MODEL, default gpt-4.1-nano).
 
 On Vercel api/photospot.py runs these same endpoints. There renders/ can't be written, so drafts, approved
@@ -74,6 +76,10 @@ REF_PX = 1024  # long side of a whole render as sent; the board carries the clos
 TILE, LABEL, COLS = 384, 46, 4  # material board: square swatches with a caption strip, four across
 STAND_IN = {"HALLWAY": "ENTRANCE"}
 DRAFT_ID = re.compile(r"^d\d+-[0-9a-f]{6}$")
+# Upload photo (Renders screen): the client's own picture, shrunk in the browser to 2400 px JPEG. Vercel takes at most
+# 4.5 MB of request body, so the data URL has to fit in that; the type is told by the file's first bytes, not its name.
+MAX_UPLOAD_BODY, MAX_UPLOAD_BYTES, MAX_CAPTION = 4_500_000, 3_300_000, 80
+UPLOAD_MAGIC = [(b"\xff\xd8\xff", "image/jpeg", "jpg"), (b"\x89PNG\r\n\x1a\n", "image/png", "png")]
 BLOB = bool(photogen_blob.token())  # on Vercel: renders/ lives in Vercel Blob
 CACHE = Path(tempfile.gettempdir()) / "photogen"  # Blob copies of references and the board, per instance
 
@@ -220,14 +226,15 @@ def find(name, sid):
     raise ValueError("no such render")
 
 
-def next_id():
-    """ai-NN, numbered across every version's file, so images never share a name in renders/ (nor, on Vercel,
-    with a deleted one the Blob cache may still hold)."""
+def next_id(prefix="ai"):
+    """ai-NN (up-NN for an uploaded photo), numbered across every version's file, so images never share a name in
+    renders/ (nor, on Vercel, with a deleted one the Blob cache may still hold)."""
     ids = {s["id"] for f in ROOT.glob("spots*.json") if SPOTS_FILE.match(f.name) for s in spots(f.name)}
+    ids |= {"-".join(f.name.split("-")[:2]) for f in RENDERS.glob(f"{prefix}-*")} if RENDERS.is_dir() else set()
     if BLOB:
         ids |= {Path(p).stem for p in photogen_blob.names("renders/ai-spots/") + photogen_blob.names("renders/ai-deleted/")}
-    n = 1 + max((int(i[3:]) for i in ids if re.fullmatch(r"ai-\d+", i)), default=0)
-    return f"ai-{n:02d}"
+    n = 1 + max((int(i[len(prefix) + 1:]) for i in ids if re.fullmatch(rf"{prefix}-\d+", i)), default=0)
+    return f"{prefix}-{n:02d}"
 
 
 def small(path):
@@ -253,7 +260,7 @@ def references(room, seen, name):
     (a bathroom's for a bathroom, a dry room's for a dry room: a bedroom edge seen from the en-suite sends no bedroom),
     up to MAX_REFS; then, only while there are fewer than SAME_ROOM, one each from rooms of the same sort (bathrooms
     for a bathroom, the terrace for the terrace, living spaces otherwise). All for colour and light only."""
-    have = [s for s in spots(name) if not s.get("ai") and (BLOB or (ROOT / s["photo"]).exists())]
+    have = [s for s in spots(name) if not s.get("ai") and not s.get("user") and (BLOB or (ROOT / s["photo"]).exists())]
     refs = [s for s in have if s["room"] == room][:SAME_ROOM]
     out = lambda r: r == "TERRACE"
     seen = [STAND_IN.get(r, r) for r in seen]  # rooms with no render of their own borrow a neighbour's
@@ -293,7 +300,7 @@ def furniture(room, name):
 def picture(s):
     """A render as sent: a designer render's 1024 px copy; an approved AI spot as it is (fetched from Blob on
     Vercel, where it has no reference copy). None if it can't be had."""
-    if s.get("ai") and BLOB:
+    if (s.get("ai") or s.get("user")) and BLOB:
         return fetched(s["photo"])
     p = small(ROOT / s["photo"])
     return p if p.exists() else None
@@ -785,12 +792,12 @@ def revise(req):
 
 
 def delete(req):
-    """{spots, id} -> {deleted: id}: a generated render gone for good, its image and its spot entry, on disk or in
-    Blob (where a marker also hides a spot kept in git). Designer renders can't be deleted here."""
+    """{spots, id} -> {deleted: id}: a generated render or an uploaded photo gone for good, its image and its spot
+    entry, on disk or in Blob (where a marker also hides a spot kept in git). Designer renders can't be deleted here."""
     name = req.get("spots", "spots.json")
     s, home = find(name, req.get("id", ""))
-    if not s.get("ai"):
-        raise ValueError("designer renders can't be deleted here, only generated ones")
+    if not (s.get("ai") or s.get("user")):
+        raise ValueError("designer renders can't be deleted here, only generated or uploaded ones")
     if BLOB:
         save(f"renders/ai-deleted/{home}/{s['id']}.json", json.dumps(s, ensure_ascii=False).encode(), "application/json")
         photogen_blob.delete([s["photo"]] + photogen_blob.names(f"renders/ai-spots/{home}/{s['id']}.json"))
@@ -841,6 +848,54 @@ def approve(req):
     return spot
 
 
+def known_rooms(name):
+    """The rooms a spots file's plan version has: its tour's stops (tour-<v>.json beside spots-<v>.json, and the tours
+    it extends) and the rooms its spots are filed under."""
+    rooms, tour = {s["room"] for s in spots(name)}, ROOT / name.replace("spots", "tour", 1)
+    while tour.exists():
+        data = json.loads(tour.read_text())
+        rooms |= {s["room"] for s in data.get("stops", []) if s.get("room")}
+        tour = ROOT / data["extends"] if data.get("extends") else Path("/nonexistent")
+    return rooms
+
+
+def upload(req):
+    """{spots, room, caption?, image: data URL} -> the new spot: the client's own photo, filed under a room of the
+    plan version (no cam: it shows only under Renders), "user": true. Stored as an approved spot is: the image in
+    renders/, the entry in the spots file on disk, or renders/ai-spots/<spots file>/<id>.json in Blob on Vercel."""
+    name = req.get("spots", "spots.json")
+    spots_path(name)
+    room = " ".join(str(req.get("room", "")).split()).upper()
+    if not re.fullmatch(r"[A-Z0-9 ]{1,40}", room) or room not in known_rooms(name):
+        raise ValueError("unknown room")
+    caption = re.sub(r"[\x00-\x1f\x7f<>]", "", " ".join(str(req.get("caption") or "").split()))[:MAX_CAPTION].strip() or "Photo"
+    head, _, body = str(req.get("image", "")).partition(",")
+    if not head.startswith("data:image/") or ";base64" not in head:
+        raise ValueError("send the photo as an image data URL")
+    if len(body) > MAX_UPLOAD_BYTES * 4 // 3 + 4:
+        raise ValueError("photo too large (at most 3.3 MB after shrinking)")
+    try:
+        data = base64.b64decode(body, validate=True)
+    except ValueError:
+        raise ValueError("photo isn't valid base64") from None
+    kind = next(((m, e) for magic, m, e in UPLOAD_MAGIC if data.startswith(magic)), None)
+    if not kind and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        kind = ("image/webp", "webp")
+    if not kind:
+        raise ValueError("only JPEG, PNG or WebP photos can be uploaded")
+    sid = next_id("up")
+    slug = re.sub(r"[^A-Za-z0-9]+", "_", caption).strip("_")[:40] or "Photo"
+    photo = f"renders/{sid}-{slug}.{kind[1]}"
+    save(photo, data, kind[0])
+    spot = {"id": sid, "room": room, "caption": caption, "photo": photo, "user": True}
+    if BLOB:
+        save(f"renders/ai-spots/{name}/{sid}.json", json.dumps(spot, ensure_ascii=False).encode(), "application/json")
+    else:
+        add_spot(name, spot)
+    print(f"[photogen] uploaded {photo} ({len(data)} bytes) to {room} in {name}", flush=True)
+    return spot
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *a, **k):
         super().__init__(*a, directory=str(ROOT), **k)
@@ -882,15 +937,19 @@ class Handler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
-        routes = {"generate": generate, "approve": approve, "edit": revise, "delete": delete, "name": name_from_image}
+        routes = {"generate": generate, "approve": approve, "edit": revise, "delete": delete, "name": name_from_image,
+                  "upload": upload}
         act, _ = self.action()
         if act not in routes:
             return self.reply(404, {"error": "not found"})
         want = os.environ.get("PHOTOSPOT_PASSWORD")
         if want and not hmac.compare_digest(self.headers.get("X-Photospot-Password", "").encode(), want.encode()):
             return self.reply(401, {"error": "wrong password"})
+        size = int(self.headers.get("Content-Length") or 0)
+        if act == "upload" and size > MAX_UPLOAD_BODY:
+            return self.reply(413, {"error": "photo too large (at most 4.5 MB per upload)"})
         try:
-            req = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            req = json.loads(self.rfile.read(size))
             self.reply(200, routes[act](req))
         except Exception as e:  # shown to the user in the panel
             print(f"[photogen] {act}: {e}", flush=True)

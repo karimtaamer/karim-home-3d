@@ -39,8 +39,10 @@ export function furnish(scene, M, mat, version = "main") {
   const root = new THREE.Group();
   const ceilingBits = new THREE.Group();  // shown only with the ceiling (downlights, grilles)
   scene.add(root, ceilingBits);
-  // Make the hallway door interactive without changing its architectural opening.
-  if (version === "kareems-changes") for (const [dId, dLabel, dx0, dy0, dTol] of [["hallway-door", "Hallway door", 13.2726, 6.8898, 0.15], ["passage-door", "Passage door", 12.0976, 6.7958, 0.25]]) {
+  // Make plan doors interactive without changing their openings: each entry finds its swing by the hinge (plan m).
+  // Guest WC: hinged on the east jamb since 618d7f3 (13.965, was 13.2726, which no longer matched any swing).
+  // Corridor -> dining (batch 25 Oct): the new door on the guest WC's south-east corner, opening into the dining area.
+  if (version === "kareems-changes") for (const [dId, dLabel, dx0, dy0, dTol] of [["guest-wc-door", "Guest toilet door", 13.965, 6.893, 0.05], ["passage-door", "Passage door", 12.0976, 6.7958, 0.25], ["dining-door", "Dining door", 14.755, 6.743, 0.05]]) {
     const swing = (M.swings || []).find(s => Math.hypot(s.hinge[0] - dx0, s.hinge[1] - dy0) < dTol);
     if (swing) {
       const [hx, hy] = swing.hinge;
@@ -921,23 +923,26 @@ export function furnish(scene, M, mat, version = "main") {
   // Kareem's (Nagham call, 25 Oct): the south build-out is gone (plank wall to the south wall face, plan y 6.883),
   // the glass is back over the door end, south of the WC, so the opening is by the WC; mixer and rain head are
   // concealed (flush trim plate, rain head flush in the ceiling), with a hand spray on a wall outlet and a low spout.
+  // Batch 25 Oct (Karim t301): the glass runs to the south wall (plan y 6.883) over a stone deck that now runs wall to
+  // wall (DWG 2furni deck south of the bath block, which already reached the north wall); mixer, spout and hand spray
+  // move left (south) behind the glass, under the rain head; the niches are recessed flush in the north wall (below).
   const GKC = version === "kareems-changes";
   const bath = item(12.324, 8.05, "E", p => {  // wood-look plank wall, stone-clad bath, framed screen at the WC end
-    p.box(GKC ? -1.167 : -1.08, 1.08, 0, M.ceiling, 0, 0.02, mat.woodTile);
-    p.box(-0.85, 0.85, 0, 0.55, 0.02, 0.75, mat.stoneWall);
+    p.box(GKC ? -1.167 : -1.08, GKC ? 1.12 : 1.08, 0, M.ceiling, 0, 0.02, mat.woodTile);
+    p.box(GKC ? -1.167 : -0.85, GKC ? 1.12 : 0.85, 0, 0.55, 0.02, 0.75, mat.stoneWall);  // Kareem's: south wall to the north wall's stone lining
     p.box(-0.78, 0.78, 0.52, 0.56, 0.08, 0.7, mat.ceramic);
     if (GKC) {
-      const g0 = -0.85, g1 = 0.05, z = 0.73;  // fixed screen on the rim over the south (door) end, black frame all round
+      const g0 = -1.165, g1 = 0.05, z = 0.73;  // fixed screen on the deck from the south (door-end) wall, black frame all round
       p.box(g0, g1, 0.56, 2.3, z, z + 0.01, mat.clearGlass);
       for (const [a, b, c, d] of [[g0, g1, 2.28, 2.31], [g0, g1, 0.55, 0.58], [g0, g0 + 0.025, 0.55, 2.31], [g1 - 0.025, g1, 0.55, 2.31]])
         p.box(a, b, c, d, z - 0.012, z + 0.022, mat.blackSteel);
       p.box(-0.4 - 0.15, -0.4 + 0.15, M.ceiling - 0.006, M.ceiling, 0.23, 0.53, mat.chrome, 0.003);  // 30 cm rain head flush in the ceiling
-      // Concealed thermostatic mixer: only its square trim plate and two knobs on the plank wall, at 1.05, mid-bath
-      const mx = 0.15;
+      // Concealed thermostatic mixer: only its square trim plate and two knobs on the plank wall, at 1.05, behind the glass
+      const mx = -0.45;
       p.box(mx - 0.09, mx + 0.09, 0.96, 1.14, 0.02, 0.028, mat.brass, 0.004);
       for (const y of [1.0, 1.1]) { const k = p.cyl(mx, 0.04, 0.024, y - 0.015, y + 0.015, mat.brass, 20); k.rotation.x = Math.PI / 2; k.position.y = y; }
-      // Hand spray: wall outlet elbow and holder north of the mixer, the spray parked in it, its hose looping down
-      const hx = 0.42;
+      // Hand spray: wall outlet elbow and holder south of the mixer, the spray parked in it, its hose looping down
+      const hx = -0.75;
       p.cyl(hx, 0.03, 0.02, 1.1, 1.13, mat.brass, 16).rotation.x = Math.PI / 2;
       p.box(hx - 0.02, hx + 0.02, 1.16, 1.2, 0.02, 0.07, mat.brass, 0.006);
       p.cyl(hx, 0.07, 0.016, 1.02, 1.24, mat.brass, 16, 0.012);
@@ -945,7 +950,7 @@ export function furnish(scene, M, mat, version = "main") {
       p.cyl(hx, 0.07, 0.007, 0.75, 1.02, mat.chrome, 8);
       // Bottom tap (حنفيه): a short concealed spout over the rim, under the mixer
       p.box(mx - 0.02, mx + 0.02, 0.66, 0.69, 0.02, 0.17, mat.brass, 0.008);
-      for (const x of [-0.62, -0.32]) {  // towels hung on the screen
+      for (const x of [-0.98, -0.18]) {  // towels hung on the screen, either side of the mixer
         p.box(x - 0.1, x + 0.1, 1.2, 1.85, z + 0.025, z + 0.05, mat.boucle, 0.01);
         p.box(x - 0.012, x + 0.012, 1.84, 1.9, z + 0.02, z + 0.05, mat.blackSteel);
       }
@@ -1000,13 +1005,31 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-0.12, 0.12, 0.68, 0.84, 0, 0.015, mat.walnut, 0.005);
     p.box(-0.06, 0.06, 0.74, 0.78, 0.015, 0.025, mat.brass, 0.005);
   });
-  item(12.767, 9.18, "S", p => {  // stone build-out at the bath end with two recessed walnut-lined niches
-    const H = M.ceiling, D = version === "kareems-changes" ? 0.12 : 0.28, niches = [[-0.18, 0.02], [0.1, 0.3]], y0 = 0.9, y1 = 2.1;
+  if (GKC) item(12.767, 9.1862, "S", p => {  // Kareem's (t301): two niches recessed flush in the north wall, no build-out
+    // Same plane as the WC's wall (plan y 9.1862): a 1.5 cm stone lining wall to bath front, the two niches (DWG dashed,
+    // x 202.992-203.192 / 203.272-203.472) cut 7 cm into the wall by --cut and lined in walnut, both the same depth.
+    // The north wall is drawn only 8.3 cm thick here, so 7 cm is all it can take (see REPORT / README).
+    const H = M.ceiling, R = 0.07, L = 0.015, niches = [[-0.18, 0.02], [0.1, 0.3]], y0 = 0.9, y1 = 2.1;
+    const face = new THREE.Shape([new THREE.Vector2(-0.42, 0.55), new THREE.Vector2(0.42, 0.55), new THREE.Vector2(0.42, H), new THREE.Vector2(-0.42, H)]);
+    for (const [a, b] of niches) face.holes.push(new THREE.Path([new THREE.Vector2(a, y0), new THREE.Vector2(b, y0), new THREE.Vector2(b, y1), new THREE.Vector2(a, y1)]));
+    mesh(new THREE.ExtrudeGeometry(face, { depth: L, bevelEnabled: false }), mat.stoneWall, p.g);
+    for (const [a, b] of niches) {
+      p.box(a, b, 0, y0, -R, 0, mat.stoneWall); p.box(a, b, y1, H, -R, 0, mat.stoneWall);  // wall above and below the cut
+      const t = 0.012, l = a + 0.001, r = b - 0.001, lo = y0 + 0.001, hi = y1 - 0.001, back = -R + t;
+      p.box(l, r, lo, hi, -R, back, mat.walnut);
+      for (const sx of [l, r - t]) p.box(sx, sx + t, lo, hi, back, L, mat.walnut);
+      p.box(l + t, r - t, lo, lo + t, back, L, mat.walnut); p.box(l + t, r - t, hi - t, hi, back, L, mat.walnut);
+      for (let k = 1; k < 6; k++) p.box(l + t, r - t, y0 + k * 0.2, y0 + k * 0.2 + 0.015, back, L - 0.005, mat.walnut);  // shelves
+      p.box(l + t + 0.008, r - t - 0.008, hi - t - 0.01, hi - t, back + 0.01, L - 0.01, mat.ledStrip);
+    }
+  });
+  else item(12.767, 9.18, "S", p => {  // stone build-out at the bath end with two recessed walnut-lined niches
+    const H = M.ceiling, D = 0.28, niches = [[-0.18, 0.02], [0.1, 0.3]], y0 = 0.9, y1 = 2.1;
     const face = new THREE.Shape([new THREE.Vector2(-0.42, 0), new THREE.Vector2(0.42, 0), new THREE.Vector2(0.42, H), new THREE.Vector2(-0.42, H)]);
     for (const [a, b] of niches) face.holes.push(new THREE.Path([new THREE.Vector2(a, y0), new THREE.Vector2(b, y0), new THREE.Vector2(b, y1), new THREE.Vector2(a, y1)]));
     mesh(new THREE.ExtrudeGeometry(face, { depth: D, bevelEnabled: false }), mat.stoneWall, p.g);
     for (const [a, b] of niches) {  // liner centred in its hole, 1 mm shy all round (no face on the stone jambs), 20 cm deep
-      const t = 0.012, l = a + 0.001, r = b - 0.001, lo = y0 + 0.001, hi = y1 - 0.001, back = D - (version === "kareems-changes" ? 0.1 : 0.2);
+      const t = 0.012, l = a + 0.001, r = b - 0.001, lo = y0 + 0.001, hi = y1 - 0.001, back = D - 0.2;
       p.box(l, r, lo, hi, 0, back, mat.walnut);
       for (const s of [l, r - t]) p.box(s, s + t, lo, hi, back, D, mat.walnut);
       p.box(l + t, r - t, lo, lo + t, back, D, mat.walnut); p.box(l + t, r - t, hi - t, hi, back, D, mat.walnut);
@@ -1245,6 +1268,30 @@ export function furnish(scene, M, mat, version = "main") {
       anchor: new THREE.Vector3(0, 2.0, D + 0.06), reach: 1.8, duration: 0.6 };
   });
   item(11.835, 9.18, "S", p => {  // DWG stacked washer and dryer 0.60 x 0.60 (x 11.535 to 12.135)
+    if (version === "kareems-changes") {
+      // Batch 25 Oct (Karim t305, reference photo): the washer is built in. A taller oak base (0.76, a pull-out laundry
+      // basket shelf over a plinth drawer) lifts the 0.84 machine so its top meets the upper's underside at 1.60, no
+      // gap; oak side panels frame it (left one standing on the counter top's end, right one filling the 6 cm to the
+      // east wall, plan x 12.197). The window behind it is gone from the DXF, so the wall is solid.
+      const y0 = 0.76;
+      p.box(-0.3, 0.3, 0, 0.1, 0.04, 0.58, mat.darkTop);                                  // recessed plinth
+      p.box(-0.3, 0.3, 0.1, 0.4, 0, 0.6, mat.oakVeneer);                                  // drawer box, front flush
+      p.box(-0.29, 0.29, 0.398, 0.402, 0.6, 0.603, mat.walnut);                           // shadow line under the basket shelf
+      p.box(-0.1, 0.1, 0.33, 0.345, 0.6, 0.615, mat.walnut, 0.005);                       // finger pull
+      p.box(-0.3, 0.3, 0.4, 0.42, 0, 0.6, mat.oakVeneer);                                 // basket shelf
+      p.box(-0.3, 0.3, y0 - 0.02, y0, 0, 0.6, mat.oakVeneer);                             // washer shelf
+      p.box(-0.3, 0.3, 0.42, y0 - 0.02, 0, 0.01, honeyOak);                               // back of the basket bay
+      p.box(-0.24, 0.24, 0.43, 0.7, 0.08, 0.56, mat.applianceWhite, 0.02);                // laundry basket
+      p.box(-0.318, -0.3, 0.92, 1.6, 0, 0.6, mat.oakVeneer);                              // left frame panel, on the counter top
+      p.box(0.3, 0.362, 0, M.ceiling - 0.1, 0, 0.6, mat.oakVeneer);                       // right frame / filler to the wall
+      p.box(-0.3, 0.3, y0, y0 + 0.84, 0.02, 0.6, mat.applianceWhite, 0.02);
+      const ring = mesh(new THREE.TorusGeometry(0.17, 0.025, 10, 40), mat.chrome, p.g);
+      ring.position.set(0, y0 + 0.4, 0.615);
+      const door = mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.02, 32), mat.smokedGlass, p.g);
+      door.rotation.x = Math.PI / 2; door.position.set(0, y0 + 0.4, 0.61);
+      p.box(-0.3, 0.3, 1.6, 2.5, 0, 0.6, mat.oakVeneer);
+      return;
+    }
     p.box(-0.3, 0.3, 0, 0.42, 0, 0.6, mat.oakVeneer);
     p.box(-0.25, 0.25, 0.1, 0.36, 0.45, 0.62, mat.applianceWhite, 0.02);
     for (const y0 of [0.45]) {

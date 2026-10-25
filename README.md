@@ -301,6 +301,21 @@ Kareem's Changes, Nagham call (2026-10-25):
   - The TV unit outlines and, in 3D, the limewash panel and console moved back 2 cm onto it.
   - Checked by sampling the built walls every 1 cm: one x on each face, 0.00 mm spread.
 
+Kareem's Changes, client batch (2026-10-25, Main / Karim's only):
+- **Guest WC shower (t301):** the glass (`2furni`) runs from the WC end (DWG y -113.513) to the south wall face
+  (-114.7218) over a stone deck drawn south of the bath block; in 3D the deck runs wall to wall. Concealed mixer, spout
+  and hand spray sit on the left (south) behind the glass, under the rain head. The north niches are recessed flush with
+  the WC's wall (no build-out): dashed `2furni` 0.20 x 0.07, carved by the two niche `--cut`s in `build_flags.json`. The north wall is
+  drawn 8.3 cm thick, so 7 cm is the most a niche can take there: deeper needs the engineer.
+- **Doors (t302, t303):** the guest WC door opens (tap / E, id `guest-wc-door`; the old lookup still pointed at the
+  pre-618d7f3 hinge). New hinged door between the corridor and the dining area in place of the bi-fold symbol: 4 cm
+  `1wall` jambs on the WC's south-east corner and the corridor's south face, leaf 0.975 hinged on the north (left,
+  walking from the bedrooms) jamb at DWG (205.164, -114.872), arc and `_DIM` leaf swinging east into the dining area
+  (`doorsAsDrawn`), openable (id `dining-door`). The corridor east of it is now part of DINING's floor.
+- **Laundry (t305):** the window behind the washer is gone (its five `Windows` lines; the wall faces already ran
+  through). The washer stands on a 0.76 oak base (basket shelf over a drawer), its top at the upper's underside
+  (1.60), framed by oak panels.
+
 Its en-suite (2026-10-24) is rearranged to Nagham's sketch: the bathroom/bedroom partition (the headboard wall, still
 0.11) sits 14 cm further east (bathroom-side face DWG x 192.5965), and the bed and bedside tables moved with it (bed
 foot 1.40 from the wardrobe front). Shower in the north-west corner, 0.84 wide inside x 1.29 deep, in front of a
@@ -488,7 +503,12 @@ that view replaces the model.
   image and the `spots*.json` entry. On Vercel it deletes the Blob image and spot, and leaves a marker
   `renders/ai-deleted/<spots file>/<id>.json`, which also hides a generated spot kept in git (remove that from git by
   hand) and stops its id being reused.
-- Both need `PHOTOSPOT_PASSWORD` if it is set, like generating.
+- **Upload photo** (each room's title on the Renders screen; rooms with nothing yet show too): the client's own
+  pictures, several at once (a phone offers the camera). The browser shrinks each to 2400 px JPEG (Vercel takes at
+  most 4.5 MB a request) and `photogen.py` (`upload`) checks it is JPEG/PNG/WebP and the room is the version's. It is
+  saved like an approved spot (`renders/up-NN-<caption>.jpg`; the `spots*.json` entry locally, `renders/ai-spots/…`
+  on Vercel) with no `cam` and `"user": true`: Renders only, never a style reference. Delete removes it like a generated one.
+- All of these need `PHOTOSPOT_PASSWORD` if it is set, like generating.
 
 **3D fixtures with Meshy**
 - `models/*.glb` were made with Meshy image-to-3D from render crops.
@@ -512,7 +532,7 @@ that view replaces the model.
   - `OPENAI_API_KEY`
   - `ANTHROPIC_API_KEY` (Edit AI on Claude, § 8), `EDIT_AI_OPENAI_API_KEY` (Edit AI OpenAI fallback, § 8)
   - `BLOB_READ_WRITE_TOKEN`
-  - optional `PHOTOSPOT_PASSWORD`: if set, the page asks for it once before generate, approve, edit or delete.
+  - optional `PHOTOSPOT_PASSWORD`: if set, the page asks for it once before generate, approve, edit, delete or upload.
     Currently unset, so anyone with the link can delete generated renders: set it.
   - optional `OPENAI_NAME_MODEL` (default `gpt-4.1-nano`): names a spot from its image when no furniture is in frame.
 - **Local secrets:** `.env` holds `OPENAI_API_KEY`. `.env.local` holds `BLOB_READ_WRITE_TOKEN` (from `vercel env pull`). Git and Vercel ignore both.

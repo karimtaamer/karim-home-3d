@@ -874,16 +874,20 @@ copy of limewash there if no colour fits). Repainting every wall of a room is th
 A target height is the top of the piece above the floor (\"85 cm high\" = top at 0.85); stretch or shrink the parts \
 under the top to suit, and nothing goes below the floor (no box starting under 0).
 - Colours and finishes: never change an existing material in materials.js (every piece in every version that uses it \
-would change); add a new named one (a tinted copy) and use it only on the pieces asked for. Change the surfaces you \
+would change); add a new named one (a tinted copy in the colour asked for, not the nearest existing material) and use it only on \
+the pieces asked for. Change the surfaces you \
 actually see in the picture (a wardrobe's door leaves and frame, a cabinet's fronts): read the builder and follow \
 the branch that runs for this call's arguments; editing a branch that doesn't run changes nothing.
 - Replacing a piece (\"replace X with Y\", \"make X round instead\"): the new one takes X's place and size unless told \
 otherwise. If X has its own plan outline, that outline becomes Y's footprint; a part built inside another piece's \
 item (a stool tucked under a dressing table, a mirror over it) has no outline of its own: leave the host piece and its \
 outline alone.
-- Shapes in build: p.box(x0, x1, y0, y1, z0, z1) is a block; p.cyl(x, z, r, y0, y1) stands upright (a leg, pot, lamp \
+- Shapes in build: p.box(x0, x1, y0, y1, z0, z1) is a block: x across the piece, y0..y1 HEIGHT above the floor, \
+z0..z1 out from its back (a seat 45 cm high is y 0.41..0.45; its legs run y 0..0.41); p.cyl(x, z, r, y0, y1) stands upright (a leg, pot, lamp \
 base, column); a round disc facing out from the wall (round mirror, clock, plate) is an upright cyl turned: \
-p.cyl(x, z + t / 2, r, y - t / 2, y + t / 2, material, 64).rotation.x = Math.PI / 2 (centre at height y, t thick); \
+p.cyl(x, z + t / 2, r, y - t / 2, y + t / 2, material, 64).rotation.x = Math.PI / 2 (centre at height y, t thick; \
+the 2nd argument is how far out from the wall, so it stays small: a 70 cm mirror 1.35 m up on the wall face is \
+p.cyl(0.2, 0.006, 0.35, 1.344, 1.356, mat.mirror, 64).rotation.x = Math.PI / 2); \
 p.pebble(...) is an organic oval, not a circle. Keep a light / halo the old piece had (a slightly larger disc of \
 mat.ledStrip just behind) unless told otherwise.
 - Compass words are plan axes, whatever the view: north = +y (dy > 0), south = -y, east = +x, west = -x. When \
@@ -1206,6 +1210,27 @@ REMOVAL = re.compile(r"\b(remove|delete|close|block|wall up|fill in|get rid)\b|Ø
 PLANT = re.compile(r"\bplant\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*(?:,\s*([\d.]+)\s*)?(?:,\s*([\d.]+)\s*)?(?:,\s*([\d.]+))?")
 
 
+def footprint(txt):
+    """What of a furnish.js snippet decides the plan footprint: where items stand (and their builder's arguments) and
+    the across / out extents of its boxes and cylinders, leaving heights out. Equal before and after = height / look only."""
+    heads = sorted(re.findall(r"\b(?:item|rug)\(([^;]*?)(?:, p =>|\)\s*;|$)", txt, re.M))
+    ext = []
+    for m in re.finditer(r"\bp\.(box|cyl)\(([^;]*?)\)\s*(?:;|\.|$)", txt, re.M):
+        a = [x.strip() for x in m[2].split(",")]
+        try:
+            if m[1] == "box":
+                v = [float(eval(a[k], {"__builtins__": {}}, {})) for k in (0, 1, 4, 5)]
+                ext.append((v[0], v[1], v[2], v[3]))
+            else:
+                x_, z_, r_ = (float(eval(a[k], {"__builtins__": {}}, {})) for k in (0, 1, 2))
+                ext.append((x_ - r_, x_ + r_, z_ - r_, z_ + r_))
+        except Exception:
+            return (heads, txt)  # can't read it: count it as a footprint change
+    bb = (round(min(e[0] for e in ext), 3), round(max(e[1] for e in ext), 3), round(min(e[2] for e in ext), 3),
+          round(max(e[3] for e in ext), 3)) if ext else None
+    return (heads, bb)
+
+
 def blocked_spot(ws, f0, f1):
     """A note when a newly added floor piece stands in a door's swing or a new pot stands inside another piece."""
     was = set(f0.splitlines())
@@ -1231,11 +1256,18 @@ def blocked_spot(ws, f0, f1):
         for sw in swings:
             (hx, hy), r = sw["hinge"], float(sw["r"])
             nx, ny = min(max(hx, b[0]), b[2]), min(max(hy, b[1]), b[3])
-            if math.hypot(nx - hx, ny - hy) < r - 0.05:
+            d_ = math.hypot(nx - hx, ny - hy)
+            if d_ < r - 0.05:
+                cx, cy = (b[0] + b[2]) / 2 - hx, (b[1] + b[3]) / 2 - hy
+                k = math.hypot(cx, cy) or 1
+                need = r + 0.05 - d_
                 return (f"Check the door: {what} stands where the door hinged at plan ({round(hx, 2)}, {round(hy, 2)}) "
-                        f"swings ({round(r * 100)} cm leaf), so the door would hit it or the doorway is blocked. Keep a new "
-                        "piece out of door swings and doorways: put it on the nearest free stretch clear of the swing "
-                        "(3D line and plan outline together), or if nothing fits there, say so.")
+                        f"swings ({round(r * 100)} cm leaf), so the door would hit it or the doorway is blocked. The leaf "
+                        f"sweeps everything within {round(r, 2)} m of the hinge; the piece's nearest corner is {round(d_, 2)} m "
+                        f"from it, so it has to go about {round(need, 2)} m further away (straight away from the hinge that is "
+                        f"dx {round(need * cx / k, 2)}, dy {round(need * cy / k, 2)}; or slide it further along its wall). Put it "
+                        "on the nearest free stretch clear of the swing in one move (3D line and plan outline together), "
+                        "or if nothing fits there, say so.")
     if pots and plan_edits():
         src = ws.tmp / "plan-pots.dxf"
         src.write_bytes(ws.orig.get(ws.cfg["dxf"]) or ws.read(ws.cfg["dxf"]))
@@ -1417,7 +1449,8 @@ def review(ws, message, reply):
     # A 3D piece moved / resized: the plan outline it stands on must have changed too.
     ops = [o for o in ws.ops.get("furnish.js") or []
            if Counter(NUMBER.findall(o["old"])) != Counter(NUMBER.findall(o["new"]))
-           and not (o["new"].startswith(o["old"]) or o["new"].endswith(o["old"]))]  # not a pure addition
+           and not (o["new"].startswith(o["old"]) or o["new"].endswith(o["old"]))  # not a pure addition
+           and footprint(o["old"]) != footprint(o["new"])]  # height / look only: the plan outline is the footprint
     in_window = lambda px, py: any(abs(px - wx) <= hw and abs(py - wy) <= 0.3 for wx, wy, hw in getattr(ws, "win_moved", []))
     gone = [(i, px, py, line) for i, px, py, line in placed_lines(ws, f0)
             if bare(line) not in now and not in_window(px, py) and any(len(seg.strip()) > 8 and seg.strip() in line for o in ops for seg in o["old"].splitlines())]
@@ -1445,8 +1478,8 @@ def review(ws, message, reply):
                 return (f"Check 2D vs 3D: you changed furnish.js line {i} ({line.strip()[:120]}) but the plan outline it stands on, "
                         f"{h} (x {bb[0]}..{bb[2]}, y {bb[1]}..{bb[3]}), didn't change. If you moved or resized that piece, give "
                         "the outline exactly the same change now with dxf_edit move_piece / resize_piece; if only its look "
-                        "or height changed (colour, finish, doors, taller / lower: the outline is the footprint), nothing "
-                        "is needed: leave the plan as it is and just answer." + tail)
+                        "or height changed (colour, finish, doors, taller / lower: the outline is the footprint), keep your "
+                        "3D edit as it is: you're done, reply to the user." + tail)
     was = {bare(l) for l in f0.splitlines()}  # only lines that stood before this message (not the model's own new piece)
     loop_ops = [o for o in ops if any(re.search(r"\bfor \(const|\bitem\(|\brug\(", l) and bare(l) in was
                                       and bare(l) not in {bare(n_) for n_ in o["new"].splitlines()}
@@ -1455,7 +1488,8 @@ def review(ws, message, reply):
         return ("Check 2D vs 3D: you moved or resized furniture in furnish.js but nothing on the plan (2furni). If the "
                 "piece is drawn on the plan (furniture_near lists the outlines there), give its outline exactly the same "
                 "change now with dxf_edit move_piece / resize_piece; things not drawn on the plan, and changes of height or "
-                "look only (taller, lower, colour: the outline is the footprint), need nothing: then just answer." + tail)
+                "look only (taller, lower, colour: the outline is the footprint), need nothing: keep your 3D edit as it is, "
+                "you're done, reply to the user." + tail)
     # A new piece on a wall overlapping (along the wall and in height) what already stands / hangs there.
     if f1 != f0:
         L1, old_lines, cl = f1.splitlines(), set(f0.splitlines()), 2.6

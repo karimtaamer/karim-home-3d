@@ -42,8 +42,11 @@ OPENAI_URL = os.environ.get("EDIT_AI_OPENAI_URL", "https://api.openai.com/v1/cha
 RESPONSES_URL = os.environ.get("EDIT_AI_OPENAI_RESPONSES_URL", "https://api.openai.com/v1/responses")
 # Models that only take function tools on /v1/responses (EDIT_AI_API=responses forces it for any model).
 RESPONSES_MODELS = ("gpt-6.1", "gpt-6-astra")
-# Extra models a request may pick with "model" (comma-separated, e.g. for an A/B run); empty = only MODEL.
-ALLOWED_MODELS = {m.strip() for m in os.environ.get("EDIT_AI_MODELS", "").split(",") if m.strip()} | {MODEL}
+# Auto-routing (pick_model): easy edits stay on the cheap model, complex ones go to the strong one.
+EASY_MODEL = "gpt-6-luna"
+COMPLEX_MODEL = os.environ.get("EDIT_AI_COMPLEX_MODEL", "gpt-6.1-sol")
+# Extra models a request may pick with "model" (comma-separated, e.g. for an A/B run); MODEL and both routes always allowed.
+ALLOWED_MODELS = {m.strip() for m in os.environ.get("EDIT_AI_MODELS", "").split(",") if m.strip()} | {MODEL, EASY_MODEL, COMPLEX_MODEL}
 MAX_STEPS = 36  # tool rounds per message (was 20; hard openable/plan builds were dying early)
 MAX_IMAGE = 3_000_000  # bytes of a data URL
 MAX_REFS = 4
@@ -1148,14 +1151,55 @@ def dollars(total, model=None):
     return round((fresh * p[0] + total["cached"] * p[1] + total["completion_tokens"] * p[2]) / 1e6, 4)
 
 
+# Why route at all: Luna "finished" a fold-down desk between the window and the coffee unit by parking it at the
+# wrong wall strip (didn't measure between the two landmarks), finishing it in the wall colour (invisible closed),
+# hinging a 2.5 cm strip instead of the front (open showed nothing) and dropping an unrelated plant in the same
+# search/replace. New / openable / between-landmarks / plan / multi-part / ref-driven edits therefore go to
+# COMPLEX_MODEL up front; plain colour, height, small-move and rename edits stay on EASY_MODEL. Decided here from
+# the words alone, before any model call (no Luna-reads-then-escalates, no classifier call).
+_COMPLEX_RES = [re.compile(p, re.I) for p in (
+    r"\b(add|adding|new|install|build|create)\b", r"\bput (a|an|some|in)\b", r"\bmake (a|an)\b(?! (bit|little|touch|tad)\b)",
+    r"\bfold(ing|s|ed)?[- ]?(down|out|away|up)\b", r"\bfold(able|-able)\b", r"\bopenable\b", r"\bput (it |them )?inside\b",
+    r"\bmake (it |them )?open", r"\bopen (the |a )?(wardrobe|cabinet|cupboard|closet|door|desk|drawer)", r"\bhinge",
+    r"\bbetween\b.+\band\b",
+    r"\b(replace[sd]?\b[^.]{0,40}?\bwith|turn\b[^.]{0,40}?\binto|convert)\b",
+    r"\b(and then|then also|also)\b",
+)]
+# Plan edits: a wall / window / door / opening that moves, goes, appears or changes size (not just its colour).
+_PLAN_RE = re.compile(r"\b(wall|window|door|doorway|opening|column|partition)s?\b", re.I)
+_PLAN_VERB_RE = re.compile(r"\b(move|shift|remove|delete|demolish|knock|widen|narrow|extend|shorten|enlarge|split|cut|close|open up|push|pull)", re.I)
+_EASY_RE = re.compile(r"\b(colou?r|paint|finish|tone|shade|darker|lighter|warmer|cooler|matte|gloss|wood|oak|walnut|marble|"
+                      r"black|white|grey|gray|beige|blue|green|red|pink|yellow|navy|olive|taller|shorter|higher|lower|height|"
+                      r"wider|narrower|bigger|smaller|move|slide|shift|nudge|rename|cm|mm)\b", re.I)
+
+
+def is_complex_edit(message, refs=()):
+    """True when the request needs the strong model (see the fold-desk note above)."""
+    m = message or ""
+    if refs:
+        return True
+    if any(r.search(m) for r in _COMPLEX_RES):
+        return True
+    if _PLAN_RE.search(m) and _PLAN_VERB_RE.search(m) and not re.search(r"\b(colou?r|paint|finish)\b", m, re.I):
+        return True
+    clauses = [c for c in re.split(r"[.;\n]|,\s*(?:and\s+)?|\band\b", m) if len(c.split()) >= 3]
+    if len(m.split()) > 30 and len(clauses) >= 3 and not _EASY_RE.search(m):
+        return True  # a long multi-clause ask with nothing that reads as a plain tweak
+    return False  # short / ambiguous / colour-height-move-rename only: the cheap model
+
+
+def pick_model(message, refs=()):
+    return COMPLEX_MODEL if is_complex_edit(message, refs) else EASY_MODEL
+
+
 def chat(req):
     v = req.get("version") or "main"
     if v not in VERSIONS:
         raise ValueError(f"unknown version {v!r}")
     if not api_key():
         raise PermissionError("Edit AI isn't switched on yet: set EDIT_AI_OPENAI_API_KEY (or OPENAI_API_KEY) on the server.")
-    model = req.get("model") or MODEL
-    if model not in ALLOWED_MODELS:
+    model = req.get("model")
+    if model and model not in ALLOWED_MODELS:
         raise ValueError(f"model {model!r} isn't allowed here")
     message = (req.get("message") or "").strip()[:4000]
     if not message:
@@ -1163,6 +1207,11 @@ def chat(req):
     ctx = req.get("context") or {}
     image = check_image(req.get("image"), "the view")
     refs = [check_image(u, f"reference {i + 1}") for i, u in enumerate((req.get("refs") or [])[:MAX_REFS])]
+    if model:
+        route = "explicit"  # an A/B pick from the client wins
+    else:
+        model = pick_model(message, refs)
+        route = "complex" if model == COMPLEX_MODEL else "easy"
     ws = Workspace(v)
     ws.allow_as_built = v == "as-built"  # only ever reached from the as-built page itself
     ws.plan_dirty, ws.dxf_furni, ws.pieces, ws.clashes, ws.new_outlines, ws.moves = False, False, {}, {}, [], []
@@ -1225,10 +1274,10 @@ def chat(req):
     finally:
         shutil.rmtree(ws.tmp, ignore_errors=True)
     usd = dollars(total, model)
-    print(f"[edit-ai] {v} ({model}): {len(steps)} tool calls, {total['prompt_tokens']} in ({total['cached']} cached) / "
+    print(f"[edit-ai] {v} ({model}, {route}): {len(steps)} tool calls, {total['prompt_tokens']} in ({total['cached']} cached) / "
           f"{total['completion_tokens']} out tokens, ${usd}; changed {sorted(ws.changed) or 'nothing'}", flush=True)
     return {"reply": reply or "Done.", "changed": sorted(ws.changed), "rev": result and result["rev"], "model": model,
-            "tokens": total, "usd": usd, "steps": len(steps), "sync": result and result.get("sync"),
+            "route": route, "tokens": total, "usd": usd, "steps": len(steps), "sync": result and result.get("sync"),
             **({"trace": trace} if req.get("debug") else {})}
 
 

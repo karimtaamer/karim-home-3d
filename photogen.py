@@ -18,7 +18,9 @@ grey block the model can't place (a water dispenser on a counter) isn't dropped.
 attempt shown with the client's marked edits (markedit.js: edits, a note per numbered red mark with its box on the
 picture, plus marked, the attempt with the marks drawn in, sent as image 2 MARKED so "the wardrobe on the right"
 can't flip sides; all the notes in one call), with up to MAX_INSPO inspiration pictures the client attached (refs:
-data URLs), sent last and used only for the look the notes ask for, never their camera or layout. An older page's
+data URLs), sent last and used only for the look the notes ask for, never their camera or layout. A first attempt
+can carry them too (picked while framing the shot), with an optional note (comments: [note]) on what to take from
+them. An older page's
 plain comments (comments, the last one new) still work. Each generate and edit returns its estimated cost (usd,
 from OpenAI's usage), which the page shows in EGP.
 Approving copies the image into renders/ and adds the spot to spots.json, like a designer render (or to
@@ -407,7 +409,7 @@ def prompt(ctx, refs, comments, revising, has_board, inspo=0, edits=(), marked=F
                      "finishes. Copy their colour, grain, weave, texture and sheen closely. The board is materials "
                      "only: a swatch is not an object to add (the door swatches do not mean this view has a door).")
     lines += [ref_line(next(n), s, w, r["name"], [x["name"] for x in seen]) for s, w in refs]
-    lines += inspo_lines(n, inspo, "the PREVIOUS image" if revising else "the VIEW")
+    lines += inspo_lines(n, inspo, "the PREVIOUS image" if revising else "the VIEW", "edit" if revising else "photo")
     if furn:
         lines += ["", "Use the EXACT furniture shown in the FURNITURE reference images (same design, shape, fabric, "
                   "colour, wood and details) for the pieces standing where the VIEW's grey shapes are; do not substitute "
@@ -438,6 +440,11 @@ def prompt(ctx, refs, comments, revising, has_board, inspo=0, edits=(), marked=F
                   + (" (the INSPIRATION images show the look they mean)" if inspo else "") + ": " + now]
         if earlier:
             lines.append("Earlier comments, already fixed - keep them fixed: " + " | ".join(earlier))
+    elif inspo:
+        lines += ["", "The client attached the INSPIRATION images to guide the look. Take from them "
+                  + (f"what the client asks: {comments[-1]}" if comments else
+                     "their materials, colours, finishes and mood, where they suit the surfaces the VIEW shows")
+                  + ". Nothing else changes: the camera, layout and every object stay as the VIEW has them."]
     return "\n".join(lines)
 
 
@@ -529,9 +536,9 @@ def inventory_lines(ctx, revising=False):
             *[f"- {x}" for x in inv]]
 
 
-def inspo_lines(n, count, base):
-    """The INSPIRATION images' lines (numbered on from n), for pictures the client attached to an edit."""
-    return [f"{next(n)}. INSPIRATION - a picture the client attached to this edit, from somewhere else. Copy from it only "
+def inspo_lines(n, count, base, to="edit"):
+    """The INSPIRATION images' lines (numbered on from n), for pictures the client attached to an edit (or a photo)."""
+    return [f"{next(n)}. INSPIRATION - a picture the client attached to this {to}, from somewhere else. Copy from it only "
             f"what the client's request refers to: the materials, colours, finishes, mood or the design of a piece. "
             f"Never its camera, framing, layout, room, walls, doors, windows or objects: those all stay as {base} has "
             f"them, and nothing of it is added that the request does not ask for." for _ in range(count)]
@@ -701,7 +708,8 @@ def generate(req):
     """{view, plan: data URLs, ctx, comments: [..], previous: draft id?, edits: [{i, note, box}]?, marked: data URL?,
     refs: [data URL]?} -> {draft, src, usd, usage, comment}. A revision's new notes are edits (Make an edit's marks,
     all in this one call; comments are then the earlier ones), or an older page's last comment; comment says them
-    back as one line for the attempt's history. marked and refs (inspiration pictures) go only with a revision."""
+    back as one line for the attempt's history. marked goes only with a revision; refs (inspiration pictures) with
+    either, and a first attempt's comments are at most one note on what to take from them (said back as comment)."""
     prev = req.get("previous")
     if prev and not DRAFT_ID.match(prev):
         raise ValueError("bad draft id")
@@ -711,7 +719,9 @@ def generate(req):
         raise ValueError("write a comment to revise with")
     ctx = req["ctx"]
     draft = f"d{int(time.time())}-{secrets.token_hex(3)}"
-    inspo = inspiration(req) if prev else []
+    inspo = inspiration(req)
+    if not prev:
+        comments = [c.strip()[:MAX_NOTE] for c in comments[-1:]] if inspo else []
     marked = marked_of(req) if any(e["box"] for e in edits) else None
     (view, vmime, vext), (plan, _, _) = data_url(req["view"]), data_url(req["plan"])
     save(f"renders/drafts/{draft}-view.{vext}", view, vmime)
@@ -721,7 +731,7 @@ def generate(req):
     if marked:
         save(f"renders/drafts/{draft}-marked.{INSPO_MIME[marked[1]]}", *marked)
     text, images, refs, mats = request(ctx, view, vmime, vext, plan, comments, prev, req.get("spots", "spots.json"), inspo, edits, marked)
-    comment = said(edits) if edits else comments[-1] if prev else None
+    comment = said(edits) if edits else comments[-1] if comments else None
     print(f"[photogen] {draft}: {ctx['room']['caption']}, {len(images)} images{' (revision)' if prev else ''}", flush=True)
     out, usage = (view, None) if DRY else edit(images, text)
     save(f"renders/drafts/{draft}.png", out, vmime if DRY else "image/png")

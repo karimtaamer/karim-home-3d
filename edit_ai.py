@@ -523,8 +523,11 @@ TOOLS = [
                                        "re-cuts the wall faces around it; ALWAYS use it to move or resize a window, never move window lines one by one. "
                                        "move_piece {handle (a furniture outline), dx, dy}: moves that piece's outline and the detail lines drawn inside it "
                                        "(pillows, sheet...), nothing else; ALWAYS use it to move furniture on the plan (a bbox `move` drags neighbouring pieces too). "
-                                       "resize_piece {handle, x_size?, y_size? (new plan extents in m), anchor? ('N' keeps the north edge, 'SW' a corner; default centre)}: "
-                                       "resizes a piece and its details; use it whenever a piece changes size. "
+                                       "resize_piece {handle, grow? {N?, S?, E?, W?: metres to push that edge out, negative pulls it in; sides left out stay put}, "
+                                       "or x_size?, y_size? (new plan extents in m) with anchor? ('N' keeps the north edge, 'SW' a corner; default centre)}: "
+                                       "resizes a piece and its details; use it whenever a piece changes size. Prefer grow: \"20 cm bigger all round\" = "
+                                       "grow {N:0.2,S:0.2,E:0.2,W:0.2}; \"10 cm wider\" on a piece facing N/S = grow {E:0.05,W:0.05}; no arithmetic. "
+                                       "The result lists clashes (a piece now running into a wall or another piece): fix them before answering. "
                                        "move_door {handle (the door's swing ARC), along? (m along its wall, + = +x/+y), dx?/dy?, width? (new leaf width = swing radius, m)}: "
                                        "moves and / or widens a door drawn loose (swing, leaf, jambs) and re-cuts the wall faces so the 3D opening follows; "
                                        "ALWAYS use it for a door, never move, delete or redraw door pieces by hand. "
@@ -734,11 +737,18 @@ the plan: dxf_edit add_polyline on 2furni, closed; wall-hung things (TV, art, sh
 furniture_near what already stands there and don't overlap it; if the spot is taken, pick the nearest free one and say so.
 - Keep 3D and 2D together: a piece drawn on the plan (2furni) that you move or resize in furnish.js gets exactly the \
 same change in the DXF (furniture_near gives its outline's handle: dxf_edit move_piece / resize_piece), and a DXF \
-furniture change gets the same change in furnish.js. Move only the pieces asked for: neighbours (nightstands, rug) \
-stay unless the user wants them to follow, and then they move in both furnish.js and the DXF. A resize that leaves \
+furniture change gets the same change in furnish.js. Move only the pieces asked for (plus their group, below): \
+other neighbours stay unless the user wants them to follow, and then they move in both furnish.js and the DXF. A resize that leaves \
 a neighbour overlapping or with an odd gap (bedside tables beside a narrower bed) moves that neighbour too, both views. A wall moved in the DXF must keep \
 both faces, close its junctions exactly (snap endpoints to existing ones within 0.1 mm), and the furniture against it \
 moves with it in furnish.js.
+- Groups that belong together: a bed's bedside tables (and the pendants over them) and the rug under it move WITH \
+the bed when the bed moves, unless the user says otherwise (\"only the bed\"); say that they followed. rug(x0, y0, x1, \
+y1) gives the rug's plan extent directly: to resize a rug, resize_piece grow on its outline and add the same metres \
+to those four numbers (x0 - W, y0 - S, x1 + E, y1 + N); a rug may run under furniture but not into a wall: if a side \
+hits one, stop that side at the wall face and say so.
+- \"Left\" / \"right\" / \"behind\" in a 3D view are as seen from the camera (camera position and look point below), \
+and in the 2D drawing as on screen (x east = right, y north = up). Convert to plan x / y before editing.
 - Windows: move or resize one only with dxf_edit's move_window op (it takes every line of the window and closes / opens the wall faces, so the 3D opening matches the 2D). To centre a window on a piece (e.g. "over the bed"), find the piece's main 2furni outline in dxf_query (the largest closed outline; its "centre" is given) and pass its handle as centre_on, never a hand-worked dx; the result says where the window now runs, so check its centre equals the piece's. Then move what hangs in that window in furnish.js (sheers, curtains, blinds: the edit result lists them) to the window's new centre and width, so the 3D matches.
 - Doors: move or widen one only with dxf_edit's move_door op (handle = its swing ARC on 1wall / 3door), which moves \
 the swing, leaf and jambs and re-cuts the wall faces so the 3D opening follows. Never delete, redraw or move door \

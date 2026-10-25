@@ -255,6 +255,7 @@ class Workspace:
         if self.dxf_path:
             self.dxf_path.write_bytes(self.read(self.cfg["dxf"]))
         self.plan_dirty, self.dxf_furni, self.pieces = False, False, {}
+        self.pieces_now = {}
         self.clashes, self.new_outlines, self.moves = {}, [], []
         if hasattr(self, "model0"):
             del self.model0
@@ -642,15 +643,21 @@ def tool(ws, name, a):
     if name == "grep":
         rx = re.compile(a["pattern"], re.I)
         paths = [a["path"]] if a.get("path") else readable(v)
-        hits = []
+        hits, other = [], 0
         for p in paths:
             if p not in readable(v):
                 return f"{p} isn't readable here. Readable: {', '.join(readable(v))}"
+            sc_ = version_scope(ws.text(p), v) if p == "furnish.js" else None
             for i, line in enumerate(ws.text(p).splitlines(), 1):
                 if rx.search(line):
-                    hits.append(f"{p}:{i}: {line[:240]}")
+                    off_ = sc_ is not None and sc_[i - 1] is False  # another version's branch: editing it changes nothing here
+                    other += off_
+                    hits.append(f"{p}:{i}: {line[:240]}" + (f"   [other versions only: doesn't run for {v}]" if off_ else ""))
                     if len(hits) >= 40:
                         return "\n".join(hits) + "\n[more matches cut; narrow the pattern]"
+        if hits and other == len(hits):
+            hits.append(f"[every match is in another version's branch: in {v} the piece is built elsewhere, maybe without these "
+                        "words (find it with furniture_near at the plan point and read its build)]")
         return "\n".join(hits) or "no matches"
     if name == "read_file":
         p = a["path"]
@@ -700,12 +707,29 @@ def tool(ws, name, a):
                                           + (f" (in block {d['inside_block']})" if d.get("inside_block") else ""))
             except Exception:
                 pass
-        out = []
+        out, on_box = [], {}
         for i, px, py, line in placed_lines(ws, text):  # near the point, or standing on a plan outline found here
             near = ((px - x) ** 2 + (py - y) ** 2) ** 0.5 <= rad
             on = any(b[0] - 0.15 <= px <= b[2] + 0.15 and b[1] - 0.15 <= py <= b[3] + 0.15 for b in boxes)
+            for k_, b in enumerate(boxes):  # which 3D items stand on (the back edge of) each outline
+                if b[0] - 0.03 <= px <= b[2] + 0.03 and b[1] - 0.03 <= py <= b[3] + 0.03 and stands_on_floor(text, i, line):
+                    on_box.setdefault(k_, []).append(i)
             if near or on:
                 out.append(f"furnish.js:{i}: {line.strip()[:240]}")
+        # One outline drawn round several 3D pieces (a dressing table and the shoe towers beside it): its size is
+        # theirs together, not one piece's.
+        smallest = {}
+        for k_, ls in on_box.items():
+            for i in ls:
+                if i not in smallest or (boxes[k_][2] - boxes[k_][0]) * (boxes[k_][3] - boxes[k_][1]) < \
+                        (boxes[smallest[i]][2] - boxes[smallest[i]][0]) * (boxes[smallest[i]][3] - boxes[smallest[i]][1]):
+                    smallest[i] = k_
+        for k_ in range(len(pieces)):
+            mine_ = sorted(i for i, kk in smallest.items() if kk == k_)
+            if len(mine_) >= 2:
+                pieces[k_] += (f" (ONE outline round {len(mine_)} 3D pieces, furnish.js lines {', '.join(map(str, mine_))}: "
+                               "each piece's own size is in its build, not this outline's; resizing one of them only has "
+                               "the room its neighbours leave, and the outline changes only by what the group's edge does)")
         res = "\n".join(out[:40]) or "no item( x, y ) literal that near; try grep for the room or the piece's name"
         if hidden > len(out):
             res += f"\n({hidden - len(out)} more near here belong to other versions' branches and don't show in {ws.v}: leave them)"
@@ -770,6 +794,7 @@ def tool(ws, name, a):
             ws.dxf_furni = ws.dxf_furni or rep_.get("furniture_changed", False)
             for pc in rep_.get("pieces_changed", []):
                 ws.pieces.setdefault(pc["handle"], pc["old"])
+                ws.pieces_now = {**getattr(ws, "pieces_now", {}), pc["handle"]: pc["new"]}
                 o_, n_ = pc["old"], pc["new"]
                 if not n_ or not o_:  # deleted (or new): nothing moved; a deleted new piece no longer needs checking
                     ws.new_outlines = [q_ for q_ in ws.new_outlines if not o_ or not all(abs(u_ - w_) < 0.005 for u_, w_ in zip(
@@ -887,7 +912,9 @@ x when it faces N/S; hit the exact size asked (outline x1-x0 / y1-y0). Move only
 other neighbours stay unless the user wants them to follow, and then they move in both furnish.js and the DXF. A resize that leaves \
 a neighbour overlapping or with an odd gap (bedside tables beside a narrower bed) moves that neighbour too, both views. A wall moved in the DXF must keep \
 both faces, close its junctions exactly (snap endpoints to existing ones within 0.1 mm), and the furniture against it \
-moves with it in furnish.js.
+moves with it in furnish.js. A NEW wall or partition is two face lines ~0.11 m apart with short end caps, one end \
+on an existing wall's face (unless the user wants it free-standing), clear of furniture outlines and leaving the \
+walkways above; dxf_edit warns when it isn't.
 - Where a NEW piece goes: a place the user names (\"at the foot of the bed\", \"in the corner left of the bed\", \"in the \
 kitchen\") wins. Otherwise (\"add X\", \"put X here\") it goes where the user is pointing, because that is where they \
 will look for it: at the circled spot (beside it if that exact spot is taken), or in Whole view somewhere inside the \
@@ -1299,6 +1326,7 @@ def chat(req):
     ws = Workspace(v)
     ws.allow_as_built = v == "as-built"  # only ever reached from the as-built page itself
     ws.plan_dirty, ws.dxf_furni, ws.pieces, ws.clashes, ws.new_outlines, ws.moves = False, False, {}, {}, [], []
+    ws.pieces_now = {}
     ws.win_moved = []
     sys_prompt = SYSTEM.format(showing="2D drawing" if ctx.get("showing") == "drawing" else "3D model", version=v,
                                marked="" if ctx.get("wholeView") else ", with what the user circled marked in red")
@@ -1370,6 +1398,25 @@ COMPASS = {"north": re.compile(r"\bnorth(wards?)?\b|شمال", re.I), "south": r
 NUMBER = re.compile(r"(?<![\w.])-?\d+(?:\.\d+)?(?![\w.])")
 GAVE_UP = re.compile(r"\b(couldn'?t|could not|can'?t|cannot|unable|wasn'?t able|not possible|left (it |them |everything )?(as it was|unchanged)|"
                      r"(made|changed) nothing|no changes?( were)? made|didn'?t change)\b", re.I)
+def stands_on_floor(text, i, line):
+    """Whether the item() at line i builds something standing on the floor (a named builder like bed(), or a box /
+    cylinder from height 0), not a wall-hung or overhead thing (sheer, art, pendant) that has no plan footprint."""
+    if re.search(r"\bitem\([^,]+,[^,]+,\s*\"[NSEW]\"\s*,\s*[A-Za-z_]\w*\s*(\(|\))", line):
+        return not re.search(r"\"\s*,\s*(art|tv|mirror|sheer|curtain|pendant|ac|sconce|towelRail|rainHead|showerWall)\w*\b", line, re.I)
+    L, blk, dep = text.splitlines(), "", 0
+    for k in range(i - 1, min(i + 40, len(L))):
+        blk += L[k] + "\n"
+        dep += L[k].count("(") - L[k].count(")")
+        if dep <= 0:
+            break
+    return bool(re.search(r"p\.box\([^,]+,[^,]+,\s*0(\.0+)?\s*,|p\.cyl\([^,]+,[^,]+,[^,]+,\s*0(\.0+)?\s*,", blk))
+
+
+# Size words in a resize ask: which way the user wants the piece to go (a class of asks, not a phrase).
+SHRINK = re.compile(r"\b(smaller|shorter|narrower|thinner|slimmer|shallower|less (wide|long|deep)|reduce|shrink|cut down|trim)\b|"
+                    r"أصغر|اصغر|أقصر|اقصر|أضيق|اضيق|صغر|قصر", re.I)
+GROW = re.compile(r"\b(bigger|larger|wider|longer|deeper|enlarge|extend|stretch|more (wide|long|deep))\b|"
+                  r"أكبر|اكبر|أعرض|اعرض|أطول|اطول|كبر|وسع", re.I)
 REMOVAL = re.compile(r"\b(remove|delete|close|block|wall up|fill in|get rid)\b|شيل|امسح|اقفل|اقفل|سد", re.I)
 
 
@@ -1716,6 +1763,23 @@ def review(ws, message, reply):
                     f"(north = +y, south = -y, east = +x, west = -x), but what you moved went the opposite way "
                     f"({', '.join(f'{v_:+.2f} m' for v_ in along[:3])} in {'y' if ax else 'x'}). Undo that (call discard) and "
                     "redo it in the direction the user named, in both views." + tail)
+    # A resize the user asked to go one way (shorter / wider) while a plan outline went the other: 2D and 3D disagree.
+    want_ = -1 if SHRINK.search(message) and not GROW.search(message) else 1 if GROW.search(message) and not SHRINK.search(message) else 0
+    if want_ and ws.pieces:
+        wrong_ = []
+        for h, b0 in ws.pieces.items():
+            b1 = getattr(ws, "pieces_now", {}).get(h)
+            if not b0 or not b1:
+                continue
+            dws = [((b1[2] - b1[0]) - (b0[2] - b0[0]), "x"), ((b1[3] - b1[1]) - (b0[3] - b0[1]), "y")]
+            moved_ = [(d_, ax_) for d_, ax_ in dws if abs(d_) > 0.005]
+            if moved_ and all(d_ * want_ < 0 for d_, _ in moved_):
+                wrong_.append(f"{h} ({', '.join(f'{ax_} {round(d_ * 100):+d} cm' for d_, ax_ in moved_)})")
+        if wrong_:
+            return (f"Check 2D vs 3D: the user asked for it {'smaller' if want_ < 0 else 'bigger'}, but on the plan "
+                    f"{'; '.join(wrong_)} got {'BIGGER' if want_ < 0 else 'SMALLER'}. In resize_piece grow, a positive value "
+                    "pushes that edge OUT (bigger) and a negative one pulls it IN (smaller). Redo the outline the right way "
+                    "(the same change as the 3D piece), so the plan and the 3D agree." + tail)
     # furnish.js edits that only touch lines which never run for this version.
     if f0 != f1:
         sc0, sc1 = version_scope(f0, ws.v), version_scope(f1, ws.v)
@@ -1724,7 +1788,7 @@ def review(ws, message, reply):
         for tag_, i0, i1, j0, j1 in difflib.SequenceMatcher(None, L0, L1_, autojunk=False).get_opcodes():
             if tag_ == "equal":
                 continue
-            touched += [sc1[j] for j in range(j0, j1) if L1_[j].strip()] + [sc0[i] for i in range(i0, i1) if L0[i].strip() and tag_ == "delete"]
+            touched += [sc1[j] for j in range(j0, j1) if L1_[j].strip()] + [sc0[i] for i in range(i0, i1) if L0[i].strip() and tag_ in ("delete", "replace")]
         if touched and all(t_ is False for t_ in touched):
             return (f"Check the version: every line you changed in furnish.js sits in a branch that doesn't run for version "
                     f"\"{ws.v}\" (another version's `if (version === ...)` block), so nothing changes in what the user sees. "

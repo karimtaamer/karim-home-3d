@@ -498,6 +498,7 @@ def edit(a):
     before = Counter(e.dxf.layer for e in msp)
     ops = json.load(sys.stdin)
     log, new, touched, moved = [], [], set(), []
+    details_cut = []  # detail lines deleted out of a piece that stays (a divider of a dressing table, not a piece)
 
     layers_hit = set()
 
@@ -577,8 +578,21 @@ def edit(a):
                 new.append(c.dxf.handle)
             log.append(f"copied {len(o['handles'])} by ({o['dx']}, {o['dy']})")
         elif k == "delete":
+            area_ = lambda b: (b[2] - b[0]) * (b[3] - b[1])
+            outl_ = [(e2, ext_of(e2)) for e2 in msp if e2.dxf.layer in FURNI and e2.dxftype() == "LWPOLYLINE" and len(e2) >= 4]
+            outl_ = [(e2, b2) for e2, b2 in outl_ if b2 and area_(b2) >= 0.04]
+            gone_ = {real(h) for h in o["handles"]}
             for h in o["handles"]:
-                msp.delete_entity(get(h))
+                e = get(h)
+                b = ext_of(e) if e.dxf.layer in FURNI else None
+                if b and not (e.dxftype() == "LWPOLYLINE" and len(e) >= 4 and area_(b) >= 0.04):
+                    own = [(area_(b2), e2.dxf.handle, b2) for e2, b2 in outl_ if e2.dxf.handle not in gone_
+                           and b2[0] - 0.01 <= b[0] and b[2] <= b2[2] + 0.01 and b2[1] - 0.01 <= b[1] and b[3] <= b2[3] + 0.01]
+                    if own:
+                        _, oh, ob_ = min(own)
+                        details_cut.append(f"{e.dxf.handle} (a {e.dxftype()} drawn inside piece {oh}, x {r(ob_[0] - ox)}..{r(ob_[2] - ox)}, "
+                                           f"y {r(ob_[1] - oy)}..{r(ob_[3] - oy)}, which stays)")
+                msp.delete_entity(e)
             log.append(f"deleted {len(o['handles'])}")
         elif k == "add_line":
             e = msp.add_line(W(o["a"]), W(o["b"]), dxfattribs=attrs(o["layer"]))
@@ -646,12 +660,39 @@ def edit(a):
         elif k == "move_piece":
             ents, _ = piece_members(msp, get(o["handle"]))
             dx, dy = float(o.get("dx", 0)), float(o.get("dy", 0))
+            h_ = ents[0].dxf.handle
+            hit0 = {c["with"] for c in clashes(msp, doc, [h_], soft, 0, 0, m=0.003) if not c.get("free")}
             for e in ents:
                 touched.add(e.dxf.handle)
                 e.translate(dx, dy, 0)
+            # A move along one axis that runs the piece into a wall / piece it was clear of stops at it (a real
+            # piece can't go through its neighbour); a jump right past it, to the far side, is left as asked.
+            note = ""
+            if bool(dx) != bool(dy) and not o.get("allow_overlap"):
+                ai = 0 if dx else 1
+                d = dx if dx else dy
+                new_hits = [c for c in clashes(msp, doc, [h_], soft, 0, 0, m=0.003) if not c.get("free") and c["with"] not in hit0]
+                if new_hits:
+                    nb_ = ext_of(ents[0])  # how far its leading edge went past each thing it now runs into
+                    back = max(((nb_[ai + 2] - 0.003) - c["overlap"][ai]) if d > 0 else (c["overlap"][ai + 2] - (nb_[ai] + 0.003))
+                               for c in new_hits) + 0.001
+                    if back < abs(d) + 0.003:
+                        back = abs(d) if abs(d) - back < 0.01 else back  # already touching: it stays put
+                        s_ = -1 if d > 0 else 1
+                        for e in ents:
+                            e.translate(s_ * back if ai == 0 else 0, s_ * back if ai == 1 else 0, 0)
+                        got = abs(d) - back
+                        what = new_hits[0]["with"].split(" (")[0]
+                        note = (f" [ONLY {round(got * 100)} cm FREE that way (asked {round(abs(d) * 100)} cm): it now touches "
+                                f"{what}" + (" - it was ALREADY touching it, so it did not move" if got < 0.005 else "")
+                                + ". Give furnish.js exactly this move and TELL THE USER it only went that far and why]")
+                        if ai == 0:
+                            dx = r(dx + s_ * back)
+                        else:
+                            dy = r(dy + s_ * back)
             b = ext_of(ents[0])
             log.append(f"piece {o['handle']} ({len(ents)} entities: {[e.dxf.handle for e in ents]}) moved by ({dx}, {dy}); "
-                       f"outline now x {r(b[0] - ox)}..{r(b[2] - ox)}, y {r(b[1] - oy)}..{r(b[3] - oy)}")
+                       f"outline now x {r(b[0] - ox)}..{r(b[2] - ox)}, y {r(b[1] - oy)}..{r(b[3] - oy)}" + note)
         elif k == "resize_piece":
             ents, b = piece_members(msp, get(o["handle"]))
             w, h = b[2] - b[0], b[3] - b[1]
@@ -724,8 +765,11 @@ def edit(a):
                 scale_entity(e, (b[0], b[1]), kx, ky)
                 e.translate(nb[0] - b[0], nb[1] - b[1], 0)
             b = ext_of(ents[0])
+            dw_, dh_ = (b[2] - b[0]) - w, (b[3] - b[1]) - h
+            chg = "; ".join(f"{ax_} size {'+' if d_ > 0 else ''}{round(d_ * 100)} cm ({'BIGGER' if d_ > 0 else 'SMALLER'})"
+                            for ax_, d_ in (("x", dw_), ("y", dh_)) if abs(d_) > 0.002) or "NO SIZE CHANGE"
             log.append(f"piece {o['handle']} ({len(ents)} entities) resized {r(w)} x {r(h)} -> {r(b[2] - b[0])} x "
-                       f"{r(b[3] - b[1])}; outline now x {r(b[0] - ox)}..{r(b[2] - ox)}, y {r(b[1] - oy)}..{r(b[3] - oy)}"
+                       f"{r(b[3] - b[1])} [{chg}]; outline now x {r(b[0] - ox)}..{r(b[2] - ox)}, y {r(b[1] - oy)}..{r(b[3] - oy)}"
                        + (" [" + "; ".join(fits) + ". Make furnish.js match this outline (size AND centre) and TELL THE USER "
                           "the size it really got and why]" if fits else ""))
         elif k == "move_door":
@@ -813,6 +857,33 @@ def edit(a):
         and e.dxftype() == "LWPOLYLINE" and len(e) >= 4]
     soft_h = {h for h, b0 in pieces0.items() if b0 and any(all(abs(b0[i] - t[i]) < 0.06 for i in range(4)) for t in soft)}
     clash = clashes(msp, doc, check, soft, ox, oy, soft_h) if check else []
+    # New wall lines: what they run through, whether they join a wall, and the walkway left beside them.
+    from shapely.geometry import box as _sbox
+    nw_ = [doc.entitydb.get(h) for h in new]
+    nw_ = [e for e in nw_ if e is not None and e.dxftype() == "LINE" and e.dxf.layer == "1wall"
+           and (e.dxf.start - e.dxf.end).magnitude > 0.2]
+    if nw_:
+        newset = {e.dxf.handle for e in nw_}
+        old_w = [e for e in msp.query("LINE") if e.dxf.layer == "1wall" and e.dxf.handle not in newset]
+        area_ = lambda b: (b[2] - b[0]) * (b[3] - b[1])
+        fo_ = [(e, ext_of(e)) for e in msp if e.dxf.layer in FURNI and e.dxftype() == "LWPOLYLINE" and len(e) >= 4]
+        fo_ = [(e, b) for e, b in fo_ if b and area_(b) >= 0.04 and not any(all(abs(b[i] - t[i]) < 0.06 for i in range(4)) for t in soft)]
+        fo_ = [(e, b) for e, b in fo_ if not any(e2 is not e and area_(b2) > area_(b) * 1.05 and b2[0] - 0.08 <= b[0] and b[2] <= b2[2] + 0.08
+                                                 and b2[1] - 0.08 <= b[1] and b[3] <= b2[3] + 0.08 for e2, b2 in fo_)]  # top-level pieces
+        P_ = lambda q: f"({r(q[0] - ox)}, {r(q[1] - oy)})"
+        stub = unary_union([LineString([(e.dxf.start.x, e.dxf.start.y), (e.dxf.end.x, e.dxf.end.y)]) for e in nw_])
+        joined = any(LineString([(w.dxf.start.x, w.dxf.start.y), (w.dxf.end.x, w.dxf.end.y)]).distance(stub) < 0.01 for w in old_w)
+        through = sorted({e.dxf.handle for e, b in fo_ if stub.intersects(_sbox(b[0] + 0.01, b[1] + 0.01, b[2] - 0.01, b[3] - 0.01))})
+        close = sorted((round(stub.distance(_sbox(*b)), 2), e.dxf.handle) for e, b in fo_ if e.dxf.handle not in through
+                       and 0 < stub.distance(_sbox(*b)) < 0.6)
+        if not joined:
+            warnings.append("the new wall doesn't touch any existing wall: it stands free in the room. A partition normally "
+                            "runs from a wall (snap one end onto an existing wall face) unless the user asked for a free-standing one")
+        if through:
+            warnings.append(f"the new wall runs through furniture outline(s) {through}: move the wall or the furniture (both views)")
+        if close:
+            warnings.append("the new wall leaves only " + ", ".join(f"{round(d * 100)} cm to {h}" for d, h in close[:3])
+                            + " (under ~60 cm is no walkway: shift it so the room still works, or say why not)")
     auditor = doc.audit()
     doc.saveas(a.out)
     after = Counter(e.dxf.layer for e in msp)
@@ -823,7 +894,12 @@ def edit(a):
                       **({"handles_remapped": vmap} if vmap else {}),
                       **({"pieces_changed": pieces} if pieces else {}),
                       **({"clashes_checked": check, "clashes": clash} if check else {}),
-                      **({"windows_moved": moved} if moved else {}), **({"warnings": warnings} if warnings else {})}))
+                      **({"windows_moved": moved} if moved else {}),
+                      **({"warnings": warnings + [f"deleted only a detail line of a piece that is still there: {d}. A part "
+                          "built inside another piece (a stool under a dressing table, a drawer front) has no outline of its "
+                          "own, so removing that part changes nothing on the plan: put the line back (discard, redo without "
+                          "it) unless the user asked to change that piece's drawing" for d in details_cut]}
+                         if warnings or details_cut else {})}))
 
 
 if __name__ == "__main__":

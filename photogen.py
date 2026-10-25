@@ -14,10 +14,13 @@ the furniture of this room go too, so the pieces keep their real design (never a
 seen through the en-suite door would come in). The screenshot alone says what the room has (walls, doors,
 windows, niches, furniture); the other images lend only surfaces and designs. The page also names the pieces in
 frame (ctx.inventory, from furnish.js labels and spotnames.js words), and the prompt lists them as must-keep, so a
-grey block the model can't place (a water dispenser on a counter) isn't dropped. Comments ("Make an edit") re-run
-it on the attempt shown, with up to MAX_INSPO inspiration pictures the client attached (refs: data URLs), sent last
-and used only for the look the comment asks for, never their camera or layout. Each generate and edit returns its
-estimated cost (usd, from OpenAI's usage), which the page shows in EGP.
+grey block the model can't place (a water dispenser on a counter) isn't dropped. "Make an edit" re-runs it on the
+attempt shown with the client's marked edits (markedit.js: edits, a note per numbered red mark with its box on the
+picture, plus marked, the attempt with the marks drawn in, sent as image 2 MARKED so "the wardrobe on the right"
+can't flip sides; all the notes in one call), with up to MAX_INSPO inspiration pictures the client attached (refs:
+data URLs), sent last and used only for the look the notes ask for, never their camera or layout. An older page's
+plain comments (comments, the last one new) still work. Each generate and edit returns its estimated cost (usd,
+from OpenAI's usage), which the page shows in EGP.
 Approving copies the image into renders/ and adds the spot to spots.json, like a designer render (or to
 the plan version's spots file the page is showing, e.g. spots-bigger-bedroom.json).
 
@@ -26,8 +29,8 @@ OPENAI_IMAGE_MODEL picks the model (default gpt-image-2). Drafts are kept in ren
 PHOTOSPOT_PASSWORD, when set, has to come with every generate, approve, edit, delete and name (the page asks once).
 PHOTOGEN_MOCK=1 (or --dry-run) makes no OpenAI calls: generate echoes the view, edit the render, name says "view".
 
-The Renders screen edits a saved render in words (edit: the render as image 1 with the board and the furniture
-renders, saved as a new spot "of" its first version with the next "version" number; the old one stays) and
+The Renders screen edits a saved render the same way, marks and notes (edit: the render as image 1, MARKED next,
+with the board and the furniture renders; or an older page's instruction in words), saved as a new spot "of" its first version with the next "version" number; the old one stays) and
 deletes generated ones (delete: image and spot entry; on Vercel also a marker, renders/ai-deleted/<file>/<id>.json,
 which hides a spot kept in git and keeps its id from being reused). A new spot with no named furniture piece
 in frame is named from its first attempt by a cheap vision model (name, OPENAI_NAME_MODEL, default gpt-4.1-nano).
@@ -63,6 +66,9 @@ MAX_FURNITURE, MAX_IMAGES = 6, 16  # extra renders sent for their furniture; Ope
 # MAX_INSPO_BYTES; they take the places of furniture renders when the 16 run short.
 MAX_INSPO, MAX_INSPO_BYTES = 4, 3_000_000
 INSPO_MIME = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
+# Make an edit's marks (markedit.js): at most MAX_MARKS numbered marks and one whole-picture note, each note at most
+# MAX_NOTE characters; the picture with the marks drawn in at most MARKED_BYTES as a data URL.
+MAX_MARKS, MAX_NOTE, MARKED_BYTES = 8, 800, 3_000_000
 SOFT = {"LIVING ROOM", "RECEPTION", "MASTER BEDROOM", "DINING"}  # the rooms that show the fabrics and art best
 REF_PX = 1024  # long side of a whole render as sent; the board carries the close-up detail
 TILE, LABEL, COLS = 384, 46, 4  # material board: square swatches with a caption strip, four across
@@ -339,11 +345,12 @@ def board():
     return out
 
 
-def prompt(ctx, refs, comments, revising, has_board, inspo=0):
-    """The images go in this order: PREVIOUS (revisions only), VIEW, PLAN, BOARD, then whole renders, each
-    (spot, None) for colour and light or (spot, [where, ..]) for its furniture too. The image model holds
-    closest to the first one, so that is the model screenshot for a first attempt and the last attempt for a
-    revision: the angle and every object stay, and only their surfaces change."""
+def prompt(ctx, refs, comments, revising, has_board, inspo=0, edits=(), marked=False):
+    """The images go in this order: PREVIOUS (revisions only), MARKED (a revision with marks), VIEW, PLAN, BOARD,
+    then whole renders, each (spot, None) for colour and light or (spot, [where, ..]) for its furniture too. The
+    image model holds closest to the first one, so that is the model screenshot for a first attempt and the last
+    attempt for a revision: the angle and every object stay, and only their surfaces change. A revision's new
+    notes are edits (edits_of) when the page marked them, else the last of comments; the rest are earlier ones."""
     v, r, seen = ctx["view"], ctx["room"], ctx.get("seen", [])
     allrooms, rooms = brief([r["name"]] + [s["name"] for s in seen])
     n = iter(range(1, 99))
@@ -371,6 +378,8 @@ def prompt(ctx, refs, comments, revising, has_board, inspo=0):
                      "comments below ask for a change, and except that anything in it the VIEW does not have (a "
                      "door, opening, window, niche, piece of furniture or fixture) is a mistake: put back what the "
                      "VIEW shows there.")
+        if marked:
+            lines.append(marked_line(next(n), "the PREVIOUS image"))
     lines += [
         f"{next(n)}. VIEW - an untextured clay render of the 3D model from the exact camera spot, drawn from the "
         "architect's DWG. Its grey shapes are the exact architecture, furniture and objects: every one stays, "
@@ -414,14 +423,87 @@ def prompt(ctx, refs, comments, revising, has_board, inspo=0):
         FACTS.format(**ctx["heights"]),
     ]
     if revising:
+        now, earlier = (marked_request(edits, marked, "the PREVIOUS image"), comments) if edits else (comments[-1], comments[:-1])
         lines += ["", "This is a revision of the PREVIOUS image. Only these comments can add or remove something "
                   "the VIEW has or lacks. Where a comment says a part is wrong, inaccurate or should not be there, "
                   "make that part match the VIEW exactly (a door or opening the VIEW lacks is removed, and plain "
-                  "wall goes back), and do not redraw it more clearly. Fix these client comments now: " + comments[-1]
-                  + (" (the INSPIRATION images show the look they mean)" if inspo else "")]
-        if len(comments) > 1:
-            lines.append("Earlier comments, already fixed - keep them fixed: " + " | ".join(comments[:-1]))
+                  "wall goes back), and do not redraw it more clearly. Fix these client comments now"
+                  + (" (the INSPIRATION images show the look they mean)" if inspo else "") + ": " + now]
+        if earlier:
+            lines.append("Earlier comments, already fixed - keep them fixed: " + " | ".join(earlier))
     return "\n".join(lines)
+
+
+def edits_of(req):
+    """Make an edit's marked notes (markedit.js: [{i, note, box: [x0, y0, x1, y1] as fractions of the picture}], a
+    note with no box being for the whole picture), checked -> [{i, note, box}] (i and box None on a whole-picture
+    note); [] when the page sent plain comments."""
+    out = []
+    for e in (req.get("edits") or [])[:MAX_MARKS + 1]:
+        if not isinstance(e, dict):
+            raise ValueError("bad edit")
+        note, box = str(e.get("note") or "").strip()[:MAX_NOTE], e.get("box")
+        if not note:
+            continue
+        if box is not None:
+            if not (isinstance(box, list) and len(box) == 4 and all(isinstance(v, (int, float)) and 0 <= v <= 1 for v in box)
+                    and box[0] <= box[2] and box[1] <= box[3]):
+                raise ValueError("bad mark")
+            box = [round(float(v), 3) for v in box]
+        out.append({"i": int(e.get("i") or len(out) + 1) if box else None, "note": note, "box": box})
+    return out
+
+
+def marked_of(req):
+    """The picture with the client's numbered red marks drawn in (markedit.js) -> (bytes, mime), or None."""
+    u = req.get("marked")
+    if not u:
+        return None
+    m = re.match(r"^data:(image/(?:jpeg|png));base64,", u) if isinstance(u, str) else None
+    if not m:
+        raise ValueError("the marked picture must be a JPEG or PNG")
+    if len(u) > MARKED_BYTES:
+        raise ValueError("the marked picture is too large")
+    return base64.b64decode(u[m.end():]), m[1]
+
+
+def where(box, short=False):
+    """A mark's place on the picture, as seen (left is the picture's left): 'right, middle height' (short), or that
+    with the box in per cent of the picture's width and height."""
+    x0, y0, x1, y1 = box
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    side = "left" if cx < 1 / 3 else "right" if cx > 2 / 3 else "centre"
+    height = "top" if cy < 1 / 3 else "bottom" if cy > 2 / 3 else "middle height"
+    if short:
+        return f"{side}, {height}"
+    return (f"the {side} of the picture, {height}: {x0:.0%} to {x1:.0%} across from the left edge, "
+            f"{y0:.0%} to {y1:.0%} down from the top")
+
+
+def said(edits):
+    """Marked edits as one comment, for the attempt's (or version's) history and later prompts: each note with where
+    its mark was (the numbers belong to that one MARKED image, so they are left out)."""
+    return " · ".join(f"{e['note']} [marked: {where(e['box'], True)}]" if e["box"] else f"{e['note']} [whole picture]"
+                      for e in edits)
+
+
+def marked_line(k, base):
+    """Image k's line: MARKED, base again with the client's numbered red marks."""
+    return (f"{k}. MARKED - {base} again, with the client's red marks drawn on it, each numbered in a red disc. Use "
+            "it only to see exactly which surface, piece or area each numbered edit below is about. The red ink and "
+            "numbers are not in the room: never paint them, and take nothing else from this image.")
+
+
+def marked_request(edits, marked, base):
+    """The client's marked edits, one line each, tied to its numbered mark and where it is, so a note's "on the
+    right" can't be applied to the wrong piece; then any note for the whole picture."""
+    head = (f"each edit below is tied to the red mark with its number{' in the MARKED image' if marked else ''}, "
+            f"and that mark shows exactly which surface, piece or area of {base} the note is about. Left and right "
+            "are as seen in the picture: never mirror them, and never apply a note to a similar piece elsewhere (a "
+            "note on the wardrobe on the right is not about the one on the left). Change only what each mark covers "
+            f"(a whole-picture note may change the whole picture); everything else stays as {base} has it.")
+    return "\n".join([head] + [f"- Mark {e['i']} ({where(e['box'])}): {e['note']}" if e["box"] else
+                               f"- Whole picture: {e['note']}" for e in edits])
 
 
 def inventory_lines(ctx, revising=False):
@@ -488,8 +570,9 @@ def ref_line(k, s, w, room, seen, base="the VIEW"):
             "colour palette, the light and the render quality; " + rest)
 
 
-def edit_prompt(s, refs, instruction, earlier, has_board, inspo=0):
-    """A saved render revised in words: RENDER first (held closest), then BOARD and the FURNITURE renders."""
+def edit_prompt(s, refs, instruction, earlier, has_board, inspo=0, edits=(), marked=False):
+    """A saved render revised, by marked edits (edits_of) or in words (instruction): RENDER first (held closest),
+    then MARKED (with marks), BOARD and the FURNITURE renders."""
     n = iter(range(2, 99))
     lines = [
         "Edit image 1 (RENDER), a finished photo of this apartment, as the client asks below. Change only what "
@@ -503,6 +586,8 @@ def edit_prompt(s, refs, instruction, earlier, has_board, inspo=0):
         "Images, in order:",
         f"1. RENDER - \"{s['caption']}\", the photo to revise.",
     ]
+    if marked:
+        lines.append(marked_line(next(n), "image 1"))
     if has_board:
         lines.append(f"{next(n)}. BOARD - the designer's materials, cropped from their renders, each labelled with "
                      "what it is for. Use these finishes for anything the request changes.")
@@ -511,8 +596,9 @@ def edit_prompt(s, refs, instruction, earlier, has_board, inspo=0):
     if any(w is not None for _, w in refs):
         lines += ["", "A piece the request names takes its EXACT design from the FURNITURE images; do not copy their "
                   "layout or camera."]
-    lines += ["", f"Room: {captionish(s['room'])}.", "", "The client's revision, to make now: " + instruction
-              + (" (the INSPIRATION images show the look they mean)" if inspo else "")]
+    lines += ["", f"Room: {captionish(s['room'])}.", "", "The client's revision, to make now"
+              + (" (the INSPIRATION images show the look they mean)" if inspo else "") + ": "
+              + (marked_request(edits, marked, "image 1") if edits else instruction)]
     if earlier:
         lines.append("Earlier revisions, already made - keep them: " + " | ".join(earlier))
     return "\n".join(lines)
@@ -578,12 +664,15 @@ def data_url(s):
     return base64.b64decode(body), mime, "jpg" if mime == "image/jpeg" else "png"
 
 
-def request(ctx, view, vmime, vext, plan, comments, prev, name, inspo=()):
-    """The edit to send: (prompt, [(filename, bytes, mime)], [(spot, None or [where, ..])] for the renders, board)."""
+def request(ctx, view, vmime, vext, plan, comments, prev, name, inspo=(), edits=(), marked=None):
+    """The edit to send: (prompt, [(filename, bytes, mime)], [(spot, None or [where, ..])] for the renders, board).
+    marked: (bytes, mime) of the PREVIOUS image with the client's marks, sent next to it."""
     room, seen = ctx["room"]["name"], [s["name"] for s in ctx.get("seen", [])]
     refs = references(room, seen, name)
     mats = board()
     images = [("previous.png", load(f"renders/drafts/{prev}.png"), "image/png")] if prev else []
+    if prev and marked:
+        images.append((f"marked.{INSPO_MIME[marked[1]]}", marked[0], marked[1]))
     images += [(f"view.{vext}", view, vmime), ("plan.png", plan, "image/png")]
     if mats:
         images.append((mats.name, mats.read_bytes(), "image/jpeg"))
@@ -598,47 +687,58 @@ def request(ctx, view, vmime, vext, plan, comments, prev, name, inspo=()):
             images.append((p.name, p.read_bytes(), "image/jpeg" if p.suffix.lower() in (".jpg", ".jpeg") else "image/png"))
             used.append((s, w))
     images += list(inspo)  # last, after the renders: the prompt numbers them so
-    return prompt(ctx, used, comments, bool(prev), bool(mats), len(inspo)), images, used, mats
+    return prompt(ctx, used, comments, bool(prev), bool(mats), len(inspo), edits, bool(prev and marked)), images, used, mats
 
 
 def generate(req):
-    """{view, plan: data URLs, ctx, comments: [..], previous: draft id?, refs: [data URL]?} -> {draft, src, usd, usage}.
-    refs (inspiration pictures) go only with a revision: they illustrate its comment."""
+    """{view, plan: data URLs, ctx, comments: [..], previous: draft id?, edits: [{i, note, box}]?, marked: data URL?,
+    refs: [data URL]?} -> {draft, src, usd, usage, comment}. A revision's new notes are edits (Make an edit's marks,
+    all in this one call; comments are then the earlier ones), or an older page's last comment; comment says them
+    back as one line for the attempt's history. marked and refs (inspiration pictures) go only with a revision."""
     prev = req.get("previous")
     if prev and not DRAFT_ID.match(prev):
         raise ValueError("bad draft id")
     comments = [c for c in req.get("comments", []) if c.strip()]
-    if prev and not comments:
+    edits = edits_of(req) if prev else []
+    if prev and not comments and not edits:
         raise ValueError("write a comment to revise with")
     ctx = req["ctx"]
     draft = f"d{int(time.time())}-{secrets.token_hex(3)}"
     inspo = inspiration(req) if prev else []
+    marked = marked_of(req) if any(e["box"] for e in edits) else None
     (view, vmime, vext), (plan, _, _) = data_url(req["view"]), data_url(req["plan"])
     save(f"renders/drafts/{draft}-view.{vext}", view, vmime)
     save(f"renders/drafts/{draft}-plan.png", plan, "image/png")
     for fname, data, mime in inspo:
         save(f"renders/drafts/{draft}-{fname}", data, mime)
-    text, images, refs, mats = request(ctx, view, vmime, vext, plan, comments, prev, req.get("spots", "spots.json"), inspo)
+    if marked:
+        save(f"renders/drafts/{draft}-marked.{INSPO_MIME[marked[1]]}", *marked)
+    text, images, refs, mats = request(ctx, view, vmime, vext, plan, comments, prev, req.get("spots", "spots.json"), inspo, edits, marked)
+    comment = said(edits) if edits else comments[-1] if prev else None
     print(f"[photogen] {draft}: {ctx['room']['caption']}, {len(images)} images{' (revision)' if prev else ''}", flush=True)
     out, usage = (view, None) if DRY else edit(images, text)
     save(f"renders/drafts/{draft}.png", out, vmime if DRY else "image/png")
-    save(f"renders/drafts/{draft}.json", json.dumps({"previous": prev, "comments": comments, "ctx": ctx, "cam": req.get("cam"),
+    save(f"renders/drafts/{draft}.json", json.dumps({"previous": prev, "comments": comments, "edits": edits, "comment": comment,
+                                                    "marked": bool(marked), "ctx": ctx, "cam": req.get("cam"),
                                                     "references": [s["photo"] for s, _ in refs],
                                                     "furniture": [s["photo"] for s, w in refs if w is not None],
                                                     "board": mats and mats.name, "inspiration": [f for f, _, _ in inspo],
                                                     "prompt": text, "usage": usage, "usd": cost(usage)}, indent=1).encode(), "application/json")
-    return {"draft": draft, "src": f"renders/drafts/{draft}.png", "usd": cost(usage), "usage": summary(usage)}
+    return {"draft": draft, "src": f"renders/drafts/{draft}.png", "usd": cost(usage), "usage": summary(usage), "comment": comment}
 
 
 def revise(req):
-    """{spots, id, instruction, refs: [data URL]?} -> {spot, usd, usage}: a saved render edited in words, saved as its next version (a new
-    spot with the same room, caption and camera, "of" its first version), the earlier versions kept."""
+    """{spots, id, edits: [{i, note, box}] and marked: data URL (or an older page's instruction), refs: [data URL]?}
+    -> {spot, usd, usage}: a saved render edited, saved as its next version (a new spot with the same room, caption
+    and camera, "of" its first version, its edit the notes said as one line), the earlier versions kept."""
     name = req.get("spots", "spots.json")
     s, home = find(name, req.get("id", ""))
-    instruction = (req.get("instruction") or "").strip()
+    edits = edits_of(req)
+    instruction = said(edits) if edits else (req.get("instruction") or "").strip()
     if not instruction:
         raise ValueError("write what should change")
     inspo = inspiration(req)
+    marked = marked_of(req) if any(e["box"] for e in edits) else None
     first = s.get("of") or s["id"]
     family = [x for x in spots(home) + blob_spots(home) if (x.get("of") or x["id"]) == first]
     src = picture(s)
@@ -646,6 +746,8 @@ def revise(req):
         raise ValueError("the render's image can't be read")
     mime = "image/jpeg" if src.suffix.lower() in (".jpg", ".jpeg") else "image/png"
     images = [(f"render{src.suffix.lower()}", src.read_bytes(), mime)]
+    if marked:
+        images.append((f"marked.{INSPO_MIME[marked[1]]}", marked[0], marked[1]))
     mats = board()
     if mats:
         images.append((mats.name, mats.read_bytes(), "image/jpeg"))
@@ -659,7 +761,7 @@ def revise(req):
             used.append((x, w))
     earlier = [x["edit"] for x in sorted(family, key=lambda x: x.get("version", 1)) if x.get("edit")]
     images += inspo  # last: edit_prompt numbers them after the renders
-    text = edit_prompt(s, used, instruction, earlier, bool(mats), len(inspo))
+    text = edit_prompt(s, used, instruction, earlier, bool(mats), len(inspo), edits, bool(marked))
     print(f"[photogen] edit {s['id']}: {len(images)} images", flush=True)
     out, usage = (images[0][1], None) if DRY else edit(images, text)
     sid = next_id()
@@ -674,7 +776,9 @@ def revise(req):
         save(f"renders/ai-spots/{home}/{sid}.json", json.dumps(spot, ensure_ascii=False).encode(), "application/json")
     else:
         add_spot(home, spot)
-    save(f"renders/drafts/{sid}-edit.json", json.dumps({"from": s["id"], "prompt": text, "references": [x["photo"] for x, _ in used],
+    if marked:
+        save(f"renders/drafts/{sid}-marked.{INSPO_MIME[marked[1]]}", *marked)
+    save(f"renders/drafts/{sid}-edit.json", json.dumps({"from": s["id"], "prompt": text, "edits": edits, "references": [x["photo"] for x, _ in used],
                                                         "inspiration": len(inspo), "usage": usage, "usd": cost(usage)}, indent=1).encode(), "application/json")
     print(f"[photogen] edited {s['id']} as {photo}", flush=True)
     return {"spot": spot, "usd": cost(usage), "usage": summary(usage)}

@@ -1,10 +1,12 @@
 // Renders: every designer render from spots.json, grouped by room, as a third view beside the 3D model
 // and the drawing. Click one to see it large; arrow keys step through, Esc closes.
-// With Generate Photo Spot's backend (actions.can()), the large view can also edit a render in words (a new
-// version, the old kept; up to four inspiration pictures can go with the words, inspiration.js) and delete a
-// generated one, after a confirmation. An edit's cost (EGP) shows on the new version's caption.
+// With Generate Photo Spot's backend (actions.can()), the large view can also edit a render (a new version, the
+// old kept) as Make an edit does on a new photo spot: red marks circled on it, a note for each, stacked, sent at once
+// (markedit.js; up to four inspiration pictures can go with them, inspiration.js), and delete a generated one,
+// after a confirmation. An edit's cost (EGP) shows on the new version's caption.
 
-import { MAX_INSPO, egp, focusWhenReady, inspirationPicker } from "./inspiration.js";
+import { MAX_INSPO, egp, inspirationPicker } from "./inspiration.js";
+import { markEditor } from "./markedit.js";
 
 // Groups in the order of the Rooms panel; anything filed under a room without a viewpoint goes last.
 export function byRoom(list, rooms) {
@@ -31,9 +33,10 @@ export function createRenders(root, rooms, actions = { can: () => false }) {
         <button class="rdel-open">Delete</button>
       </div>
       <form class="rsheet redit" hidden>
-        <label>What should change?<textarea placeholder="e.g. walnut nightstands, warmer evening light"></textarea></label>
+        <label>Make an edit</label>
+        <div class="rmarks"></div>
         <div class="rinspo"></div>
-        <p class="rnote">Add up to ${MAX_INSPO} inspiration pictures (+ Picture, paste or drop) to copy a look from. Saved as a new version; this one stays.</p>
+        <p class="rnote">Add up to ${MAX_INSPO} inspiration pictures (+ Picture, paste or drop) and say in a note what to take from them. Saved as a new version; this one stays.</p>
         <div class="rerr"></div>
         <div class="rrow"><button type="submit" class="rgo">Make new version</button><button type="button" class="rattach">+ Picture</button><button type="button" class="rcancel">Cancel</button></div>
       </form>
@@ -49,13 +52,17 @@ export function createRenders(root, rooms, actions = { can: () => false }) {
   const list = root.querySelector(".rlist"), box = root.querySelector(".rbox");
   const big = box.querySelector("img"), cap = box.querySelector(".rcap");
   const acts = box.querySelector(".racts"), editor = box.querySelector(".redit"), confirm = box.querySelector(".rdel");
-  const notes = editor.querySelector("textarea");
-  const inspo = inspirationPicker({ form: editor, button: editor.querySelector(".rattach"), area: notes, thumbs: editor.querySelector(".rinspo"),
+  const send = editor.querySelector(".rgo");
+  const marks = markEditor({ stage: box, img: big, panel: editor.querySelector(".rmarks"), go: "Make new version",
+    onChange: () => { if (!busy) { send.disabled = !!marks.problem(); send.title = marks.problem(); } } });
+  const inspo = inspirationPicker({ form: editor, button: editor.querySelector(".rattach"), area: editor, thumbs: editor.querySelector(".rinspo"),
     onError: m => (editor.querySelector(".rerr").textContent = m) });
   let order = [], at = -1, shown = false, busy = false;
 
   function sheet(which) {
     editor.hidden = which !== editor;
+    box.classList.toggle("marking", which === editor);  // the picture is drawn on: no stepping to another
+    which === editor ? marks.open() : marks.close();
     confirm.hidden = which !== confirm;
     acts.hidden = !!which || !actions.can();
     for (const e of box.querySelectorAll(".rerr")) e.textContent = "";
@@ -76,13 +83,13 @@ export function createRenders(root, rooms, actions = { can: () => false }) {
   box.querySelector(".rnext").onclick = () => open(at + 1);
   box.addEventListener("click", e => e.target === box && close());
   addEventListener("keydown", e => {
-    if (!shown || box.hidden || e.target.closest?.(".rsheet")) return;
+    if (!shown || box.hidden || e.target.closest?.(".rsheet") || !editor.hidden) return;
     if (e.key === "Escape") close();
     else if (e.key === "ArrowLeft") open(at - 1);
     else if (e.key === "ArrowRight") open(at + 1);
   });
 
-  box.querySelector(".redit-open").onclick = () => { sheet(editor); notes.value = ""; inspo.clear(); focusWhenReady(notes, () => !box.hidden && !editor.hidden); };
+  box.querySelector(".redit-open").onclick = () => { inspo.clear(); sheet(editor); };
   box.querySelector(".rdel-open").onclick = () => {
     const s = order[at];
     confirm.querySelector(".rq").textContent = `Delete “${versioned(s.caption, s)}”? It goes for good, on every device.`;
@@ -107,9 +114,9 @@ export function createRenders(root, rooms, actions = { can: () => false }) {
   }
   editor.onsubmit = async e => {
     e.preventDefault();
-    const text = notes.value.trim();
-    if (!text) return;
-    const out = await work(editor, "Editing", () => actions.edit(order[at], text, inspo.list()));
+    if (busy || marks.problem()) return;
+    const edit = { edits: marks.edits(), marked: marks.marked(), refs: inspo.list() };
+    const out = await work(editor, "Editing", () => actions.edit(order[at], edit));
     if (!out?.spot) return;
     inspo.clear();
     open(order.findIndex(s => s.id === out.spot.id));

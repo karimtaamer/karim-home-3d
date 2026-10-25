@@ -41,8 +41,9 @@ async function encode(file) {
   return c.toDataURL("image/jpeg", 0.85);
 }
 
-// form: where pictures can be dropped; button: opens the picker; area: the comment (pasted pictures); thumbs: where
-// they show; onChange(list) after each add or remove; onError(message). -> { list(), clear(), set(list) }
+// form: where pictures can be dropped; button: opens the picker; area: the comment, or the box holding the comments
+// (markedit.js: one per mark), for pasted pictures; thumbs: where they show; onChange(list) after each add or remove;
+// onError(message). -> { list(), clear(), set(list) }
 export function inspirationPicker({ form, button, area, thumbs, onChange = () => {}, onError = () => {} }) {
   style();
   thumbs.classList.add("inspo-thumbs");
@@ -79,12 +80,13 @@ export function inspirationPicker({ form, button, area, thumbs, onChange = () =>
   area.addEventListener("paste", e => {
     const data = e.clipboardData;
     if (!data) return;
-    const text = data.getData("text/plain");
+    const text = data.getData("text/plain"), into = e.target.closest?.("textarea") || area;
     if (text) {
+      if (!into.setRangeText) return;
       e.preventDefault();
-      area.focus();
-      area.setRangeText(text, area.selectionStart, area.selectionEnd, "end");
-      area.dispatchEvent(new Event("input", { bubbles: true }));
+      into.focus();
+      into.setRangeText(text, into.selectionStart, into.selectionEnd, "end");
+      into.dispatchEvent(new Event("input", { bubbles: true }));
       return;
     }
     const files = [...data.items].filter(it => it.kind === "file" && it.type.startsWith("image/")).map(it => it.getAsFile()).filter(Boolean);

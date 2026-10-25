@@ -1169,28 +1169,39 @@ def review(ws, message, reply):
         home = ring_at(x + fx * 0.05, y + fy * 0.05)
         if home < 0:
             continue
-        run = []
+        span_ = []
         for sgn in (-1, 1):  # how far this room's face of the wall runs each way
             t = 0.0
             while abs(t) < 12 and ring_at(x + ux * (t + sgn * 0.02) + fx * 0.05, y + uy * (t + sgn * 0.02) + fy * 0.05) == home:
                 t += sgn * 0.02
-            run.append(round(t, 2))
-        w0, w1 = run
+            span_.append(round(t, 2))
+        w0, w1 = span_
+        ax_ = "x" if ux else "y"
+        pl = lambda t: round((x if ux else y) + t * (ux + uy), 3)  # local x along the wall -> plan coordinate
+        rng = lambda a_, b_: f"{min(pl(a_), pl(b_))}..{max(pl(a_), pl(b_))}"
         problems = []
         for a_, b_, top in boxes:
             if a_ < w0 - 0.03 or b_ > w1 + 0.03:
-                problems.append(f"box {a_}..{b_} runs past this room's wall, which spans local x {w0}..{w1} here "
-                                "(beyond that it is inside the next wall or room)")
+                problems.append(f"box {a_}..{b_} covers plan {ax_} {rng(a_, b_)}, past this room's face of the wall, "
+                                f"which runs plan {ax_} {rng(w0, w1)} (beyond is the next wall or room)")
             for wo in wins:  # window on this wall: close to the back line, overlapping along it
                 ds = [(px - x) * fx + (py - y) * fy for px, py in wo]
                 ts = [(px - x) * ux + (py - y) * uy for px, py in wo]
                 if min(ds) < 0.05 and max(ds) > -0.6 and min(ts) < min(b_, w1) - 0.05 and max(ts) > max(a_, w0) + 0.05 and (top == "M.ceiling" or (re.fullmatch(r"[\d.]+", top) and float(top) > sill + 0.02)):
-                    problems.append(f"box {a_}..{b_} covers the window at local x {round(min(ts), 2)}..{round(max(ts), 2)}")
+                    problems.append(f"box {a_}..{b_} (plan {ax_} {rng(a_, b_)}) covers the window at plan {ax_} "
+                                    f"{rng(min(ts), max(ts))}")
         if problems:
-            return (f"Check the panel: furnish.js line {i} ({line.strip()[:140]}): " + "; ".join(problems[:3]) + ". Local x "
-                    f"runs along the wall (for \"{f}\" that is plan {'+' if ux + uy > 0 else '-'}{'x' if ux else 'y'}). Keep "
-                    "it to this room's wall and leave windows (and doors) open: one box each side of the window, plus a strip "
-                    "under it (0..M.sill) and over it (M.winHead..M.ceiling)." + tail)
+            wl = sorted({rng(min(ts), max(ts)) for wo in wins
+                         for ds in [[(px - x) * fx + (py - y) * fy for px, py in wo]]
+                         for ts in [[(px - x) * ux + (py - y) * uy for px, py in wo]]
+                         if min(ds) < 0.05 and max(ds) > -0.6 and min(ts) < w1 and max(ts) > w0})
+            return (f"Check the panel: furnish.js line {i} ({line.strip()[:140]}): " + "; ".join(problems[:3]) + ". "
+                    f"This room's wall here runs plan {ax_} {rng(w0, w1)}" + (f", window(s) at plan {ax_} " + ", ".join(wl)
+                    if wl else "") + f". Cover exactly that: full-height boxes from the room corner to each window and "
+                    "between windows, plus a strip under each window (0..M.sill) and over it (M.winHead..M.ceiling). Box "
+                    (f"x values are local to the item: local = plan {ax_} - {x if ux else y} " if ux + uy > 0 else
+                     f"x values are local to the item: local = {x if ux else y} - plan {ax_} ") +
+                    f"(\"{f}\" runs along plan {'+' if ux + uy > 0 else '-'}{ax_})." + tail)
     for i, line in new_items[:4]:  # a new floor piece's plan outline has to start at its back, like the 3D does
         m = ITEM.search(line)
         x, y, f = float(m[1]), float(m[2]), m[3]

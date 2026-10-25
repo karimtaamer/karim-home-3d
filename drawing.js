@@ -118,8 +118,9 @@ export function createDrawing(root, url) {
   }
 
   // Where a pick lands: the nearest snap point in reach, then ortho squares it up from the fixed point (A, or the
-  // other end of a measurement being edited). Shift / F8 always lock; otherwise a near-straight line (the pointer,
-  // or the snap it found) locks, and a snap is projected onto the axis, so wall to wall measures straight.
+  // other end of a measurement being edited). Shift / F8 always lock; otherwise only the pointer's direction decides:
+  // near-straight locks and the snap is projected onto the axis, so wall to wall measures straight, while a clearly
+  // angled drag keeps the snap as-is (a near-level snap alone never pulls a diagonal straight).
   function target(sx, sy, kind, from = start) {
     const [wx, wy] = toWorld(sx, sy);
     snap = nearestSnap(wx, wy, SNAP_PX[kind]);
@@ -127,7 +128,7 @@ export function createDrawing(root, url) {
     if (from) {
       axis = ortho || shift
         ? (Math.abs(p[0] - from[0]) >= Math.abs(p[1] - from[1]) ? "h" : "v")
-        : softAxis(from, [wx, wy], kind) || (snap && softAxis(from, snap.p, kind));
+        : softAxis(from, [wx, wy], kind);
       if (axis === "h") p = [p[0], from[1]];
       else if (axis === "v") p = [from[0], p[1]];
     }

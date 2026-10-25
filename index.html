@@ -41,28 +41,30 @@
   #bar #versions button.on { background: #2b2622; color: #f3eee5; }
   #bar .panel button { font-weight: 400; padding: 6px 12px; font-size: 11.5px; box-shadow: 0 0 0 1px #2b262214 inset; }
   /* The AI actions, in the bar (desktop, tablet) or the column bottom-left (phone): Make an Edit (edit-ai.js's dock) with
-     its Undo attached on the right as one split pill, and Generate a render. Both dark with a gold sheen that drifts
-     across Generate (and across Make an Edit on hover); Generate stays readable while disabled. */
+     its Undo attached on the right as one split pill, and Generate a render. Static, and told apart: Generate gold with
+     dark text, Make an Edit deep brown with cream text. Undo is just its icon until the first tap asks "Undo?" (edit-ai.js);
+     Generate stays readable while disabled. */
   :is(#bar, #actions) #edit-ai-dock { position: static; flex-direction: row; align-items: stretch; gap: 0; }
   :is(#bar, #actions) :is(#photogen, #edit-ai-btn) { display: flex; align-items: center; gap: 7px; border: 0; border-radius: 999px; padding: 8px 15px;
-    font: 600 12px Inter, sans-serif; letter-spacing: .03em; color: #fffaf3; cursor: pointer; backdrop-filter: none;
-    background: linear-gradient(115deg, #2b2622 0%, #5a4636 36%, #b8862f 48%, #e7b866 50%, #b8862f 52%, #5a4636 64%, #2b2622 100%) 0 0 / 280% 100%;
-    box-shadow: 0 3px 12px #0003, 0 0 0 1px #e7b86659 inset; transition: transform .15s, background-position 1.2s ease; }
-  :is(#bar, #actions) #photogen { animation: sheen 5s ease-in-out infinite alternate; }
-  :is(#bar, #actions) #edit-ai-btn:hover { background-position: 100% 0; }
-  :is(#bar, #actions) #photogen:not(:disabled):hover { transform: translateY(-1px); }
+    font: 600 12px Inter, sans-serif; letter-spacing: .03em; cursor: pointer; backdrop-filter: none; transition: transform .15s, filter .15s; }
+  :is(#bar, #actions) #photogen { color: #2b2622; background: linear-gradient(180deg, #ecc27a, #c8973f);
+    box-shadow: 0 3px 12px #0003, 0 0 0 1px #8a6424a6 inset; }
+  :is(#bar, #actions) #edit-ai-btn { color: #fffaf3; background: linear-gradient(180deg, #5a4636, #2b2622);
+    box-shadow: 0 3px 12px #0003, 0 0 0 1px #e7b86640 inset; }
+  :is(#bar, #actions) #photogen:not(:disabled):hover { transform: translateY(-1px); filter: brightness(1.05); }
+  :is(#bar, #actions) #edit-ai-btn:hover { filter: brightness(1.15); }
   :is(#bar, #actions) :is(#edit-ai-btn, #edit-ai-undo):hover { transform: none; }
   :is(#bar, #actions) :is(#photogen, #edit-ai-btn) svg { width: 15px; height: 15px; margin: 0; fill: none; stroke: #e7b866; stroke-width: 1.8;
     stroke-linecap: round; stroke-linejoin: round; }
-  :is(#bar, #actions) #photogen:disabled { animation: none; opacity: 1; color: #fffaf3b3; cursor: default;
-    background: linear-gradient(115deg, #2b2622cc, #5a4636cc); box-shadow: 0 0 0 1px #e7b86640 inset; }
-  :is(#bar, #actions) #photogen:disabled svg { stroke: #e7b866a6; }
+  :is(#bar, #actions) #photogen svg { stroke: #2b2622; }
+  :is(#bar, #actions) #photogen:disabled { opacity: 1; color: #2b2622a6; cursor: default;
+    background: linear-gradient(180deg, #e3cfa6, #cdb27c); box-shadow: 0 0 0 1px #8a642459 inset; }
+  :is(#bar, #actions) #photogen:disabled svg { stroke: #2b262280; }
   :is(#bar, #actions) #edit-ai-dock:has(#edit-ai-undo:not([hidden])) #edit-ai-btn { border-radius: 999px 0 0 999px; padding-right: 13px; }
-  :is(#bar, #actions) #edit-ai-undo { gap: 5px; padding: 0 13px 0 11px; border-radius: 0 999px 999px 0; font: 600 12px Inter, sans-serif; letter-spacing: .02em; }
+  :is(#bar, #actions) #edit-ai-undo { gap: 0; padding: 0 11px 0 9px; border-radius: 0 999px 999px 0; font: 600 12px Inter, sans-serif; letter-spacing: .02em; }
+  :is(#bar, #actions) #edit-ai-undo.sure { gap: 5px; padding: 0 13px 0 11px; }
   :is(#bar, #actions) #edit-ai-undo svg { width: 13px; height: 13px; margin: 0; stroke: #b8862f; stroke-width: 2; }
   :is(#bar, #actions) #edit-ai-undo.sure svg { stroke: #e7b866; }
-  @keyframes sheen { to { background-position: 100% 0; } }
-  @media (prefers-reduced-motion: reduce) { :is(#bar, #actions) #photogen { animation: none; } }
   #switcher { top: 84px; right: 22px; z-index: 4; }
   #switcher .short { display: none; }
   body:is(.drawing, .renders) :is(#help, #stick, #caption, #shade) { display: none; }
@@ -166,7 +168,8 @@
     #actions :is(#photogen, #edit-ai-btn) { min-height: 44px; padding: 0 16px; font-size: 13px; }
     #actions :is(#photogen, #edit-ai-btn) svg { width: 16px; height: 16px; }
     #actions #edit-ai-dock:has(#edit-ai-undo:not([hidden])) #edit-ai-btn { padding-right: 14px; }
-    #actions #edit-ai-undo { min-height: 44px; padding: 0 14px 0 12px; font-size: 12.5px; }
+    #actions #edit-ai-undo { min-height: 44px; padding: 0 13px 0 11px; font-size: 12.5px; }
+    #actions #edit-ai-undo.sure { padding: 0 14px 0 12px; }
     body.walking:not(.drawing, .renders) #stick { display: block; }
     #stick { right: 14px; bottom: 14px; width: 124px; height: 124px; border-radius: 50%; background: #fffaf3b3; box-shadow: 0 1px 6px #0002, 0 0 0 1px #2b262214 inset;
       backdrop-filter: blur(6px); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }

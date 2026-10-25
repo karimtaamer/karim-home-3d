@@ -1685,6 +1685,27 @@ def review(ws, message, reply):
                     f"is outside the flat: it is on the outer face of its wall, looking out. Put its back on the wall's "
                     f"room-side face (dxf_query 1wall: the face line nearer the room, ~11-25 cm in) and face it \"{opp}\"; "
                     "for a facing flip, local x runs the other way, so mirror any x offsets inside build." + tail)
+    for i, line in new_items[:4]:  # a free-standing piece the wrong way round: back to the room, front at a wall
+        m = ITEM.search(line)
+        x, y, f = float(m[1]), float(m[2]), m[3]
+        fx, fy = {"S": (0, -1), "N": (0, 1), "E": (1, 0), "W": (-1, 0)}[f]
+        L1, blk, dep = f1.splitlines(), "", 0
+        for k in range(i - 1, min(i + 40, len(L1))):
+            blk += L1[k] + "\n"
+            dep += L1[k].count("(") - L1[k].count(")")
+            if dep <= 0:
+                break
+        zs = [float(b_[1]) for b_ in re.finditer(r"p\.box\([^()]*?,[^(),]*,\s*0(?:\.0+)?\s*,[^(),]*,[^(),]*,\s*(-?[\d.]+)\s*,", blk)]
+        if not rings or not zs:
+            continue  # nothing standing on the floor
+        d_ = max(zs)
+        home = ring_at(x + fx * d_ / 2, y + fy * d_ / 2)
+        if home >= 0 and ring_at(x - fx * 0.12, y - fy * 0.12) == home and ring_at(x + fx * (d_ + 0.35), y + fy * (d_ + 0.35)) != home:
+            opp = {"N": "S", "S": "N", "E": "W", "W": "E"}[f]
+            return (f"Check facing: furnish.js line {i} ({line.strip()[:110]}) faces \"{f}\" with its back out in the room "
+                    f"and its front less than 35 cm from the wall ahead of it, so its front / controls face the wall. "
+                    f"Turn it round: back on that wall's room-side face, facing \"{opp}\" (local x runs the other way, so "
+                    "mirror x offsets inside build), with its plan outline to match." + tail)
     PANEL = re.compile(r"p\.box\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*([\w.]+)\s*,\s*([\w.]+)\s*,\s*-?0(?:\.0+)?\s*,\s*(0\.0[0-4]\d*)")
     for i, line in new_items[:4]:  # a paint / cladding panel stays on this room's wall and leaves the windows open
         m = ITEM.search(line)

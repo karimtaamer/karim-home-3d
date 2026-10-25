@@ -450,6 +450,7 @@ def version_scope(text, version):
     return out
 
 
+CALLS = re.compile(r"\b(?:item|rug|plant|art|ac|sconce|pendant)\(")  # any call, loop bodies too
 PLACE = re.compile(r"\b(?:item|rug|plant|art|ac|sconce|pendant)\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)")
 RUG = re.compile(r"\brug\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)")
 ITEM = re.compile(r"\bitem\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*\"([NSEW])\"")
@@ -740,6 +741,10 @@ def tool(ws, name, a):
             for pc in rep_.get("pieces_changed", []):
                 ws.pieces.setdefault(pc["handle"], pc["old"])
                 o_, n_ = pc["old"], pc["new"]
+                if not n_ or not o_:  # deleted (or new): nothing moved; a deleted new piece no longer needs checking
+                    ws.new_outlines = [q_ for q_ in ws.new_outlines if not o_ or not all(abs(u_ - w_) < 0.005 for u_, w_ in zip(
+                        [min(t[0] for t in q_), min(t[1] for t in q_), max(t[0] for t in q_), max(t[1] for t in q_)], o_))]
+                    continue
                 for k_, pts_ in enumerate(ws.new_outlines):  # a new piece moved / resized afterwards: check where it is now
                     bx_ = [min(q[0] for q in pts_), min(q[1] for q in pts_), max(q[0] for q in pts_), max(q[1] for q in pts_)]
                     if all(abs(u_ - w_) < 0.005 for u_, w_ in zip(bx_, o_)):
@@ -1330,7 +1335,7 @@ def off_view(ws, message, f0, f1, rings):
             dx, dy = {"N": (0, 0.15), "S": (0, -0.15), "E": (0.15, 0), "W": (-0.15, 0)}[m[3]]
             px, py = px + dx, py + dy
         added.append((i, round(px, 2), round(py, 2), line))
-    if not added or len(placed_lines(ws, f1)) <= len(placed_lines(ws, f0)):
+    if not added or len(placed_lines(ws, f1)) <= len(placed_lines(ws, f0)) or len(CALLS.findall(f1)) <= len(CALLS.findall(f0)):  # e.g. a loop unrolled, not an addition
         return None  # nothing new (a move, resize or swap in place)
     named = NAMED_PLACE.search(message) and not POINTED.search(message)
     msg_l = message.lower()

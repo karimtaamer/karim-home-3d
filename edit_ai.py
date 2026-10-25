@@ -68,6 +68,10 @@ ORIGIN = (190.4049651574427, -121.6132067325871)  # DWG -> plan, the same for ev
 # Each plan version: its DXF, the files built from it and the build flags (README §3-4).
 NC_FLAGS = ["--wall", "190.9609,-112.8031,190.9609,-112.3428", "--cut", "191.0309,-114.2431,191.7309,-114.0731",
             "--window", "192.2087,-112.47,1.5,2.1,frosted"]
+# Main / Karim's: the reception column as the DXF and survey draw it (face DWG x 207.9471, plan 17.542); without
+# this cut build_geometry's corner-square step re-inflates it to 17.862 and the TV wall stops being flush (25 Oct,
+# Edit AI 0a5a7de). Keep in step with the README build command.
+KC_FLAGS = NC_FLAGS + ["--cut", "207.9471,-116.2418,208.2871,-115.8818"]
 # Since 2026-10-25 the page's Main (and "Karim's version") load the kareems-changes plan; Bigger / Shifted Bedroom
 # are retired. A request for "main" (or with no version) is an edit to that plan.
 ALIASES = {"main": "kareems-changes"}
@@ -75,7 +79,7 @@ VERSIONS = {
     "naghams-changes": {"dxf": "dwg/naghams-changes.dxf", "model": "model-naghams-changes.js", "drawing": "drawing-naghams-changes.json",
                         "tour": "tour-naghams-changes.json", "flags": NC_FLAGS},
     "kareems-changes": {"dxf": "dwg/kareems-changes.dxf", "model": "model-kareems-changes.js", "drawing": "drawing-kareems-changes.json",
-                        "tour": "tour-kareems-changes.json", "flags": NC_FLAGS},
+                        "tour": "tour-kareems-changes.json", "flags": KC_FLAGS},
     "as-built": {"dxf": "dwg/as-built.dxf", "model": "model-as-built.js", "drawing": "drawing-as-built.json",
                  "tour": "tour-as-built.json", "flags": []},
 }

@@ -123,6 +123,10 @@ def check(lock, files):
         c = (t["low"][0] + t["low"][1]) / 2
         if not near(c, lock["tv_center"]):
             out.append(f"TV centre local {round(c, 4)}, locked at {lock['tv_center']}")
+        if "panel" in lock:
+            pc = (t["edge"] + lock["column_x"]) / 2
+            if not near(c, pc):
+                out.append(f"TV centre local {round(c, 4)} is not centred on the elevated panel ({t['edge']}..{lock['column_x']}, centre {round(pc, 4)})")
         if c + lock["tv_width"] / 2 > lock["column_x"]:
             out.append("TV reaches into the column")
         if not near(t["edge"], lock["edge"]):

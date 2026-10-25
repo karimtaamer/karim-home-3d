@@ -1460,12 +1460,12 @@ export function furnish(scene, M, mat, version = "main") {
       mesh(new THREE.ExtrudeGeometry(ring, { depth: d, bevelEnabled: false, curveSegments: 12 }), honeyOak, p.g);
       mesh(new THREE.ExtrudeGeometry(roundRect(new THREE.Shape(), x0, x1, y0, y1, r), { depth: 0.01, bevelEnabled: false, curveSegments: 12 }), honeyOak, p.g);
     };
-    // Kareem's (Karim t311, 25 Oct 2026): the free wall runs from the south wall's face (plan y 2.0705, local -1.60)
-    // to the column (local 1.72); nothing goes on the column. With two locked 0.34 tall niches the most the TV can come
-    // south is ~5 cm: TV centred at local 0.44 (plan y 4.11), the low niche centred on it, the splayed return 0.06
-    // clear of the low niche, and the tall niches centred in what's left (-1.60 to -0.71): 0.07 / 0.34 / 0.07 / 0.34 / 0.07.
+    // Kareem's (Karim t315, 25 Oct 2026): the TV and its low niche are centred on the ELEVATED panel — the proud D1
+    // box face from the splayed return (local edge -0.51) to the column seam (local 1.72, plan y 5.3914): centre
+    // local 0.605 (plan y 4.275), 0.225 clear each side for the low niche. Nothing goes on the column. The run behind
+    // keeps the two tall niches centred in -1.60 to -0.71 (south wall face to splay start): 0.07 / 0.34 / 0.07 / 0.34 / 0.07.
     const tall = KC ? [[-1.53, -1.19], [-1.12, -0.78]] : [[-1.59, -1.25], [-1.11, -0.77]];
-    const low = KC ? [-0.45, 1.33, 0.33, 0.69, 0.1] : [-0.4, 1.38, 0.33, 0.69, 0.1];
+    const low = KC ? [-0.285, 1.495, 0.33, 0.69, 0.1] : [-0.4, 1.38, 0.33, 0.69, 0.1];
     const tcx = (low[0] + low[1]) / 2;
     const n0 = (tall[0][0] + tall[0][1]) / 2 + 1.42, n1 = (tall[1][0] + tall[1][1]) / 2 + 0.94, nl = tcx - 0.49;  // styling follows its niche
     const tvX0 = tcx - TW / 2, tvX1 = tcx + TW / 2;

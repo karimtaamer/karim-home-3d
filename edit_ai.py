@@ -65,24 +65,14 @@ PRICES = {"claude-haiku-5-5": (0.10, 0.01, 0.50, 0.125), "claude-sonnet-5-5": (2
           "gpt-4o": (2.5, 1.25, 10.0), "gpt-4o-mini": (0.15, 0.075, 0.6)}
 ORIGIN = (190.4049651574427, -121.6132067325871)  # DWG -> plan, the same for every version (model*.js "origin")
 
-# Each plan version: its DXF, the files built from it and the build flags (README §3-4).
-NC_FLAGS = ["--wall", "190.9609,-112.8031,190.9609,-112.3428", "--cut", "191.0309,-114.2431,191.7309,-114.0731",
-            "--window", "192.2087,-112.47,1.5,2.1,frosted"]
-# Main / Karim's: the reception column as the DXF and survey draw it (face DWG x 207.9471, plan 17.542); without
-# this cut build_geometry's corner-square step re-inflates it to 17.862 and the TV wall stops being flush (25 Oct,
-# Edit AI 0a5a7de). Keep in step with the README build command.
-KC_FLAGS = NC_FLAGS + ["--cut", "207.9471,-116.2418,208.2871,-115.8818"]
+# Each plan version: its DXF, the files built from it and the build flags. They live in build_flags.json, the one
+# file the manual build (build_version.py, README) also reads, so a plan rebuild here can't drift from it (25 Oct:
+# Edit AI 0a5a7de rebuilt Main without the reception column --cut and re-inflated the column to 17.862).
 # Since 2026-10-25 the page's Main (and "Karim's version") load the kareems-changes plan; Bigger / Shifted Bedroom
 # are retired. A request for "main" (or with no version) is an edit to that plan.
 ALIASES = {"main": "kareems-changes"}
-VERSIONS = {
-    "naghams-changes": {"dxf": "dwg/naghams-changes.dxf", "model": "model-naghams-changes.js", "drawing": "drawing-naghams-changes.json",
-                        "tour": "tour-naghams-changes.json", "flags": NC_FLAGS},
-    "kareems-changes": {"dxf": "dwg/kareems-changes.dxf", "model": "model-kareems-changes.js", "drawing": "drawing-kareems-changes.json",
-                        "tour": "tour-kareems-changes.json", "flags": KC_FLAGS},
-    "as-built": {"dxf": "dwg/as-built.dxf", "model": "model-as-built.js", "drawing": "drawing-as-built.json",
-                 "tour": "tour-as-built.json", "flags": []},
-}
+VERSIONS = {k: c for k, c in json.loads((Path(__file__).resolve().parent / "build_flags.json").read_text()).items()
+            if not k.startswith("_")}
 SHARED = ["furnish.js", "materials.js"]  # loaded by the page through the live overrides; shared by every version
 DOCS = ["README.md", "DWG_EDITING.md", "CLAUDE.md",  # read-only context
         "docs/edit-ai/when-2d-needed.md", "docs/edit-ai/3d-only-patterns.md"]  # decision notes: does an edit need the plan?
@@ -96,7 +86,7 @@ def editable(v):
 
 def readable(v):
     c = VERSIONS[v]
-    return editable(v) + DOCS + ["index.html", "drawing.js", "check_furnish.py", "tour.json"] + [c["tour"]]
+    return editable(v) + DOCS + ["index.html", "drawing.js", "check_furnish.py", "design-locks.json", "build_flags.json", "tour.json"] + [c["tour"]]
 
 
 def _key(*names):
@@ -1600,6 +1590,15 @@ def chat(req):
             ws.changed.clear()
         if not ws.changed and reply and re.search(r"\b(I('ve| have)?|have been) (changed|made|moved|added|removed|replaced|updated|set)\b", reply):
             reply = "Nothing was changed yet: " + reply  # the model claimed an edit it never made
+        if ws.changed:  # last gate: a settled design lock (design-locks.json) the request didn't name stays as it is
+            if ws.plan_dirty:
+                rebuild(ws)
+                ws.plan_dirty = False
+            if breaks := lock_breaks(ws, message, record=True):
+                print(f"[edit-ai] refused, design lock: {lock_note(breaks)}", flush=True)
+                ws.discard()
+                reply = ("Nothing was changed: this edit would undo a decision you already settled — " + lock_note(breaks) +
+                         ". If you do want to change that, say so and name it (e.g. the column, the TV wall, the niches or the buffet).")
         result = save(ws, reply or message) if ws.changed else None
     finally:
         shutil.rmtree(ws.tmp, ignore_errors=True)
@@ -2166,6 +2165,45 @@ def three_d_only(ws, f0, f1):
     return True
 
 
+def lock_breaks(ws, message, record=False):
+    """Design locks (design-locks.json) this edit would newly break and the request doesn't name: [(lock, problems)].
+    record: when the only breaks are ones the request names, mark those locks suspended in the edit's design-locks.json."""
+    import check_locks
+    locks = [l for l in check_locks.load_locks(ws.read) if l.get("version") in (None, ws.v) and not l.get("suspended")]
+    named = []
+    if not locks:
+        return []
+    paths = {"furnish.js"} | {l["model"] for l in locks if "model" in l}
+    before = {p: (ws.orig.get(p) or ws.read(p)).decode() for p in paths}
+    after = {p: ws.read(p).decode() for p in paths}
+    out = []
+    for lock in locks:
+        def probs(files):
+            try:
+                return check_locks.check(lock, files)
+            except Exception as e:  # noqa: BLE001
+                return [f"check failed: {e}"]
+        now = probs(after)
+        if now and not probs(before):
+            if check_locks.named(lock, message):
+                named.append(lock)  # on purpose: saved, and the lock is suspended below so pushes and later edits go on
+            else:
+                out.append((lock, now))
+    if named and not out and record:
+        data = json.loads(ws.read("design-locks.json"))
+        ids = {l["id"] for l in named}
+        for l in data["locks"]:
+            if l["id"] in ids:
+                l["suspended"] = {"by_request": (message or "")[:200], "date": time.strftime("%Y-%m-%d"),
+                                  "note": "changed on purpose through Edit AI; set the new numbers here and drop 'suspended' to re-lock"}
+        ws.write("design-locks.json", (json.dumps(data, indent=2, ensure_ascii=False) + "\n").encode())
+    return out
+
+
+def lock_note(breaks):
+    return "; ".join(f"{l['what']} (decided by {l.get('decided_by')}, {l.get('date')}): {', '.join(p)}" for l, p in breaks)
+
+
 def review(ws, message, reply):
     """What to point out to the model before its edits are saved, or None."""
     if not ws.changed:
@@ -2182,6 +2220,10 @@ def review(ws, message, reply):
             return f"The plan no longer rebuilds ({str(e)[:600]}). Fix it or call discard."
     if (lost := lost_openings(ws)) and not REMOVAL.search(message):
         return lost
+    if breaks := lock_breaks(ws, message):
+        return ("Your edit breaks a settled design decision the user didn't ask to change, so it can't be saved: "
+                f"{lock_note(breaks)}. Put those numbers back (keep the rest of your edit), check, then reply; or call "
+                "discard if the request can't be done without it.")
     tail = (" Then reply to the user as you normally would, about the change itself compared with how it was before their "
             "request (a piece you added is \"added\", not \"moved\"; don't mention this check).")
     f0 = ws.orig["furnish.js"].decode() if "furnish.js" in ws.orig else ws.text("furnish.js")

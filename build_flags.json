@@ -1,0 +1,17 @@
+{
+  "_comment": "Extra build_geometry.py flags per plan version. The ONE source for both the manual build (build_version.py) and Edit AI's rebuild (edit_ai.py VERSIONS). Change a version's flags here only, then rebuild with: ~/.dwg-tools/bin/python build_version.py <version>. kareems-changes' last --cut carves off the 0.32 m block build_geometry's corner-square step adds to the reception column (DWG face x 207.9471 = plan 17.542); without it the column re-inflates to 17.862 (Edit AI 0a5a7de, 25 Oct 2026). Locked by design-locks.json kc-column-face.",
+  "naghams-changes": {
+    "dxf": "dwg/naghams-changes.dxf", "model": "model-naghams-changes.js", "drawing": "drawing-naghams-changes.json", "tour": "tour-naghams-changes.json",
+    "flags": ["--wall", "190.9609,-112.8031,190.9609,-112.3428", "--cut", "191.0309,-114.2431,191.7309,-114.0731",
+              "--window", "192.2087,-112.47,1.5,2.1,frosted"]
+  },
+  "kareems-changes": {
+    "dxf": "dwg/kareems-changes.dxf", "model": "model-kareems-changes.js", "drawing": "drawing-kareems-changes.json", "tour": "tour-kareems-changes.json",
+    "flags": ["--wall", "190.9609,-112.8031,190.9609,-112.3428", "--cut", "191.0309,-114.2431,191.7309,-114.0731",
+              "--window", "192.2087,-112.47,1.5,2.1,frosted", "--cut", "207.9471,-116.2418,208.2871,-115.8818"]
+  },
+  "as-built": {
+    "dxf": "dwg/as-built.dxf", "model": "model-as-built.js", "drawing": "drawing-as-built.json", "tour": "tour-as-built.json",
+    "flags": []
+  }
+}

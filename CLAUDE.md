@@ -5,6 +5,7 @@ Rules worth repeating:
 - Dimensions come only from the DWG. Never regenerate main `model.js` / `drawing.json` unasked.
 - A plan version may differ from Main only in the rooms it changes. Flag any other DWG difference.
 - Client decisions in README §5 override the designer's renders.
+- **Design locks.** `design-locks.json` holds settled decisions (reception column face 17.542, TV wall flush, TV niche depths 21/29 with the 8 cm step + curve, buffet niche = TV tall niche). Run `python3 check_locks.py` after any `furnish.js` or model change; it must pass (Edit AI and the pre-push hook refuse otherwise). Don't change a locked number unless the request names it, and then update the lock in the same commit. Rebuild plans only with `build_version.py <version>` (flags in `build_flags.json`).
 - Don't spend OpenAI or Meshy credits unprompted. Test Generate Photo Spot with `python3 photogen.py --dry-run`.
 - Answer drawing questions with a marked-up crop from `dwgtool.py render`, sizes in cm. Quick dimension questions get numbers only.
 - Keep everything in `index.html`: no side pages or experiment folders.

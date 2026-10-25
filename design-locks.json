@@ -1,0 +1,103 @@
+{
+  "_comment": "Settled design decisions. check_locks.py fails when furnish.js or a built model breaks one; Edit AI refuses to save an edit that breaks a lock unless the request names it (one of the lock's 'names'; it then saves and marks the lock 'suspended' with the request so pushes go on); the pre-push hook (.githooks) refuses a push. To change a lock on purpose: change the design AND the numbers here in the same commit, with the new decided_by/date.",
+  "locks": [
+    {
+      "id": "kc-column-face",
+      "version": "kareems-changes",
+      "what": "Reception column face (Main / Karim's) at plan x 17.542 (DWG 207.9471), as the DXF and survey draw it, not the inflated 17.862.",
+      "model": "model-kareems-changes.js",
+      "face_x": 17.542,
+      "y_range": [
+        5.3914,
+        5.7114
+      ],
+      "tol": 0.003,
+      "decided_by": "Karim",
+      "date": "2026-10-25",
+      "ref": "db36c26 (flush to real column), 0a5a7de (Edit AI rebuild re-inflated it), 9c69130 (column --cut in Edit AI rebuild)",
+      "names": [
+        "reception column",
+        "tv column",
+        "column face",
+        "column by the tv",
+        "عمود الريسبشن",
+        "عمود الصالة",
+        "عمود التلفزيون",
+        "عمود التليفزيون"
+      ]
+    },
+    {
+      "id": "kc-tv-wall-flush",
+      "version": "kareems-changes",
+      "what": "Reception TV library (TV box) face flush with the column face: item x + TV box depth = 17.542.",
+      "item_x": 17.25,
+      "face_x": 17.542,
+      "tol": 0.003,
+      "decided_by": "Karim",
+      "date": "2026-10-25",
+      "ref": "t288, db36c26",
+      "names": [
+        "tv wall",
+        "tv library",
+        "tv unit",
+        "tv box",
+        "مكتبة التلفزيون",
+        "مكتبة التليفزيون"
+      ]
+    },
+    {
+      "id": "kc-tv-niche-depths",
+      "version": "kareems-changes",
+      "what": "Option A: keep the 8 cm step and the splayed curve; tall niches ~21 cm deep (run 0.2122), TV niche ~29 cm (TV box 0.2922), splay 0.08 out over 0.20.",
+      "run_depth": 0.2122,
+      "tv_depth": 0.2922,
+      "step": 0.08,
+      "splay": 0.2,
+      "tol": 0.003,
+      "decided_by": "Karim",
+      "date": "2026-10-25",
+      "ref": "Option A (t306s1346)",
+      "names": [
+        "tv wall",
+        "tv library",
+        "tv niche",
+        "tall niche",
+        "مكتبة التلفزيون",
+        "مكتبة التليفزيون",
+        "نيش التلفزيون",
+        "نيشز التلفزيون",
+        "نيش التليفزيون",
+        "نيشز التليفزيون"
+      ]
+    },
+    {
+      "id": "kc-buffet-niche-matches-tv",
+      "version": "kareems-changes",
+      "what": "Dining buffet niche = the TV wall's tall niche opening: 0.34 wide, 0.42-2.20 high, r 0.13, shelves 0.86 / 1.30 / 1.74, same family/curve.",
+      "width": 0.34,
+      "y0": 0.42,
+      "y1": 2.2,
+      "r": 0.13,
+      "shelves": [
+        0.86,
+        1.3,
+        1.74
+      ],
+      "tol": 0.003,
+      "decided_by": "Karim",
+      "date": "2026-10-25",
+      "ref": "Notion execution notes (buffet same curve and niche size as TV library), 8e25b0f",
+      "names": [
+        "buffet",
+        "sideboard",
+        "بوفيه",
+        "البوفيه",
+        "tv wall",
+        "tv library",
+        "tall niche",
+        "مكتبة التلفزيون",
+        "مكتبة التليفزيون"
+      ]
+    }
+  ]
+}

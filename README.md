@@ -276,14 +276,11 @@ Kareem's Changes, Nagham call (2026-10-25):
   the face end). Main / Karim's build carves that block off with `--cut 207.9471,-116.2418,208.2871,-115.8818`, so
   the 3D column face is 17.542 too. The other versions (Nagham's, As-built, old Main) still show the inflated column
   in Walk; a general fix in `pair_walls` (skip overlapping collinear pieces) also changed small corners elsewhere,
-  so it was not made. Build Main / Karim's with:
+  so it was not made. Build Main / Karim's with (flags in `build_flags.json`, the same file Edit AI's rebuild
+  reads, so the two can't drift; it runs `check_locks.py` after):
 
   ```sh
-  K=dwg/kareems-changes.dxf
-  ~/.dwg-tools/bin/python build_geometry.py $K --out model-kareems-changes.js --tour tour-kareems-changes.json \
-      --wall 190.9609,-112.8031,190.9609,-112.3428 --cut 191.0309,-114.2431,191.7309,-114.0731 \
-      --window 192.2087,-112.47,1.5,2.1,frosted --cut 207.9471,-116.2418,208.2871,-115.8818
-  ~/.dwg-tools/bin/python build_drawing.py $K --model model-kareems-changes.js --out drawing-kareems-changes.json
+  ~/.dwg-tools/bin/python build_version.py kareems-changes
   ```
 - **Guest WC:** the door is hinged on the east jamb (DWG x 204.366) and opens inwards against the vanity
   (`doorsAsDrawn`). The 0.26 build-out on the south wall (`1wall` lines and its niche block) is gone. The glass is
@@ -558,3 +555,24 @@ tap it, the view freezes, circle what to change (or pick **Whole view**), then s
 - **Run locally:** `python3 edit_ai.py [port]` serves the site with both APIs (reads `.env`).
 - **Limits:** the rate limit is per server instance; on Vercel only furniture/finishes/tour edits (no DXF, since `.vercelignore`
   drops `dwg/` and the build scripts); concurrent edits are last-write-wins; the 2D zoom isn't kept across the reload.
+
+## Design locks (`design-locks.json`, `check_locks.py`)
+
+Settled decisions that kept getting undone by later edits are recorded in `design-locks.json` with who decided
+and when, and checked by `check_locks.py` (stdlib only):
+
+- Main / Karim's reception column face at plan x 17.542 (DWG 207.9471), not the inflated 17.862.
+- TV library (TV box) face flush with that column (item x 17.25 + depth 0.2922).
+- Option A (Karim, 25 Oct 2026): 8 cm step + splayed curve kept; tall niches ~21 cm (0.2122), TV niche ~29 cm (0.2922).
+- Dining buffet niche = the TV wall's tall niche (0.34 x 0.42-2.20, r 0.13, shelves 0.86 / 1.30 / 1.74).
+
+Where it runs:
+- **Edit AI**, before every save (`lock_breaks` in `edit_ai.py`): an edit that newly breaks a lock is sent back to
+  the model to fix, and refused at the last gate, unless the request names the lock (its `names`); a named
+  change is saved and the lock is marked `suspended` with the request, so it can be re-locked with new numbers (and pushes go on).
+- **Deploy**: not wired yet. Adding a `- run: python3 check_locks.py` step before `vercel deploy` in
+  `.github/workflows/deploy.yml` needs a push with the `workflow` token scope (the bot's token lacks it).
+- **Push**: `git config core.hooksPath .githooks` once per clone runs it as a pre-push hook. Run it by hand with
+  `python3 check_locks.py` after any furnish.js / model change.
+
+To change a locked decision: change the design and the lock's numbers (and `decided_by` / `date`) in one commit.

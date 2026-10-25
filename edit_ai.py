@@ -25,7 +25,7 @@ Public: anyone may use it. Each IP gets EDIT_AI_RATE requests an hour (default 2
 """
 import base64, hashlib, json, os, re, secrets, shutil, subprocess, sys, tempfile, threading, time, urllib.error, \
     urllib.parse, urllib.request
-from collections import defaultdict, deque
+from collections import Counter, defaultdict, deque
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
@@ -242,6 +242,17 @@ class Workspace:
         if op:
             self.ops[path].append(op)
 
+    def discard(self):
+        for p in list(self.changed):
+            self.files.pop(p, None)
+            self.ops.pop(p, None)
+        self.changed.clear()
+        if self.dxf_path:
+            self.dxf_path.write_bytes(self.read(self.cfg["dxf"]))
+        self.plan_dirty, self.dxf_furni = False, False
+        if hasattr(self, "model0"):
+            del self.model0
+
     def dxf(self):
         if not self.dxf_path:
             self.dxf_path = self.tmp / "plan.dxf"
@@ -286,11 +297,122 @@ def rebuild(ws):
     return "\n".join(out.splitlines()[-4:] + out2.splitlines()[-1:])
 
 
+def js_balance(src):
+    """Rough JS sanity check without node: brackets, strings, template literals and comments must balance.
+    Returns None when fine, else a short message with the line."""
+    stack, i, n, line = [], 0, len(src), 1
+    pairs = {")": "(", "]": "[", "}": "{"}
+    prev = ""  # last significant char, to tell a regex literal from a division
+    while i < n:
+        ch = src[i]
+        if ch == "\n":
+            line += 1; i += 1; continue
+        if ch in " \t\r":
+            i += 1; continue
+        if src.startswith("//", i):
+            j = src.find("\n", i); i = n if j < 0 else j; continue
+        if src.startswith("/*", i):
+            j = src.find("*/", i + 2)
+            if j < 0:
+                return f"line {line}: comment never closed"
+            line += src.count("\n", i, j); i = j + 2; continue
+        if ch in "'\"":
+            j = i + 1
+            while j < n and src[j] != ch:
+                if src[j] == "\\":
+                    j += 1
+                elif src[j] == "\n":
+                    return f"line {line}: string never closed"
+                j += 1
+            if j >= n:
+                return f"line {line}: string never closed"
+            i = j + 1; prev = "a"; continue
+        if ch == "`":
+            stack.append(("`", line)); i += 1
+            # scan template text until ` or ${
+            while True:
+                while i < n and src[i] not in "`$\\":
+                    if src[i] == "\n":
+                        line += 1
+                    i += 1
+                if i >= n:
+                    return f"line {stack[-1][1]}: template literal never closed"
+                if src[i] == "\\":
+                    i += 2; continue
+                if src[i] == "`":
+                    stack.pop(); i += 1; prev = "a"; break
+                if src.startswith("${", i):
+                    stack.append(("${", line)); i += 2; break
+                i += 1
+            continue
+        if ch == "/" and (prev == "" or prev in "(,=:[!&|?{};+-*%<>~^" or src[max(0, i - 7):i].rstrip().endswith(("return", "typeof"))):
+            j, cls = i + 1, False
+            while j < n and (cls or src[j] != "/"):
+                if src[j] == "\\":
+                    j += 1
+                elif src[j] == "[":
+                    cls = True
+                elif src[j] == "]":
+                    cls = False
+                elif src[j] == "\n":
+                    return f"line {line}: regex never closed"
+                j += 1
+            i = j + 1; prev = "a"; continue
+        if ch in "([{":
+            stack.append((ch, line))
+        elif ch in ")]":
+            if not stack or stack[-1][0] != pairs[ch]:
+                return f"line {line}: unexpected '{ch}'" + (f" (open '{stack[-1][0]}' from line {stack[-1][1]})" if stack else "")
+            stack.pop()
+        elif ch == "}":
+            if stack and stack[-1][0] == "${":
+                stack.pop()
+                # back into the template text
+                while True:
+                    while i + 1 < n and src[i + 1] not in "`$\\":
+                        if src[i + 1] == "\n":
+                            line += 1
+                        i += 1
+                    i += 1
+                    if i >= n:
+                        return "template literal never closed"
+                    if src[i] == "\\":
+                        i += 1; continue
+                    if src[i] == "`":
+                        stack.pop(); prev = "a"; break
+                    if src.startswith("${", i):
+                        stack.append(("${", line)); i += 1; break
+                i += 1; continue
+            if not stack or stack[-1][0] != "{":
+                return f"line {line}: unexpected '}}'" + (f" (open '{stack[-1][0]}' from line {stack[-1][1]})" if stack else "")
+            stack.pop()
+        prev = ch if not (ch.isalnum() or ch in "_$.") else "a"
+        i += 1
+    if stack:
+        return f"line {stack[-1][1]}: '{stack[-1][0]}' never closed"
+    return None
+
+
+def mat_names(ws):
+    return set(re.findall(r"^\s+(\w+)\s*:", ws.text("materials.js"), re.M))
+
+
+def unknown_mats(ws, text):
+    return sorted(set(re.findall(r"\bmat\.(\w+)", text)) - mat_names(ws))
+
+
+def opening_counts(model_bytes):
+    s = model_bytes.decode()
+    m = json.loads(s[s.index("{"):s.rindex("}") + 1])
+    return Counter(o["kind"] for o in m.get("openings", []))
+
+
 def js_check(ws, path):
     """Parse a JS module with node when there is one (not on Vercel); None when it parses or can't be checked."""
     node = shutil.which("node")
-    if not node:
-        return None
+    if not node:  # Vercel: no node, so at least brackets, strings and comments must balance
+        err = js_balance(ws.text(path))
+        return f"{path}: {err}" if err else None
     f = ws.tmp / (Path(path).stem + ".mjs")
     f.write_bytes(ws.read(path))
     code, out = run([node, "--check", str(f)], timeout=30)
@@ -309,7 +431,8 @@ TOOLS = [
                                          "`old` must match the file byte for byte (copy it from read_file without the line numbers) and occur once.",
      "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old": {"type": "string"}, "new": {"type": "string"}},
                     "required": ["path", "old", "new"]}},
-    {"name": "furniture_near", "description": "furnish.js lines that place an item( x, y, ...) within `radius` m of a plan point, to find the code of a piece you see.",
+    {"name": "furniture_near", "description": "furnish.js lines that place an item( x, y, ...) within `radius` m of a plan point, to find the code of a piece you see, "
+                                              "plus the plan's furniture outlines (2furni) there, with handles for move_piece / resize_piece.",
      "parameters": {"type": "object", "properties": {"x": {"type": "number"}, "y": {"type": "number"}, "radius": {"type": "number"}},
                     "required": ["x", "y"]}},
     {"name": "plan_rooms", "description": "The version's rooms: name, label position and floor extent in plan metres, plus ceiling/door/window heights.",
@@ -323,9 +446,19 @@ TOOLS = [
                                        "add_line {layer,a:[x,y],b:[x,y]}; add_polyline {layer,points,closed}; set_points {handle,points}; "
                                        "move_window {handle (any one Windows line of it), centre_on? (handle of a piece to centre it on, e.g. the bed outline), centre? [x, y or null], dx?, dy?, width?}: moves (and resizes) the whole window and "
                                        "re-cuts the wall faces around it; ALWAYS use it to move or resize a window, never move window lines one by one. "
+                                       "move_piece {handle (a furniture outline), dx, dy}: moves that piece's outline and the detail lines drawn inside it "
+                                       "(pillows, sheet...), nothing else; ALWAYS use it to move furniture on the plan (a bbox `move` drags neighbouring pieces too). "
+                                       "resize_piece {handle, x_size?, y_size? (new plan extents in m), anchor? ('N' keeps the north edge, 'SW' a corner; default centre)}: "
+                                       "resizes a piece and its details; use it whenever a piece changes size. "
+                                       "move_door {handle (the door's swing ARC), along? (m along its wall, + = +x/+y), dx?/dy?, width? (new leaf width = swing radius, m)}: "
+                                       "moves and / or widens a door drawn loose (swing, leaf, jambs) and re-cuts the wall faces so the 3D opening follows; "
+                                       "ALWAYS use it for a door, never move, delete or redraw door pieces by hand. "
                                        "The 3D model and the 2D drawing are rebuilt from it when you finish.",
      "parameters": {"type": "object", "properties": {"ops": {"type": "array", "items": {"type": "object"}}}, "required": ["ops"]}},
     {"name": "check", "description": "Check the edits so far: JS syntax of furnish.js / materials.js and, if the plan changed, a trial rebuild of the model and drawing.",
+     "parameters": {"type": "object", "properties": {}}},
+    {"name": "discard", "description": "Throw away every edit made for this message (files and plan back to how they were). Call it before "
+                                       "answering whenever you can't do what was asked, so nothing half-done is saved.",
      "parameters": {"type": "object", "properties": {}}},
 ]
 
@@ -367,6 +500,9 @@ def tool(ws, name, a):
         ws.write(p, t.encode(), {"old": a["old"], "new": a["new"]})
         if p.endswith(".js") and (err := js_check(ws, p)):  # kept, so it can be fixed; saving checks again
             return f"edited, but {p} no longer parses:\n{err}"
+        if p == "furnish.js" and (bad := unknown_mats(ws, a["new"])):  # an unknown mat.x renders nothing (or breaks the page)
+            return (f"edited, but materials.js has no {', '.join('mat.' + b for b in bad)}: fix it now, using one of: "
+                    f"{', '.join(sorted(mat_names(ws)))} (or add the material to materials.js first)")
         if p.endswith(".json"):
             try:
                 json.loads(t)
@@ -381,7 +517,22 @@ def tool(ws, name, a):
                 if ((float(m[1]) - x) ** 2 + (float(m[2]) - y) ** 2) ** 0.5 <= rad:
                     out.append(f"furnish.js:{i}: {line.strip()[:240]}")
                     break
-        return "\n".join(out[:40]) or "no item( x, y ) literal that near; try grep for the room or the piece's name"
+        res = "\n".join(out[:40]) or "no item( x, y ) literal that near; try grep for the room or the piece's name"
+        if plan_edits():
+            try:
+                code, q = run([dwg_python(), str(ROOT / "edit_ai_dxf.py"), "query", str(ws.dxf()), f"--origin={ORIGIN[0]},{ORIGIN[1]}",
+                               f"--bbox={x - rad},{y - rad},{x + rad},{y + rad}", "--layers=2furni,2 furni", "--limit", "400"], timeout=90)
+                pieces = []
+                for d in json.loads(q).get("entities", []):
+                    ps = d.get("points") or []
+                    if d["type"] == "LWPOLYLINE" and len(ps) >= 4:
+                        xs, ys = [p[0] for p in ps], [p[1] for p in ps]
+                        if (max(xs) - min(xs)) * (max(ys) - min(ys)) >= 0.04:
+                            pieces.append(f"{d['handle']}: x {min(xs)}..{max(xs)}, y {min(ys)}..{max(ys)}")
+                res += "\nPlan furniture outlines here (2furni handle: extent):\n" + ("\n".join(pieces[:25]) or "none")
+            except Exception:
+                pass
+        return res
     if name == "plan_rooms":
         s = ws.text(ws.cfg["model"])
         m = json.loads(s[s.index("{"):s.rindex("}") + 1])
@@ -411,11 +562,19 @@ def tool(ws, name, a):
                          f"--origin={ORIGIN[0]},{ORIGIN[1]}"], stdin=json.dumps(a["ops"]), timeout=120)
         if code:
             return f"nothing changed: {out[-1500:]}"
+        if not hasattr(ws, "model0"):
+            ws.model0 = ws.read(ws.cfg["model"])  # the 3D before this message, to spot a lost opening
         out_path.replace(ws.dxf())
         ws.write(ws.cfg["dxf"], ws.dxf().read_bytes())
         ws.plan_dirty = True
+        try:
+            ws.dxf_furni = ws.dxf_furni or json.loads(out).get("furniture_changed", False)
+        except ValueError:
+            pass
         try:  # what hangs in a moved window (sheers, curtains) has to follow it in furnish.js
             for w in json.loads(out).get("windows_moved", []):
+                if "old_centre" not in w:
+                    continue  # a door
                 (x, y), half = w["old_centre"], w["old_width"] / 2 + 0.3
                 near = tool(ws, "furniture_near", {"x": x, "y": y, "radius": half})
                 out += (f"\nfurnish.js items within {half:.2f} m of the window's old centre ({x}, {y}); move any curtain / "
@@ -432,10 +591,28 @@ def tool(ws, name, a):
             try:
                 notes.append(rebuild(ws))
                 ws.plan_dirty = False
+                if (lost := lost_openings(ws)):
+                    notes.append(lost)
             except Exception as e:
                 notes.append(str(e))
         return "\n".join(notes) or ("no syntax problems" if shutil.which("node") else "no node here, syntax can't be checked; be careful")
+    if name == "discard":
+        ws.discard()
+        return "every edit of this message is thrown away; nothing will be saved unless you edit again"
     return f"unknown tool {name}"
+
+
+def lost_openings(ws):
+    """A warning when the rebuilt 3D has fewer doors or windows than before this message."""
+    if not hasattr(ws, "model0") or ws.cfg["model"] not in ws.changed:
+        return None
+    a, b = opening_counts(ws.model0), opening_counts(ws.read(ws.cfg["model"]))
+    gone = {k: a[k] - b[k] for k in a if b[k] < a[k]}
+    if not gone:
+        return None
+    return ("WARNING: the rebuilt 3D lost " + ", ".join(f"{n} {k} opening(s)" for k, n in gone.items())
+            + " (a door or window no longer cuts its wall). Unless the user asked to remove it, fix the plan "
+              "(move_door / move_window keep openings intact) or call discard.")
 
 
 SYSTEM = """\
@@ -453,18 +630,31 @@ walls/openings (model JS) and the 2D drawing are rebuilt from the DXF automatica
 plan's south-west corner; heights in metres above the floor), with item(x, y, facing, build). It is shared by all \
 versions and branches on `version === "..."`. Change only version "{version}" unless the user asks otherwise: if a line \
 serves several versions, split it, e.g. `version === "{version}" ? newValue : oldValue`. materials.js holds the \
-materials (colours, textures) that furnish.js uses by name (mat.whiteLacquer, ...).
-- Keep 3D and 2D together: a piece drawn on the plan (2furni) that you move or resize in furnish.js gets the same \
-change in the DXF, and a DXF furniture change gets the same change in furnish.js. A wall moved in the DXF must keep \
+materials (colours, textures) that furnish.js uses by name (mat.whiteLacquer, ...). Use only names that exist there \
+(grep materials.js first): an unknown mat.x breaks the 3D.
+- item(x, y, facing, build): (x, y) is the middle of the piece's BACK, facing (N/S/E/W) is the way its front looks; \
+inside build, local x runs across the piece, y up and z out from its back. A piece against a wall has (x, y) on that \
+wall's face (read the face line from dxf_query, layer 1wall); something "on the wall facing the bed" goes on the wall \
+opposite the headboard, at that wall's face, never out in the room. Before adding or moving a piece, check with \
+furniture_near what already stands there and don't overlap it; if the spot is taken, pick the nearest free one and say so.
+- Keep 3D and 2D together: a piece drawn on the plan (2furni) that you move or resize in furnish.js gets exactly the \
+same change in the DXF (furniture_near gives its outline's handle: dxf_edit move_piece / resize_piece), and a DXF \
+furniture change gets the same change in furnish.js. Move only the pieces asked for: neighbours (nightstands, rug) \
+stay unless the user wants them to follow, and then they move in both furnish.js and the DXF. A resize that leaves \
+a neighbour overlapping or with an odd gap (bedside tables beside a narrower bed) moves that neighbour too, both views. A wall moved in the DXF must keep \
 both faces, close its junctions exactly (snap endpoints to existing ones within 0.1 mm), and the furniture against it \
 moves with it in furnish.js.
 - Windows: move or resize one only with dxf_edit's move_window op (it takes every line of the window and closes / opens the wall faces, so the 3D opening matches the 2D). To centre a window on a piece (e.g. "over the bed"), find the piece's main 2furni outline in dxf_query (the largest closed outline; its "centre" is given) and pass its handle as centre_on, never a hand-worked dx; the result says where the window now runs, so check its centre equals the piece's. Then move what hangs in that window in furnish.js (sheers, curtains, blinds: the edit result lists them) to the window's new centre and width, so the 3D matches.
+- Doors: move or widen one only with dxf_edit's move_door op (handle = its swing ARC on 1wall / 3door), which moves \
+the swing, leaf and jambs and re-cuts the wall faces so the 3D opening follows. Never delete, redraw or move door \
+pieces by hand: that removes the opening from the 3D. A door drawn as a block (INSERT) can't be changed here: say so.
 - DXF coordinates in the tools are plan metres (the same frame as furnish.js and the camera numbers below).
 
 Work fast and cheap: find the code with furniture_near / grep around the plan point the user marked, read only the \
 lines you need, make the smallest edits that do the job, run `check` once after editing, then answer. Don't re-read \
 whole files. If the request is ambiguous, make the most sensible choice and say what you chose. If something truly \
-can't be done, change nothing and say why.
+can't be done, call discard (so nothing half-done is saved) and say why; never say you left something unchanged \
+while edits are still pending.
 
 The picture: image 1 is the frozen view{marked}. Later images are the user's references (looks to copy, not a plan).
 
@@ -632,7 +822,7 @@ def chat(req):
     refs = [check_image(u, f"reference {i + 1}") for i, u in enumerate((req.get("refs") or [])[:MAX_REFS])]
     ws = Workspace(v)
     ws.allow_as_built = v == "as-built"  # only ever reached from the as-built page itself
-    ws.plan_dirty = False
+    ws.plan_dirty, ws.dxf_furni = False, False
     sys_prompt = SYSTEM.format(showing="2D drawing" if ctx.get("showing") == "drawing" else "3D model", version=v,
                                marked="" if ctx.get("wholeView") else ", with what the user circled marked in red")
     if not plan_edits():
@@ -647,6 +837,7 @@ def chat(req):
     content += [{"type": "image_url", "image_url": {"url": u, "detail": "low"}} for u in refs]
     messages.append({"role": "user", "content": content})
     total, reply, steps, trace = {"prompt_tokens": 0, "completion_tokens": 0, "cached": 0}, "", [], []
+    nudged = False
     try:
         for step in range(MAX_STEPS):
             res = openai(messages, first=step == 0, model=model)  # look before answering: no "done" without a tool call
@@ -655,6 +846,12 @@ def chat(req):
             messages.append({k: msg[k] for k in ("role", "content", "tool_calls") if msg.get(k) is not None})
             if not msg.get("tool_calls"):
                 reply = msg.get("content") or ""
+                nudge = None if nudged or step >= MAX_STEPS - 3 else review(ws, message, reply)
+                if nudge:  # one second look before saving: 2D and 3D out of step, a lost opening, a give-up with edits left
+                    nudged = True
+                    trace.append({"tool": "(review)", "args": "", "out": nudge[:700]})
+                    messages.append({"role": "user", "content": nudge})
+                    continue
                 break
             for call in msg["tool_calls"]:
                 name = call["function"]["name"]
@@ -679,6 +876,41 @@ def chat(req):
     return {"reply": reply or "Done.", "changed": sorted(ws.changed), "rev": result and result["rev"], "model": model,
             "tokens": total, "usd": usd, "steps": len(steps), "sync": result and result.get("sync"),
             **({"trace": trace} if req.get("debug") else {})}
+
+
+NUMBER = re.compile(r"(?<![\w.])-?\d+(?:\.\d+)?(?![\w.])")
+GAVE_UP = re.compile(r"\b(couldn'?t|could not|can'?t|cannot|unable|wasn'?t able|not possible|left (it |them |everything )?(as it was|unchanged)|"
+                     r"(made|changed) nothing|no changes?( were)? made|didn'?t change)\b", re.I)
+REMOVAL = re.compile(r"\b(remove|delete|close|block|wall up|fill in|get rid)\b|شيل|امسح|اقفل|اقفل|سد", re.I)
+
+
+def review(ws, message, reply):
+    """What to point out to the model before its edits are saved, or None."""
+    if not ws.changed:
+        return None
+    if GAVE_UP.search(reply or "") and not re.search(r"\binstead\b|\b(so|but) I(\'ve| have)? (made|set|went|used|put|moved|added|changed|widened|resized)\b", reply or "", re.I):
+        return ("You say it couldn't be done, but your edits are still pending and would be saved as they are. If you're "
+                "giving up, call discard now and then answer; if the change is in fact done, check it and say what changed.")
+    if ws.plan_dirty:
+        try:
+            rebuild(ws)
+            ws.plan_dirty = False
+        except Exception as e:
+            return f"The plan no longer rebuilds ({str(e)[:600]}). Fix it or call discard."
+    if (lost := lost_openings(ws)) and not REMOVAL.search(message):
+        return lost
+    ops = ws.ops.get("furnish.js") or []
+    moved3d = any(Counter(NUMBER.findall(o["old"])) != Counter(NUMBER.findall(o["new"])) for o in ops)
+    if moved3d and not ws.dxf_furni:
+        return ("Check 2D vs 3D: you changed positions or sizes in furnish.js but no furniture on the plan (2furni). "
+                "If the piece you changed is drawn on the plan (furniture_near lists the outlines there), give its outline "
+                "exactly the same move / resize now with dxf_edit move_piece / resize_piece. Things not drawn on the plan "
+                "(lights, lamps, curtains, art, a TV, decor) need nothing: then just answer again.")
+    if ws.dxf_furni and not moved3d:
+        return ("Check 2D vs 3D: you changed furniture on the plan (2furni) but no position or size in furnish.js, so the "
+                "3D piece stays where it was. Make the same change to its item(...) in furnish.js now, or undo the plan "
+                "change if it wasn't wanted, then answer again.")
+    return None
 
 
 def save(ws, summary):

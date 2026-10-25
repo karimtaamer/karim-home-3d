@@ -5,7 +5,7 @@
 
 The page (edit-ai.js) freezes the 3D or 2D view, the user circles what to change (or picks Whole view), says what
 they want and may attach reference pictures. POST /api/edit-ai/chat sends that here; an OpenAI chat model with
-vision (EDIT_AI_MODEL, default gpt-5.6-sol, key EDIT_AI_OPENAI_API_KEY, kept apart from Generate Photo Spot's
+vision (EDIT_AI_MODEL, default gpt-6-luna, key EDIT_AI_OPENAI_API_KEY, kept apart from Generate Photo Spot's
 OPENAI_API_KEY) works through tools: it greps and reads furnish.js / materials.js / the docs, edits them by exact
 search/replace, queries and edits the version's DXF (edit_ai_dxf.py), and the model and drawing are rebuilt from the
 DXF (build_geometry.py, build_drawing.py) whenever the plan changed, so the 3D and the 2D stay one.
@@ -36,14 +36,14 @@ ROOT = Path(__file__).resolve().parent
 LIVE = "edit-ai-live"  # the store's prefix, and the folder here
 BLOB = bool(photogen_blob.token())
 ON_VERCEL = bool(os.environ.get("VERCEL"))
-MODEL = os.environ.get("EDIT_AI_MODEL", "gpt-5.6-sol")
+MODEL = os.environ.get("EDIT_AI_MODEL", "gpt-6-luna")
 RATE = int(os.environ.get("EDIT_AI_RATE", "20"))
 OPENAI_URL = os.environ.get("EDIT_AI_OPENAI_URL", "https://api.openai.com/v1/chat/completions")  # a test double can stand in
 MAX_STEPS = 16  # tool rounds per message
 MAX_IMAGE = 3_000_000  # bytes of a data URL
 MAX_REFS = 4
 # USD per million tokens (input, cached input, output), OpenAI list prices; only to tell the user what a message cost.
-PRICES = {"gpt-5.6-sol": (5.0, 0.5, 30.0), "gpt-4.1": (2.0, 0.5, 8.0), "gpt-4.1-mini": (0.4, 0.1, 1.6), "gpt-4.1-nano": (0.1, 0.025, 0.4),
+PRICES = {"gpt-6-luna": (5.0, 0.5, 30.0), "gpt-4.1": (2.0, 0.5, 8.0), "gpt-4.1-mini": (0.4, 0.1, 1.6), "gpt-4.1-nano": (0.1, 0.025, 0.4),
           "gpt-4o": (2.5, 1.25, 10.0), "gpt-4o-mini": (0.15, 0.075, 0.6)}
 ORIGIN = (190.4049651574427, -121.6132067325871)  # DWG -> plan, the same for every version (model*.js "origin")
 

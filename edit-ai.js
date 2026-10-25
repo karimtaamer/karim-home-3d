@@ -225,7 +225,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
         <path class="hex" d="M0 -22 L19 -11 L19 11 L0 22 L-19 11 L-19 -11 Z"/>
         <g class="orb"><circle cx="0" cy="-44" r="2.6"/></g><circle class="dot" r="3.6"/></svg>
         <p class="phase"></p><p class="sub">Edit AI is reshaping your home</p></div></div>
-    <div class="ask"><span>Highlight what to change: circle or scribble on it.</span>
+    <div class="ask"><span>Highlight what to change: circle or scribble on it. To move something, circle it, then circle where it goes.</span>
       <button class="whole">Whole view</button><button class="clear" hidden>Clear</button><button class="go next" disabled>Next</button></div>
     <div class="demo" aria-hidden="true"><svg class="d2" viewBox="0 0 200 150">
       <defs><pattern id="eai-plangrid"width="10" height="10" patternUnits="userSpaceOnUse"><path d="M10 0H0V10" fill="none" stroke="#ffffff0a" stroke-width=".5"/></pattern></defs>
@@ -361,7 +361,12 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
   ink.addEventListener("pointercancel", lift);
   $(".clear").onclick = () => { strokes = []; drawInk(); markStep(); showDemo(true); };
   $(".whole").onclick = () => { showDemo(false); whole = true; strokes = []; drawInk(); toChat("Got it, the whole view. What do you want changed?"); };
-  $(".next").onclick = () => { whole = false; toChat("Got it, I see what you marked. What do you want changed?"); };
+  $(".next").onclick = () => {
+    whole = false;
+    const n = marks().length;
+    toChat(n >= 2 ? `Got it — ${n === 2 ? "two" : n} marks (from → to${n > 2 ? ", in the order you drew them" : ""}). What do you want changed?`
+                  : "Got it, I see what you marked. What do you want changed?");
+  };
   $(".redo").onclick = () => { if (!busy) { box.classList.remove("chatting"); $(".chat").hidden = true; markStep(); showDemo(!strokes.length); } };
   box.querySelectorAll(".x").forEach(b => (b.onclick = close));
   btn.onclick = open;
@@ -466,6 +471,30 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     }
     return out;
   }
+  // Strokes grouped into separate marks: strokes whose screen boxes overlap (or nearly touch) are one mark, e.g. a circle
+  // drawn in two goes or a scribble; marks far apart stay apart (circle A on a piece, circle B on where it should go).
+  // Ordered by draw order: the mark whose first stroke came first is Mark 1.
+  const MARK_GAP = 28;  // CSS px
+  function marks() {
+    const bb = s => { const xs = s.map(p => p[0]), ys = s.map(p => p[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; };
+    const near = (a, b) => a[0] - MARK_GAP <= b[2] && b[0] - MARK_GAP <= a[2] && a[1] - MARK_GAP <= b[3] && b[1] - MARK_GAP <= a[3];
+    let groups = strokes.filter(s => s.length).map((s, i) => ({ first: i, pts: [...s], box: bb(s) }));
+    for (let merged = true; merged;) {  // merge until stable: a stroke can bridge two earlier groups
+      merged = false;
+      outer: for (let a = 0; a < groups.length; a++) for (let b = a + 1; b < groups.length; b++) if (near(groups[a].box, groups[b].box)) {
+        const g = groups[a], h = groups[b];
+        g.first = Math.min(g.first, h.first); g.pts.push(...h.pts); g.box = bb(g.pts);
+        groups.splice(b, 1); merged = true; break outer;
+      }
+    }
+    return groups.sort((a, b) => a.first - b.first);
+  }
+  function samplesOf(pts, n = 14) {
+    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    const c = [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2];
+    const step = Math.max(1, Math.floor(pts.length / n));
+    return [c, ...pts.filter((_, i) => i % step === 0)];
+  }
   function samples() {
     const pts = strokes.flat();
     if (!pts.length) return [[freeze.w / 2, freeze.h / 2]];
@@ -484,6 +513,21 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
       if (pts.length) c.highlightBox = box2([Math.min(...pts.map(p => p[0])), Math.min(...pts.map(p => p[1]))], [Math.max(...pts.map(p => p[0])), Math.max(...pts.map(p => p[1]))]);
       delete c.cam;
     } else c.hits = hits3D(samples());
+    // Separate marks (2+ = e.g. from -> to). highlightBox / hits above stay the union, for older readers.
+    const ms = whole ? [] : marks();
+    if (ms.length >= 2) {
+      const sb = b => [b[0] / freeze.w, b[1] / freeze.h, b[2] / freeze.w, b[3] / freeze.h].map(r3);
+      c.marks = ms.slice(0, 6).map((g, i) => {
+        const m = { i: i + 1, screenBox: sb(g.box) };
+        if (c.showing === "drawing" && freeze.frame) {
+          const w = freeze.frame.toWorld, p = w(g.box[0], g.box[1]), q = w(g.box[2], g.box[3]);
+          m.planBox = [r3(Math.min(p[0], q[0])), r3(Math.min(p[1], q[1])), r3(Math.max(p[0], q[0])), r3(Math.max(p[1], q[1]))];
+        } else m.hits = hits3D(samplesOf(g.pts, 10)).slice(0, 6);
+        return m;
+      });
+      // Union hits would be the blob between the marks' centre: list each mark's own instead.
+      if (c.hits) c.hits = c.marks.flatMap(m => m.hits || []).slice(0, 10);
+    }
     return c;
   }
   function marked() {

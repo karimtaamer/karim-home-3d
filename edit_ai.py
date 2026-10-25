@@ -865,6 +865,11 @@ picture: in the room the camera is in, in front of the camera and inside its fie
 the view's centre on the floor and its width), on the free floor / wall stretch nearest the view's centre that suits \
 the piece. Never put it behind the camera, out of frame or in another room because a spot there looks emptier; if \
 nothing in view fits, use the nearest free spot in this room and say where it went.
+- Two or more red marks with a move / put / relocate / shift request (\"put it here\", \"move this there\"): it is a \
+from -> to move, not two additions. Mark 1 (drawn first) is the piece to move, Mark 2 is where it goes (the context \
+below lists each mark). Move that piece (3D line and its plan outline together) to Mark 2, keeping its size, height on \
+the wall and orientation (re-face it only if it moves onto a different wall) unless the user asks otherwise; nothing \
+stays behind at Mark 1.
 - \"At the foot of / beside / in front of\" a piece: line the new piece up with that piece's plan outline (centred on \
 it unless told otherwise) and set it 5-10 cm off it, not across the room. At the foot of a bed whose headboard faces \
 "S" (foot edge at y = F): item(bed centre x, F - 0.05, "S", ...), i.e. the new piece's back toward the bed and its \
@@ -1020,15 +1025,58 @@ def context_text(ctx, aspect=None, rings=None):
                          f"{v_[2]}° either side of the look direction (anything outside that is out of frame)")
     if c.get("planBox"):
         lines.append(f"Plan area on screen (x0, y0, x1, y1 m): {c['planBox']}")
+    ms = marks_of(c)
+    surf = lambda h, lead: (f"{lead} plan ({h.get('x')}, {h.get('y')}), {h.get('h')} m up"
+                            + (f", material {h['material']}" if h.get("material") else "")
+                            + (", a furniture piece" if h.get("furniture") else ", architecture (wall/floor/ceiling)"))
+    if len(ms) >= 2:
+        lines.append(f"The user drew {len(ms)} separate red marks on image 1, numbered in the order drawn:")
+        for m in ms:
+            role = "the thing to move / the source" if m["i"] == 1 else "destination" + (f" {m['i'] - 1}" if len(ms) > 2 else "")
+            sb = m.get("screenBox")
+            where = f" (on screen x {round(sb[0] * 100)}-{round(sb[2] * 100)}%, y {round(sb[1] * 100)}-{round(sb[3] * 100)}% from top-left)" if sb and len(sb) == 4 else ""
+            lines.append(f"Mark {m['i']} ({role}){where}:")
+            if m.get("planBox"):
+                lines.append(f"  plan area (x0, y0, x1, y1 m): {m['planBox']}")
+            for k, h in enumerate((m.get("hits") or [])[:6]):
+                lines.append(surf(h, "  centre at" if k == 0 else "  also on"))
+            if not m.get("planBox") and not m.get("hits"):
+                lines.append("  (nothing solid under it)")
+        lines.append("Convention: Mark 1 is the thing to move (or the source); Mark 2 and later are where it goes. If the "
+                     "request is a move / put / relocate (\"put it here\", \"move this there\"), move the piece at Mark 1 to "
+                     "Mark 2 (on a wall at the same height unless the user says otherwise), keep its size and orientation, "
+                     "and move its plan outline with it. Don't add a second copy at Mark 2 or treat both marks as \"add here\".")
+        return "\n".join(lines)
     if c.get("highlightBox"):
         lines.append(f"Plan area the user circled (x0, y0, x1, y1 m): {c['highlightBox']}")
     for h in (c.get("hits") or [])[:10]:
-        lines.append(f"Circled surface at plan ({h.get('x')}, {h.get('y')}), {h.get('h')} m up"
-                     + (f", material {h['material']}" if h.get("material") else "")
-                     + (", a furniture piece" if h.get("furniture") else ", architecture (wall/floor/ceiling)"))
+        lines.append(surf(h, "Circled surface at"))
     lines.append("The user chose Whole view (no circle): the request is about everything in the picture."
                  if c.get("wholeView") else "The user circled the part to change in red on image 1.")
     return "\n".join(lines)
+
+
+def marks_of(c):
+    """The separate red marks the client sent (context.marks, in draw order), cleaned; [] for one mark / Whole view."""
+    if (c or {}).get("wholeView"):
+        return []
+    out = []
+    for n, m in enumerate((c or {}).get("marks") or []):
+        if isinstance(m, dict) and len(out) < 6:
+            out.append({"i": len(out) + 1, "screenBox": m.get("screenBox"), "planBox": m.get("planBox"),
+                        "hits": [h for h in (m.get("hits") or []) if isinstance(h, dict)]})
+    return out if len(out) >= 2 else []
+
+
+def mark_point(m):
+    """A mark's plan point: its first (centre) hit, or its plan box's centre."""
+    for h in m.get("hits") or []:
+        if h.get("x") is not None and h.get("y") is not None:
+            return float(h["x"]), float(h["y"])
+    b = m.get("planBox")
+    if b and len(b) == 4:
+        return (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+    return None
 
 
 def check_image(u, what):
@@ -1380,6 +1428,44 @@ def blocked_spot(ws, f0, f1):
 NAMED_PLACE = re.compile(r"\b(at|on|in|by|beside|next to|near|behind|under|above|over|opposite|facing|between|corner|"
                          r"foot|left|right|wall)\b|جنب|فوق|تحت|ورا|قدام|عند|على|في|يمين|شمال", re.I)
 POINTED = re.compile(r"\b(here|there|this (spot|place|corner|area|room))\b|هنا|هناك", re.I)
+
+
+MOVE_ASK = re.compile(r"\b(move|put|place|relocate|shift|bring|take|transfer|carry|here|there)\b|انقل|نقل|حط|هنا|هناك", re.I)
+
+
+def two_mark_move(ws, message, f0, f1):
+    """Once per request: with 2+ marks and a move / put-here ask, a note when no changed placement landed at Mark 2, or a
+    new copy went there while the piece at Mark 1 stayed. None when it can't tell (e.g. only local build coords changed)."""
+    ms = marks_of(getattr(ws, "ctx", None) or {})
+    if len(ms) < 2 or getattr(ws, "move_nudged", False) or not MOVE_ASK.search(message or "") or f0 == f1:
+        return None
+    a, b = mark_point(ms[0]), mark_point(ms[1])
+    if not a or not b or math.hypot(a[0] - b[0], a[1] - b[1]) < 0.5:
+        return None
+    old = placed_lines(ws, f0)
+    was = {l for _, _, _, l in old}
+    changed = [(i, px, py, l) for i, px, py, l in placed_lines(ws, f1) if l not in was]
+    if not changed:
+        return None  # nothing with plan coordinates changed (e.g. a nested part's local numbers): can't judge
+    near_b = [t for t in changed if math.hypot(t[1] - b[0], t[2] - b[1]) <= 1.0]
+    left = [t for t in old if math.hypot(t[1] - a[0], t[2] - a[1]) <= 0.6 and t[3] in f1.splitlines()]
+    fmt = lambda p: f"({round(p[0], 2)}, {round(p[1], 2)})"
+    if not near_b:
+        ws.move_nudged = True
+        i, px, py, l = min(changed, key=lambda t: math.hypot(t[1] - b[0], t[2] - b[1]))
+        return (f"Check the move: the user drew two marks and asked to move / put something there. Mark 1 (the piece) is "
+                f"around plan {fmt(a)}, Mark 2 (where it goes) around {fmt(b)}, but the nearest line you changed (furnish.js "
+                f"line {i}: {l.strip()[:110]}) is at ({px}, {py}), {round(math.hypot(px - b[0], py - b[1]), 1)} m from Mark 2. "
+                "Move the piece at Mark 1 to Mark 2 (same size, height and orientation unless asked; plan outline too), "
+                "or if you read the marks differently, say how.")
+    if len(placed_lines(ws, f1)) > len(old) and left:
+        ws.move_nudged = True
+        i, px, py, l = left[0]
+        return (f"Check the move: the user asked to move the piece at Mark 1 {fmt(a)} to Mark 2 {fmt(b)}. You added a "
+                f"new piece at Mark 2, but furnish.js line {i} ({l.strip()[:110]}) still stands at Mark 1. If that is the "
+                "piece they meant, move it instead of copying it (remove the original, plan outline too); if it isn't, "
+                "leave it and say what you moved.")
+    return None
 
 
 def off_view(ws, message, f0, f1, rings):
@@ -1849,6 +1935,8 @@ def review(ws, message, reply):
         return blk_ + tail
     if rings and (off := off_view(ws, message, f0, f1, rings)):  # a new piece where the user isn't looking
         return off + tail
+    if (mv_ := two_mark_move(ws, message, f0, f1)):  # "put it here" with two marks, and nothing went to Mark 2
+        return mv_ + tail
     for i, line in new_items[:4]:  # its front has to look into a room, not out of the flat
         m = ITEM.search(line)
         x, y, f = float(m[1]), float(m[2]), m[3]

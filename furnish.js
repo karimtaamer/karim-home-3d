@@ -1601,11 +1601,15 @@ export function furnish(scene, M, mat, version = "main") {
   // splayed back into the wall like the TV wall, then a walnut sideboard under a backlit pebble mirror.
   item(14.79, 8.0, "E", p => {  // local x = plan y - 8, z = plan x - 14.79
     const H = M.ceiling, F = 0.462, P = 0.062;  // mass front (x 15.25), wall panel face (x 14.85)
-    const S = -1.213, C = -1.013, E = -0.347, K = 0.103, N = 1.477;  // y 6.79, corner, 7.65, 8.10 (45 cm splay), 9.48
     // Kareem's: the niche is the reception TV wall's tall niche (0.34 wide, 0.42-2.2 high, r 0.13, shelves 0.86 /
-    // 1.3 / 1.74, LED 2.1), centred where the old 0.41 x 1.80 one was, so the two rooms read as one family.
+    // 1.3 / 1.74, LED 2.1), so the two rooms read as one family. Karim t330: a gentler splay and a wider mirror panel.
+    // The mass face takes the TV run's 0.07 / 0.34 / 0.07 (corner to splay start), and the splay runs 0.55 (was 0.45)
+    // over the same 0.40: 36° off the wall instead of 41.6°, panel 1.46 wide (was 1.374), sideboard still 0.40 deep.
     const BK = version === "kareems-changes";
-    const niche = BK ? [-0.8485, -0.5085, 0.42, 2.2, 0.13] : [-0.883, -0.474, 0.45, 2.25, 0.13], deep = 0.25;
+    const S = -1.213, C = -1.013, N = 1.477;  // y 6.79, corner, 9.48
+    const E = BK ? -0.533 : -0.347, K = BK ? 0.017 : 0.103;  // splay y 7.467-8.017 (Kareem's), 7.65-8.10 (45 cm)
+    const niche = BK ? [-0.943, -0.603, 0.42, 2.2, 0.13] : [-0.883, -0.474, 0.45, 2.25, 0.13], deep = 0.25;
+    const dn = (niche[0] + niche[1]) / 2 + 0.6785;  // styling follows its niche
     const face = new THREE.Shape([new THREE.Vector2(C, 0), new THREE.Vector2(E, 0), new THREE.Vector2(E, H), new THREE.Vector2(C, H)]);
     face.holes.push(roundRect(new THREE.Path(), ...niche));
     mesh(new THREE.ExtrudeGeometry(face, { depth: F, bevelEnabled: false, curveSegments: 12 }), mat.limewash, p.g);
@@ -1626,8 +1630,8 @@ export function furnish(scene, M, mat, version = "main") {
     }
     const ly = BK ? 2.1 : 2.14, sy = BK ? [0.885, 1.325, 1.765] : [0.875, 1.275, 1.675];  // top LED, styled shelf tops
     p.box(x0 + 0.06, x1 - 0.06, ly, ly + 0.012, F - deep + 0.03, F - 0.03, mat.ledStrip);
-    p.cyl(-0.76, F - 0.12, 0.05, sy[0], sy[0] + 0.205, mat.linenSage, 16, 0.065); p.cyl(-0.6, F - 0.12, 0.04, sy[1], sy[1] + 0.145, mat.planter, 16);
-    for (let k = 0; k < 4; k++) p.box(-0.8 + k * 0.03, -0.775 + k * 0.03, sy[2], sy[2] + 0.185 - (k % 2) * 0.03, F - 0.2, F - 0.04, k % 2 ? mat.linenBlush : mat.walnut);
+    p.cyl(-0.76 + dn, F - 0.12, 0.05, sy[0], sy[0] + 0.205, mat.linenSage, 16, 0.065); p.cyl(-0.6 + dn, F - 0.12, 0.04, sy[1], sy[1] + 0.145, mat.planter, 16);
+    for (let k = 0; k < 4; k++) p.box(-0.8 + dn + k * 0.03, -0.775 + dn + k * 0.03, sy[2], sy[2] + 0.185 - (k % 2) * 0.03, F - 0.2, F - 0.04, k % 2 ? mat.linenBlush : mat.walnut);
     // Walnut sideboard from the mass to the corner, front in line with the mass (DWG x 15.25).
     p.box(E, N - 0.02, 0.12, 0.8, P, F, mat.walnut);
     fronts(p, E, N - 0.02, 0.12, 0.8, F, 0.45);
@@ -1638,9 +1642,11 @@ export function furnish(scene, M, mat, version = "main") {
     p.cyl(1.05, 0.3, 0.045, 0.83, 0.88, mat.blackSteel, 16);
   });
   plant(15.04, 8.15, 0.5, 0.06, 0.83);
-  // 2.25 hp split on the buffet wall panel (x 14.852), centred on the pebble mirror (y 8.79): 1.05 W x 0.30 H
-  // x 0.23 D, top 2.42, its underside 0.12 over the mirror top (2.00) and 0.18 under the ceiling.
-  if (NCAC) ac(14.852, 8.79, "E", 2.42, 1.05, 0.3, 0.23, true);
+  // 2.25 hp split on the buffet wall panel (x 14.852), centred on the pebble mirror (y 8.79; Kareem's 8.747, the
+  // centre of the wider panel): 1.05 W x 0.30 H x 0.23 D, top 2.42, its underside 0.12 over the mirror top (2.00)
+  // and 0.18 under the ceiling.
+  if (version === "kareems-changes") ac(14.852, 8.747, "E", 2.42, 1.05, 0.3, 0.23, true);
+  else if (NCAC) ac(14.852, 8.79, "E", 2.42, 1.05, 0.3, 0.23, true);
   item(20.474, 9.5, "S", p => {  // coffee corner (DWG, 0.60 deep), column to wall: walnut base, white top, lit shelves
     // Two bays: left = one swinging door over a single shelf (water dispenser sits on the top above it);
     // right = drawer stack top to bottom. Opens with a tap / E in Walk.

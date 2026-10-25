@@ -1445,7 +1445,7 @@ export function furnish(scene, M, mat, version = "main") {
     const KC = version === "kareems-changes";
     // Kareem's: the TV box face is flush with the reception column's face as the DXF and survey draw it (plan x
     // 17.542, DWG 207.9471), one continuous surface; the run (tall niches) 0.08 behind it at 17.462.
-    const H = M.ceiling, edge = -0.46, D0 = KC ? 0.2122 : 0.28, D1 = KC ? 0.2922 : 0.36;  // run depth, TV box depth
+    const H = M.ceiling, edge = KC ? -0.51 : -0.46, D0 = KC ? 0.2122 : 0.28, D1 = KC ? 0.2922 : 0.36;  // run depth, TV box depth
     const dz0 = D0 - 0.28, dz1 = D1 - 0.36;  // shelf styling keeps its distance from the fronts
     // Kareem's: TV 166.8 x 95.8 x 7.7 cm in a flat rectangular opening centred over the niche (render).
     const TW = KC ? 1.668 : 1.50, TH = KC ? 0.958 : 0.85, TD = KC ? 0.077 : 0.03;
@@ -1460,8 +1460,14 @@ export function furnish(scene, M, mat, version = "main") {
       mesh(new THREE.ExtrudeGeometry(ring, { depth: d, bevelEnabled: false, curveSegments: 12 }), honeyOak, p.g);
       mesh(new THREE.ExtrudeGeometry(roundRect(new THREE.Shape(), x0, x1, y0, y1, r), { depth: 0.01, bevelEnabled: false, curveSegments: 12 }), honeyOak, p.g);
     };
-    const tall = [[-1.59, -1.25], [-1.11, -0.77]], low = [-0.4, 1.38, 0.33, 0.69, 0.1];
+    // Kareem's (Karim t311, 25 Oct 2026): the free wall runs from the south wall's face (plan y 2.0705, local -1.60)
+    // to the column (local 1.72); nothing goes on the column. With two locked 0.34 tall niches the most the TV can come
+    // south is ~5 cm: TV centred at local 0.44 (plan y 4.11), the low niche centred on it, the splayed return 0.06
+    // clear of the low niche, and the tall niches centred in what's left (-1.60 to -0.71): 0.07 / 0.34 / 0.07 / 0.34 / 0.07.
+    const tall = KC ? [[-1.53, -1.19], [-1.12, -0.78]] : [[-1.59, -1.25], [-1.11, -0.77]];
+    const low = KC ? [-0.45, 1.33, 0.33, 0.69, 0.1] : [-0.4, 1.38, 0.33, 0.69, 0.1];
     const tcx = (low[0] + low[1]) / 2;
+    const n0 = (tall[0][0] + tall[0][1]) / 2 + 1.42, n1 = (tall[1][0] + tall[1][1]) / 2 + 0.94, nl = tcx - 0.49;  // styling follows its niche
     const tvX0 = tcx - TW / 2, tvX1 = tcx + TW / 2;
     const tvY0 = KC ? 0.83 : 0.92, tvY1 = tvY0 + TH;
     // Opening slightly larger than the TV so the set sits in a flat plaster pocket (render).
@@ -1485,11 +1491,11 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(x0 + 0.06, x1 - 0.06, 2.1, 2.112, 0.04, D0 - 0.03, mat.ledStrip);
     }
     // Shelf styling as rendered: vases, books, a bowl.
-    p.cyl(-1.42, 0.15 + dz0, 0.045, 1.765, 1.97, mat.linenSage, 16, 0.065); p.cyl(-0.94, 0.15 + dz0, 0.035, 1.765, 1.99, mat.linenSlate, 16, 0.06);
-    for (const [x, y] of [[-1.47, 1.325], [-0.99, 0.885], [-1.0, 1.325]]) for (let k = 0; k < 4; k++) p.box(x + k * 0.03, x + k * 0.03 + 0.025, y, y + 0.2 - (k % 2) * 0.03, 0.06 + dz0, 0.24 + dz0, k % 2 ? mat.linenBlush : mat.walnut);
-    p.cyl(-1.42, 0.15 + dz0, 0.05, 0.445, 0.6, mat.planter, 16);
-    p.box(0.95, 1.15, 0.345, 0.4, 0.08 + dz1, 0.26 + dz1, mat.whiteLacquer);
-    p.cyl(0.2, 0.15 + dz1, 0.05, 0.345, 0.52, mat.clearGlass, 16);
+    p.cyl(-1.42 + n0, 0.15 + dz0, 0.045, 1.765, 1.97, mat.linenSage, 16, 0.065); p.cyl(-0.94 + n1, 0.15 + dz0, 0.035, 1.765, 1.99, mat.linenSlate, 16, 0.06);
+    for (const [x, y] of [[-1.47 + n0, 1.325], [-0.99 + n1, 0.885], [-1.0 + n1, 1.325]]) for (let k = 0; k < 4; k++) p.box(x + k * 0.03, x + k * 0.03 + 0.025, y, y + 0.2 - (k % 2) * 0.03, 0.06 + dz0, 0.24 + dz0, k % 2 ? mat.linenBlush : mat.walnut);
+    p.cyl(-1.42 + n0, 0.15 + dz0, 0.05, 0.445, 0.6, mat.planter, 16);
+    p.box(0.95 + nl, 1.15 + nl, 0.345, 0.4, 0.08 + dz1, 0.26 + dz1, mat.whiteLacquer);
+    p.cyl(0.2 + nl, 0.15 + dz1, 0.05, 0.345, 0.52, mat.clearGlass, 16);
     // TV centred over the niche; on Kareem's it sits in the opening so the face reads flat with the plaster.
     const z0 = KC ? D1 - TD : D1, z1 = KC ? D1 : D1 + TD;
     p.box(tvX0, tvX1, tvY0, tvY1, z0, z1, mat.blackSteel);

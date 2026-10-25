@@ -98,6 +98,45 @@
         "مكتبة التلفزيون",
         "مكتبة التليفزيون"
       ]
+    },
+    {
+      "id": "kc-tv-wall-centring",
+      "version": "kareems-changes",
+      "what": "Reception TV wall horizontal layout (local x along the wall, +x = north toward the column; item at plan y 3.67; free wall = south wall face local -1.60 / plan y 2.0705 to column local 1.72 / plan y 5.3914): TV 166.81 x 95.78 cm centred at local 0.44 (plan y 4.11), never past the column; low niche centred on the TV ([-0.45, 1.33]); splayed return at local -0.51 (splay from -0.71); two tall niches centred in the leftover run -1.60..-0.71 at [-1.53,-1.19] and [-1.12,-0.78] (0.07 margins and gap).",
+      "tv_center": 0.44,
+      "low": [
+        -0.45,
+        1.33
+      ],
+      "edge": -0.51,
+      "tall": [
+        [
+          -1.53,
+          -1.19
+        ],
+        [
+          -1.12,
+          -0.78
+        ]
+      ],
+      "column_x": 1.72,
+      "tv_width": 1.668,
+      "tol": 0.003,
+      "decided_by": "Karim",
+      "date": "2026-10-25",
+      "ref": "t311 (centre the TV wall, niches centred in the space left, low niche centred on the TV)",
+      "names": [
+        "tv wall",
+        "tv library",
+        "tv niche",
+        "tall niche",
+        "center the tv",
+        "centre the tv",
+        "مكتبة التلفزيون",
+        "مكتبة التليفزيون",
+        "نيش التلفزيون",
+        "نيشز التلفزيون"
+      ]
     }
   ]
 }

@@ -44,14 +44,17 @@ def _model(text):
 
 def _tv(furnish):
     b = _block(furnish, "--- Reception: TV wall")
-    tall = b and re.search(r"const tall = \[\[([-\d.]+),\s*([-\d.]+)\],\s*\[([-\d.]+),\s*([-\d.]+)\]\]", b)
+    tall = b and re.search(r"const tall = (?:KC \? )?\[\[([-\d.]+),\s*([-\d.]+)\],\s*\[([-\d.]+),\s*([-\d.]+)\]\]", b)
     hole = b and re.search(r"tall\.map\(\(\[x0, x1\]\) => \[x0, x1, ([\d.]+), ([\d.]+), ([\d.]+)\]\)", b)
     shelves = b and re.search(r"for \(const y of \[([^\]]+)\]\)", b)
     return {"item_x": _num(b, r"item\(\s*([-\d.]+)\s*,"), "run": _num(b, r"D0 = KC \? ([\d.]+)"),
             "tv": _num(b, r"D1 = KC \? ([\d.]+)"), "splay": _num(b, r"const splay = ([\d.]+)"),
             "tall": [float(tall.group(i)) for i in range(1, 5)] if tall else None,
             "hole": [float(hole.group(i)) for i in range(1, 4)] if hole else None,
-            "shelves": _nums(shelves.group(1)) if shelves else None}
+            "shelves": _nums(shelves.group(1)) if shelves else None,
+            "edge": _num(b, r"edge = KC \? (-?[\d.]+)"),
+            "low": _nums(re.search(r"const low = KC \? \[([^\]]+)\]", b).group(1))[:2] if b and re.search(r"const low = KC \? \[([^\]]+)\]", b) else None,
+            "tcx_from_low": bool(b and "const tcx = (low[0] + low[1]) / 2" in b)}
 
 
 def check(lock, files):
@@ -108,6 +111,25 @@ def check(lock, files):
                 out.append(f"TV wall tall niche shelves {t['shelves']} no longer match the buffet's {lock['shelves']}")
         else:
             out.append("can't read the TV wall's tall niches in furnish.js")
+        return out
+    if i == "kc-tv-wall-centring":
+        out = []
+        if not t["tall"] or not t["low"] or t["edge"] is None:
+            return ["can't read the TV wall's niches / return in furnish.js"]
+        if not t["tcx_from_low"]:
+            out.append("TV is no longer centred on the low niche (const tcx = (low[0] + low[1]) / 2)")
+        if not (near(t["low"][0], lock["low"][0]) and near(t["low"][1], lock["low"][1])):
+            out.append(f"low niche {t['low']}, locked at {lock['low']}")
+        c = (t["low"][0] + t["low"][1]) / 2
+        if not near(c, lock["tv_center"]):
+            out.append(f"TV centre local {round(c, 4)}, locked at {lock['tv_center']}")
+        if c + lock["tv_width"] / 2 > lock["column_x"]:
+            out.append("TV reaches into the column")
+        if not near(t["edge"], lock["edge"]):
+            out.append(f"splayed return at {t['edge']}, locked at {lock['edge']}")
+        want = [v for pair in lock["tall"] for v in pair]
+        if any(not near(a, b_) for a, b_ in zip(t["tall"], want)):
+            out.append(f"tall niches {t['tall']}, locked at {want}")
         return out
     return [f"unknown lock {i} (add its check to check_locks.py)"]
 

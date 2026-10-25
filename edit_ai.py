@@ -450,6 +450,8 @@ def version_scope(text, version):
 
 
 PLACE = re.compile(r"\b(?:item|rug)\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)")
+RUG = re.compile(r"\brug\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)")
+ITEM = re.compile(r"\bitem\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*\"([NSEW])\"")
 
 
 def placed_lines(ws, text=None):
@@ -638,8 +640,11 @@ def tool(ws, name, a):
         if v == "as-built" and not ws.allow_as_built:
             return "As-built is the survey of the flat as it stands; it can't be edited from another version."
         out_path = ws.tmp / "plan-next.dxf"
+        rugs = {";".join(m_[1:5]) for t_ in {ws.text("furnish.js"), (ws.orig.get("furnish.js") or b"").decode()}
+                for m_ in RUG.finditer(t_)}
         code, out = run([dwg_python(), str(ROOT / "edit_ai_dxf.py"), "edit", str(ws.dxf()), str(out_path),
-                         f"--origin={ORIGIN[0]},{ORIGIN[1]}"], stdin=json.dumps(a["ops"]), timeout=120)
+                         f"--origin={ORIGIN[0]},{ORIGIN[1]}", "--soft=" + ";".join(r_.replace(";", ",") for r_ in rugs)],
+                        stdin=json.dumps(a["ops"]), timeout=120)
         if code:
             return f"nothing changed: {out[-1500:]}"
         if not hasattr(ws, "model0"):
@@ -652,6 +657,8 @@ def tool(ws, name, a):
             ws.dxf_furni = ws.dxf_furni or rep_.get("furniture_changed", False)
             for pc in rep_.get("pieces_changed", []):
                 ws.pieces.setdefault(pc["handle"], pc["old"])
+            for h_ in rep_.get("clashes_checked", []):
+                ws.clashes[h_] = [c_ for c_ in rep_.get("clashes", []) if c_["piece"] == h_]
         except ValueError:
             pass
         try:  # what hangs in a moved window (sheers, curtains) has to follow it in furnish.js
@@ -910,7 +917,7 @@ def chat(req):
     refs = [check_image(u, f"reference {i + 1}") for i, u in enumerate((req.get("refs") or [])[:MAX_REFS])]
     ws = Workspace(v)
     ws.allow_as_built = v == "as-built"  # only ever reached from the as-built page itself
-    ws.plan_dirty, ws.dxf_furni, ws.pieces = False, False, {}
+    ws.plan_dirty, ws.dxf_furni, ws.pieces, ws.clashes = False, False, {}, {}
     sys_prompt = SYSTEM.format(showing="2D drawing" if ctx.get("showing") == "drawing" else "3D model", version=v,
                                marked="" if ctx.get("wholeView") else ", with what the user circled marked in red")
     if not plan_edits():
@@ -1037,6 +1044,49 @@ def review(ws, message, reply):
         return ("Check 2D vs 3D: you moved or resized furniture in furnish.js but nothing on the plan (2furni). If the "
                 "piece is drawn on the plan (furniture_near lists the outlines there), give its outline exactly the same "
                 "change now with dxf_edit move_piece / resize_piece; things not drawn on the plan need nothing." + tail)
+    # A plan piece that now runs into a wall or another piece.
+    hits = [c for cs in ws.clashes.values() for c in cs]
+    if hits:
+        desc = "; ".join(f"{c['piece']} overlaps {c['with']} at x {c['overlap'][0]}..{c['overlap'][2]}, "
+                         f"y {c['overlap'][1]}..{c['overlap'][3]}" for c in hits[:4])
+        return ("Check the fit: on the plan " + desc + ". A real piece can't go into a wall or through another piece. "
+                "Fix it in both views the same way: shift or size the piece so it fits (dxf_edit move_piece / "
+                "resize_piece with grow, and the furnish.js line to match), or, if the user would expect the neighbour to "
+                "make room, move that too in both views. If it really can't fit as asked, do the closest that fits and say "
+                "so." + tail)
+    # A new / moved wall piece standing on the far face of its wall (its front would be inside the wall).
+    new_items = [(i, line) for i, _, _, line in placed_lines(ws, f1) if line not in set(f0.splitlines()) and ITEM.search(line)]
+    if new_items:
+        cur = ws.tmp / "plan-now.dxf"
+        cur.write_bytes(ws.read(ws.cfg["dxf"]))
+        for i, line in new_items[:4]:
+            m = ITEM.search(line)
+            x, y, f = float(m[1]), float(m[2]), m[3]
+            code, q = run([dwg_python(), str(ROOT / "edit_ai_dxf.py"), "query", str(cur), f"--origin={ORIGIN[0]},{ORIGIN[1]}",
+                           f"--bbox={x - 0.4},{y - 0.4},{x + 0.4},{y + 0.4}", "--layers=1wall", "--limit", "200"], timeout=90)
+            try:
+                ents = json.loads(q).get("entities", [])
+            except ValueError:
+                continue
+            ax, d = (1, 1 if f == "N" else -1) if f in "NS" else (0, 1 if f == "E" else -1)
+            at, along = (y, x) if ax == 1 else (x, y)
+            faces = []
+            for e in ents:
+                ps = e.get("points") or []
+                if e["type"] != "LINE" or len(ps) != 2 or abs(ps[0][ax] - ps[1][ax]) > 0.005:
+                    continue
+                lo, hi = sorted((ps[0][1 - ax], ps[1][1 - ax]))
+                if lo - 0.05 <= along <= hi + 0.05:
+                    faces.append(ps[0][ax])
+            on = [c for c in faces if abs(c - at) < 0.02]
+            ahead = sorted((c - at) * d for c in faces if 0.04 < (c - at) * d < 0.35)
+            if on and ahead:
+                good = round(at + d * ahead[0], 3)
+                axis = "y" if ax == 1 else "x"
+                return (f"Check placement: furnish.js line {i} ({line.strip()[:120]}) has its back on the far face of a "
+                        f"wall ({axis} {round(on[0], 3)}): facing \"{f}\" its front would be inside the wall. The face on the "
+                        f"room side is {axis} {good}; put the back there (keep the facing if it points into the room)." + tail)
+    return None
     return None
 
 

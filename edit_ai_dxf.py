@@ -25,6 +25,10 @@ Edit ops (a JSON list), handles as `query` gives them:
     {"op": "resize_piece", "handle": "1692", "x_size": 1.8, "y_size": null, "anchor": "N"}
         the same piece scaled to a new extent along plan x and / or y (metres; null keeps it); anchor names the sides
         that stay put ("N" keeps the north edge - a headboard on the north wall; "SW" a corner); default the centre.
+    {"op": "resize_piece", "handle": "16B8", "grow": {"W": 0.2, "E": 0.2, "S": 0.2}}
+        or grow / shrink given sides by metres (negative shrinks; missing sides stay put): no arithmetic needed.
+After any edit, each piece moved, resized or added is checked against the walls and the other outlines: overlaps are
+listed under "clashes" (a rug may sit under things; given as --soft boxes).
     {"op": "move_door", "handle": "16FA", "along": 0.2, "width": 0.8}
         a door drawn loose (its swing ARC is the handle): swing, leaf, jambs and frame bits slide along their wall by
         `along` metres (+ = towards +x / +y; or dx, dy, projected on the wall) and, with width, the leaf (= swing
@@ -263,6 +267,54 @@ def piece_members(msp, outline, m=0.08):
     return out, ob
 
 
+def clashes(msp, doc, handles, soft, ox, oy, soft_h=(), m=0.025):
+    """Each listed outline against the wall faces and the other top-level furniture outlines (rugs in `soft` may
+    overlap things). Returns [{"piece", "with", "overlap": plan box}]."""
+    area = lambda b: (b[2] - b[0]) * (b[3] - b[1])
+    near = lambda b, t: all(abs(b[i] - t[i]) < 0.06 for i in range(4))
+    is_soft0 = lambda b: any(near(b, t) for t in soft)
+    inside = lambda a_, b_: a_[0] >= b_[0] - 0.08 and a_[1] >= b_[1] - 0.08 and a_[2] <= b_[2] + 0.08 and a_[3] <= b_[3] + 0.08
+    outl = [(e, ext_of(e)) for e in msp if e.dxf.layer in FURNI and e.dxftype() == "LWPOLYLINE" and len(e) >= 4]
+    outl = [(e, b) for e, b in outl if b and area(b) >= 0.04]
+    soft_h = set(soft_h) | {e.dxf.handle for e, b in outl if is_soft0(b)}
+    soft_b = [b for e, b in outl if e.dxf.handle in soft_h]
+    is_soft = lambda b: any(near(b, t) for t in soft_b)
+    top = [(e, b) for e, b in outl if not any(o is not e and area(b2) > area(b) * 1.05 and inside(b, b2) and not is_soft(b2)
+                                              for o, b2 in outl)]
+    walls = [e for e in msp.query("LINE") if e.dxf.layer == "1wall"]
+    R = lambda v: round(v, 3)
+    out = []
+    for h in handles:
+        e = doc.entitydb.get(h)
+        if e is None or not e.is_alive:
+            continue
+        b = ext_of(e)
+        mine = {x.dxf.handle for x in piece_members(msp, e)[0]}
+        x0, y0, x1, y1 = b[0] + m, b[1] + m, b[2] - m, b[3] - m
+        if x1 <= x0 or y1 <= y0:
+            continue
+        for w in walls:
+            (ax, ay), (bx, by) = (w.dxf.start.x, w.dxf.start.y), (w.dxf.end.x, w.dxf.end.y)
+            seg = LineString([(ax, ay), (bx, by)])
+            from shapely.geometry import box as _box
+            cut = seg.intersection(_box(x0, y0, x1, y1))
+            if not cut.is_empty and cut.length > 0.02:
+                c = cut.bounds
+                out.append({"piece": h, "with": f"wall {w.dxf.handle}",
+                            "overlap": [R(c[0] - ox), R(c[1] - oy), R(c[2] - ox), R(c[3] - oy)]})
+        if h in soft_h:
+            continue  # a rug only clashes with walls
+        for o, b2 in top:
+            if o.dxf.handle in mine or is_soft(b2) or inside(b2, b) or inside(b, b2):
+                continue
+            ix0, iy0, ix1, iy1 = max(x0, b2[0]), max(y0, b2[1]), min(x1, b2[2]), min(y1, b2[3])
+            if ix1 - ix0 > 0.005 and iy1 - iy0 > 0.005:
+                out.append({"piece": h, "with": f"outline {o.dxf.handle} (x {R(b2[0] - ox)}..{R(b2[2] - ox)}, "
+                                                f"y {R(b2[1] - oy)}..{R(b2[3] - oy)})",
+                            "overlap": [R(ix0 - ox), R(iy0 - oy), R(ix1 - ox), R(iy1 - oy)]})
+    return out
+
+
 def scale_entity(e, a, kx, ky):
     """Scale e about point a by kx along x and ky along y."""
     f = lambda p: (a[0] + (p[0] - a[0]) * kx, a[1] + (p[1] - a[1]) * ky)
@@ -472,14 +524,24 @@ def edit(a):
         elif k == "resize_piece":
             ents, b = piece_members(msp, get(o["handle"]))
             w, h = b[2] - b[0], b[3] - b[1]
-            kx = float(o["x_size"]) / w if o.get("x_size") else 1
-            ky = float(o["y_size"]) / h if o.get("y_size") else 1
-            an = (o.get("anchor") or "").upper()
-            ax = b[0] if "W" in an else b[2] if "E" in an else (b[0] + b[2]) / 2
-            ay = b[1] if "S" in an else b[3] if "N" in an else (b[1] + b[3]) / 2
+            g = {str(k2).upper(): float(v2 or 0) for k2, v2 in (o.get("grow") or {}).items()}
+            if g:
+                kx, ky = (w + g.get("W", 0) + g.get("E", 0)) / w, (h + g.get("S", 0) + g.get("N", 0)) / h
+                if kx <= 0.05 or ky <= 0.05:
+                    raise ValueError("grow would shrink the piece to nothing")
+                (ax, ay), shift = (b[0], b[1]), (-g.get("W", 0), -g.get("S", 0))
+            else:
+                kx = float(o["x_size"]) / w if o.get("x_size") else 1
+                ky = float(o["y_size"]) / h if o.get("y_size") else 1
+                an = (o.get("anchor") or "").upper()
+                ax = b[0] if "W" in an else b[2] if "E" in an else (b[0] + b[2]) / 2
+                ay = b[1] if "S" in an else b[3] if "N" in an else (b[1] + b[3]) / 2
+                shift = (0, 0)
             for e in ents:
                 touched.add(e.dxf.handle)
                 scale_entity(e, (ax, ay), kx, ky)
+                if shift != (0, 0):
+                    e.translate(shift[0], shift[1], 0)
             b = ext_of(ents[0])
             log.append(f"piece {o['handle']} ({len(ents)} entities) resized {r(w)} x {r(h)} -> {r(b[2] - b[0])} x "
                        f"{r(b[3] - b[1])}; outline now x {r(b[0] - ox)}..{r(b[2] - ox)}, y {r(b[1] - oy)}..{r(b[3] - oy)}")
@@ -563,6 +625,13 @@ def edit(a):
         if b0 and b1 != b0:
             B = lambda b: b and [r(b[0] - ox), r(b[1] - oy), r(b[2] - ox), r(b[3] - oy)]
             pieces.append({"handle": h, "old": B(b0), "new": B(b1)})
+    check = [p_["handle"] for p_ in pieces if p_["new"]] + [
+        h for h in new if (e := doc.entitydb.get(h)) is not None and e.dxf.layer in FURNI
+        and e.dxftype() == "LWPOLYLINE" and len(e) >= 4]
+    soft = [tuple(float(v) for v in t.split(",")) for t in (a.soft or "").split(";") if t.strip()]
+    soft = [(t[0] + ox, t[1] + oy, t[2] + ox, t[3] + oy) for t in soft]
+    soft_h = {h for h, b0 in pieces0.items() if b0 and any(all(abs(b0[i] - t[i]) < 0.06 for i in range(4)) for t in soft)}
+    clash = clashes(msp, doc, check, soft, ox, oy, soft_h) if check else []
     auditor = doc.audit()
     doc.saveas(a.out)
     after = Counter(e.dxf.layer for e in msp)
@@ -571,6 +640,7 @@ def edit(a):
                       "removed_zero_length": zero, "audit_errors": len(auditor.errors),
                       "furniture_changed": bool(layers_hit & set(FURNI)),
                       **({"pieces_changed": pieces} if pieces else {}),
+                      **({"clashes_checked": check, "clashes": clash} if check else {}),
                       **({"windows_moved": moved} if moved else {}), **({"warnings": warnings} if warnings else {})}))
 
 
@@ -580,6 +650,7 @@ if __name__ == "__main__":
     q = sub.add_parser("query"); q.add_argument("src"); q.add_argument("--origin", required=True)
     q.add_argument("--bbox", required=True); q.add_argument("--layers"); q.add_argument("--limit", default="150")
     e = sub.add_parser("edit"); e.add_argument("src"); e.add_argument("out"); e.add_argument("--origin", required=True)
+    e.add_argument("--soft", default="")
     a = p.parse_args()
     try:
         query(a) if a.cmd == "query" else edit(a)

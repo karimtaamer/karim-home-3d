@@ -102,7 +102,6 @@ export function createRenders(root, rooms, actions = { can: () => false }) {
     const s = order[at];
     big.src = s.src;
     cap.textContent = `${versioned(s.caption, s)} · ${at + 1} of ${order.length}`;
-    box.querySelector(".rdel-open").hidden = !(s.ai || s.user);  // the designer's renders stay
     sheet(null);
     box.hidden = false;
   }
@@ -121,7 +120,7 @@ export function createRenders(root, rooms, actions = { can: () => false }) {
   box.querySelector(".redit-open").onclick = () => { inspo.clear(); sheet(editor); };
   box.querySelector(".rdel-open").onclick = () => {
     const s = order[at];
-    confirm.querySelector(".rq").textContent = `Delete “${versioned(s.caption, s)}”? It goes for good, on every device.`;
+    confirm.querySelector(".rq").textContent = `Delete “${versioned(s.caption, s)}”? ${s.ai || s.user ? "" : " It is one of the designer's renders."} It goes for good, on every device.`;
     sheet(confirm);
   };
   for (const b of box.querySelectorAll(".rcancel")) b.onclick = () => !busy && sheet(null);

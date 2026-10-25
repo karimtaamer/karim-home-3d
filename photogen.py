@@ -33,8 +33,8 @@ PHOTOGEN_MOCK=1 (or --dry-run) makes no OpenAI calls: generate echoes the view, 
 
 The Renders screen edits a saved render the same way, marks and notes (edit: the render as image 1, MARKED next,
 with the board and the furniture renders; or an older page's instruction in words), saved as a new spot "of" its first version with the next "version" number; the old one stays) and
-deletes generated ones (delete: image and spot entry; on Vercel also a marker, renders/ai-deleted/<file>/<id>.json,
-which hides a spot kept in git and keeps its id from being reused). Upload files the client's own photo under a
+deletes any (delete: spot entry, and the image of a generated one; on Vercel also a marker,
+renders/ai-deleted/<file>/<id>.json, which hides a spot kept in git, the designer's too, and keeps its id from being reused). Upload files the client's own photo under a
 room (upload: a JPEG, PNG or WebP data URL the page has already shrunk; a spot "up-NN" with no cam and "user": true,
 saved where approved spots go, and deletable like them). A new spot with no named furniture piece
 in frame is named from its first attempt by a cheap vision model (name, OPENAI_NAME_MODEL, default gpt-4.1-nano).
@@ -802,18 +802,19 @@ def revise(req):
 
 
 def delete(req):
-    """{spots, id} -> {deleted: id}: a generated render or an uploaded photo gone for good, its image and its spot
-    entry, on disk or in Blob (where a marker also hides a spot kept in git). Designer renders can't be deleted here."""
+    """{spots, id} -> {deleted: id}: a render gone for good, its spot entry on disk or in Blob (where a marker also
+    hides a spot kept in git). A generated render or an uploaded photo loses its image too; a designer render's image
+    stays, as other spots and the furniture references may use it."""
     name = req.get("spots", "spots.json")
     s, home = find(name, req.get("id", ""))
-    if not (s.get("ai") or s.get("user")):
-        raise ValueError("designer renders can't be deleted here, only generated or uploaded ones")
+    made = s.get("ai") or s.get("user")
     if BLOB:
         save(f"renders/ai-deleted/{home}/{s['id']}.json", json.dumps(s, ensure_ascii=False).encode(), "application/json")
-        photogen_blob.delete([s["photo"]] + photogen_blob.names(f"renders/ai-spots/{home}/{s['id']}.json"))
+        photogen_blob.delete(([s["photo"]] if made else []) + photogen_blob.names(f"renders/ai-spots/{home}/{s['id']}.json"))
     else:
         write_spots(home, [x for x in own(home) if x["id"] != s["id"]])
-        (ROOT / s["photo"]).unlink(missing_ok=True)
+        if made:
+            (ROOT / s["photo"]).unlink(missing_ok=True)
     print(f"[photogen] deleted {s['id']} ({s['photo']})", flush=True)
     return {"deleted": s["id"]}
 

@@ -513,10 +513,12 @@ that view replaces the model.
   furniture renders, to the same image edit (about $0.30 at high quality, 1536×1024). The result is a **new version**:
   a spot with the same room, caption and camera, `"of"` its first version, `"version": n` and the `"edit"` text. The
   old one stays. Walk shows the latest version of each; Renders shows them all ("dresser · v2").
-- **Delete** (after a confirmation): generated renders only; the designer's renders stay. Locally it removes the
-  image and the `spots*.json` entry. On Vercel it deletes the Blob image and spot, and leaves a marker
-  `renders/ai-deleted/<spots file>/<id>.json`, which also hides a generated spot kept in git (remove that from git by
-  hand) and stops its id being reused.
+- **Delete** (after a confirmation): any render, generated, uploaded or the designer's. Locally it removes the
+  `spots*.json` entry, and the image of a generated or uploaded one. On Vercel it deletes the Blob spot (and image,
+  if generated or uploaded), and leaves a marker `renders/ai-deleted/<spots file>/<id>.json`, which also hides a spot
+  kept in git, the designer's included (remove that from git by hand; delete the marker in Blob to bring it back),
+  and stops its id being reused. A designer render's image is never deleted: other spots and the furniture
+  references may use it.
 - **Upload photo** (each room's title on the Renders screen; rooms with nothing yet show too): the client's own
   pictures, several at once (a phone offers the camera). The browser shrinks each to 2400 px JPEG (Vercel takes at
   most 4.5 MB a request) and `photogen.py` (`upload`) checks it is JPEG/PNG/WebP and the room is the version's. It is

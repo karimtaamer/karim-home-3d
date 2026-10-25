@@ -263,6 +263,12 @@ def piece_members(msp, outline, m=0.08):
             continue
         owners = [(area(b2), o) for o, b2 in outlines if o is not e and inside(b, b2) and area(b2) >= area(b) * 1.05]
         if owners and min(owners, key=lambda x: x[0])[1] is outline:
+            # Also inside another piece that this one only clips the edge of (a table pushed into the bed): it's
+            # that piece's line (a pillow), not this one's. A piece mostly standing on a rug keeps its own lines.
+            ov = lambda b2: max(0, min(ob[2], b2[2]) - max(ob[0], b2[0])) * max(0, min(ob[3], b2[3]) - max(ob[1], b2[1]))
+            if any(o is not outline and o is not e and inside(b, b2) and not inside(ob, b2) and not inside(b2, ob)
+                   and ov(b2) < 0.5 * area(ob) for o, b2 in outlines):
+                continue
             out.append(e)
     return out, ob
 

@@ -708,6 +708,10 @@ def tool(ws, name, a):
                 k_, v_ = next(iter(o.items()))
                 o = {"op": k_, **v_}
             ops_.append(o)
+        pm_ = {o.get("handle") for o in ops_ if isinstance(o, dict) and o.get("op") in ("move_piece", "resize_piece")}
+        dup_ = [o for o in ops_ if isinstance(o, dict) and o.get("op") == "move" and o.get("handles")
+                and set(o["handles"]) <= pm_]
+        ops_ = [o for o in ops_ if not any(o is d_ for d_ in dup_)]  # the same piece moved twice in one call
         if not ops_:
             return "no ops given: nothing changed on the plan"
         a = {**a, "ops": ops_}
@@ -733,8 +737,14 @@ def tool(ws, name, a):
             for pc in rep_.get("pieces_changed", []):
                 ws.pieces.setdefault(pc["handle"], pc["old"])
                 o_, n_ = pc["old"], pc["new"]
+                for k_, pts_ in enumerate(ws.new_outlines):  # a new piece moved / resized afterwards: check where it is now
+                    bx_ = [min(q[0] for q in pts_), min(q[1] for q in pts_), max(q[0] for q in pts_), max(q[1] for q in pts_)]
+                    if all(abs(u_ - w_) < 0.005 for u_, w_ in zip(bx_, o_)):
+                        ws.new_outlines[k_] = [[n_[0], n_[1]], [n_[2], n_[1]], [n_[2], n_[3]], [n_[0], n_[3]]]
                 ws.moves.append(((n_[0] + n_[2] - o_[0] - o_[2]) / 2, (n_[1] + n_[3] - o_[1] - o_[3]) / 2))
             for w_ in rep_.get("windows_moved", []):
+                if "old_centre" in w_ and w_.get("old_width"):
+                    ws.win_moved = getattr(ws, "win_moved", []) + [(*w_["old_centre"][:2], w_["old_width"] / 2 + 0.3)]
                 if "old_centre" in w_ and "new_centre" in w_:
                     ws.moves.append((w_["new_centre"][0] - w_["old_centre"][0], w_["new_centre"][1] - w_["old_centre"][1]))
                 elif w_.get("old_opening") and w_.get("new_opening"):
@@ -1034,6 +1044,7 @@ def chat(req):
     ws = Workspace(v)
     ws.allow_as_built = v == "as-built"  # only ever reached from the as-built page itself
     ws.plan_dirty, ws.dxf_furni, ws.pieces, ws.clashes, ws.new_outlines, ws.moves = False, False, {}, {}, [], []
+    ws.win_moved = []
     sys_prompt = SYSTEM.format(showing="2D drawing" if ctx.get("showing") == "drawing" else "3D model", version=v,
                                marked="" if ctx.get("wholeView") else ", with what the user circled marked in red")
     if not plan_edits():
@@ -1142,12 +1153,14 @@ def review(ws, message, reply):
                     f"Find the line that builds this piece for \"{ws.v}\" (furniture_near lists only the ones that run here; "
                     "pieces shared by several versions sit after the per-version blocks), put the change there instead "
                     "(split it with a version check if the line serves other versions) and revert the edit you made." + tail)
-    now = set(f1.splitlines())
+    def bare(l):  # a line's code, without its trailing // comment or spacing (a comment-only edit isn't a change)
+        return re.sub(r"\s+", "", re.sub(r"\s//.*$", "", l))
+    now = {bare(l) for l in f1.splitlines()}
     # A plan piece moved / resized: the 3D line(s) standing on it must have changed too.
     for h, b in ws.pieces.items():
         lines = [(i, line) for i, px, py, line in placed_lines(ws, f0)
                  if b[0] - 0.15 <= px <= b[2] + 0.15 and b[1] - 0.15 <= py <= b[3] + 0.15]
-        if lines and all(line in now for _, line in lines):
+        if lines and all(bare(line) in now for _, line in lines):
             return (f"Check 2D vs 3D: you changed plan piece {h} (was x {b[0]}..{b[2]}, y {b[1]}..{b[3]}) but its 3D line(s) in "
                     "furnish.js didn't change: " + "; ".join(f"line {i}: {line.strip()[:160]}" for i, line in lines[:4])
                     + ". Give the 3D piece exactly the same move / resize (for this version only), or put the plan piece "
@@ -1156,8 +1169,9 @@ def review(ws, message, reply):
     ops = [o for o in ws.ops.get("furnish.js") or []
            if Counter(NUMBER.findall(o["old"])) != Counter(NUMBER.findall(o["new"]))
            and not (o["new"].startswith(o["old"]) or o["new"].endswith(o["old"]))]  # not a pure addition
+    in_window = lambda px, py: any(abs(px - wx) <= hw and abs(py - wy) <= 0.3 for wx, wy, hw in getattr(ws, "win_moved", []))
     gone = [(i, px, py, line) for i, px, py, line in placed_lines(ws, f0)
-            if line not in now and any(len(seg.strip()) > 8 and seg.strip() in line for o in ops for seg in o["old"].splitlines())]
+            if bare(line) not in now and not in_window(px, py) and any(len(seg.strip()) > 8 and seg.strip() in line for o in ops for seg in o["old"].splitlines())]
     if gone and plan_edits():
         src = ws.tmp / "plan-before.dxf"
         src.write_bytes(ws.orig.get(ws.cfg["dxf"]) or ws.read(ws.cfg["dxf"]))
@@ -1183,8 +1197,9 @@ def review(ws, message, reply):
                         f"{h} (x {bb[0]}..{bb[2]}, y {bb[1]}..{bb[3]}), didn't change. If you moved or resized that piece, give "
                         "the outline exactly the same change now with dxf_edit move_piece / resize_piece; if only its look "
                         "changed (colour, finish, doors), nothing is needed." + tail)
-    loop_ops = [o for o in ops if any(re.search(r"\bfor \(const|\bitem\(|\brug\(", l)
-                                      and l.strip() not in {n_.strip() for n_ in o["new"].splitlines()}
+    was = {bare(l) for l in f0.splitlines()}  # only lines that stood before this message (not the model's own new piece)
+    loop_ops = [o for o in ops if any(re.search(r"\bfor \(const|\bitem\(|\brug\(", l) and bare(l) in was
+                                      and bare(l) not in {bare(n_) for n_ in o["new"].splitlines()}
                                       for l in o["old"].splitlines())]
     if loop_ops and not ws.dxf_furni and not gone:
         return ("Check 2D vs 3D: you moved or resized furniture in furnish.js but nothing on the plan (2furni). If the "
@@ -1300,6 +1315,27 @@ def review(ws, message, reply):
                             f"({line.strip()[:120]}) puts the 3D piece's back-centre at {ax2} {pos}. item()'s x, y is the middle "
                             f"of the back, so a piece resized on one side moves its centre by half the change: set it to "
                             f"{round(mid, 3)} (or change the outline to match)." + tail)
+            # The same for pieces placed from a loop: for (const x of [2.02, 4.35]) { item(x, 9.015, "S", ...) }
+            L1b = f1.splitlines()
+            for k, line in enumerate(L1b):
+                lm = re.search(r"for \(const (\w+) of \[([-\d.,\s]+)\]\)", line)
+                if not lm or bare(line) in was:
+                    continue
+                for nxt in L1b[k + 1:k + 4]:
+                    im = re.search(r"\bitem\(\s*" + lm[1] + r"\s*,\s*(-?[\d.]+)\s*,\s*\"([NSEW])\"", nxt)
+                    if not im:
+                        continue
+                    f, at = im[2], float(im[1])
+                    if f not in "NS" or abs(at - {"N": b[1], "S": b[3]}[f]) > 0.05:
+                        continue
+                    mid = (b[0] + b[2]) / 2
+                    vals = [float(v_) for v_ in lm[2].split(",") if v_.strip()]
+                    near_ = min(vals, key=lambda v_: abs(v_ - mid))
+                    if abs(near_ - mid) > 0.03 and b[0] <= near_ <= b[2] and b[2] - b[0] < 1.2:
+                        return (f"Check 2D vs 3D: plan piece {h} now runs x {round(b[0], 3)}..{round(b[2], 3)} (middle of its back "
+                                f"at x {round(mid, 3)}), but furnish.js line {k + 1} ({line.strip()[:100]}) puts the 3D piece at "
+                                f"x {near_}. Make them the same: set that value to {round(mid, 3)}, or move the outline to match "
+                                "(if the piece can't move as asked, put both back and say why)." + tail)
     # A plan piece that now runs into a wall or another piece.
     hits = [c for cs in ws.clashes.values() for c in cs]
     if any(not c.get("free") for c in hits):

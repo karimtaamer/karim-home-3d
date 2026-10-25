@@ -41,6 +41,36 @@ export function furnish(scene, M, mat, version = "main") {
   scene.add(root, ceilingBits);
   if (version === "as-built") return { root, ceilingBits, setReveal() {} };  // the empty flat as it stands today
 
+  // Make the existing master-bedroom entry leaf interactive without altering its opening.
+  if (version === "kareems-changes") {
+    const s = (M.swings || []).find(s => Math.hypot(s.hinge[0] - 5.5724, s.hinge[1] - 5.6626) < 0.15);
+    if (s) {
+      const [hx, hy] = s.hinge;
+      const leaf = scene.children.find(o => o.isMesh && o.geometry?.type === "BoxGeometry" &&
+        Math.abs(o.geometry.parameters.width - (s.r - 0.02)) < 0.001 &&
+        Math.abs(o.geometry.parameters.height - (M.doorHead - 0.01)) < 0.001 &&
+        Math.abs(Math.hypot(o.position.x - hx, o.position.z + hy) - s.r / 2) < 0.03);
+      if (leaf) {
+        const a0 = Math.atan2(s.closed[1] - hy, s.closed[0] - hx);
+        const current = leaf.rotation.y;
+        const swing = Math.atan2(Math.sin(current - a0), Math.cos(current - a0));
+        const c = new THREE.Group(), hinge = new THREE.Group();
+        root.add(c); c.add(hinge);
+        hinge.position.set(hx, 0, -hy);
+        hinge.rotation.y = a0;
+        hinge.add(leaf);
+        leaf.position.set(s.r / 2, (M.doorHead - 0.01) / 2, 0);
+        leaf.rotation.set(0, 0, 0);
+        c.userData.openable = {
+          id: "master-bedroom-entry-door", label: "Bedroom door",
+          leaves: [{ obj: hinge, axis: "y", open: Math.abs(swing) > 0.1 ? swing : -Math.PI / 2 }],
+          anchor: new THREE.Vector3(hx + (s.closed[0] - hx) * 0.75, 1.05, -hy - (s.closed[1] - hy) * 0.75),
+          reach: 2.2, duration: 0.7
+        };
+      }
+    }
+  }
+
   function mesh(geo, material, parent, uv = true) {
     if (uv) metreUVs(geo);
     const m = new THREE.Mesh(geo, material);
@@ -347,7 +377,7 @@ export function furnish(scene, M, mat, version = "main") {
     p.cyl(0.62, 0.2, 0.06, 0.75, 0.93, mat.planter, 16, 0.045);  // vases on the console
     p.cyl(-0.62, 0.2, 0.05, 0.75, 0.88, mat.planter, 16, 0.04);
   });
-  plant(5.12, 0.84, 1.8, 0.24);  // tall olive by the end of the chaise
+  if (version !== "kareems-changes") plant(5.12, 0.84, 1.8, 0.24);  // tall olive by the end of the chaise (removed on Kareem's via Edit AI)
   plant(5.9, 1.08, 1.35, 0.2);   // beside the TV console
   art(3.62, 0.548, "N", 0.9, 1.25, 1.62, 0);  // large abstracts on both side walls, picture lights above
   art(4.35, 4.443, "S", 0.75, 1.0, 1.48, 1);
@@ -434,8 +464,8 @@ export function furnish(scene, M, mat, version = "main") {
     const H = w / 2 - 0.01, t = 0.018, F = d - 0.02, y0 = 0.3, y1 = 0.8;  // half width, board, carcass front, body
     const body = mat.oakVeneer.clone(); body.color.setRGB(0.78, 0.55, 0.36); body.clippingPlanes = mat.oakVeneer.clippingPlanes;
     const white = mat.applianceWhite.clone(); white.roughness = 0.75; white.clippingPlanes = mat.applianceWhite.clippingPlanes;
-    const top = mat.oakVeneer.clone(); top.color.setRGB(1.6, 1.45, 1.25); top.clippingPlanes = mat.oakVeneer.clippingPlanes;
-    p.box(-H, H, y1, 0.86, 0.02, d, top);                                             // pale oak counter, as the model's
+    const top = mat.marbleTop;
+    p.box(-H, H, y1, 0.86, 0.02, d, top);                                             // porcelain countertop (Edit AI)
     for (const s of [-1, 1]) p.box(s < 0 ? -H : H - t, s < 0 ? -H + t : H, y0, y1, 0.02, F, body);  // sides
     p.box(-H, H, y0, y0 + t, 0.02, F, body);                                          // bottom
     p.box(-H, H, y1 - t, y1, 0.02, F, body);                                          // top under the counter
@@ -491,10 +521,17 @@ export function furnish(scene, M, mat, version = "main") {
   };
   // DWG wardrobe w long. Default: smoked-glass sliding doors in a gypsum frame. `white`: plain white lacquer
   // leaves with a recessed vertical finger-pull between them (hidden handle), no walnut mullions.
-  const wardrobe = (w, door = 1.04, white = false) => p => {
+  const wardrobe = (w, door = 1.04, white = false, tinted = false) => p => {
     const h = w / 2, n = Math.max(1, Math.round((w - 0.16) / door));
     p.box(-h, h, 0, M.ceiling, 0, 0.6, mat.whiteLacquer);
-    if (white) {
+    if (tinted) {
+      p.box(-h, h, 0, M.ceiling, 0.6, 0.625, mat.masterBronzeFrame);
+      const span = (w - 0.08) / n;
+      for (let k = 0; k < n; k++) {
+        const x0 = -h + 0.04 + k * span;
+        p.box(x0 + 0.012, x0 + span - 0.012, 0.045, M.ceiling - 0.045, 0.625, 0.645, mat.masterBronzeReflective);
+      }
+    } else if (white) {
       const span = (w - 0.16) / n, z0 = 0.6, z1 = 0.62;
       for (let k = 0; k < n; k++) {
         const x0 = -h + 0.08 + k * span, x1 = x0 + span;
@@ -584,8 +621,17 @@ export function furnish(scene, M, mat, version = "main") {
     for (const x of [2.95, 5.37]) item(x, 9.02, "S", p => {  // curtains either side of the 2.18 m window
       const m = mesh(curtainGeometry(0.55, 2.45), mat.curtain, p.g); m.position.set(0, 1.27, 0.12);
     });
+    if (version === "kareems-changes") {
+      // Three-gang switch moved to the circled wall spot.
+      item(4.516, 5.585, "W", p => {
+        p.box(-0.043, 0.043, 1.265, 1.351, 0, 0.008, mat.whiteLacquer);
+        for (const x of [-0.025, 0, 0.025]) {
+          p.box(x - 0.011, x + 0.011, 1.276, 1.34, 0.008, 0.012, mat.whiteLacquer);
+        }
+      });
+    }
     // Kareem's Changes: white lacquer sliding doors with recessed hidden pulls (other versions keep smoked glass).
-    item(6.367, 7.336, "W", wardrobe(3.36, 1.04, version === "kareems-changes"));  // DWG wardrobe on the kitchen wall
+    item(6.367, 7.336, "W", wardrobe(3.36, 1.04, version === "kareems-changes", version === "kareems-changes"));  // DWG wardrobe on the kitchen wall
     item(1.564, 4.55, "N", wardrobe(1.895, 0.45, version === "kareems-changes"));  // DWG wardrobe on the south wall, 20 cm shorter for the dresser: four ~43 cm sliding doors
     item(0.556, 5.561, "E", wardrobe(0.872, 1.04, version === "kareems-changes"));  // DWG cupboard by the bathroom door (0.87 long, its end overlaps the south wardrobe front as drawn)
     // DWG dresser 2.00 x 0.45 x 0.75, east end on the lobby wall. Facing it (local -x = east = your left): three
@@ -1401,7 +1447,7 @@ export function furnish(scene, M, mat, version = "main") {
     // right = drawer stack top to bottom. Opens with a tap / E in Walk.
     const c = new THREE.Group(), q = part(c), leaves = []; p.g.add(c);
     const F = 0.58, mid = 0.0;  // front face; split at centre
-    q.box(-0.75, 0.75, 0.1, 0.88, 0, F - 0.02, mat.walnut);  // carcass
+    q.box(-0.75, 0.75, 0.1, 0.88, 0, version === "kareems-changes" ? 0.015 : F - 0.02, mat.walnut);  // carcass (Kareem's: back only, interior visible when opened)
     q.box(-0.75, 0.75, 0.1, 0.12, 0, F, mat.walnut);  // plinth shelf
     q.box(-0.02, 0.02, 0.12, 0.88, 0, F - 0.02, mat.walnut);  // centre divider
     // Left bay: one shelf at mid-height, open behind the door.
@@ -1444,6 +1490,40 @@ export function furnish(scene, M, mat, version = "main") {
     });
   });
   item(16.95, 9.5, "S", p => p.box(-1.0, 1.0, 2.5, 2.52, 0.02, 0.22, mat.ledStrip));
+  if (version === "kareems-changes") item(18.55, 9.502, "S", p => {
+    const c = new THREE.Group(), q = part(c), leaves = []; p.g.add(c);
+    // Shallow wall-mounted box: clear monitor cavity and bottom-hinged worktop.
+    q.box(-0.42, 0.42, 0.75, 1.425, 0, 0.025, mat.limewash);
+    for (const x of [-0.42, 0.395]) q.box(x, x + 0.025, 0.75, 1.425, 0.025, 0.23, mat.limewash);
+    q.box(-0.42, 0.42, 1.4, 1.425, 0.025, 0.23, mat.limewash);
+    q.box(-0.42, 0.42, 0.725, 0.75, 0, 0.23, mat.limewash);
+    q.box(-0.39, 0.39, 0.775, 1.4, 0.025, 0.04, mat.oakVeneer);
+    q.box(-0.32, 0.32, 0.98, 1.355, 0.055, 0.095, mat.blackSteel);
+    q.box(-0.30, 0.30, 1.0, 1.335, 0.095, 0.099, mat.screen);
+    const d = new THREE.Group(); d.position.set(0, 0.75, 0.23); c.add(d);
+    part(d).box(-0.42, 0.42, 0, 0.65, 0, 0.025, mat.limewash);
+    part(d).box(-0.395, 0.395, 0.025, 0.625, -0.008, 0, mat.oakVeneer);
+    leaves.push({ obj: d, axis: "x", open: Math.PI / 2 });
+    c.userData.openable = { id: "dining-window-fold-desk", label: "Fold-down monitor desk", leaves, anchor: new THREE.Vector3(0, 1.08, 0.3), reach: 1.8, duration: 0.7 };
+  });
+  if (version === "kareems-changes") item(32.33, 6.912, "S", p => {
+    const w = 0.42, h = 0.62, back = 0.015, front = 0.23;
+    const c = new THREE.Group(), q = part(c), leaves = []; p.g.add(c);
+    q.box(-w, w, 1.05, 1.05 + h, back, front - 0.035, mat.limewash);
+    q.box(-w + 0.025, w - 0.025, 1.075, 1.075 + h - 0.05, back + 0.01, back + 0.025, mat.whiteLacquer);
+    q.box(-w + 0.025, w - 0.025, 1.075, 1.075 + h - 0.05, front - 0.06, front - 0.035, mat.limewash);
+    q.box(-w + 0.025, -w + 0.05, 1.075, 1.075 + h - 0.05, back + 0.025, front - 0.06, mat.limewash);
+    q.box(w - 0.05, w - 0.025, 1.075, 1.075 + h - 0.05, back + 0.025, front - 0.06, mat.limewash);
+    q.box(-w + 0.05, w - 0.05, 1.075, 1.09, back + 0.025, front - 0.06, mat.limewash);
+    q.box(-w + 0.05, w - 0.05, 1.075 + h - 0.065, 1.075 + h - 0.05, back + 0.025, front - 0.06, mat.limewash);
+    q.box(-0.3, 0.3, 1.3, 1.32, 0.12, 0.17, mat.blackSteel);
+    q.box(-0.285, 0.285, 1.32, 1.59, 0.12, 0.14, mat.blackGlass);
+    q.box(-w, w, 1.05, 1.075, front - 0.025, front, mat.limewash);
+    const door = new THREE.Group(); door.position.set(0, 1.05, front - 0.025); c.add(door);
+    part(door).box(-w, w, 0, 0.025, 0, 0.025, mat.limewash);
+    leaves.push({ obj: door, axis: "x", open: -105 * Math.PI / 180 });
+    c.userData.openable = { id: "dining-fold-down-desk", label: "Fold-down desk", leaves, anchor: new THREE.Vector3(0, 1.38, front + 0.06), reach: 1.8, duration: 0.6 };
+  });
   plant(20.75, 5.77, 1.7, 0.25);  // in the pier between the sofa window and the slider, between their curtain stacks
 
   // --- Terrace: decking, L bench, lounge set, BBQ counter ----------

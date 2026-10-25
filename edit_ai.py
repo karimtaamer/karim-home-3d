@@ -5,7 +5,7 @@
 
 The page (edit-ai.js) freezes the 3D or 2D view, the user circles what to change (or picks Whole view), says what
 they want and may attach reference pictures. POST /api/edit-ai/chat sends that here; an OpenAI chat model with
-vision (EDIT_AI_MODEL, default gpt-6-luna, key EDIT_AI_OPENAI_API_KEY, kept apart from Generate Photo Spot's
+vision (EDIT_AI_MODEL, default gpt-6-luna; gpt-6.1* / gpt-6-astra go through /v1/responses, key EDIT_AI_OPENAI_API_KEY, kept apart from Generate Photo Spot's
 OPENAI_API_KEY) works through tools: it greps and reads furnish.js / materials.js / the docs, edits them by exact
 search/replace, queries and edits the version's DXF (edit_ai_dxf.py), and the model and drawing are rebuilt from the
 DXF (build_geometry.py, build_drawing.py) whenever the plan changed, so the 3D and the 2D stay one.
@@ -39,6 +39,11 @@ ON_VERCEL = bool(os.environ.get("VERCEL"))
 MODEL = os.environ.get("EDIT_AI_MODEL", "gpt-6-luna")
 RATE = int(os.environ.get("EDIT_AI_RATE", "20"))
 OPENAI_URL = os.environ.get("EDIT_AI_OPENAI_URL", "https://api.openai.com/v1/chat/completions")  # a test double can stand in
+RESPONSES_URL = os.environ.get("EDIT_AI_OPENAI_RESPONSES_URL", "https://api.openai.com/v1/responses")
+# Models that only take function tools on /v1/responses (EDIT_AI_API=responses forces it for any model).
+RESPONSES_MODELS = ("gpt-6.1", "gpt-6-astra")
+# Extra models a request may pick with "model" (comma-separated, e.g. for an A/B run); empty = only MODEL.
+ALLOWED_MODELS = {m.strip() for m in os.environ.get("EDIT_AI_MODELS", "").split(",") if m.strip()} | {MODEL}
 MAX_STEPS = 16  # tool rounds per message
 MAX_IMAGE = 3_000_000  # bytes of a data URL
 MAX_REFS = 4
@@ -508,12 +513,16 @@ def plan_edits():
     return all(importlib.util.find_spec(m) for m in ("ezdxf", "shapely"))
 
 
-def openai(messages, first=False):
-    tools = [t for t in TOOLS if plan_edits() or not t["name"].startswith("dxf_")]
-    req = urllib.request.Request(OPENAI_URL, method="POST", data=json.dumps({
-        "model": MODEL, "messages": messages, **({"reasoning_effort": "none"} if MODEL.startswith(("gpt-5", "gpt-6")) else {"temperature": 0.2}), **({"tool_choice": "required"} if first else {}),
-        "tools": [{"type": "function", "function": t} for t in tools]}).encode(),
-        headers={"Authorization": f"Bearer {api_key()}", "Content-Type": "application/json"})
+def uses_responses(model):
+    return os.environ.get("EDIT_AI_API") == "responses" or model.startswith(RESPONSES_MODELS) or model in _RESPONSES_ONLY
+
+
+_RESPONSES_ONLY = set()  # models chat/completions turned away with "use /v1/responses" since this process started
+
+
+def post(url, body):
+    req = urllib.request.Request(url, method="POST", data=json.dumps(body).encode(),
+                                 headers={"Authorization": f"Bearer {api_key()}", "Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=150) as r:
             return json.loads(r.read())
@@ -526,14 +535,80 @@ def openai(messages, first=False):
         raise RuntimeError(f"OpenAI said {e.code}: {msg}")
 
 
+def openai(messages, first=False, model=None):
+    """One model turn over the chat-completions style history in `messages`; returns a chat-completions style
+    result ({"choices": [{"message": ...}], "usage": ...}) whichever API answered."""
+    model = model or MODEL
+    tools = [t for t in TOOLS if plan_edits() or not t["name"].startswith("dxf_")]
+    if not uses_responses(model):
+        try:
+            return post(OPENAI_URL, {
+                "model": model, "messages": messages,
+                **({"reasoning_effort": "none"} if model.startswith(("gpt-5", "gpt-6")) else {"temperature": 0.2}),
+                **({"tool_choice": "required"} if first else {}),
+                "tools": [{"type": "function", "function": t} for t in tools]})
+        except RuntimeError as e:
+            if "/v1/responses" not in str(e) and "reasoning_effort" not in str(e):
+                raise
+            _RESPONSES_ONLY.add(model)  # e.g. "function tools ... use /v1/responses": take the other road from now on
+    return responses(messages, tools, first, model)
+
+
+def responses(messages, tools, first, model):
+    """The same turn on POST /v1/responses. The history stays in chat-completions shape (so the loop in chat() is
+    one loop) and is translated every turn: system -> instructions, text / image_url parts -> input_text /
+    input_image, an assistant's tool_calls -> function_call items, role "tool" -> function_call_output. Stateless
+    (store false, no previous_response_id): each turn sends the whole conversation, like chat/completions."""
+    instructions, items = [], []
+    for m in messages:
+        role, content = m["role"], m.get("content")
+        if role == "system":
+            instructions.append(content)
+        elif role == "tool":
+            items.append({"type": "function_call_output", "call_id": m["tool_call_id"], "output": content or ""})
+        else:
+            if isinstance(content, list):
+                parts = []
+                for c in content:
+                    if c.get("type") == "text":
+                        parts.append({"type": "input_text" if role == "user" else "output_text", "text": c["text"]})
+                    elif c.get("type") == "image_url":
+                        parts.append({"type": "input_image", "image_url": c["image_url"]["url"],
+                                      "detail": c["image_url"].get("detail", "auto")})
+                items.append({"role": role, "content": parts})
+            elif content:
+                items.append({"role": role, "content": content})
+            for call in m.get("tool_calls") or []:
+                items.append({"type": "function_call", "call_id": call["id"], "name": call["function"]["name"],
+                              "arguments": call["function"]["arguments"] or "{}"})
+    res = post(RESPONSES_URL, {
+        "model": model, "instructions": "\n\n".join(instructions) or None, "input": items, "store": False,
+        "reasoning": {"effort": os.environ.get("EDIT_AI_REASONING", "low")},
+        **({"tool_choice": "required"} if first else {}),
+        "tools": [{"type": "function", "name": t["name"], "description": t.get("description", ""),
+                   "parameters": t["parameters"]} for t in tools]})
+    text, calls = [], []
+    for o in res.get("output") or []:
+        if o.get("type") == "message":
+            text += [c.get("text", "") for c in o.get("content") or [] if c.get("type") == "output_text"]
+        elif o.get("type") == "function_call":
+            calls.append({"id": o["call_id"], "type": "function",
+                          "function": {"name": o["name"], "arguments": o.get("arguments") or "{}"}})
+    u = res.get("usage") or {}
+    return {"choices": [{"message": {"role": "assistant", "content": "".join(text) or None, "tool_calls": calls or None}}],
+            "usage": {"prompt_tokens": u.get("input_tokens", 0), "completion_tokens": u.get("output_tokens", 0),
+                      "prompt_tokens_details": {"cached_tokens": (u.get("input_tokens_details") or {}).get("cached_tokens", 0)}}}
+
+
 def cost(usage, total):
     for k in ("prompt_tokens", "completion_tokens"):
         total[k] += usage.get(k, 0)
     total["cached"] += (usage.get("prompt_tokens_details") or {}).get("cached_tokens", 0)
 
 
-def dollars(total):
-    p = next((v for k, v in sorted(PRICES.items(), key=lambda kv: -len(kv[0])) if MODEL.startswith(k)), None)
+def dollars(total, model=None):
+    model = model or MODEL
+    p = next((v for k, v in sorted(PRICES.items(), key=lambda kv: -len(kv[0])) if model.startswith(k)), None)
     if not p:
         return None
     fresh = total["prompt_tokens"] - total["cached"]
@@ -546,6 +621,9 @@ def chat(req):
         raise ValueError(f"unknown version {v!r}")
     if not api_key():
         raise PermissionError("Edit AI isn't switched on yet: set EDIT_AI_OPENAI_API_KEY (or OPENAI_API_KEY) on the server.")
+    model = req.get("model") or MODEL
+    if model not in ALLOWED_MODELS:
+        raise ValueError(f"model {model!r} isn't allowed here")
     message = (req.get("message") or "").strip()[:4000]
     if not message:
         raise ValueError("Say what you want changed.")
@@ -571,7 +649,7 @@ def chat(req):
     total, reply, steps = {"prompt_tokens": 0, "completion_tokens": 0, "cached": 0}, "", []
     try:
         for step in range(MAX_STEPS):
-            res = openai(messages, first=step == 0)  # look before answering: no "done" without a tool call
+            res = openai(messages, first=step == 0, model=model)  # look before answering: no "done" without a tool call
             cost(res.get("usage") or {}, total)
             msg = res["choices"][0]["message"]
             messages.append({k: msg[k] for k in ("role", "content", "tool_calls") if msg.get(k) is not None})
@@ -594,10 +672,10 @@ def chat(req):
         result = save(ws, reply or message) if ws.changed else None
     finally:
         shutil.rmtree(ws.tmp, ignore_errors=True)
-    usd = dollars(total)
-    print(f"[edit-ai] {v}: {len(steps)} tool calls, {total['prompt_tokens']} in ({total['cached']} cached) / "
+    usd = dollars(total, model)
+    print(f"[edit-ai] {v} ({model}): {len(steps)} tool calls, {total['prompt_tokens']} in ({total['cached']} cached) / "
           f"{total['completion_tokens']} out tokens, ${usd}; changed {sorted(ws.changed) or 'nothing'}", flush=True)
-    return {"reply": reply or "Done.", "changed": sorted(ws.changed), "rev": result and result["rev"], "model": MODEL,
+    return {"reply": reply or "Done.", "changed": sorted(ws.changed), "rev": result and result["rev"], "model": model,
             "tokens": total, "usd": usd, "steps": len(steps), "sync": result and result.get("sync")}
 
 
@@ -792,7 +870,8 @@ class Handler(photogen.Handler):
             return super().do_GET()
         try:
             if act == "status":
-                return self.reply(200, {"ready": bool(api_key()), "model": MODEL, "planEdits": plan_edits()})
+                return self.reply(200, {"ready": bool(api_key()), "model": MODEL, "api": "responses" if uses_responses(MODEL) else "chat",
+                                        "models": sorted(ALLOWED_MODELS), "planEdits": plan_edits()})
             if act == "patches":
                 return self.reply(200, patches(q.get("version", ["main"])[0]))
         except Exception as e:

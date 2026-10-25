@@ -782,6 +782,8 @@ other neighbours stay unless the user wants them to follow, and then they move i
 a neighbour overlapping or with an odd gap (bedside tables beside a narrower bed) moves that neighbour too, both views. A wall moved in the DXF must keep \
 both faces, close its junctions exactly (snap endpoints to existing ones within 0.1 mm), and the furniture against it \
 moves with it in furnish.js.
+- \"At the foot of / beside / in front of\" a piece: line the new piece up with that piece's plan outline (centred on \
+it unless told otherwise) and set it 5-10 cm off it, not across the room.
 - Groups that belong together: a bed's bedside tables (and the pendants over them) and the rug under it move WITH \
 the bed when the bed moves, unless the user says otherwise (\"only the bed\"); say that they followed. rug(x0, y0, x1, \
 y1) gives the rug's plan extent directly: to resize a rug, resize_piece grow on its outline and add the same metres \
@@ -1142,11 +1144,12 @@ def review(ws, message, reply):
         return -1
     on_floor = lambda px, py: ring_at(px, py) >= 0
     try:
-        sill = float(json.loads(sm[sm.index("{"):sm.rindex("}") + 1]).get("sill") or 0.9)
+        mj_ = json.loads(sm[sm.index("{"):sm.rindex("}") + 1])
+        sill, win_head, ceil_h = float(mj_.get("sill") or 0.9), float(mj_.get("winHead") or 2.1), float(mj_.get("ceiling") or 2.6)
         wins = [o["outer"] for o in json.loads(sm[sm.index("{"):sm.rindex("}") + 1]).get("openings", [])
                 if o.get("kind") == "window" and o.get("outer")]
     except Exception:
-        wins, sill = [], 0.9
+        wins, sill, win_head, ceil_h = [], 0.9, 2.1, 2.6
     for i, line in new_items[:4]:  # its front has to look into a room, not out of the flat
         m = ITEM.search(line)
         x, y, f = float(m[1]), float(m[2]), m[3]
@@ -1157,13 +1160,19 @@ def review(ws, message, reply):
                     f"is outside the flat: it is on the outer face of its wall, looking out. Put its back on the wall's "
                     f"room-side face (dxf_query 1wall: the face line nearer the room, ~11-25 cm in) and face it \"{opp}\"; "
                     "for a facing flip, local x runs the other way, so mirror any x offsets inside build." + tail)
-    PANEL = re.compile(r"p\.box\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*([\w.]+)\s*,\s*-?0(?:\.0+)?\s*,\s*(0\.0[0-4]\d*)")
+    PANEL = re.compile(r"p\.box\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*([\w.]+)\s*,\s*([\w.]+)\s*,\s*-?0(?:\.0+)?\s*,\s*(0\.0[0-4]\d*)")
     for i, line in new_items[:4]:  # a paint / cladding panel stays on this room's wall and leaves the windows open
         m = ITEM.search(line)
         x, y, f = float(m[1]), float(m[2]), m[3]
         ux, uy = {"S": (1, 0), "N": (-1, 0), "E": (0, 1), "W": (0, -1)}[f]
         fx, fy = {"S": (0, -1), "N": (0, 1), "E": (1, 0), "W": (-1, 0)}[f]
-        boxes = [(float(b_[1]), float(b_[2]), b_[4]) for b_ in PANEL.finditer(line) if float(b_[2]) - float(b_[1]) > 0.3]
+        L1, blk, dep = f1.splitlines(), "", 0
+        for k in range(i - 1, min(i + 40, len(L1))):  # the item's whole call, which may span lines
+            blk += L1[k] + "\n"
+            dep += L1[k].count("(") - L1[k].count(")")
+            if dep <= 0:
+                break
+        boxes = [(float(b_[1]), float(b_[2]), b_[4], b_[3]) for b_ in PANEL.finditer(blk) if float(b_[2]) - float(b_[1]) > 0.3]
         if not boxes or not rings:
             continue
         home = ring_at(x + fx * 0.05, y + fy * 0.05)
@@ -1180,16 +1189,37 @@ def review(ws, message, reply):
         pl = lambda t: round((x if ux else y) + t * (ux + uy), 3)  # local x along the wall -> plan coordinate
         rng = lambda a_, b_: f"{min(pl(a_), pl(b_))}..{max(pl(a_), pl(b_))}"
         problems = []
-        for a_, b_, top in boxes:
+        hv = {"M.sill": sill, "M.winHead": win_head, "M.ceiling": ceil_h, "0": 0.0}
+        hnum = lambda v: hv.get(v, float(v) if re.fullmatch(r"-?[\d.]+", v) else None)
+        for a_, b_, top, z0_ in boxes:
             if a_ < w0 - 0.03 or b_ > w1 + 0.03:
                 problems.append(f"box {a_}..{b_} covers plan {ax_} {rng(a_, b_)}, past this room's face of the wall, "
                                 f"which runs plan {ax_} {rng(w0, w1)} (beyond is the next wall or room)")
             for wo in wins:  # window on this wall: close to the back line, overlapping along it
                 ds = [(px - x) * fx + (py - y) * fy for px, py in wo]
                 ts = [(px - x) * ux + (py - y) * uy for px, py in wo]
-                if min(ds) < 0.05 and max(ds) > -0.6 and min(ts) < min(b_, w1) - 0.05 and max(ts) > max(a_, w0) + 0.05 and (top == "M.ceiling" or (re.fullmatch(r"[\d.]+", top) and float(top) > sill + 0.02)):
+                if min(ds) < 0.05 and max(ds) > -0.6 and min(ts) < min(b_, w1) - 0.05 and max(ts) > max(a_, w0) + 0.05 and (hnum(top) or 9) > sill + 0.02 and (hnum(z0_) or 0) < win_head - 0.02:
                     problems.append(f"box {a_}..{b_} (plan {ax_} {rng(a_, b_)}) covers the window at plan {ax_} "
                                     f"{rng(min(ts), max(ts))}")
+        wspans = [(min(ts), max(ts)) for wo in wins
+                  for ds in [[(px - x) * fx + (py - y) * fy for px, py in wo]]
+                  for ts in [[(px - x) * ux + (py - y) * uy for px, py in wo]] if min(ds) < 0.05 and max(ds) > -0.6]
+        lo_b, hi_b = min(bx[0] for bx in boxes), max(bx[1] for bx in boxes)
+        bare = []
+        t = max(w0, lo_b) + 0.05
+        while t < min(w1, hi_b) - 0.05:  # a one-wall paint job leaves no bare bands between its ends
+            for h_ in (0.4, 1.5, ceil_h - 0.2):
+                if any(a_ <= t <= b_ for a_, b_ in wspans) and sill < h_ < win_head:
+                    continue
+                if not any(a_ - 0.01 <= t <= b_ + 0.01 and (hnum(z0) or 0) - 0.01 <= h_ <= (hnum(z1) or 9) + 0.01
+                           for a_, b_, z1, z0 in boxes):
+                    bare.append((round(t, 2), h_))
+            t += 0.05
+        if len(bare) >= 2 and not problems:
+            xs_ = [b2[0] for b2 in bare]
+            problems.append(f"it leaves the wall bare between local x {min(xs_)} and {max(xs_)} at heights "
+                            f"{sorted({round(b2[1], 2) for b2 in bare})} m (beside a window the boxes have to run full height, "
+                            "0..M.ceiling)")
         if problems:
             wl = sorted({rng(min(ts), max(ts)) for wo in wins
                          for ds in [[(px - x) * fx + (py - y) * fy for px, py in wo]]

@@ -40,8 +40,8 @@ export function furnish(scene, M, mat, version = "main") {
   const ceilingBits = new THREE.Group();  // shown only with the ceiling (downlights, grilles)
   scene.add(root, ceilingBits);
   // Make the hallway door interactive without changing its architectural opening.
-  if (version === "kareems-changes") {
-    const swing = (M.swings || []).find(s => Math.hypot(s.hinge[0] - 13.2726, s.hinge[1] - 6.8898) < 0.15);
+  if (version === "kareems-changes") for (const [dId, dLabel, dx0, dy0, dTol] of [["hallway-door", "Hallway door", 13.2726, 6.8898, 0.15], ["passage-door", "Passage door", 12.0976, 6.7958, 0.25]]) {
+    const swing = (M.swings || []).find(s => Math.hypot(s.hinge[0] - dx0, s.hinge[1] - dy0) < dTol);
     if (swing) {
       const [hx, hy] = swing.hinge;
       const leaf = scene.children.find(o => o.isMesh && o.geometry?.type === "BoxGeometry" &&
@@ -57,7 +57,7 @@ export function furnish(scene, M, mat, version = "main") {
         leaf.position.set(swing.r / 2, (M.doorHead - 0.01) / 2, 0);
         leaf.rotation.set(0, 0, 0);
         const turn = Math.atan2(Math.sin(openAngle - closed), Math.cos(openAngle - closed));
-        cabinet.userData.openable = { id: "hallway-door", label: "Hallway door", leaves: [{ obj: hinge, axis: "y", open: turn }],
+        cabinet.userData.openable = { id: dId, label: dLabel, leaves: [{ obj: hinge, axis: "y", open: turn }],
           anchor: new THREE.Vector3(swing.r * 0.75, 1.05, 0.06), reach: 2, duration: 0.6 };
       }
     }

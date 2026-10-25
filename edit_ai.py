@@ -23,7 +23,7 @@ a token there is no git sync and the edit lives in Blob only.
 
 Public: anyone may use it. Each IP gets EDIT_AI_RATE requests an hour (default 20); the key's own cap does the rest.
 """
-import base64, hashlib, json, os, re, secrets, shutil, subprocess, sys, tempfile, threading, time, urllib.error, \
+import base64, difflib, hashlib, json, os, re, secrets, shutil, subprocess, sys, tempfile, threading, time, urllib.error, \
     urllib.parse, urllib.request
 from collections import Counter, defaultdict, deque
 from http.server import ThreadingHTTPServer
@@ -252,6 +252,7 @@ class Workspace:
         if self.dxf_path:
             self.dxf_path.write_bytes(self.read(self.cfg["dxf"]))
         self.plan_dirty, self.dxf_furni, self.pieces = False, False, {}
+        self.clashes, self.new_outlines, self.moves = {}, [], []
         if hasattr(self, "model0"):
             del self.model0
 
@@ -696,6 +697,14 @@ def tool(ws, name, a):
             ws.dxf_furni = ws.dxf_furni or rep_.get("furniture_changed", False)
             for pc in rep_.get("pieces_changed", []):
                 ws.pieces.setdefault(pc["handle"], pc["old"])
+                o_, n_ = pc["old"], pc["new"]
+                ws.moves.append(((n_[0] + n_[2] - o_[0] - o_[2]) / 2, (n_[1] + n_[3] - o_[1] - o_[3]) / 2))
+            for w_ in rep_.get("windows_moved", []):
+                if "old_centre" in w_ and "new_centre" in w_:
+                    ws.moves.append((w_["new_centre"][0] - w_["old_centre"][0], w_["new_centre"][1] - w_["old_centre"][1]))
+                elif w_.get("old_opening") and w_.get("new_opening"):
+                    (a0, a1), (b0, b1) = w_["old_opening"], w_["new_opening"]
+                    ws.moves.append(((b0[0] + b1[0] - a0[0] - a1[0]) / 2, (b0[1] + b1[1] - a0[1] - a1[1]) / 2))
             for h_ in rep_.get("clashes_checked", []):
                 ws.clashes[h_] = [c_ for c_ in rep_.get("clashes", []) if c_["piece"] == h_]
         except ValueError:
@@ -771,7 +780,9 @@ wall face y 4.55). Something "on the wall facing the bed" goes on the wall oppos
 never out in the room. A new piece that stands on the floor (table, chair, cabinet) also gets its footprint drawn on \
 the plan: dxf_edit add_polyline on 2furni, closed, drawn exactly where the 3D puts it: its back edge through (x, y) \
 and its depth out in the facing direction (facing "E" with depth d: x .. x + d; "N": y .. y + d), width centred on \
-(x, y); wall-hung things (TV, art, shelves, lights) don't. Before adding or moving a piece, check with \
+(x, y); wall-hung things (TV, art, shelves, lights) don't. A wall-hung thing must not overlap what is already on that \
+wall (mirror, shelves, a dressing table's mirror, wardrobe, windows, doors): check furniture_near along the wall and \
+slide it along to the free stretch (say so). Before adding or moving a piece, check with \
 furniture_near what already stands there and don't overlap it; if the spot is taken, pick the nearest free one and say so. \
 Keep the room usable: ~70 cm clear in front of wardrobe / cabinet fronts and door swings, ~60 cm beside the bed; a \
 new chair or table never goes in front of the wardrobe doors.
@@ -783,7 +794,9 @@ a neighbour overlapping or with an odd gap (bedside tables beside a narrower bed
 both faces, close its junctions exactly (snap endpoints to existing ones within 0.1 mm), and the furniture against it \
 moves with it in furnish.js.
 - \"At the foot of / beside / in front of\" a piece: line the new piece up with that piece's plan outline (centred on \
-it unless told otherwise) and set it 5-10 cm off it, not across the room.
+it unless told otherwise) and set it 5-10 cm off it, not across the room. At the foot of a bed whose headboard faces \
+"S" (foot edge at y = F): item(bed centre x, F - 0.05, "S", ...), i.e. the new piece's back toward the bed and its \
+depth running away from it; its outline then runs y F - 0.05 - depth .. F - 0.05.
 - Groups that belong together: a bed's bedside tables (and the pendants over them) and the rug under it move WITH \
 the bed when the bed moves, unless the user says otherwise (\"only the bed\"); say that they followed. rug(x0, y0, x1, \
 y1) gives the rug's plan extent directly: to resize a rug, resize_piece grow on its outline and add the same metres \
@@ -801,6 +814,10 @@ length inside THIS room only (corner to corner of the room-side face, not into t
 room; leave window openings clear: box left of the window, box right of it, a strip under it (0..M.sill) and over it \
 (M.winHead..M.ceiling), all in local x (along the wall), material from materials.js (add a tinted \
 copy of limewash there if no colour fits). Repainting every wall of a room is the same, one panel per wall.
+- Compass words are plan axes, whatever the view: north = +y (dy > 0), south = -y, east = +x, west = -x. When \
+the user names one (\"towards the bed wall (north)\"), move that way.
+- Never move or reshape parts of a piece the user didn't name (the bed's pillow lines, a neighbour's outline) just to \
+clear an overlap; if what they asked for collides, do the closest that fits and say so.
 - \"Left\" / \"right\" / \"behind\" in a 3D view are as seen from the camera (camera position and look point below), \
 and in the 2D drawing as on screen (x east = right, y north = up). Convert to plan x / y before editing.
 - Windows: move or resize one only with dxf_edit's move_window op (it takes every line of the window and closes / opens the wall faces, so the 3D opening matches the 2D). To centre a window on a piece (e.g. "over the bed"), find the piece's main 2furni outline in dxf_query (the largest closed outline; its "centre" is given) and pass its handle as centre_on, never a hand-worked dx; the result says where the window now runs, so check its centre equals the piece's. Then move what hangs in that window in furnish.js (sheers, curtains, blinds: the edit result lists them) to the window's new centre and width, so the 3D matches.
@@ -981,7 +998,7 @@ def chat(req):
     refs = [check_image(u, f"reference {i + 1}") for i, u in enumerate((req.get("refs") or [])[:MAX_REFS])]
     ws = Workspace(v)
     ws.allow_as_built = v == "as-built"  # only ever reached from the as-built page itself
-    ws.plan_dirty, ws.dxf_furni, ws.pieces, ws.clashes, ws.new_outlines = False, False, {}, {}, []
+    ws.plan_dirty, ws.dxf_furni, ws.pieces, ws.clashes, ws.new_outlines, ws.moves = False, False, {}, {}, [], []
     sys_prompt = SYSTEM.format(showing="2D drawing" if ctx.get("showing") == "drawing" else "3D model", version=v,
                                marked="" if ctx.get("wholeView") else ", with what the user circled marked in red")
     if not plan_edits():
@@ -996,7 +1013,7 @@ def chat(req):
     content += [{"type": "image_url", "image_url": {"url": u, "detail": "low"}} for u in refs]
     messages.append({"role": "user", "content": content})
     total, reply, steps, trace = {"prompt_tokens": 0, "completion_tokens": 0, "cached": 0}, "", [], []
-    nudged = False
+    nudged = 0
     try:
         for step in range(MAX_STEPS):
             res = openai(messages, first=step == 0, model=model)  # look before answering: no "done" without a tool call
@@ -1005,9 +1022,9 @@ def chat(req):
             messages.append({k: msg[k] for k in ("role", "content", "tool_calls") if msg.get(k) is not None})
             if not msg.get("tool_calls"):
                 reply = msg.get("content") or ""
-                nudge = None if nudged or step >= MAX_STEPS - 3 else review(ws, message, reply)
-                if nudge:  # one second look before saving: 2D and 3D out of step, a lost opening, a give-up with edits left
-                    nudged = True
+                nudge = None if nudged >= 2 or step >= MAX_STEPS - 3 else review(ws, message, reply)
+                if nudge:  # up to two second looks before saving: 2D and 3D out of step, a lost opening, a give-up with edits left
+                    nudged += 1
                     trace.append({"tool": "(review)", "args": "", "out": nudge[:700]})
                     messages.append({"role": "user", "content": nudge})
                     continue
@@ -1037,6 +1054,8 @@ def chat(req):
             **({"trace": trace} if req.get("debug") else {})}
 
 
+COMPASS = {"north": re.compile(r"\bnorth(wards?)?\b|شمال", re.I), "south": re.compile(r"\bsouth(wards?)?\b|جنوب", re.I),
+           "east": re.compile(r"\beast(wards?)?\b|شرق", re.I), "west": re.compile(r"\bwest(wards?)?\b|غرب", re.I)}
 NUMBER = re.compile(r"(?<![\w.])-?\d+(?:\.\d+)?(?![\w.])")
 GAVE_UP = re.compile(r"\b(couldn'?t|could not|can'?t|cannot|unable|wasn'?t able|not possible|left (it |them |everything )?(as it was|unchanged)|"
                      r"(made|changed) nothing|no changes?( were)? made|didn'?t change)\b", re.I)
@@ -1062,6 +1081,32 @@ def review(ws, message, reply):
     tail = " Then reply to the user as you normally would, about the change itself (don't mention this check)."
     f0 = ws.orig["furnish.js"].decode() if "furnish.js" in ws.orig else ws.text("furnish.js")
     f1 = ws.text("furnish.js")
+    # A compass direction the user named, and every move went the other way.
+    named = {d for d, rx in COMPASS.items() if rx.search(message)}
+    if len(named) == 1 and ws.moves:
+        d = named.pop()
+        ax, sg = {"north": (1, 1), "south": (1, -1), "east": (0, 1), "west": (0, -1)}[d]
+        along = [m_[ax] for m_ in ws.moves if abs(m_[ax]) > 0.02]
+        if along and all(v_ * sg < 0 for v_ in along):
+            return (f"Check the direction: the user said {d}, which is plan {'+' if sg > 0 else '-'}{'y' if ax else 'x'} "
+                    f"(north = +y, south = -y, east = +x, west = -x), but what you moved went the opposite way "
+                    f"({', '.join(f'{v_:+.2f} m' for v_ in along[:3])} in {'y' if ax else 'x'}). Undo that (call discard) and "
+                    "redo it in the direction the user named, in both views." + tail)
+    # furnish.js edits that only touch lines which never run for this version.
+    if f0 != f1:
+        sc0, sc1 = version_scope(f0, ws.v), version_scope(f1, ws.v)
+        L0, L1_ = f0.splitlines(), f1.splitlines()
+        touched = []
+        for tag_, i0, i1, j0, j1 in difflib.SequenceMatcher(None, L0, L1_, autojunk=False).get_opcodes():
+            if tag_ == "equal":
+                continue
+            touched += [sc1[j] for j in range(j0, j1) if L1_[j].strip()] + [sc0[i] for i in range(i0, i1) if L0[i].strip() and tag_ == "delete"]
+        if touched and all(t_ is False for t_ in touched):
+            return (f"Check the version: every line you changed in furnish.js sits in a branch that doesn't run for version "
+                    f"\"{ws.v}\" (another version's `if (version === ...)` block), so nothing changes in what the user sees. "
+                    f"Find the line that builds this piece for \"{ws.v}\" (furniture_near lists only the ones that run here; "
+                    "pieces shared by several versions sit after the per-version blocks), put the change there instead "
+                    "(split it with a version check if the line serves other versions) and revert the edit you made." + tail)
     now = set(f1.splitlines())
     # A plan piece moved / resized: the 3D line(s) standing on it must have changed too.
     for h, b in ws.pieces.items():
@@ -1110,6 +1155,39 @@ def review(ws, message, reply):
         return ("Check 2D vs 3D: you moved or resized furniture in furnish.js but nothing on the plan (2furni). If the "
                 "piece is drawn on the plan (furniture_near lists the outlines there), give its outline exactly the same "
                 "change now with dxf_edit move_piece / resize_piece; things not drawn on the plan need nothing." + tail)
+    # A resized / moved plan piece: a new or changed item line standing on it sits at the middle of its back.
+    if ws.pieces:
+        cur_ = ws.tmp / "plan-pieces.dxf"
+        cur_.write_bytes(ws.read(ws.cfg["dxf"]))
+        old_lines = set(f0.splitlines())
+        for h, b0 in list(ws.pieces.items())[:4]:
+            code, q = run([dwg_python(), str(ROOT / "edit_ai_dxf.py"), "query", str(cur_), f"--origin={ORIGIN[0]},{ORIGIN[1]}",
+                           f"--bbox={b0[0] - 1},{b0[1] - 1},{b0[2] + 1},{b0[3] + 1}", "--layers=2furni,2 furni", "--limit", "400"],
+                          timeout=90)
+            try:
+                ent = next((d for d in json.loads(q).get("entities", []) if d["handle"] == h), None)
+            except ValueError:
+                ent = None
+            ps = (ent or {}).get("points") or []
+            if len(ps) < 4:
+                continue
+            xs, ys = [p_[0] for p_ in ps], [p_[1] for p_ in ps]
+            b = (min(xs), min(ys), max(xs), max(ys))
+            if (b[2] - b[0]) * (b[3] - b[1]) < 0.04:
+                continue
+            for i, px, py, line in placed_lines(ws, f1):
+                im = ITEM.search(line)
+                if not im or line in old_lines or not (b[0] - 0.05 <= px <= b[2] + 0.05 and b[1] - 0.05 <= py <= b[3] + 0.05):
+                    continue
+                f = im[3]
+                edge = {"E": b[0], "W": b[2], "N": b[1], "S": b[3]}[f]
+                at, pos, mid, ax2 = (px, py, (b[1] + b[3]) / 2, "y") if f in "EW" else (py, px, (b[0] + b[2]) / 2, "x")
+                if abs(at - edge) <= 0.05 and abs(pos - mid) > 0.03:
+                    return (f"Check 2D vs 3D: plan piece {h} now runs x {round(b[0], 3)}..{round(b[2], 3)}, y {round(b[1], 3)}.."
+                            f"{round(b[3], 3)} (middle of its back at {ax2} {round(mid, 3)}), but furnish.js line {i} "
+                            f"({line.strip()[:120]}) puts the 3D piece's back-centre at {ax2} {pos}. item()'s x, y is the middle "
+                            f"of the back, so a piece resized on one side moves its centre by half the change: set it to "
+                            f"{round(mid, 3)} (or change the outline to match)." + tail)
     # A plan piece that now runs into a wall or another piece.
     hits = [c for cs in ws.clashes.values() for c in cs]
     if any(not c.get("free") for c in hits):
@@ -1175,6 +1253,9 @@ def review(ws, message, reply):
         boxes = [(float(b_[1]), float(b_[2]), b_[4], b_[3]) for b_ in PANEL.finditer(blk) if float(b_[2]) - float(b_[1]) > 0.3]
         if not boxes or not rings:
             continue
+        full = lambda bx: bx[3] in ("0", "0.0") and (bx[2] == "M.ceiling" or (re.fullmatch(r"[\d.]+", bx[2]) and float(bx[2]) >= ceil_h - 0.1))
+        if not any(full(bx) for bx in boxes):
+            continue  # no floor-to-ceiling box: a TV, shelf or headboard on the wall, not a paint / cladding panel
         home = ring_at(x + fx * 0.05, y + fy * 0.05)
         if home < 0:
             continue
@@ -1242,6 +1323,13 @@ def review(ws, message, reply):
                 continue
             edge = {"E": b[0], "W": b[2], "N": b[1], "S": b[3]}[f]
             at = x if f in "EW" else y
+            mid, pos = ((b[1] + b[3]) / 2, y) if f in "EW" else ((b[0] + b[2]) / 2, x)
+            if abs(at - edge) <= 0.05 and abs(mid - pos) > 0.04:
+                ax2 = "y" if f in "EW" else "x"
+                return (f"Check 2D vs 3D: furnish.js line {i} ({line.strip()[:120]}) centres the piece at {ax2} {pos}, but its "
+                        f"new plan outline is centred at {ax2} {round(mid, 3)} (runs {ax2} {round(b[1] if f in 'EW' else b[0], 3)}.."
+                        f"{round(b[3] if f in 'EW' else b[2], 3)}). item()'s x, y is the middle of the back: make them the "
+                        "same piece (move the item or the outline)." + tail)
             if abs(at - edge) > 0.05:
                 d = b[2] - b[0] if f in "EW" else b[3] - b[1]
                 want = {"E": f"x {x}..{round(x + d, 3)}", "W": f"x {round(x - d, 3)}..{x}",

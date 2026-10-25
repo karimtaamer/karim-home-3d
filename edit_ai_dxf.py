@@ -619,10 +619,19 @@ def edit(a):
                     for ii, lim, bad in ((i0, lo, lambda v, L: v < L - 0.005), (i1, hi, lambda v, L: v > L + 0.005)):
                         if lim is not None and bad(nb[ii], lim):
                             side = ("W", "S", "E", "N")[ii]
-                            want, got = abs(nb[ii] - b[ii]), max(0.0, abs(lim - b[ii]))
-                            nb[ii] = lim if abs(lim - b[ii]) > 0 and (lim - b[ii]) * (nb[ii] - b[ii]) > 0 else b[ii]
-                            fits.append(f"the {side} edge could only grow {round(got * 100)} cm (asked {round(want * 100)}): "
-                                        f"it stops at the wall / piece at {axis} {r(lim - (ox if ai == 0 else oy))}")
+                            want = abs(nb[ii] - b[ii])
+                            nb[ii] = lim if (lim - b[ii]) * (nb[ii] - b[ii]) > 0 else b[ii]
+                            got = abs(nb[ii] - b[ii])
+                            jj = i1 if ii == i0 else i0  # the opposite edge: room left there for the shortfall
+                            lim2 = hi if ii == i0 else lo
+                            room = (abs(lim2 - nb[jj]) if lim2 is not None else 9.0)
+                            msg_ = (f"the {side} edge could only grow {round(got * 100)} cm (asked {round(want * 100)}): "
+                                    f"it stops at the wall / piece at {axis} {r(lim - (ox if ai == 0 else oy))}")
+                            if room > 0.01:
+                                msg_ += (f"; the {('W', 'S', 'E', 'N')[jj]} side still has {round(min(room, 9) * 100)} cm free, so if the "
+                                         f"user asked for a total size (\"60 cm wide\") grow that side by the {round((want - got) * 100)} cm "
+                                         "shortfall too (x_size / y_size does this for you), but not for an even border like a rug's")
+                            fits.append(msg_)
                     continue
                 if lo is not None and nb[i0] < lo - 0.005:
                     d_ = lo - nb[i0]; nb[i0] += d_; nb[i1] += d_

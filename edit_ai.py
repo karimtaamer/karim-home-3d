@@ -583,7 +583,7 @@ TOOLS = [
                                        "resize_piece {handle, grow? {N?, S?, E?, W?: metres to push that edge out, negative pulls it in; sides left out stay put}, "
                                        "or x_size?, y_size? (new plan extents in m) with anchor? ('N' keeps the north edge, 'SW' a corner; default centre)}: "
                                        "resizes a piece and its details; use it whenever a piece changes size. Prefer grow: \"20 cm bigger all round\" = "
-                                       "grow {N:0.2,S:0.2,E:0.2,W:0.2}; \"10 cm wider\" on a piece facing N/S = grow {E:0.05,W:0.05}; no arithmetic. "
+                                       "grow {N:0.2,S:0.2,E:0.2,W:0.2}; \"10 cm wider\" on a piece facing N/S = grow {E:0.05,W:0.05}; no arithmetic. For a target size (\"make it 60 cm wide\") use x_size / y_size instead: it lands inside the piece's free span by itself. "
                                        "Growing keeps a piece inside its free span (walls, the pieces beside it): if its log line says ONLY .. FITS, NO ROOM, "
                                        "could only grow or slid, that is what was done on the plan: make furnish.js match the outline (size and centre; "
                                        "pieces drawn in one loop can each get their own size) and tell the user the size it really got and why. "

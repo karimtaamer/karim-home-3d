@@ -463,7 +463,7 @@ that view replaces the model.
   - To make one permanent in git, copy its entry into `spots*.json` and its image into `renders/`.
 - **Vercel env vars:**
   - `OPENAI_API_KEY`
-  - `EDIT_AI_OPENAI_API_KEY` (Edit AI, § 8)
+  - `ANTHROPIC_API_KEY` (Edit AI on Claude, § 8), `EDIT_AI_OPENAI_API_KEY` (Edit AI OpenAI fallback, § 8)
   - `BLOB_READ_WRITE_TOKEN`
   - optional `PHOTOSPOT_PASSWORD`: if set, the page asks for it once before generate, approve, edit or delete.
     Currently unset, so anyone with the link can delete generated renders: set it.
@@ -480,7 +480,11 @@ tap it, the view freezes, circle what to change (or pick **Whole view**), then s
 
 - **Files:** `edit-ai.js` (button, freeze + highlight, chat, live loading), `edit_ai.py` (the agent and its tools, `/api/edit-ai/*`),
   `edit_ai_dxf.py` (DXF query/edit CLI), `api/edit-ai.py` (Vercel entry). `index.html` only calls `liveFiles` / `liveImport` / `createEditAI`.
-- **Model:** `gpt-6-luna` with vision (override with `EDIT_AI_MODEL`). It greps and reads the repo, edits `furnish.js`,
+- **Model:** routed per message before any model call (`is_complex_edit`): plain colour / height / small-move / rename edits
+  go to **Claude Haiku 5.5** (`claude-haiku-5-5`, `EDIT_AI_EASY_MODEL`); new pieces, openables / fold-downs, between-landmarks,
+  plan / wall, reference-picture and multi-part edits go to **Claude Sonnet 5.5** (`claude-sonnet-5-5`, `EDIT_AI_COMPLEX_MODEL`),
+  on Anthropic's Messages API with prompt caching. Without an Anthropic key the same routes run on OpenAI `gpt-6-luna` /
+  `gpt-6.1-sol`. Each reply reports its model and cost (Anthropic list prices, Oct 2026). It greps and reads the repo, edits `furnish.js`,
   `materials.js` and the version's tour, and (where `dwg/` and the build scripts exist, i.e. locally) moves walls in the plan DXF and
   rebuilds the model and drawing. It never edits the As-built plan unless you are on the As-built page. No image generation.
 - **Hot path:** every change is saved as a revision in Blob (`edit-ai-live/<version>/rev-*.json`, files content-addressed in
@@ -497,7 +501,8 @@ tap it, the view freezes, circle what to change (or pick **Whole view**), then s
   Vercel: GitHub API, only if `EDIT_AI_GITHUB_TOKEN` is set, else the change lives in Blob only).
 - **Safety:** per-IP rate limit (`EDIT_AI_RATE`, default 20 requests/hour), images capped (~2 MB screenshot, 4 refs re-encoded
   in the browser to 1024 px, which strips EXIF), JS is syntax-checked (locally) and test-imported in the browser; a broken edit is undone.
-- **Env vars:** `EDIT_AI_OPENAI_API_KEY` (required, separate from photogen's `OPENAI_API_KEY`), optional `EDIT_AI_MODEL`, `EDIT_AI_RATE`,
+- **Env vars:** `ANTHROPIC_API_KEY` (or `EDIT_AI_ANTHROPIC_API_KEY`; Claude), `EDIT_AI_OPENAI_API_KEY` (OpenAI fallback,
+  separate from photogen's `OPENAI_API_KEY`), optional `EDIT_AI_MODEL`, `EDIT_AI_RATE`,
   `EDIT_AI_GIT_SYNC=0` (off), `EDIT_AI_GITHUB_TOKEN` / `EDIT_AI_GITHUB_REPO` / `EDIT_AI_GITHUB_BRANCH`, `EDIT_AI_DWG_PYTHON`
   (python with ezdxf for DXF edits). Without the key the button still shows and explains that Edit AI isn't switched on.
 - **Run locally:** `python3 edit_ai.py [port]` serves the site with both APIs (reads `.env`).

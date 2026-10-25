@@ -1,6 +1,6 @@
 // Edit AI: change the flat from the viewer, in words. A floating button, Make an Edit (3D and 2D, not Renders), freezes the view;
 // you circle what to change (or pick Whole view), say what you want and may attach reference pictures. edit_ai.py
-// (api/edit-ai.py on Vercel) has an OpenAI model edit furnish.js / materials.js / the version's DXF, rebuilds the
+// (api/edit-ai.py on Vercel) has a Claude model (Haiku 5.5 easy / Sonnet 5.5 complex) edit furnish.js / materials.js / the version's DXF, rebuilds the
 // model and drawing from the DXF, and stores the result as live overrides of the deployed files; the page then
 // reloads on the same view with them (liveFiles / liveImport below load them), while git catches up behind.
 
@@ -10,6 +10,14 @@ const API = "api/edit-ai";
 const MAX_SIDE = 1280, REF_SIDE = 1024, MAX_REFS = 4;
 const INK = "#e5322d";
 const store = sessionStorage;
+
+// "claude-haiku-5-5" -> "Claude Haiku 5.5"; anything else (an OpenAI stand-in) as it is.
+function modelName(m) {
+  const c = /^claude-([a-z]+)-(\d+)-(\d+)/.exec(m || "");
+  return c ? `Claude ${c[1][0].toUpperCase() + c[1].slice(1)} ${c[2]}.${c[3]}` : (m || "");
+}
+function usd(v) { return `Cost: $${v.toFixed(v < 0.01 ? 4 : v < 1 ? 3 : 2)}`; }
+
 
 // --- Live overrides: the files Edit AI changed for this version, loaded instead of the deployed ones -----------------
 export async function liveFiles(version) {
@@ -293,7 +301,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
   const $ = s => box.querySelector(s);
   const freezeImg = $(".freeze"), ink = $(".ink"), ctx = ink.getContext("2d"), msgs = $(".msgs"), area = $("textarea"), thumbs = $(".thumbs");
   const fileInput = $("input[type=file]");
-  $(".chat .meta").textContent = live.model ? `· ${live.model}` : "";
+  $(".chat .meta").textContent = live.model ? `· ${modelName(live.model)}` : "";
 
   let freeze = null;  // { url, w, h, plan: drawing frame or null }
   let strokes = [], whole = false, refs = [], busy = false;
@@ -378,7 +386,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     box.classList.add("chatting");
     $(".chat").hidden = false;
     if (!msgs.children.length) for (const h of history.slice(-6)) say(h.role === "user" ? "me" : "bot", h.text);
-    if (!live.ready) say("err", "Edit AI isn't switched on yet: the server has no EDIT_AI_OPENAI_API_KEY. You can still try; it will say the same.");
+    if (!live.ready) say("err", "Edit AI isn't switched on yet: the server has no ANTHROPIC_API_KEY (or EDIT_AI_OPENAI_API_KEY). You can still try; it will say the same.");
     say("bot", greeting);
     focusArea();
   }
@@ -568,7 +576,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
       history = history.slice(-12);
       store.setItem(histKey, JSON.stringify(history));
       say("bot", res.reply);
-      const cost = res.usd != null ? ` · ${egp(res.usd)}` : "";
+      const cost = res.usd != null ? ` · ${modelName(res.model)} · ${usd(res.usd)} (${egp(res.usd).replace("Cost: ", "")})` : "";
       if (!res.changed?.length) { say("note", `No change made${cost}`); return; }
       say("note", `Applying the change${cost}…`);
       phase("Loading your edit", true);

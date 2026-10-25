@@ -5,8 +5,9 @@
 
 The page (edit-ai.js) freezes the 3D or 2D view, the user circles what to change (or picks Whole view), says what
 they want and may attach reference pictures. POST /api/edit-ai/chat sends that here; an OpenAI chat model with
-vision (EDIT_AI_MODEL, default gpt-6-luna; gpt-6.1* / gpt-6-astra go through /v1/responses, key EDIT_AI_OPENAI_API_KEY, kept apart from Generate Photo Spot's
-OPENAI_API_KEY) works through tools: it greps and reads furnish.js / materials.js / the docs, edits them by exact
+vision works through tools (routed per message: easy -> Claude Haiku 5.5, complex -> Claude Sonnet 5.5 on the Anthropic
+Messages API, key EDIT_AI_ANTHROPIC_API_KEY or ANTHROPIC_API_KEY; without that key the same routes fall back to OpenAI
+gpt-6-luna / gpt-6.1-sol with EDIT_AI_OPENAI_API_KEY, kept apart from Generate Photo Spot's OPENAI_API_KEY): it greps and reads furnish.js / materials.js / the docs, edits them by exact
 search/replace, queries and edits the version's DXF (edit_ai_dxf.py), and the model and drawing are rebuilt from the
 DXF (build_geometry.py, build_drawing.py) whenever the plan changed, so the 3D and the 2D stay one.
 
@@ -36,22 +37,31 @@ ROOT = Path(__file__).resolve().parent
 LIVE = "edit-ai-live"  # the store's prefix, and the folder here
 BLOB = bool(photogen_blob.token())
 ON_VERCEL = bool(os.environ.get("VERCEL"))
-MODEL = os.environ.get("EDIT_AI_MODEL", "gpt-6-luna")
+MODEL = os.environ.get("EDIT_AI_MODEL", "claude-haiku-5-5")
 RATE = int(os.environ.get("EDIT_AI_RATE", "20"))
 OPENAI_URL = os.environ.get("EDIT_AI_OPENAI_URL", "https://api.openai.com/v1/chat/completions")  # a test double can stand in
 RESPONSES_URL = os.environ.get("EDIT_AI_OPENAI_RESPONSES_URL", "https://api.openai.com/v1/responses")
+ANTHROPIC_URL = os.environ.get("EDIT_AI_ANTHROPIC_URL", "https://api.anthropic.com/v1/messages")
 # Models that only take function tools on /v1/responses (EDIT_AI_API=responses forces it for any model).
 RESPONSES_MODELS = ("gpt-6.1", "gpt-6-astra")
 # Auto-routing (pick_model): easy edits stay on the cheap model, complex ones go to the strong one.
-EASY_MODEL = "gpt-6-luna"
-COMPLEX_MODEL = os.environ.get("EDIT_AI_COMPLEX_MODEL", "gpt-6.1-sol")
+# Claude (Anthropic API ids, platform.claude.com/docs/en/models/overview, Oct 2026): Haiku 5.5 takes Luna's role,
+# Sonnet 5.5 takes Sol's. Without an Anthropic key the same route goes to its OpenAI stand-in (OPENAI_FALLBACK).
+EASY_MODEL = os.environ.get("EDIT_AI_EASY_MODEL", "claude-haiku-5-5")
+COMPLEX_MODEL = os.environ.get("EDIT_AI_COMPLEX_MODEL", "claude-sonnet-5-5")
+OPENAI_FALLBACK = {"easy": "gpt-6-luna", "complex": "gpt-6.1-sol"}
 # Extra models a request may pick with "model" (comma-separated, e.g. for an A/B run); MODEL and both routes always allowed.
-ALLOWED_MODELS = {m.strip() for m in os.environ.get("EDIT_AI_MODELS", "").split(",") if m.strip()} | {MODEL, EASY_MODEL, COMPLEX_MODEL}
+ALLOWED_MODELS = {m.strip() for m in os.environ.get("EDIT_AI_MODELS", "").split(",") if m.strip()} | {MODEL, EASY_MODEL, COMPLEX_MODEL, *OPENAI_FALLBACK.values()}
 MAX_STEPS = 36  # tool rounds per message (was 20; hard openable/plan builds were dying early)
 MAX_IMAGE = 3_000_000  # bytes of a data URL
 MAX_REFS = 4
-# USD per million tokens (input, cached input, output), OpenAI list prices; only to tell the user what a message cost.
-PRICES = {"gpt-6.1-sol": (2.0, 0.1, 10.0), "gpt-6-luna": (0.1, 0.01, 0.5), "gpt-6-sol": (2.0, 0.2, 10.0), "gpt-5.6-sol": (4.0, 0.4, 20.0), "gpt-4.1": (2.0, 0.5, 8.0), "gpt-4.1-mini": (0.4, 0.1, 1.6), "gpt-4.1-nano": (0.1, 0.025, 0.4),
+# USD per million tokens (input, cached input, output[, cache write]); only to tell the user what a message cost.
+# Claude: Anthropic list prices (platform.claude.com/docs/en/about-claude/pricing, rate card effective 2026-10-07);
+# Haiku 5.5 doubles up above 100K prompt tokens per call (PRICES_LONG). OpenAI: OpenAI list prices.
+PRICES_LONG = {"claude-haiku-5-5": (100_000, (0.50, 0.05, 2.50, 0.625))}
+PRICES = {"claude-haiku-5-5": (0.10, 0.01, 0.50, 0.125), "claude-sonnet-5-5": (2.0, 0.10, 10.0, 2.50),
+          "claude-opus-5-5": (4.0, 0.20, 20.0, 5.0), "claude-haiku-4-5": (1.0, 0.10, 5.0, 1.25), "claude-sonnet-4-5": (3.0, 0.30, 15.0, 3.75),
+          "gpt-6.1-sol": (2.0, 0.1, 10.0), "gpt-6-luna": (0.1, 0.01, 0.5), "gpt-6-sol": (2.0, 0.2, 10.0), "gpt-5.6-sol": (4.0, 0.4, 20.0), "gpt-4.1": (2.0, 0.5, 8.0), "gpt-4.1-mini": (0.4, 0.1, 1.6), "gpt-4.1-nano": (0.1, 0.025, 0.4),
           "gpt-4o": (2.5, 1.25, 10.0), "gpt-4o-mini": (0.15, 0.075, 0.6)}
 ORIGIN = (190.4049651574427, -121.6132067325871)  # DWG -> plan, the same for every version (model*.js "origin")
 
@@ -85,6 +95,42 @@ def editable(v):
 def readable(v):
     c = VERSIONS[v]
     return editable(v) + DOCS + ["index.html", "drawing.js", "check_furnish.py", "tour.json"] + [c["tour"]]
+
+
+def _key(*names):
+    """The first usable value of these env names (env first, then .env here); ignores the connector placeholder."""
+    def _ok(v):
+        v = (v or "").strip().strip('"\'')
+        return v if v and v != "[REDACTED]" and len(v) > 20 else None
+    env = ROOT / ".env"
+    lines = env.read_text().splitlines() if env.exists() else []
+    for n in names:
+        if k := _ok(os.environ.get(n)):
+            return k
+        for line in lines:
+            name, _, val = line.partition("=")
+            if name.strip() == n and (k := _ok(val)):
+                return k
+    return None
+
+
+def anthropic_key():
+    return _key("EDIT_AI_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY", "CLAUDE_API_KEY")
+
+
+def is_claude(model):
+    return (model or "").startswith("claude")
+
+
+def ready():
+    return bool(anthropic_key() or api_key())
+
+
+def live_model(model):
+    """The model a message really runs on: a Claude pick falls back to its OpenAI stand-in without an Anthropic key."""
+    if is_claude(model) and not anthropic_key():
+        return OPENAI_FALLBACK["complex" if model == COMPLEX_MODEL or "sonnet" in model or "opus" in model else "easy"]
+    return model
 
 
 def api_key():
@@ -248,7 +294,7 @@ def patches(v):
         elif status == "conflict":
             conflicts.append(path)
     return {"version": v, "rev": man and man["rev"], "summary": man and man.get("summary"), "files": files,
-            "conflicts": conflicts, "ready": bool(api_key()), "model": MODEL, "undo": bool(man and man.get("changed"))}
+            "conflicts": conflicts, "ready": ready(), "model": live_model(MODEL), "undo": bool(man and man.get("changed"))}
 
 
 # --- One message: the workspace the model edits ---------------------------------------------------------------------
@@ -1212,9 +1258,9 @@ def uses_responses(model):
 _RESPONSES_ONLY = set()  # models chat/completions turned away with "use /v1/responses" since this process started
 
 
-def post(url, body):
+def post(url, body, headers=None, who="OpenAI"):
     req = urllib.request.Request(url, method="POST", data=json.dumps(body).encode(),
-                                 headers={"Authorization": f"Bearer {api_key()}", "Content-Type": "application/json"})
+                                 headers=headers or {"Authorization": f"Bearer {api_key()}", "Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=150) as r:
             return json.loads(r.read())
@@ -1224,7 +1270,7 @@ def post(url, body):
             msg = json.loads(body)["error"]["message"]
         except Exception:
             msg = body[:300]
-        raise RuntimeError(f"OpenAI said {e.code}: {msg}")
+        raise RuntimeError(f"{who} said {e.code}: {msg}")
 
 
 def openai(messages, first=False, model=None):
@@ -1232,6 +1278,8 @@ def openai(messages, first=False, model=None):
     result ({"choices": [{"message": ...}], "usage": ...}) whichever API answered."""
     model = model or MODEL
     tools = [t for t in TOOLS if plan_edits() or not t["name"].startswith("dxf_")]
+    if is_claude(model):
+        return anthropic(messages, tools, first, model)
     if not uses_responses(model):
         try:
             return post(OPENAI_URL, {
@@ -1292,19 +1340,109 @@ def responses(messages, tools, first, model):
                       "prompt_tokens_details": {"cached_tokens": (u.get("input_tokens_details") or {}).get("cached_tokens", 0)}}}
 
 
-def cost(usage, total):
-    for k in ("prompt_tokens", "completion_tokens"):
-        total[k] += usage.get(k, 0)
-    total["cached"] += (usage.get("prompt_tokens_details") or {}).get("cached_tokens", 0)
+def _media(url):
+    """A chat-style image URL as a Claude image source (data URLs inline as base64)."""
+    if url.startswith("data:"):
+        head, _, data = url.partition(",")
+        return {"type": "base64", "media_type": head[5:].split(";")[0] or "image/png", "data": data}
+    return {"type": "url", "url": url}
+
+
+def anthropic(messages, tools, first, model):
+    """The same turn on Anthropic's Messages API. The history stays in chat-completions shape (one loop in chat())
+    and is translated every turn: system -> system, image_url -> image blocks, an assistant's tool_calls ->
+    tool_use blocks, role "tool" -> tool_result blocks in a user turn (consecutive same-role turns are merged, as
+    Claude wants strict user/assistant alternation). Prompt caching: one breakpoint after the system prompt (covers
+    the tools too) and one on the newest block, so each tool round re-reads the conversation so far at cache price."""
+    system, out = [], []
+    def add(role, blocks):
+        if out and out[-1]["role"] == role:
+            out[-1]["content"] += blocks
+        else:
+            out.append({"role": role, "content": blocks})
+    for m in messages:
+        role, content = m["role"], m.get("content")
+        if role == "system":
+            system.append(content)
+            continue
+        if role == "tool":
+            add("user", [{"type": "tool_result", "tool_use_id": m["tool_call_id"], "content": content or "(empty)"}])
+            continue
+        blocks = []
+        if isinstance(content, list):
+            for c in content:
+                if c.get("type") == "text":
+                    blocks.append({"type": "text", "text": c["text"]})
+                elif c.get("type") == "image_url":
+                    blocks.append({"type": "image", "source": _media(c["image_url"]["url"])})
+        elif content:
+            blocks.append({"type": "text", "text": content})
+        for call in m.get("tool_calls") or []:
+            try:
+                args = json.loads(call["function"]["arguments"] or "{}")
+            except ValueError:
+                args = {}
+            blocks.append({"type": "tool_use", "id": call["id"], "name": call["function"]["name"], "input": args})
+        if blocks:
+            add(role, blocks)
+    if out and out[0]["role"] != "user":
+        out.insert(0, {"role": "user", "content": [{"type": "text", "text": "(conversation so far)"}]})
+    if out:
+        last = out[-1]["content"][-1]
+        out[-1]["content"][-1] = {**last, "cache_control": {"type": "ephemeral"}}
+    body = {"model": model, "max_tokens": int(os.environ.get("EDIT_AI_MAX_TOKENS", "8192")), "messages": out,
+            "system": [{"type": "text", "text": "\n\n".join(system), "cache_control": {"type": "ephemeral"}}] if system else [],
+            "tools": [{"name": t["name"], "description": t.get("description", ""), "input_schema": t["parameters"]} for t in tools],
+            **({"tool_choice": {"type": "any"}} if first else {})}
+    headers = {"x-api-key": anthropic_key() or "", "anthropic-version": "2023-06-01", "content-type": "application/json"}
+    try:
+        res = post(ANTHROPIC_URL, body, headers, "Claude")
+    except RuntimeError as e:
+        if not first or "tool_choice" not in str(e):
+            raise
+        body.pop("tool_choice")  # e.g. thinking on by default: forced tool use isn't allowed, let it choose
+        res = post(ANTHROPIC_URL, body, headers, "Claude")
+    text, calls = [], []
+    for b in res.get("content") or []:
+        if b.get("type") == "text":
+            text.append(b.get("text", ""))
+        elif b.get("type") == "tool_use":
+            calls.append({"id": b["id"], "type": "function",
+                          "function": {"name": b["name"], "arguments": json.dumps(b.get("input") or {})}})
+    u = res.get("usage") or {}
+    read, write = u.get("cache_read_input_tokens") or 0, u.get("cache_creation_input_tokens") or 0
+    return {"choices": [{"message": {"role": "assistant", "content": "".join(text) or None, "tool_calls": calls or None}}],
+            "usage": {"prompt_tokens": (u.get("input_tokens") or 0) + read + write, "completion_tokens": u.get("output_tokens") or 0,
+                      "prompt_tokens_details": {"cached_tokens": read, "cache_write_tokens": write}}}
+
+
+def _price(model, prompt_tokens):
+    long_ = next((v for k, v in PRICES_LONG.items() if model.startswith(k)), None)
+    if long_ and prompt_tokens > long_[0]:
+        return long_[1]
+    return next((v for k, v in sorted(PRICES.items(), key=lambda kv: -len(kv[0])) if model.startswith(k)), None)
+
+
+def cost(usage, total, model=None):
+    """Add one call's tokens to the message total, and its dollars (priced per call: Haiku's long-prompt tier)."""
+    d = usage.get("prompt_tokens_details") or {}
+    one = {"prompt_tokens": usage.get("prompt_tokens", 0), "completion_tokens": usage.get("completion_tokens", 0),
+           "cached": d.get("cached_tokens", 0) or 0, "cache_write": d.get("cache_write_tokens", 0) or 0}
+    for k, v in one.items():
+        total[k] = total.get(k, 0) + v
+    p = _price(model or MODEL, one["prompt_tokens"])
+    if p is None:
+        total["unpriced"] = True
+    else:
+        fresh = one["prompt_tokens"] - one["cached"] - one["cache_write"]
+        total["usd"] = total.get("usd", 0.0) + (fresh * p[0] + one["cached"] * p[1] + one["completion_tokens"] * p[2]
+                                                + one["cache_write"] * (p[3] if len(p) > 3 else p[0])) / 1e6
 
 
 def dollars(total, model=None):
-    model = model or MODEL
-    p = next((v for k, v in sorted(PRICES.items(), key=lambda kv: -len(kv[0])) if model.startswith(k)), None)
-    if not p:
-        return None
-    fresh = total["prompt_tokens"] - total["cached"]
-    return round((fresh * p[0] + total["cached"] * p[1] + total["completion_tokens"] * p[2]) / 1e6, 4)
+    if total.get("unpriced") or "usd" not in total:
+        return None if total.get("unpriced") or total.get("prompt_tokens") else 0.0
+    return round(total["usd"], 4)
 
 
 # Why route at all: Luna "finished" a fold-down desk between the window and the coffee unit by parking it at the
@@ -1352,8 +1490,8 @@ def chat(req):
     v = req.get("version") or "main"
     if v not in VERSIONS:
         raise ValueError(f"unknown version {v!r}")
-    if not api_key():
-        raise PermissionError("Edit AI isn't switched on yet: set EDIT_AI_OPENAI_API_KEY (or OPENAI_API_KEY) on the server.")
+    if not ready():
+        raise PermissionError("Edit AI isn't switched on yet: set ANTHROPIC_API_KEY (or EDIT_AI_OPENAI_API_KEY) on the server.")
     model = req.get("model")
     if model and model not in ALLOWED_MODELS:
         raise ValueError(f"model {model!r} isn't allowed here")
@@ -1368,6 +1506,7 @@ def chat(req):
     else:
         model = pick_model(message, refs)
         route = "complex" if model == COMPLEX_MODEL else "easy"
+    model = live_model(model)  # no Anthropic key yet: the route's OpenAI stand-in
     ws = Workspace(v)
     ws.allow_as_built = v == "as-built"  # only ever reached from the as-built page itself
     ws.plan_dirty, ws.dxf_furni, ws.pieces, ws.clashes, ws.new_outlines, ws.moves = False, False, {}, {}, [], []
@@ -1392,12 +1531,12 @@ def chat(req):
                {"type": "image_url", "image_url": {"url": image, "detail": "high"}}]
     content += [{"type": "image_url", "image_url": {"url": u, "detail": "low"}} for u in refs]
     messages.append({"role": "user", "content": content})
-    total, reply, steps, trace = {"prompt_tokens": 0, "completion_tokens": 0, "cached": 0}, "", [], []
+    total, reply, steps, trace = {"prompt_tokens": 0, "completion_tokens": 0, "cached": 0, "cache_write": 0}, "", [], []
     nudged = 0
     try:
         for step in range(MAX_STEPS):
             res = openai(messages, first=step == 0, model=model)  # look before answering: no "done" without a tool call
-            cost(res.get("usage") or {}, total)
+            cost(res.get("usage") or {}, total, model)
             msg = res["choices"][0]["message"]
             messages.append({k: msg[k] for k in ("role", "content", "tool_calls") if msg.get(k) is not None})
             if not msg.get("tool_calls"):
@@ -2807,7 +2946,7 @@ class Handler(photogen.Handler):
             return super().do_GET()
         try:
             if act == "status":
-                return self.reply(200, {"ready": bool(api_key()), "model": MODEL, "api": "responses" if uses_responses(MODEL) else "chat",
+                return self.reply(200, {"ready": ready(), "model": live_model(MODEL), "api": "anthropic" if is_claude(live_model(MODEL)) else "responses" if uses_responses(live_model(MODEL)) else "chat",
                                         "models": sorted(ALLOWED_MODELS), "planEdits": plan_edits(), "gitSync": git_sync_status()})
             if act == "patches":
                 return self.reply(200, patches(q.get("version", ["main"])[0]))
@@ -2842,6 +2981,6 @@ class Handler(photogen.Handler):
 
 if __name__ == "__main__":
     port = next((int(a) for a in sys.argv[1:] if a.isdigit()), 8000)
-    print(f"Serving http://127.0.0.1:{port}  ·  Edit AI: {MODEL}"
-          f"{'' if api_key() else '  (no EDIT_AI_OPENAI_API_KEY: editing is off)'}", flush=True)
+    print(f"Serving http://127.0.0.1:{port}  ·  Edit AI: {live_model(EASY_MODEL)} / {live_model(COMPLEX_MODEL)}"
+          f"{'' if ready() else '  (no ANTHROPIC_API_KEY or EDIT_AI_OPENAI_API_KEY: editing is off)'}", flush=True)
     ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()

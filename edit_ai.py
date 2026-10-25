@@ -161,6 +161,27 @@ def deployed(path):
     return p.read_bytes() if p.exists() else b""
 
 
+def merge3(base, live, dep):
+    """Line-based three-way merge: the Edit AI change (base -> live) laid onto a newer deployed file (base -> dep).
+    None when both sides touched the same lines differently (a real conflict)."""
+    B, L, D = base.splitlines(True), live.splitlines(True), dep.splitlines(True)
+
+    def hunks(new):
+        return [(i1, i2, new[j1:j2]) for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, B, new, autojunk=False).get_opcodes()
+                if tag != "equal"]
+
+    changes = sorted({(i1, i2, tuple(r)) for i1, i2, r in hunks(L) + hunks(D)})  # identical hunks on both sides count once
+    for (a1, a2, ar), (b1, b2, br) in zip(changes, changes[1:]):
+        empty = a1 == a2 or b1 == b2
+        if (a1 <= b2 and b1 <= a2) if empty else (a1 < b2 and b1 < a2):
+            return None
+    out, at = [], 0
+    for i1, i2, r in changes:
+        out += B[at:i1] + list(r)
+        at = i2
+    return "".join(out + B[at:])
+
+
 def replay(text, ops):
     """Apply recorded search/replace edits to a newer base; None if one neither applies nor is already in."""
     for o in ops:
@@ -183,11 +204,19 @@ def resolve(man):
             out[path] = ("synced", e, None)
         elif sha(dep) == e["base"]:
             out[path] = ("live", e, None)
-        elif e.get("ops"):
-            t = replay(dep.decode(), e["ops"])
-            out[path] = ("replayed", e, t.encode()) if t is not None else ("conflict", e, None)
         else:
-            out[path] = ("conflict", e, None)
+            # The deployed file moved on (a git push): keep the live edit on top of it. A three-way merge against the
+            # file the edit started from is tried first (it also covers undo revisions, which carry no ops), then the
+            # recorded search/replace ops. Only when both fail is it a conflict, and a conflict is kept, never dropped.
+            t = None
+            if path.endswith((".js", ".json")) and e.get("base_url"):
+                try:
+                    t = merge3(get(e["base_url"]).decode(), get(e["url"]).decode(), dep.decode())
+                except Exception as err:
+                    print(f"[edit-ai] merge {path}: {err}", flush=True)
+            if t is None and e.get("ops"):
+                t = replay(dep.decode(), e["ops"])
+            out[path] = ("replayed", e, t.encode()) if t is not None else ("conflict", e, None)
     # Files built from the DXF stand or fall with it.
     for path, (st, e, _) in list(out.items()):
         if e.get("derived") and out.get(e["derived"], ("synced",))[0] == "conflict":
@@ -2573,8 +2602,8 @@ def save(ws, summary):
         rebuild(ws)
     derived_from = ws.cfg["dxf"] if ws.cfg["dxf"] in ws.changed else None
     files = {}
-    for path, (status, e, _) in resolve(ws.man).items():  # what stays live from before
-        if status in ("live", "replayed"):
+    for path, (status, e, _) in resolve(ws.man).items():  # what stays live from before (conflicts kept for edit_ai_pull.py)
+        if status in ("live", "replayed", "conflict"):
             files[path] = e
     for path in ws.changed:
         prev = ws.res.get(path)
@@ -2613,7 +2642,7 @@ def undo(req):
         raise ValueError("there is no Edit AI change to undo here")
     before = json.loads(get(cur["parent"])) if cur.get("parent") else None
     res_before = resolve(before)
-    files = {p: e for p, (st, e, _) in resolve(cur).items() if st in ("live", "replayed")}
+    files = {p: e for p, (st, e, _) in resolve(cur).items() if st in ("live", "replayed", "conflict")}
     contents = {}
     for path in cur["changed"]:
         e = cur["files"].get(path)
@@ -2634,10 +2663,20 @@ def undo(req):
 
 
 def reset(req):
-    """Drop every live Edit AI override for a version: it shows exactly what is deployed (a new, empty revision)."""
+    """Drop every live Edit AI override for a version: it shows exactly what is deployed (a new, empty revision).
+
+    Live overrides are the user's edits that may not be in git yet (on Vercel without EDIT_AI_GITHUB_TOKEN they are
+    in Blob only), so this refuses while any remain unless the caller names the revision it is throwing away
+    ({"discard": "<rev>"}). Bring them into git first: python3 edit_ai_pull.py <version>, commit, push."""
     v = req.get("version") or "main"
     if v not in VERSIONS:
         raise ValueError(f"unknown version {v!r}")
+    cur = latest(v)
+    left = sorted(p for p, (st, _, _) in resolve(cur).items() if st != "synced")
+    if left and req.get("discard") != cur["rev"]:
+        raise ValueError(f"refusing to reset {v}: revision {cur['rev']} still has live edits not in the deployed files "
+                         f"({', '.join(left)}). Run `python3 edit_ai_pull.py {v}` and commit them first, or pass "
+                         f"discard={cur['rev']!r} to throw them away.")
     stamp = time.strftime("%Y%m%dT%H%M%S", time.gmtime()) + f"{int(time.time() * 1000) % 1000:03d}"
     rev = f"{stamp}-{secrets.token_hex(3)}"
     prev = revisions(v)

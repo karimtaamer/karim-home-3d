@@ -487,7 +487,12 @@ tap it, the view freezes, circle what to change (or pick **Whole view**), then s
   `edit-ai-live/files/`; served same-origin through the `/edit-ai-live/*` rewrite). The page loads `GET /api/edit-ai/patches?version=`
   first and uses those files instead of the deployed ones, then reloads in place with the same camera. Undo writes a new revision.
   Once git catches up the override is "synced"; if the deployed file moved on, the edit's search/replace ops are replayed on it,
-  and if that fails the override is dropped (conflict) so the site never shows a stale file.
+  Once git catches up the override is "synced". If the deployed file moved on (a push), the live file is three-way merged
+  onto it (against the file the edit started from, `base_url`), then the recorded search/replace ops are tried; only if both
+  fail is it a conflict: the deployed file shows and the override is kept in later revisions (not dropped) for `edit_ai_pull.py`.
+- **Before you push:** `python3 edit_ai_pull.py [version ...]` merges the latest live edits into the working tree (no token
+  needed); commit them with your change. `POST /api/edit-ai/reset` refuses while live edits remain unless given
+  `{"discard": "<rev>"}`; never use it to make a push show.
 - **Git:** after the live save a background job commits the change to `main` (local: `git commit` + push as karimtaamer;
   Vercel: GitHub API, only if `EDIT_AI_GITHUB_TOKEN` is set, else the change lives in Blob only).
 - **Safety:** per-IP rate limit (`EDIT_AI_RATE`, default 20 requests/hour), images capped (~2 MB screenshot, 4 refs re-encoded

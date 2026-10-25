@@ -1745,7 +1745,10 @@ def resized_off_plan(ws, f0, f1):
             return (f"Check 2D vs 3D: furnish.js line {i} ({line.strip()[:90]}) now builds {where}, {round(over * 100)} cm past "
                     f"its plan outline {h} (x {r3(c[0])}..{r3(c[2])}, y {r3(c[1])}..{r3(c[3])}). Give the outline the same "
                     "change (dxf_edit resize_piece / move_piece) so 2D and 3D match, or fit the 3D inside it; if there "
-                    "isn't room, put it back and tell the user why.")
+                    "isn't room, put it back and tell the user why."
+                    + ("".join(f" The outline also holds line {k} ({l2.strip()[:60]}): growing this piece inside it means "
+                               "making room there first (move / narrow that piece in both views) or telling the user it "
+                               "doesn't fit." for k, qx, qy, l2 in floor[:40] if k != i and c[0] <= qx <= c[2] and c[1] - 0.02 <= qy <= c[3])[:400]))
     return None
 
 
@@ -1915,11 +1918,20 @@ def review(ws, message, reply):
         return re.sub(r"\s+", "", re.sub(r"\s//.*$", "", l))
     now = {bare(l) for l in f1.splitlines()}
     # A plan piece moved / resized: the 3D line(s) standing on it must have changed too.
+    L0_, L1b = f0.splitlines(), f1.splitlines()
+    def build_changed(i, line):  # an inline build whose size changed under an unchanged item( line
+        j = next((k for k, l2 in enumerate(L1b, 1) if bare(l2) == bare(line)), None)
+        b0_, b1_ = item_box(L0_, i, ws.v), (item_box(L1b, j, ws.v) if j else None)
+        return bool(b0_ and b1_ and any(abs(u - w) > 0.01 for u, w in zip(b0_[:4], b1_[:4])))
     for h, b in ws.pieces.items():
+        nb = getattr(ws, "pieces_now", {}).get(h, False)
+        if nb and all(abs(u - w) < 0.002 for u, w in zip(nb, b)):
+            continue  # put back where it was: nothing to match
         on = lambda px, py: b[0] - 0.15 <= px <= b[2] + 0.15 and b[1] - 0.15 <= py <= b[3] + 0.15
         loops = [(i, ls) for i, px, py, ls in loop_placed(ws, f0) if on(px, py)]  # e.g. one of two bedside tables
         lines = [(i, [line]) for i, px, py, line in placed_lines(ws, f0) if on(px, py)] + loops
-        if lines and all(bare(l) in now for _, ls in lines for l in ls):
+        if lines and all(bare(l) in now for _, ls in lines for l in ls) \
+                and not any(build_changed(i, ls[-1]) for i, ls in lines if len(ls) == 1):
             return (f"Check 2D vs 3D: you changed plan piece {h} (was x {b[0]}..{b[2]}, y {b[1]}..{b[3]}) but its 3D line(s) in "
                     "furnish.js didn't change: " + "; ".join(f"line {i}: {ls[-1].strip()[:160]}" for i, ls in lines[:4])
                     + (" (placed by the loop above it together with other pieces: take this one out of the loop into its own "

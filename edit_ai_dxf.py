@@ -581,21 +581,21 @@ def edit(a):
             area_ = lambda b: (b[2] - b[0]) * (b[3] - b[1])
             outl_ = [(e2, ext_of(e2)) for e2 in msp if e2.dxf.layer in FURNI and e2.dxftype() == "LWPOLYLINE" and len(e2) >= 4]
             outl_ = [(e2, b2) for e2, b2 in outl_ if b2 and area_(b2) >= 0.04]
-            gone_ = {real(h) for h in o["handles"]}
+            gone_, n_del_ = {real(h) for h in o["handles"]}, 0
             for h in o["handles"]:
                 e = get(h)
                 b = ext_of(e) if e.dxf.layer in FURNI else None
                 if b and not (e.dxftype() == "LWPOLYLINE" and len(e) >= 4 and area_(b) >= 0.04):
                     own = [(area_(b2), e2.dxf.handle, b2) for e2, b2 in outl_ if e2.dxf.handle not in gone_
                            and b2[0] - 0.01 <= b[0] and b[2] <= b2[2] + 0.01 and b2[1] - 0.01 <= b[1] and b[3] <= b2[3] + 0.01]
-                    if own:
+                    if own and not o.get("detail"):
                         _, oh, ob_ = min(own)
                         details_cut.append(f"{e.dxf.handle} (a {e.dxftype()} drawn inside piece {oh}, x {r(ob_[0] - ox)}..{r(ob_[2] - ox)}, "
                                            f"y {r(ob_[1] - oy)}..{r(ob_[3] - oy)}, which stays)")
-                        if not o.get("detail"):
-                            continue  # kept: a line of a piece that stays isn't a piece of its own
+                        continue  # kept: a line of a piece that stays isn't a piece of its own
                 msp.delete_entity(e)
-            log.append(f"deleted {len(o['handles']) - (0 if o.get('detail') else len(details_cut))}")
+                n_del_ += 1
+            log.append(f"deleted {n_del_}")
         elif k == "add_line":
             e = msp.add_line(W(o["a"]), W(o["b"]), dxfattribs=attrs(o["layer"]))
             new.append(e.dxf.handle)
@@ -901,7 +901,7 @@ def edit(a):
                       **({"warnings": warnings + [f"KEPT {d}: it is a detail line of a piece that stays, not a piece of its own. "
                           "A part built inside another piece (a stool under a dressing table, a drawer front) has no outline "
                           "of its own, so removing that part is a 3D-only change: keep your furnish.js edit, the plan is right "
-                          "as it is. Only if the user asked to change that piece's drawing, delete it with \"detail\": true"
+                          "as it is, don't delete that line. Only when the user asked for that drawn line itself to go (they pointed at the line, not at a part of the piece), delete it with \"detail\": true"
                           for d in details_cut]}
                          if warnings or details_cut else {})}))
 

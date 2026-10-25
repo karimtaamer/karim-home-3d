@@ -1001,12 +1001,12 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-0.06, 0.06, 0.74, 0.78, 0.015, 0.025, mat.brass, 0.005);
   });
   item(12.767, 9.18, "S", p => {  // stone build-out at the bath end with two recessed walnut-lined niches
-    const H = M.ceiling, D = 0.28, niches = [[-0.18, 0.02], [0.1, 0.3]], y0 = 0.9, y1 = 2.1;
+    const H = M.ceiling, D = version === "kareems-changes" ? 0.12 : 0.28, niches = [[-0.18, 0.02], [0.1, 0.3]], y0 = 0.9, y1 = 2.1;
     const face = new THREE.Shape([new THREE.Vector2(-0.42, 0), new THREE.Vector2(0.42, 0), new THREE.Vector2(0.42, H), new THREE.Vector2(-0.42, H)]);
     for (const [a, b] of niches) face.holes.push(new THREE.Path([new THREE.Vector2(a, y0), new THREE.Vector2(b, y0), new THREE.Vector2(b, y1), new THREE.Vector2(a, y1)]));
     mesh(new THREE.ExtrudeGeometry(face, { depth: D, bevelEnabled: false }), mat.stoneWall, p.g);
     for (const [a, b] of niches) {  // liner centred in its hole, 1 mm shy all round (no face on the stone jambs), 20 cm deep
-      const t = 0.012, l = a + 0.001, r = b - 0.001, lo = y0 + 0.001, hi = y1 - 0.001, back = D - 0.2;
+      const t = 0.012, l = a + 0.001, r = b - 0.001, lo = y0 + 0.001, hi = y1 - 0.001, back = D - (version === "kareems-changes" ? 0.1 : 0.2);
       p.box(l, r, lo, hi, 0, back, mat.walnut);
       for (const s of [l, r - t]) p.box(s, s + t, lo, hi, back, D, mat.walnut);
       p.box(l + t, r - t, lo, lo + t, back, D, mat.walnut); p.box(l + t, r - t, hi - t, hi, back, D, mat.walnut);

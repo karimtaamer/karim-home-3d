@@ -175,9 +175,20 @@ export function furnish(scene, M, mat, version = "main") {
         m.position.set(x, y, z);
         return m;
       },
+      // A named part, built by build(p) in a child group at the item's origin: Generate Photo Spot lists what the
+      // view shows by these names (and by spotnames.js words), so the image model knows what each grey shape is.
+      label(text, build) {
+        const c = new THREE.Group();
+        c.userData.label = text;
+        g.add(c);
+        build(part(c));
+        return c;
+      },
     };
     return api;
   }
+  // The same for a whole item (the helpers below): its name in Generate Photo Spot's list.
+  const named = (g, text) => ((g.userData.label = text), g);
 
   // --- Reusable pieces ----------------------------------------------------------------------
   // Warm grey veined stone (kitchen splashback, guest vanity top) and soft shadow gaps between fronts.
@@ -215,26 +226,26 @@ export function furnish(scene, M, mat, version = "main") {
       }
     }
     mesh(mergeGeometries(leaves), mat.leaf, p.g, false);
-  }); g.position.y = base; return g; };
-  const rug = (x0, y0, x1, y1, m = mat.rug) => item((x0 + x1) / 2, (y0 + y1) / 2, "S", p => p.box(-(x1 - x0) / 2, (x1 - x0) / 2, 0.003, 0.016, -(y1 - y0) / 2, (y1 - y0) / 2, m, 0.006));
-  const art = (x, y, facing, w, h, zc, k, light = true) => item(x, y, facing, p => {
+  }); g.position.y = base; return named(g, base > 0.3 ? "small potted plant" : "potted plant"); };
+  const rug = (x0, y0, x1, y1, m = mat.rug) => named(item((x0 + x1) / 2, (y0 + y1) / 2, "S", p => p.box(-(x1 - x0) / 2, (x1 - x0) / 2, 0.003, 0.016, -(y1 - y0) / 2, (y1 - y0) / 2, m, 0.006)), "rug");
+  const art = (x, y, facing, w, h, zc, k, light = true) => named(item(x, y, facing, p => {
     p.box(-w / 2 - 0.025, w / 2 + 0.025, zc - h / 2 - 0.025, zc + h / 2 + 0.025, 0, 0.03, mat.walnut);
     p.face(-w / 2, w / 2, zc - h / 2, zc + h / 2, 0.031, mat.art[k % mat.art.length]);
     if (light) {
       p.box(-0.015, 0.015, zc + h / 2 + 0.06, zc + h / 2 + 0.14, 0, 0.1, mat.brass);
       p.box(-w * 0.25, w * 0.25, zc + h / 2 + 0.04, zc + h / 2 + 0.08, 0.06, 0.13, mat.brass, 0.015);
     }
-  });
+  }), light ? "framed artwork with a picture light" : "framed artwork");
   // Wall-mounted split AC: w wide, h tall, d deep, top at `top`; `vane` adds the louvre slot along the underside front.
-  const ac = (x, y, facing, top = 2.5, w = 0.9, h = 0.3, d = 0.22, vane = false) => item(x, y, facing, p => {
+  const ac = (x, y, facing, top = 2.5, w = 0.9, h = 0.3, d = 0.22, vane = false) => named(item(x, y, facing, p => {
     p.box(-w / 2, w / 2, top - h, top, 0, d, mat.applianceWhite, 0.04);
     if (vane) p.box(-w / 2 + 0.06, w / 2 - 0.06, top - h + 0.025, top - h + 0.06, d - 0.004, d + 0.002, mat.grille);
-  });
-  const sconce = (x, y, facing, z = 1.8) => item(x, y, facing, p => {
+  }), "wall-mounted split AC unit");
+  const sconce = (x, y, facing, z = 1.8) => named(item(x, y, facing, p => {
     p.box(-0.04, 0.04, z - 0.14, z + 0.14, 0, 0.03, mat.brass);
     p.cyl(0, 0.08, 0.05, z - 0.1, z + 0.12, mat.lampShade, 20);
-  });
-  const pendant = (x, y, drop, shape = "globe") => item(x, y, "S", p => {
+  }), "wall sconce");
+  const pendant = (x, y, drop, shape = "globe") => named(item(x, y, "S", p => {
     p.cyl(0, 0, 0.004, drop, M.ceiling, shape === "globe" ? mat.brass : mat.blackSteel, 6);
     if (shape === "globe") {
       const s = mesh(new THREE.SphereGeometry(0.1, 24, 16), mat.lampShade, p.g);
@@ -242,7 +253,7 @@ export function furnish(scene, M, mat, version = "main") {
     } else {
       p.cyl(0, 0, 0.14, drop - 0.24, drop, mat.lampShade, 10, 0.14);
     }
-  });
+  }), "pendant light");
   function sofa(p, w, depth, fabric, cushions = [], plinth = mat.walnut) {
     p.box(-w / 2 + 0.04, w / 2 - 0.04, 0.04, 0.2, 0.02, depth - 0.04, plinth, 0.02);
     p.box(-w / 2 + 0.16, w / 2 - 0.16, 0.2, 0.44, 0.2, depth, fabric, 0.06);
@@ -1366,22 +1377,28 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-0.75, 0.75, 0.1, 0.88, 0, 0.58, mat.walnut);
     fronts(p, -0.75, 0.75, 0.1, 0.88, 0.58, 0.5);
     p.box(-0.75, 0.75, 0.88, 0.92, 0, 0.6, mat.marbleTop);
-    for (const y of [1.55, 1.8]) { p.box(-0.75, 0.75, y, y + 0.035, 0, 0.28, mat.oakVeneer); p.box(-0.73, 0.73, y - 0.012, y, 0.03, 0.26, mat.ledStrip); }
+    p.label("two lit floating shelves", p => {
+      for (const y of [1.55, 1.8]) { p.box(-0.75, 0.75, y, y + 0.035, 0, 0.28, mat.oakVeneer); p.box(-0.73, 0.73, y - 0.012, y, 0.03, 0.26, mat.ledStrip); }
+    });
     // Espresso machine: steel body over a recessed brew bay, group head, portafilter, steam wand, cup
-    p.box(0.2, 0.5, 0.92, 0.95, 0.06, 0.42, mat.blackSteel, 0.008);
-    p.box(0.2, 0.5, 0.95, 1.12, 0.06, 0.2, mat.chrome, 0.015);
-    p.box(0.2, 0.5, 1.12, 1.34, 0.06, 0.4, mat.chrome, 0.02);
-    p.face(0.24, 0.3, 1.2, 1.28, 0.401, mat.blackGlass);
-    for (const x of [0.38, 0.42, 0.46]) p.box(x - 0.012, x + 0.012, 1.22, 1.25, 0.4, 0.41, mat.blackSteel, 0.004);
-    p.cyl(0.35, 0.3, 0.035, 1.07, 1.12, mat.chrome, 20);
-    p.box(0.335, 0.365, 1.05, 1.075, 0.3, 0.5, mat.blackSteel, 0.012);
-    p.cyl(0.46, 0.34, 0.005, 0.99, 1.12, mat.chrome, 8);
-    p.cyl(0.35, 0.3, 0.032, 0.95, 1.01, mat.whiteLacquer, 16, 0.026);
+    p.label("espresso machine", p => {
+      p.box(0.2, 0.5, 0.92, 0.95, 0.06, 0.42, mat.blackSteel, 0.008);
+      p.box(0.2, 0.5, 0.95, 1.12, 0.06, 0.2, mat.chrome, 0.015);
+      p.box(0.2, 0.5, 1.12, 1.34, 0.06, 0.4, mat.chrome, 0.02);
+      p.face(0.24, 0.3, 1.2, 1.28, 0.401, mat.blackGlass);
+      for (const x of [0.38, 0.42, 0.46]) p.box(x - 0.012, x + 0.012, 1.22, 1.25, 0.4, 0.41, mat.blackSteel, 0.004);
+      p.cyl(0.35, 0.3, 0.035, 1.07, 1.12, mat.chrome, 20);
+      p.box(0.335, 0.365, 1.05, 1.075, 0.3, 0.5, mat.blackSteel, 0.012);
+      p.cyl(0.46, 0.34, 0.005, 0.99, 1.12, mat.chrome, 8);
+      p.cyl(0.35, 0.3, 0.032, 0.95, 1.01, mat.whiteLacquer, 16, 0.026);
+    });
     // Fresh 2-tap countertop water dispenser, 31.5 W x 54 H x 42.5 D cm, at the column end
-    p.box(-0.694, -0.379, 0.92, 1.46, 0, 0.425, mat.blackSteel, 0.03);
-    p.box(-0.6, -0.47, 1.32, 1.38, 0.425, 0.43, mat.blackGlass);
-    for (const x of [-0.6, -0.48]) p.box(x - 0.02, x + 0.02, 1.13, 1.2, 0.41, 0.45, mat.chrome);
-    p.box(-0.68, -0.39, 0.93, 0.95, 0.3, 0.44, mat.chrome);
+    p.label("two-tap countertop water dispenser", p => {
+      p.box(-0.694, -0.379, 0.92, 1.46, 0, 0.425, mat.blackSteel, 0.03);
+      p.box(-0.6, -0.47, 1.32, 1.38, 0.425, 0.43, mat.blackGlass);
+      for (const x of [-0.6, -0.48]) p.box(x - 0.02, x + 0.02, 1.13, 1.2, 0.41, 0.45, mat.chrome);
+      p.box(-0.68, -0.39, 0.93, 0.95, 0.3, 0.44, mat.chrome);
+    });
   });
   item(16.95, 9.5, "S", p => p.box(-1.0, 1.0, 2.5, 2.52, 0.02, 0.22, mat.ledStrip));
   plant(20.75, 5.77, 1.7, 0.25);  // in the pier between the sofa window and the slider, between their curtain stacks

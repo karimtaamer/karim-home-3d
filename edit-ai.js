@@ -90,6 +90,9 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     #edit-ai .chat h2 { margin: 0; font: 400 26px "Cormorant Garamond", serif; }
     #edit-ai .chat .meta { flex: 1; font-size: 11px; color: #6d645b; }
     #edit-ai .chat header button { padding: 4px 10px; }
+    /* In the chat the close X sits in its header (the one over the frozen view would be under the panel). */
+    #edit-ai.chatting > .x { display: none; }
+    #edit-ai .chat header .shut { position: static; flex: none; align-self: center; width: 36px; height: 36px; padding: 0; margin-left: 2px; }
     #edit-ai .msgs { flex: 1; overflow-y: auto; padding: 4px 18px 12px; display: flex; flex-direction: column; gap: 10px; }
     #edit-ai .m { max-width: 92%; padding: 9px 12px; border-radius: 14px; line-height: 1.4; white-space: pre-wrap; }
     #edit-ai .m.bot { background: #fffaf3; align-self: flex-start; box-shadow: 0 0 0 1px #2b262214 inset; }
@@ -272,7 +275,8 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     </svg><div class="cap">Circle like this<br><span class="or">or tap Whole view</span></div></div>
     <button class="x" title="Close">×</button>
     <aside class="chat" hidden>
-      <header><h2>Edit AI</h2><span class="meta"></span><button class="redo" title="Circle something else">Re-mark</button></header>
+      <header><h2>Edit AI</h2><span class="meta"></span><button class="redo" title="Circle something else">Re-mark</button>
+        <button class="x shut" title="Close Edit AI" aria-label="Close Edit AI">×</button></header>
       <div class="msgs"></div>
       <div class="thumbs"></div>
       <form><button type="button" class="attach" title="Attach reference pictures">+</button>
@@ -357,7 +361,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
   $(".whole").onclick = () => { showDemo(false); whole = true; strokes = []; drawInk(); toChat("Got it, the whole view. What do you want changed?"); };
   $(".next").onclick = () => { whole = false; toChat("Got it, I see what you marked. What do you want changed?"); };
   $(".redo").onclick = () => { if (!busy) { box.classList.remove("chatting"); $(".chat").hidden = true; markStep(); showDemo(!strokes.length); } };
-  $(".x").onclick = close;
+  box.querySelectorAll(".x").forEach(b => (b.onclick = close));
   btn.onclick = open;
   addEventListener("resize", () => !box.hidden && sizeInk());
 
@@ -500,7 +504,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     const text = area.value.trim(), sent = refs;
     if (busy || !text) return;
     busy = true;
-    $(".send").disabled = true;
+    $(".send").disabled = $(".shut").disabled = true;  // close waits for the edit: it may still be saving
     // The composer empties as soon as it is sent; the prompt lives on in the chat above (and comes back on an error).
     area.value = ""; area.style.height = ""; refs = []; showRefs();
     say("me", text);
@@ -527,7 +531,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
       if (!area.value) area.value = text;
     } finally {
       busy = false;
-      $(".send").disabled = false;
+      $(".send").disabled = $(".shut").disabled = false;
       if (!leaving) working(false);
     }
   }

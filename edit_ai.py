@@ -833,10 +833,14 @@ local x runs across the piece, y up and z out from its back into the room. A pie
 wall's ROOM-SIDE face: a wall is two face lines ~11 cm apart (dxf_query, layer 1wall) and the right one is the one \
 nearer the room's middle (other pieces on that wall in furniture_near show it, e.g. item(2.36, 4.55, "N") = south \
 wall face y 4.55). Something "on the wall facing the bed" goes on the wall opposite the headboard, at that face, \
-never out in the room. A new piece that stands on the floor (table, chair, cabinet) also gets its footprint drawn on \
-the plan: dxf_edit add_polyline on 2furni, closed, drawn exactly where the 3D puts it: its back edge through (x, y) \
-and its depth out in the facing direction (facing "E" with depth d: x .. x + d; "N": y .. y + d), width centred on \
-(x, y); wall-hung things (TV, art, shelves, lights) don't. A wall-hung thing must not overlap what is already on that \
+never out in the room. Every NEW piece of furniture or joinery gets its footprint on the plan in the same edit, so \
+the user can find and edit it in 2D: one that stands on the floor (table, chair, cabinet) and one fixed to a wall that \
+reaches out ~30 cm or more below head height (a wall / fold-down desk, a floating vanity, console or bench, a wall \
+bed, a deep wall cabinet). Draw it with dxf_edit add_polyline on 2furni, closed, exactly where the 3D puts it: its back \
+edge through (x, y) and its depth out in the facing direction (facing "E" with depth d: x .. x + d; "N": y .. y + d), \
+width centred on (x, y); a fold-down piece is drawn at its open depth. Only thin wall-hung things (TV, art, mirrors, \
+lights, shallow shelves, paint panels) and parts built inside another piece's item go without. The reverse too: a \
+new outline drawn on the plan gets its matching item(...) in furnish.js. A wall-hung thing must not overlap what is already on that \
 wall (mirror, shelves, a dressing table's mirror, wardrobe, windows, doors): check furniture_near along the wall and \
 slide it along to the free stretch (say so). Before adding or moving a piece, check with \
 furniture_near what already stands there and don't overlap it; if the spot is taken, pick the nearest free one and say so. \
@@ -1406,6 +1410,98 @@ def off_view(ws, message, f0, f1, rings):
     return None
 
 
+SHAPE = re.compile(r"\b[a-z]\w*\.(box|cyl)\(([^;]*?)\)\s*(?:;|\.|,|\)|$)", re.M)
+BUILDER = re.compile(r"\bitem\(\s*-?[\d.]+\s*,\s*-?[\d.]+\s*,\s*\"[NSEW]\"\s*,\s*\w+\(")
+
+
+def unplanned(ws, f0, f1, new_items):
+    """A note when a new piece in furnish.js (on the floor, or fixed to a wall and reaching out into the room) has no
+    plan outline (2furni) under it, or a new plan outline has no 3D piece standing on it, else None."""
+    if not plan_edits():
+        return None
+    cur = ws.tmp / "plan-unplanned.dxf"
+    cur.write_bytes(ws.read(ws.cfg["dxf"]))
+    def outlines(bx):
+        code, q = run([dwg_python(), str(ROOT / "edit_ai_dxf.py"), "query", str(cur), f"--origin={ORIGIN[0]},{ORIGIN[1]}",
+                       "--bbox=" + ",".join(str(round(v_, 4)) for v_ in bx), "--layers=2furni,2 furni", "--limit", "400"], timeout=90)
+        try:
+            ents = json.loads(q).get("entities", [])
+        except ValueError:
+            return []
+        return [(min(p_[0] for p_ in d["points"]), min(p_[1] for p_ in d["points"]), max(p_[0] for p_ in d["points"]),
+                 max(p_[1] for p_ in d["points"])) for d in ents if d["type"] == "LWPOLYLINE" and len(d.get("points") or []) >= 4]
+    num = lambda s: float(eval(s, {"__builtins__": {}}, {}))
+    old_pts = [(px, py) for _, px, py, _ in placed_lines(ws, f0)]
+    L1 = f1.splitlines()
+    for i, line in new_items[:4]:
+        m = ITEM.search(line)
+        x, y, f = float(m[1]), float(m[2]), m[3]
+        if any(abs(x - a) < 0.02 and abs(y - b) < 0.02 for a, b in old_pts):
+            continue  # changed in place, not a new piece
+        blk, dep = "", 0
+        for k in range(i - 1, min(i + 40, len(L1))):
+            blk += L1[k] + "\n"
+            dep += L1[k].count("(") - L1[k].count(")")
+            if dep <= 0:
+                break
+        ext = []  # (across x0, x1, height y0, out z0, z1) of each shape whose numbers can be read
+        for s in SHAPE.finditer(blk):
+            a = [t.strip() for t in s[2].split(",")]
+            try:
+                if s[1] == "box":
+                    ext.append((num(a[0]), num(a[1]), num(a[2]), num(a[4]), num(a[5])))
+                else:
+                    cx, cz, r = num(a[0]), num(a[1]), num(a[2])
+                    ext.append((cx - r, cx + r, num(a[3]), cz - r, cz + r))
+            except Exception:
+                continue
+        ux, uy = {"S": (1, 0), "N": (-1, 0), "E": (0, 1), "W": (0, -1)}[f]
+        fx, fy = {"S": (0, -1), "N": (0, 1), "E": (1, 0), "W": (-1, 0)}[f]
+        if ext:
+            low, deep = min(e[2] for e in ext), max(e[4] for e in ext)
+            if not ((low <= 0.05 and deep >= 0.15) or (deep >= 0.3 and low < 1.5)):
+                continue  # thin wall-hung (art, TV, lights, shallow shelf, paint panel): no outline
+            a0, a1 = min(e[0] for e in ext), max(e[1] for e in ext)
+            z0 = max(0.0, min(e[3] for e in ext))
+            pts = [(x + ux * u + fx * z, y + uy * u + fy * z) for u in (a0, a1) for z in (z0, deep)]
+            b = (min(p_[0] for p_ in pts), min(p_[1] for p_ in pts), max(p_[0] for p_ in pts), max(p_[1] for p_ in pts))
+        elif BUILDER.search(blk):  # item(x, y, "S", bed(...)): a builder's piece, size unknown here
+            low, deep, b = 0.0, None, (x, y, x, y)
+        else:
+            continue
+        cx, cy = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+        inside = lambda c: c[0] - 0.05 <= cx <= c[2] + 0.05 and c[1] - 0.05 <= cy <= c[3] + 0.05
+        drawn = [[min(q[0] for q in p_), min(q[1] for q in p_), max(q[0] for q in p_), max(q[1] for q in p_)] for p_ in ws.new_outlines if p_]
+        if any(inside(c) for c in drawn) or any(inside(c) for c in outlines((b[0] - 0.1, b[1] - 0.1, b[2] + 0.1, b[3] + 0.1))):
+            continue
+        r3 = lambda v_: round(v_, 3)
+        where = (f"x {r3(b[0])}..{r3(b[2])}, y {r3(b[1])}..{r3(b[3])}" if deep is not None else f"its back-centre ({x}, {y})")
+        return (f"Check 2D vs 3D: your new furnish.js line {i} ({line.strip()[:120]}) adds a piece that "
+                + ("stands on the floor" if low <= 0.05 else f"reaches {round(deep * 100)} cm out from its wall")
+                + f", but the plan has no outline for it at {where}, so the user can't find or edit it in 2D. Draw its "
+                "footprint now: dxf_edit add_polyline on 2furni, closed, back edge through the item's (x, y), depth out in "
+                "its facing direction, width centred on it (a fold-down piece at its open depth). If it is only a thin "
+                "wall-hung thing or part of another piece's outline, keep your edit as it is.")
+    was = {re.sub(r"\s+", "", l) for l in f0.splitlines()}
+    placed = placed_lines(ws, f1)
+    for pts in ws.new_outlines[:4]:
+        if not pts:
+            continue
+        xs, ys = [q[0] for q in pts], [q[1] for q in pts]
+        b = (min(xs), min(ys), max(xs), max(ys))
+        if (b[2] - b[0]) * (b[3] - b[1]) < 0.04:
+            continue  # a detail line (a pillow, a basin), not a piece
+        if any(b[0] - 0.15 <= px <= b[2] + 0.15 and b[1] - 0.15 <= py <= b[3] + 0.15 for _, px, py, _ in placed):
+            continue
+        if any(re.sub(r"\s+", "", l) not in was and re.search(r"for \(const \w+ of \[", l) for l in L1):
+            continue  # a new loop of items: its positions aren't literal, leave it to the model
+        return (f"Check 2D vs 3D: you drew a new plan outline (2furni, x {round(b[0], 3)}..{round(b[2], 3)}, y "
+                f"{round(b[1], 3)}..{round(b[3], 3)}) but no furnish.js item stands on it, so the 3D doesn't have the "
+                "piece. Add its item(x, y, facing, build) for this version: back-centre on the outline's wall-side edge, "
+                "facing into the room, the outline's width and depth; or remove the outline if it wasn't meant.")
+    return None
+
+
 def review(ws, message, reply):
     """What to point out to the model before its edits are saved, or None."""
     if not ws.changed:
@@ -1848,6 +1944,8 @@ def review(ws, message, reply):
                     (f"x values are local to the item: local = plan {ax_} - {x if ux else y} " if ux + uy > 0 else
                      f"x values are local to the item: local = {x if ux else y} - plan {ax_} ") +
                     f"(\"{f}\" runs along plan {'+' if ux + uy > 0 else '-'}{ax_})." + tail)
+    if (miss := unplanned(ws, f0, f1, new_items)):  # a new 3D piece with no plan outline, or a new outline with no 3D piece
+        return miss + tail
     for i, line in new_items[:4]:  # a new floor piece's plan outline has to start at its back, like the 3D does
         m = ITEM.search(line)
         x, y, f = float(m[1]), float(m[2]), m[3]

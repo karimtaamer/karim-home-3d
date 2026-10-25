@@ -12,8 +12,10 @@ renders themselves (this room's; another room's in shot only when both are wet o
 finishes written out in photogen-brief.json; the earlier renders (designer's and approved AI spots) that show
 the furniture of this room go too, so the pieces keep their real design (never another room's furniture: a bed
 seen through the en-suite door would come in). The screenshot alone says what the room has (walls, doors,
-windows, niches, furniture); the other images lend only surfaces and designs. Comments re-run it on the attempt
-shown.
+windows, niches, furniture); the other images lend only surfaces and designs. The page also names the pieces in
+frame (ctx.inventory, from furnish.js labels and spotnames.js words), and the prompt lists them as must-keep, so a
+grey block the model can't place (a water dispenser on a counter) isn't dropped. Comments ("Make an edit") re-run
+it on the attempt shown.
 Approving copies the image into renders/ and adds the spot to spots.json, like a designer render (or to
 the plan version's spots file the page is showing, e.g. spots-bigger-bedroom.json).
 
@@ -388,6 +390,7 @@ def prompt(ctx, refs, comments, revising, has_board):
                   "colour, wood and details) for the pieces standing where the VIEW's grey shapes are; do not substitute "
                   "other designs. Do not copy those images' layout or camera: positions and sizes come from the VIEW, "
                   "and a piece that is not in the VIEW stays out, even when a FURNITURE image lists it for this room."]
+    lines += inventory_lines(ctx, revising)
     lines += [
         "",
         f"Room: {r['caption']} (DWG label {r['name']}), about {r['width']:.2f} m east-west by {r['depth']:.2f} m "
@@ -411,6 +414,22 @@ def prompt(ctx, refs, comments, revising, has_board):
         if len(comments) > 1:
             lines.append("Earlier comments, already fixed - keep them fixed: " + " | ".join(comments[:-1]))
     return "\n".join(lines)
+
+
+def inventory_lines(ctx, revising=False):
+    """What the VIEW's grey shapes are, named from the 3D model by the page (photogen.js inventory: each piece in
+    frame, what it stands on, where in the frame), so none is dropped or swapped for a prop. [] when the page sent none."""
+    inv = [str(x).strip()[:160] for x in ctx.get("inventory") or [] if str(x).strip()][:24]
+    if not inv:
+        return []
+    return ["", "What is in the VIEW, labelled from the 3D model (where in the frame: left / centre / right, low / "
+            "middle height / high). These are the real pieces the grey shapes stand for: prioritise every one of them. "
+            "Each labelled piece must appear in the photo, at its grey shape's place and size, as that kind of object; "
+            "do not omit it, hide it, or replace it with another object or prop (a grey block on a counter labelled as "
+            "an appliance stays that appliance). You may add small styling (books, a vase, a bowl) on free shelves and "
+            "surfaces, but never in place of a labelled piece."
+            + (" If the PREVIOUS image dropped or swapped any of them, put it back." if revising else ""),
+            *[f"- {x}" for x in inv]]
 
 
 def ref_line(k, s, w, room, seen, base="the VIEW"):

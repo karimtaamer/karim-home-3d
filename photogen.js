@@ -1,7 +1,8 @@
 // Generate Photo Spot: in Walk, turn the view you are standing in into a photoreal render with OpenAI
 // (photogen.py does the calls, so the key never reaches the page). It sends an untextured clay screenshot of
 // the model (the shapes only; the finishes come from the brief and references), a plan of the room drawn from
-// the DWG and the view's numbers; the designer's renders go along as style references. Comment to re-run it on the attempt shown; approve to save it as a photo spot.
+// the DWG, the view's numbers and a list of the named pieces in frame (so none is dropped); the designer's renders go
+// along as style references. Make an edit (a comment typed over the picture) re-runs it on the attempt shown; approve to save it as a photo spot.
 // The endpoints are photogen.py's: the local server, or api/photospot.py on Vercel; with neither (a plain
 // static server) the button stays hidden. If PHOTOSPOT_PASSWORD is set there, the page asks for it once.
 // The button first shows a preview of the shot from where you stand, with − / + to frame it: + widens it by
@@ -13,7 +14,7 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
-import { framedWord, uniqueName } from "./spotnames.js";
+import { framedWord, uniqueName, wordFor } from "./spotnames.js";
 
 const W = 1536, H = 1024;  // the 3:2 frame photogen.py asks for
 // The clay VIEW: matte light grey; glass a faint grey-blue at its own opacity; lamps and LED strips a soft white.
@@ -57,7 +58,13 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     #photogen-box label { display: flex; flex-direction: column; gap: 6px; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: #6d645b; }
     #photogen-box input, #photogen-box textarea { font: 13px Inter, sans-serif; color: #2b2622; background: #fffaf3; border: 0; border-radius: 10px;
       padding: 9px 11px; box-shadow: 0 0 0 1px #2b262226 inset; resize: vertical; }
-    #photogen-box textarea { min-height: 110px; }
+    /* Make an edit: a comment box over the picture, opened from the button, never left standing empty. */
+    #photogen-box .edit { position: absolute; left: 22px; right: 22px; bottom: 96px; display: flex; flex-direction: column; gap: 8px; max-width: 560px;
+      margin: 0 auto; padding: 12px; border-radius: 14px; background: #f3eee5f2; color: #2b2622; box-shadow: 0 8px 28px #0006; }
+    #photogen-box .edit[hidden] { display: none; }
+    #photogen-box .edit span { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: #6d645b; }
+    #photogen-box .edit textarea { min-height: 72px; }
+    #photogen-box .edit .actions { margin-top: 0; justify-content: flex-end; }
     #photogen-box ol { margin: 0; padding-left: 18px; font-size: 12px; color: #4a423b; }
     #photogen-box ol:empty { display: none; }
     #photogen-box .err { font-size: 12px; color: #b3412e; }
@@ -67,7 +74,7 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
       letter-spacing: .04em; background: #fffaf3; color: #2b2622; box-shadow: 0 0 0 1px #2b262226 inset; }
     #photogen-box .actions .approve { background: #2b2622; color: #f3eee5; }
     #photogen-box .actions button:disabled { opacity: .4; cursor: default; }
-    #photogen-box[data-mode=frame] :is(.gen, .thumbs), #photogen-box:not([data-mode=frame]) .frame { display: none; }
+    #photogen-box[data-mode=frame] :is(.gen, .thumbs, .edit), #photogen-box:not([data-mode=frame]) .frame { display: none; }
     #photogen-box .zoom { display: flex; align-items: center; gap: 10px; }
     #photogen-box .zoom button { width: 56px; height: 56px; border: 0; border-radius: 999px; font: 300 30px Inter, sans-serif; line-height: 1; cursor: pointer;
       background: #fffaf3; color: #2b2622; box-shadow: 0 0 0 1px #2b262226 inset; touch-action: manipulation; }
@@ -80,13 +87,19 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
       #photogen-box .stage { padding: 12px 12px 92px; }
       #photogen-box .stage > img { max-height: 46vh; }
       #photogen-box .thumbs { left: 12px; right: 12px; }
+      #photogen-box .edit { left: 12px; right: 12px; bottom: 92px; }
+      #photogen-box .edit textarea { font-size: 16px; }  /* under 16px iOS zooms the page on focus */
     }`;
   document.head.appendChild(style);
   const box = document.createElement("div");
   box.id = "photogen-box";
   box.hidden = true;
   box.innerHTML = `
-    <div class="stage"><img alt=""><div class="wait" hidden><div class="spin"></div><div class="status"></div></div><div class="thumbs"></div></div>
+    <div class="stage"><img alt=""><div class="wait" hidden><div class="spin"></div><div class="status"></div></div><div class="thumbs"></div>
+      <form class="edit" hidden><span>Make an edit</span>
+        <textarea placeholder="What should change? e.g. warmer evening light, sofa in oatmeal bouclé, no rug"></textarea>
+        <div class="actions"><button type="button" class="edit-cancel">Cancel</button><button class="approve regen">Regenerate</button></div>
+      </form></div>
     <aside>
       <h2 class="frame">Frame the shot</h2>
       <p class="frame meta">Your view as the photo will frame it. Press + to take in more of the room.</p>
@@ -95,19 +108,18 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
       <h2 class="gen">New photo spot</h2>
       <p class="gen meta"></p>
       <label class="gen">Name<input class="name"></label>
-      <label class="gen">Comments<textarea placeholder="What should change? e.g. warmer evening light, sofa in oatmeal bouclé, no rug"></textarea></label>
       <ol class="gen"></ol>
       <div class="err"></div>
       <div class="gen actions">
         <button class="approve save">Approve &amp; save</button>
-        <button class="revise">Revise</button>
+        <button class="revise">Make an edit</button>
         <button class="cancel">Discard</button>
       </div>
     </aside>`;
   document.body.appendChild(box);
   const $ = s => box.querySelector(s);
   const stage = $(".stage > img"), wait = $(".wait"), status = $(".status"), thumbs = $(".thumbs");
-  const name = $(".name"), notes = $("textarea"), list = $("ol"), err = $(".err");
+  const name = $(".name"), editor = $(".edit"), notes = $(".edit textarea"), list = $("ol"), err = $(".err");
   // Typing here must not walk, measure or step through renders (they all listen on window).
   for (const t of ["keydown", "keyup"]) box.addEventListener(t, e => e.stopPropagation());
 
@@ -311,6 +323,58 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     return best.r;
   }
 
+  // What the VIEW shows, by name, so the image model knows what each grey shape is and keeps it (a grey block on a
+  // counter is a water dispenser, not a spare spot for a prop): rays on a grid across the framed lens, each to the
+  // first wall or piece it meets (glass is looked through). A hit is named by the nearest label up its parents
+  // (furnish.js label() / named(): "water dispenser", "potted plant"), else by its piece's spotnames.js word; a named
+  // part of a piece with its own word says what it sits on. -> ["two-tap countertop water dispenser (on the coffee
+  // bar; left, middle height)", ...], the most seen first.
+  function inventory(p) {
+    const eye = camera.clone();
+    eye.position.copy(p.pos); eye.fov = p.vfov; eye.aspect = W / H;
+    eye.updateProjectionMatrix(); eye.updateMatrixWorld();
+    const view = new THREE.Frustum().setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(eye.projectionMatrix, eye.matrixWorldInverse));
+    const meshes = [];
+    furniture.traverseVisible(o => o.isMesh && view.intersectsObject(o) && meshes.push(o));
+    const walls = new Set(solids), targets = [...solids.filter(o => view.intersectsObject(o)), ...meshes];
+    const found = new Map();  // labelled object -> { what, on, n, u, w }
+    for (let i = 0; i < 40; i++) for (let j = 0; j < 27; j++) {
+      const u = -1 + (2 * i + 1) / 40, w = -1 + (2 * j + 1) / 27;
+      ray.setFromCamera(new THREE.Vector2(u, w), eye);
+      ray.far = 15;
+      for (const hit of ray.intersectObjects(targets, false)) {
+        if (walls.has(hit.object)) break;
+        const m = hit.object.material;
+        if ([m].flat().every(x => x.transparent && x.opacity < 0.3)) continue;  // glass: look through it
+        let o = hit.object, own = null;
+        while (o.parent && o.parent !== furniture) { if (!own && o.userData.label) own = o; o = o.parent; }
+        if (o.parent !== furniture) break;
+        if (!own && o.userData.label) own = o;
+        const word = wordFor(o, version), what = own ? own.userData.label : word;
+        if (what) {
+          const on = own && own !== o && word !== what ? word : null;
+          const k = own || o, f = found.get(k) || { what, on, n: 0, u: 0, w: 0 };
+          f.n++; f.u += u; f.w += w;
+          found.set(k, f);
+        }
+        break;
+      }
+    }
+    const where = f => {
+      const u = f.u / f.n, w = f.w / f.n;
+      return `${u < -0.33 ? "left" : u > 0.33 ? "right" : "centre"}, ${w < -0.33 ? "low" : w > 0.33 ? "high" : "middle height"}`;
+    };
+    // Several of a kind (chairs round a table) make one line with each one's place.
+    const lines = new Map();
+    for (const f of [...found.values()].sort((a, b) => b.n - a.n)) {
+      const key = `${f.what}|${f.on}`, l = lines.get(key) || { ...f, at: [] };
+      l.at.push(where(f));
+      lines.set(key, l);
+    }
+    return [...lines.values()].slice(0, 24).map(l =>
+      `${l.at.length > 1 ? `${l.at.length} x ` : ""}${l.what} (${l.on ? `on the ${l.on}; ` : ""}${[...new Set(l.at)].join("; ")})`);
+  }
+
   function plan(room, v) {
     // The DWG round the room, north up: walls, glazing, doors, furniture, and the camera with its view.
     const pts = room.rings.flat().concat([[v.x, v.y]]);
@@ -369,7 +433,8 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
   function sync() {
     const on = !!job && !job.busy && job.at >= 0;
     $(".save").disabled = !on || !name.value.trim();
-    $(".revise").disabled = !on || !notes.value.trim();
+    $(".revise").disabled = !on;
+    $(".regen").disabled = !on || !notes.value.trim();
     list.innerHTML = "";
     for (const c of job?.attempts[job.at]?.comments || []) {  // what led to the attempt shown
       const li = document.createElement("li");
@@ -454,20 +519,31 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
         room: { name: r.name, caption, area: r.area, width: x1 - x0, depth: y1 - y0, finish: r.finish },
         seen: [...new Set([here.name, ...seen(v, r.name)])].filter(n => n !== r.name).map(n => ({ name: n, caption: captionOf(n) })),
         view: v.info, heights: { ceiling: M.ceiling, doorHead: M.doorHead, sill: M.sill, winHead: M.winHead, sliderHead: M.sliderHead },
+        inventory: inventory(p),
       },
     };
     job.plan = plan(r, v);
     // Until the piece is known (from the picture, after the first attempt), a numbered name stands in.
     name.value = uniqueName(caption, word || "view", spotNames(r.name));
     notes.value = "";
+    editor.hidden = true;
     $(".gen.meta").textContent = `${caption}${here.name !== r.name ? ` (from ${captionOf(here.name)})` : ""} · facing ${v.info.facing} · ${v.info.hfov.toFixed(0)}° lens`;
     box.dataset.mode = "generate";
     drawThumbs();
     show(-2);
     run();
   };
-  $(".revise").onclick = () => run(notes.value.trim());
-  box.querySelectorAll(".cancel").forEach(b => (b.onclick = () => { box.hidden = true; job = null; shot = null; }));
+  // Make an edit opens the comment box over the picture; its comment re-runs the attempt shown.
+  $(".revise").onclick = () => { editor.hidden = false; sync(); notes.focus(); };
+  $(".edit-cancel").onclick = () => { editor.hidden = true; };
+  editor.onsubmit = e => {
+    e.preventDefault();
+    const comment = notes.value.trim();
+    if (!comment || $(".regen").disabled) return;
+    editor.hidden = true;
+    run(comment);
+  };
+  box.querySelectorAll(".cancel").forEach(b => (b.onclick = () => { box.hidden = true; editor.hidden = true; job = null; shot = null; }));
   $(".save").onclick = async () => {
     const a = job.attempts[job.at];
     job.busy = true; sync();

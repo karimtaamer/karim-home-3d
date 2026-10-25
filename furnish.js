@@ -930,17 +930,20 @@ export function furnish(scene, M, mat, version = "main") {
   // Karim (25 Oct, red-boxed wall): every fitting moves onto the shower's SOUTH wall (the door-end wall, plan y 6.891,
   // flush with the WC's south wall, nothing built out): concealed mixer, spout, hand spray and a wall-arm shower head
   // (DWG 2furni circle). The plank wall is bare; the glass still starts at that wall. Niches: 12 cm build-out (below).
+  // Karim t327 (25 Oct, swapped): the fittings go on the NORTH wall (the WC's wall, plan y 9.1862, flush, no build-out)
+  // and the 12 cm niche build-out on the SOUTH (door-end) wall. The glass now starts at the north wall and keeps its
+  // 1.209 length, so the 0.967 opening is at the south end, to the build-out face (DWG 2furni 1847 / 1848 / 26BE).
   const GKC = version === "kareems-changes";
   const bath = item(12.324, 8.05, "E", p => {  // wood-look plank wall, stone-clad bath, framed screen at the WC end
     p.box(GKC ? -1.167 : -1.08, GKC ? 1.12 : 1.08, 0, M.ceiling, 0, 0.02, mat.woodTile);
     p.box(GKC ? -1.167 : -0.85, GKC ? 1.12 : 0.85, 0, 0.55, 0.02, 0.75, mat.stoneWall);  // Kareem's: south wall to the north wall's stone lining
     p.box(-0.78, 0.78, 0.52, 0.56, 0.08, 0.7, mat.ceramic);
     if (GKC) {
-      const g0 = -1.165, g1 = 0.05, z = 0.73;  // fixed screen on the deck from the south (door-end) wall, black frame all round
+      const g0 = -0.072, g1 = 1.142, z = 0.73;  // fixed screen on the deck from the north (WC) wall, black frame all round
       p.box(g0, g1, 0.56, 2.3, z, z + 0.01, mat.clearGlass);
       for (const [a, b, c, d] of [[g0, g1, 2.28, 2.31], [g0, g1, 0.55, 0.58], [g0, g0 + 0.025, 0.55, 2.31], [g1 - 0.025, g1, 0.55, 2.31]])
         p.box(a, b, c, d, z - 0.012, z + 0.022, mat.blackSteel);
-      for (const x of [-0.98, -0.18]) {  // towels hung on the screen (WC side)
+      for (const x of [0.16, 0.96]) {  // towels hung on the screen (WC side)
         p.box(x - 0.1, x + 0.1, 1.2, 1.85, z + 0.025, z + 0.05, mat.boucle, 0.01);
         p.box(x - 0.012, x + 0.012, 1.84, 1.9, z + 0.02, z + 0.05, mat.blackSteel);
       }
@@ -962,15 +965,15 @@ export function furnish(scene, M, mat, version = "main") {
     }
   });
   bath.scale.z = 0.9 / 0.812;  // modelled 0.81 m deep; the DWG bath is 0.90
-  if (GKC) item(12.725, 6.906, "N", p => {  // Karim (25 Oct): all the shower fittings on the south wall (its tile face), centred between plank wall and glass
-    // Local +x is west (toward the plank wall), z north out of the wall. Brass, as before.
+  if (GKC) item(12.725, 9.1716, "S", p => {  // Karim t327: all the shower fittings on the north (WC) wall's tile face, centred between plank wall and glass
+    // Local +x is east (toward the glass), z south out of the wall. Brass, as before.
     // Concealed thermostatic mixer: only its square trim plate and two knobs, at 1.05 (0.5 over the deck)
     p.box(-0.09, 0.09, 0.96, 1.14, 0, 0.008, mat.brass, 0.004);
     for (const y of [1.0, 1.1]) { const k = p.cyl(0, 0.02, 0.024, y - 0.015, y + 0.015, mat.brass, 20); k.rotation.x = Math.PI / 2; k.position.y = y; }
     // Bottom tap (حنفيه): a short concealed spout over the deck, under the mixer
     p.box(-0.02, 0.02, 0.66, 0.69, 0, 0.15, mat.brass, 0.008);
-    // Hand spray west of the mixer: wall outlet elbow and holder, the spray parked in it, its hose looping down
-    const hx = 0.25;
+    // Hand spray west of the mixer (toward the plank wall): wall outlet elbow and holder, the spray parked in it, its hose looping down
+    const hx = -0.25;
     p.cyl(hx, 0.01, 0.02, 1.1, 1.13, mat.brass, 16).rotation.x = Math.PI / 2;
     p.box(hx - 0.02, hx + 0.02, 1.16, 1.2, 0, 0.05, mat.brass, 0.006);
     p.cyl(hx, 0.05, 0.016, 1.02, 1.24, mat.brass, 16, 0.012);
@@ -1015,11 +1018,11 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-0.12, 0.12, 0.68, 0.84, 0, 0.015, mat.walnut, 0.005);
     p.box(-0.06, 0.06, 0.74, 0.78, 0.015, 0.025, mat.brass, 0.005);
   });
-  if (GKC) item(12.767, 9.1862, "S", p => {  // Karim (25 Oct): a 12 cm stone build-out on the north wall, two wood-lined niches
-    // DWG 2furni: build-out x 202.722-203.622 (plank wall to the bath end), face y -112.547 (plan 9.0662); niches
-    // dashed 0.25 x 0.105, x 202.862-203.112 / 203.232-203.482. Nothing cut into the 8 cm wall any more (no --cut):
+  if (GKC) item(12.767, 6.8906, "N", p => {  // Karim t327: a 12 cm stone build-out on the south (door-end) wall, two wood-lined niches
+    // DWG 2furni: build-out x 202.722-203.622 (plank wall to the bath end), face y -114.6026 (plan 7.0106); niches
+    // dashed 0.25 x 0.105, x 202.862-203.112 / 203.232-203.482. Nothing cut into the wall (no --cut):
     // 12 cm leaves 1.5 cm of build-out behind each niche; lined in walnut all round (back too), 9.3 cm clear inside.
-    // It stands on the deck (0.55), like the old stone lining; local +x is east, z south out of the wall.
+    // It stands on the deck (0.55); local +x is west, z north out of the wall.
     const H = M.ceiling, D = 0.12, R = 0.105, niches = [[-0.31, -0.06], [0.06, 0.31]], y0 = 0.9, y1 = 2.1;
     const face = new THREE.Shape([new THREE.Vector2(-0.45, 0.55), new THREE.Vector2(0.45, 0.55), new THREE.Vector2(0.45, H), new THREE.Vector2(-0.45, H)]);
     for (const [a, b] of niches) face.holes.push(new THREE.Path([new THREE.Vector2(a, y0), new THREE.Vector2(b, y0), new THREE.Vector2(b, y1), new THREE.Vector2(a, y1)]));

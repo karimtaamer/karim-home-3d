@@ -324,6 +324,13 @@ Kareem's Changes, client batch (2026-10-25, Main / Karim's only):
   high (0.90-2.10) x 10.5 cm deep (dashed), walnut-lined all round including the back (9.3 cm clear), five walnut
   shelves and an LED under the top. Nothing is cut into the 8 cm wall any more: the two niche `--cut`s are out of
   `build_flags.json`.
+- **Guest WC shower swap (Karim t327, supersedes the redo above):** the two walls swap. All fittings (concealed mixer
+  at 1.05, low spout, hand spray 25 cm west, 25 cm brass head on a 35 cm arm at 2.25, `2furni` circle DWG 203.130,
+  -112.7762) are on the **north** wall, the WC's wall (DWG y -112.427, plan 9.1862), flush, no build-out. The 12 cm
+  stone build-out (`2furni`, DWG x 202.722-203.622, face y -114.6026, plan 7.0106) with the two walnut niches (same
+  sizes, dashed, y -114.7076 to -114.6026) is on the **south** (door-end) wall, on the deck. The glass now starts at
+  the north wall and keeps its 1.209 length (DWG y -112.427 to -113.6356), leaving the 0.967 opening at the south end
+  to the build-out face. Still no `--cut`s: `build_flags.json` is unchanged.
 - **Doors (Karim, same evening):** the guest WC door is hinged on its **west** jamb (DWG x 203.678; arc, `_DIM` leaf and
   pin mirrored) and opens inwards toward the shower, its open leaf 11 cm east of the glass, clear of the vanity. The
   laundry door (hinge DWG 202.45, -114.72, east jamb) already swung inwards in the DWG, but the 3D opened it into the

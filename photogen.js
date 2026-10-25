@@ -1,4 +1,4 @@
-// Generate Photo Spot: in Walk, turn the view you are standing in into a photoreal render with OpenAI
+// Generate a render: in Walk, turn the view you are standing in into a photoreal render with OpenAI
 // (photogen.py does the calls, so the key never reaches the page). It sends an untextured clay screenshot of
 // the model (the shapes only; the finishes come from the brief and references), a plan of the room drawn from
 // the DWG, the view's numbers and a list of the named pieces in frame (so none is dropped); the designer's renders go
@@ -471,7 +471,7 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
       headers: { "Content-Type": "application/json", "X-Photospot-Password": localStorage.photospotPassword || "" },
     });
     if (r.status === 401 && retry) {  // no password yet, or a wrong one: ask, remember it, try again
-      const pw = prompt("Password for Generate Photo Spot");
+      const pw = prompt("Password for Generate a render");
       if (pw === null) throw new Error("A password is needed to generate here.");
       localStorage.photospotPassword = pw;
       return call(path, body, false);

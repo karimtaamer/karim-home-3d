@@ -1,8 +1,8 @@
 # Karim's Apartment — 3D model viewer
 
 A Three.js viewer of the flat, built from the architect's DWG floor plan: Walk (the default) and Top views,
-a 2D drawing view, a tape measure, the designer's renders as "photo spots", and an in-viewer
-**Generate Photo Spot** button that turns a Walk view into a photoreal render with OpenAI.
+a 2D drawing view, a tape measure, the designer's renders as "photo spots" (browse them all under **Renders**), and an
+in-viewer **Generate a render** button that turns a Walk view into a photoreal render with OpenAI.
 
 - Plain static site: no bundler, no npm. Three.js 0.170 comes from jsDelivr through the import map in `index.html`.
 - Live on Vercel. Every push to `main` deploys to production (`.github/workflows/deploy.yml`).
@@ -382,12 +382,15 @@ that view replaces the model.
    - Files already online at the same size are skipped.
    - It needs the Vercel CLI, logged in and linked. It pulls `BLOB_READ_WRITE_TOKEN` into `.env.local` if missing.
 
-**Generate Photo Spot** (Walk view button)
+**Generate a render** (Walk view button; was "Generate Photo Spot")
 
+- **Top bar (2026-10-25).** Left to right: version chip, Walk | Top, Rooms, ┃ Measure (and Clear), ┃ **Make an Edit**
+  with its Undo attached as one split pill, then **Generate a render**. Both AI buttons are dark with a gold sheen
+  (Generate's drifts slowly). There is no Photo spots menu in the bar any more: the **Renders** tab lists every spot.
 - **Phones and tablets (2026-10-25).** On a touch screen (`pointer: coarse`, any width) or a window ≤ 760 px wide,
-  Walk has a joystick bottom-right (analog: the further out, the faster) instead of arrow buttons, and drag to look.
-  **Generate a render** (this button), **Make an Edit** (Edit AI) and its Undo sit in a column bottom-left over the
-  help. Mouse desktops keep the button in the top bar and Make an Edit bottom-right.
+  Walk has a joystick bottom-right (analog: the further out, the faster) instead of arrow buttons, and drag to look
+  (no help chip; help shows only while measuring). Tablets keep the top bar above. On phones (≤ 760 px) **Generate a
+  render** and **Make an Edit** + Undo sit in a column bottom-left instead, in the same dark-and-gold style.
 
 - **Framing first (2026-10-24).** The button opens a preview of the shot from where you stand. **+** steps back
   along the view in 0.4 m steps (up to 3 m, stopping 0.3 m short of the first wall, tall piece or the room's edge;
@@ -472,7 +475,7 @@ that view replaces the model.
 
 ## 8. Edit AI
 
-The floating **Make an Edit** button (Edit AI; 3D and 2D only, hidden in Renders) lets anyone with the link change the flat in words:
+The **Make an Edit** button (Edit AI; in the top bar, bottom-left on phones; 3D and 2D only, hidden in Renders) lets anyone with the link change the flat in words:
 tap it, the view freezes, circle what to change (or pick **Whole view**), then say what you want and optionally attach reference images.
 
 - **Files:** `edit-ai.js` (button, freeze + highlight, chat, live loading), `edit_ai.py` (the agent and its tools, `/api/edit-ai/*`),

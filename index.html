@@ -29,26 +29,47 @@
     stroke-linecap: round; stroke-linejoin: round; }
   #bar #measure.on { background: #ff8a3d; color: #fff; }
   #bar button:disabled { opacity: .45; cursor: default; transform: none; }
-  /* Rooms and photo spots: one panel at a time, folded under its chip. */
+  /* Versions and rooms: one panel at a time, folded under its chip. */
   #bar .menu::after { content: " ▾"; }
-  #bar:is([data-open=versions] [data-menu=versions], [data-open=rooms] [data-menu=rooms], [data-open=spots] [data-menu=spots]) { background: #2b2622; color: #f3eee5; }
-  #bar:is([data-open=versions] [data-menu=versions], [data-open=rooms] [data-menu=rooms], [data-open=spots] [data-menu=spots])::after { content: " ▴"; }
+  #bar:is([data-open=versions] [data-menu=versions], [data-open=rooms] [data-menu=rooms]) { background: #2b2622; color: #f3eee5; }
+  #bar:is([data-open=versions] [data-menu=versions], [data-open=rooms] [data-menu=rooms])::after { content: " ▴"; }
   #bar .panel { display: none; flex-wrap: wrap; gap: 6px; max-width: 620px; padding: 8px; border-radius: 18px; background: #fffaf3d9;
     box-shadow: 0 4px 18px #0002, 0 0 0 1px #2b262214 inset; backdrop-filter: blur(8px); }
-  #bar[data-open=versions] #versions, #bar[data-open=rooms] #rooms, #bar[data-open=spots] #spots { display: flex; }
+  #bar[data-open=versions] #versions, #bar[data-open=rooms] #rooms { display: flex; }
   #bar #versions { flex-direction: column; align-items: stretch; gap: 4px; }
   #bar #versions button { text-align: left; }
   #bar #versions button.on { background: #2b2622; color: #f3eee5; }
   #bar .panel button { font-weight: 400; padding: 6px 12px; font-size: 11.5px; box-shadow: 0 0 0 1px #2b262214 inset; }
-  #bar #spots { flex-direction: column; align-items: stretch; gap: 4px; }
-  #bar #spots .group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-  #bar #spots .title { width: 128px; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: #6d645b; }
+  /* The AI actions, in the bar (desktop, tablet) or the column bottom-left (phone): Make an Edit (edit-ai.js's dock) with
+     its Undo attached on the right as one split pill, and Generate a render. Both dark with a gold sheen that drifts
+     across Generate (and across Make an Edit on hover); Generate stays readable while disabled. */
+  :is(#bar, #actions) #edit-ai-dock { position: static; flex-direction: row; align-items: stretch; gap: 0; }
+  :is(#bar, #actions) :is(#photogen, #edit-ai-btn) { display: flex; align-items: center; gap: 7px; border: 0; border-radius: 999px; padding: 8px 15px;
+    font: 600 12px Inter, sans-serif; letter-spacing: .03em; color: #fffaf3; cursor: pointer; backdrop-filter: none;
+    background: linear-gradient(115deg, #2b2622 0%, #5a4636 36%, #b8862f 48%, #e7b866 50%, #b8862f 52%, #5a4636 64%, #2b2622 100%) 0 0 / 280% 100%;
+    box-shadow: 0 3px 12px #0003, 0 0 0 1px #e7b86659 inset; transition: transform .15s, background-position 1.2s ease; }
+  :is(#bar, #actions) #photogen { animation: sheen 5s ease-in-out infinite alternate; }
+  :is(#bar, #actions) #edit-ai-btn:hover { background-position: 100% 0; }
+  :is(#bar, #actions) #photogen:not(:disabled):hover { transform: translateY(-1px); }
+  :is(#bar, #actions) :is(#edit-ai-btn, #edit-ai-undo):hover { transform: none; }
+  :is(#bar, #actions) :is(#photogen, #edit-ai-btn) svg { width: 15px; height: 15px; margin: 0; fill: none; stroke: #e7b866; stroke-width: 1.8;
+    stroke-linecap: round; stroke-linejoin: round; }
+  :is(#bar, #actions) #photogen:disabled { animation: none; opacity: 1; color: #fffaf3b3; cursor: default;
+    background: linear-gradient(115deg, #2b2622cc, #5a4636cc); box-shadow: 0 0 0 1px #e7b86640 inset; }
+  :is(#bar, #actions) #photogen:disabled svg { stroke: #e7b866a6; }
+  :is(#bar, #actions) #edit-ai-dock:has(#edit-ai-undo:not([hidden])) #edit-ai-btn { border-radius: 999px 0 0 999px; padding-right: 13px; }
+  :is(#bar, #actions) #edit-ai-undo { gap: 5px; padding: 0 13px 0 11px; border-radius: 0 999px 999px 0; font: 600 12px Inter, sans-serif; letter-spacing: .02em; }
+  :is(#bar, #actions) #edit-ai-undo svg { width: 13px; height: 13px; margin: 0; stroke: #b8862f; stroke-width: 2; }
+  :is(#bar, #actions) #edit-ai-undo.sure svg { stroke: #e7b866; }
+  @keyframes sheen { to { background-position: 100% 0; } }
+  @media (prefers-reduced-motion: reduce) { :is(#bar, #actions) #photogen { animation: none; } }
   #switcher { top: 84px; right: 22px; z-index: 4; }
   #switcher .short { display: none; }
   body:is(.drawing, .renders) :is(#help, #stick, #caption, #shade) { display: none; }
-  /* Over the drawing and the renders only the version chip stays, so each version's can be looked at. */
+  /* Over the drawing and the renders only the version chip stays, so each version's can be looked at
+     (and Make an Edit beside it over the drawing; edit-ai.js hides it under Renders). */
   body:is(.drawing, .renders) #bar { z-index: 4; }
-  body:is(.drawing, .renders) #bar :is(.row > :not([data-menu=versions]), .panel:not(#versions)) { display: none; }
+  body:is(.drawing, .renders) #bar :is(.row > :not([data-menu=versions], #edit-ai-dock), .panel:not(#versions)) { display: none; }
   body.drawing #title h1 { color: #e8e2d8; }
   body:is(.drawing, .renders) #title { z-index: 4; }
   /* Renders: the designer's images room by room, on paper, below the title and the switch. */
@@ -126,24 +147,21 @@
   #loader { position: fixed; inset: 0; z-index: 5; background: #f3eee5; display: grid; place-items: center; }
   #loader div { font-family: "Cormorant Garamond", serif; font-size: 46px; letter-spacing: .3em; }
   #loader span { display: inline-block; opacity: 0; }
-  #bar .break, #stick, #photogen .short { display: none; }
+  #bar .break, #stick, :is(#bar, #actions) #photogen[hidden] { display: none; }
   #actions { display: contents; }
-  /* Phones and tablets (a touch screen, or any narrow window): a joystick to walk with bottom-right, and
-     Generate a render, Make an Edit (edit-ai.js's dock, with its undo) and the help in a column bottom-left. */
+  /* Phones and tablets (a touch screen, or any narrow window): a joystick to walk with bottom-right, and the measuring
+     help bottom-left. On phones Generate a render and Make an Edit (with its Undo) sit in that column too, touch-sized. */
   @media (max-width: 760px), (pointer: coarse) {
     #actions { left: 14px; right: 14px; bottom: 14px; z-index: 4; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; pointer-events: none; }
     #actions > * { pointer-events: auto; }
     body.walking #actions { right: 152px; }
     #actions #help { position: static; border-radius: 12px; }
-    #actions #photogen { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 0; border-radius: 999px; background: #fffaf3e6; color: #2b2622;
-      font: 500 13px Inter, sans-serif; letter-spacing: .02em; box-shadow: 0 2px 10px #0002, 0 0 0 1px #2b262214 inset; backdrop-filter: blur(6px); cursor: pointer; }
-    #actions #photogen svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-    #actions #photogen:disabled { opacity: .45; cursor: default; }
-    #actions #photogen[hidden], body:is(:not(.walking), .drawing, .renders) #actions #photogen, #actions #photogen .long { display: none; }
-    #actions #photogen .short { display: inline; }
-    #actions #edit-ai-dock { position: static; align-items: flex-start; }
-    #actions #edit-ai-btn { min-height: 44px; padding: 0 16px; }
-    #actions #edit-ai-undo { min-height: 36px; }
+    #actions #help:empty { display: none; }
+    body:is(:not(.walking), .drawing, .renders) #actions #photogen { display: none; }
+    #actions :is(#photogen, #edit-ai-btn) { min-height: 44px; padding: 0 16px; font-size: 13px; }
+    #actions :is(#photogen, #edit-ai-btn) svg { width: 16px; height: 16px; }
+    #actions #edit-ai-dock:has(#edit-ai-undo:not([hidden])) #edit-ai-btn { padding-right: 14px; }
+    #actions #edit-ai-undo { min-height: 44px; padding: 0 14px 0 12px; font-size: 12.5px; }
     body.walking:not(.drawing, .renders) #stick { display: block; }
     #stick { right: 14px; bottom: 14px; width: 124px; height: 124px; border-radius: 50%; background: #fffaf3b3; box-shadow: 0 1px 6px #0002, 0 0 0 1px #2b262214 inset;
       backdrop-filter: blur(6px); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -195,16 +213,15 @@
       <button data-view="top">Top</button>
     </div>
     <button class="menu" data-menu="rooms"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM12 3v7M3 12h6M12 14v7M15 12h6"/></svg>Rooms</button>
-    <button class="menu" data-menu="spots" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg>Photo spots</button>
     <span class="break"></span>
     <span class="sep"></span>
     <button id="measure" class="tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg>Measure</button>
     <button id="clearMeasure" class="tool" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>Clear</button>
-    <button id="photogen" class="tool" hidden disabled title="Walk to a view first"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h5M21 12v7H3V8"/><circle cx="12" cy="13" r="3.5"/><path d="M19 2v6M16 5h6"/></svg><span class="long">Generate Photo Spot</span><span class="short">Generate a render</span></button>
+    <span class="sep"></span>
+    <button id="photogen" hidden disabled title="Walk to a view first"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h5M21 12v7H3V8"/><circle cx="12" cy="13" r="3.5"/><path d="M19 2v6M16 5h6"/></svg>Generate a render</button>
   </div>
   <div class="panel" id="versions"></div>
   <div class="panel" id="rooms"></div>
-  <div class="panel" id="spots"></div>
 </div>
 <div id="title" class="ui"><h1>Karim's Apartment</h1><p>Lotus - New Cairo</p></div>
 <div id="switcher" class="ui"><div class="seg" role="group" aria-label="Show">
@@ -665,18 +682,15 @@ const HELP = {
   top: "Scroll to zoom · drag to pan",
   walk: "Click to look around · WASD / arrows to move · Shift to hurry · Esc to free the mouse",
 };
-// Phones and tablets (and narrow windows): touch help, drag to look, the joystick; the same test as the CSS's.
+// Phones and tablets (and narrow windows): drag to look, the joystick; the same test as the CSS's.
+// They get help only while measuring (the joystick speaks for itself), so the empty pill hides.
 const TOUCH = matchMedia("(max-width: 760px), (pointer: coarse)");
-const HELP_TOUCH = {
-  top: "Pinch to zoom · drag to pan",
-  walk: "Drag to look around · joystick to walk",
-};
 const HELP_MEASURE = "Click or drag to measure · Shift squares it up · Esc cancels · Backspace undoes";
 function showHelp() {
   if (measure?.active) help.textContent = TOUCH.matches
     ? "Tap or drag to measure · " + (mode === "walk" ? "a second finger looks around" : "two fingers pan / zoom")
     : HELP_MEASURE + (mode === "walk" ? " · right-drag to look" : " · right-drag pans · snaps to the DWG");
-  else help.textContent = (TOUCH.matches ? HELP_TOUCH : HELP)[mode];
+  else help.textContent = TOUCH.matches ? "" : HELP[mode];
 }
 function setMode(m) {
   mode = m;
@@ -917,7 +931,7 @@ for (const v of VERSIONS) {
   };
   versionBar.appendChild(b);
 }
-// Versions / Rooms / Photo spots chips: one panel open at a time; picking, the chip again, or a click elsewhere folds it.
+// Versions / Rooms chips: one panel open at a time; picking, the chip again, or a click elsewhere folds it.
 const bar = document.getElementById("bar");
 const closeMenu = () => delete bar.dataset.open;
 document.querySelectorAll("[data-menu]").forEach(b => (b.onclick = () => {
@@ -955,7 +969,7 @@ document.getElementById("clearMeasure").onclick = () => measure.clear();
 
 const drawing = createDrawing(document.getElementById("drawing"), live.url(version.drawing));
 const switcher = document.getElementById("switcher");
-// Edit (a new version) and delete go through Generate Photo Spot's backend, so they show only where it runs.
+// Edit (a new version) and delete go through Generate a render's backend, so they show only where it runs.
 const renders = createRenders(document.getElementById("renders"), viewpoints.map(v => ({ room: v.room, caption: v.caption })), {
   can: () => photogen.ready(),
   edit: async (s, instruction, refs = []) => {
@@ -985,7 +999,7 @@ function showScreen(next) {
 }
 switcher.querySelectorAll("[data-show]").forEach(b => (b.onclick = () => showScreen(b.dataset.show)));
 
-// --- Generate Photo Spot: a photoreal render of where you stand in Walk (photogen.js, photogen.py) --------
+// --- Generate a render: a photoreal render of where you stand in Walk (photogen.js, photogen.py) --------
 let renderList = [], addSpot = null, removeSpot = null;
 const FLOOR_NAME = { wood: "warm oak", tile: "honed beige stone tiles", decking: "timber decking" };
 const photogen = createPhotoGen({
@@ -1041,7 +1055,7 @@ if (cam?.length >= 6) {
 }
 // Photo spots: the designer's renders at marked spots in Walk (spots.js), and all of them under Renders.
 import("./spots.js").then(m => m.photoSpots({
-  file: version.spots, THREE, gsap, camera, scene, toWorld, goRoom, FOV, EYE, UP, rooms: viewpoints.map(v => ({ room: v.room, caption: v.caption })),
+  file: version.spots, THREE, gsap, camera, scene, toWorld, FOV, EYE, UP,
   isWalking: () => mode === "walk", isBusy: () => !!(tween || glide),
 })).then(({ renders: list, add, remove }) => {
   addSpot = add;
@@ -1057,17 +1071,22 @@ if (!params.has("clean")) createEditAI({
   freeMouse: () => walker.isLocked && walker.unlock(),
 });
 
-// Phones and tablets: Generate a render and Make an Edit (edit-ai.js's dock) move to the column bottom-left (#actions);
-// over the 2D the dock goes back to its own corner, clear of the drawing's status. Mouse desktops keep the bar and the corner.
+// Desktops and tablets: Make an Edit (edit-ai.js's dock, with its Undo) then Generate a render at the end of the bar.
+// Phones: both in the column bottom-left (#actions); over the 2D the dock goes back to its own corner, clear of the
+// drawing's status.
+const PHONE = matchMedia("(max-width: 760px)");
 const actions = document.getElementById("actions"), photogenBtn = document.getElementById("photogen");
 function placeActions() {
   const dock = document.getElementById("edit-ai-dock");
-  if (TOUCH.matches) actions.prepend(photogenBtn);
-  else document.getElementById("clearMeasure").after(photogenBtn);
-  if (dock) TOUCH.matches && showing === "model" ? photogenBtn.after(dock) : document.body.append(dock);
+  if (PHONE.matches) actions.prepend(photogenBtn);
+  else bar.querySelector(".row").append(photogenBtn);
+  if (!dock) return;
+  if (!PHONE.matches) photogenBtn.before(dock);
+  else showing === "model" ? photogenBtn.after(dock) : document.body.append(dock);
 }
 placeActions();
-TOUCH.addEventListener("change", () => { placeActions(); showHelp(); });
+TOUCH.addEventListener("change", showHelp);
+PHONE.addEventListener("change", placeActions);
 
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {

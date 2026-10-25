@@ -1,14 +1,12 @@
 // Photo spots: stand on a marked spot in Walk and an Enter photo spot button offers the designer's render of
-// that view; nothing switches until it is pressed (or the spot is picked in the Photo spots panel).
+// that view; nothing switches until it is pressed. To browse them all, open the Renders tab.
 // Spots live in spots.json (cam = x,y,h,lookX,lookY,lookH,fov in plan metres, the model camera closest
 // to the render's angle; a render without one yet is only listed under Renders). The renders in renders/
 // are kept out of git; on the live site vercel.json serves renders/ from Vercel Blob (publish_renders.sh).
-// Spots approved in Generate Photo Spot (photogen.js, "ai": true) are added while the page is open, as are
+// Spots approved in Generate a render (photogen.js, "ai": true) are added while the page is open, as are
 // renders edited or deleted under Renders (an edit is a new version: "of" the first, with a "version" number).
 // A plan version's file is { extends: "spots.json", replaces: [rooms], spots: [...] }: the main plan's spots
 // except in the rooms the version redraws, plus its own.
-
-import { byRoom, shortLabel } from "./renders.js";
 
 const NEAR = 0.4;      // metres from the spot that count as "on it"
 const FACING = 20;     // degrees of heading either way that count as facing the view
@@ -21,7 +19,7 @@ export async function loadSpots(url) {
   return [...base.filter(s => !data.replaces?.includes(s.room)), ...data.spots];
 }
 
-export async function photoSpots({ file, THREE, gsap, camera, scene, toWorld, goRoom, FOV, EYE, UP, rooms, isWalking, isBusy }) {
+export async function photoSpots({ file, THREE, gsap, camera, scene, toWorld, FOV, EYE, UP, isWalking, isBusy }) {
   if (new URLSearchParams(location.search).has("clean")) return { renders: [], add: null, remove: null };  // screenshots of the bare model stay bare
   const base = new URL(".", import.meta.url);
   const place = s => ({
@@ -97,34 +95,7 @@ export async function photoSpots({ file, THREE, gsap, camera, scene, toWorld, go
   spots.forEach(mark);
   scene.add(markers);
 
-  // Buttons in the Photo spots panel: glide to a spot like a room button does; the render follows once you are there.
-  const bar = document.getElementById("bar"), panel = document.getElementById("spots");
-  function fillPanel() {
-    panel.innerHTML = "";
-    for (const g of byRoom(spots, rooms)) {  // a titled line per room, in the Rooms panel's order
-      const line = document.createElement("div"), title = document.createElement("span");
-      line.className = "group";
-      title.className = "title";
-      title.textContent = g.caption;
-      line.appendChild(title);
-      for (const s of g.items) {
-        const b = document.createElement("button");
-        b.textContent = shortLabel(s.caption, g.caption);
-        b.title = s.caption;
-        b.onclick = () => {
-          delete bar.dataset.open;
-          picked = s;
-          goRoom({ room: s.room, caption: s.caption, eye: toWorld(s.cam, EYE), look: toWorld(s.cam.slice(3), EYE - 0.15) });
-        };
-        line.appendChild(b);
-      }
-      panel.appendChild(line);
-    }
-    bar.querySelector("[data-menu=spots]").hidden = !spots.length;
-  }
-  fillPanel();
-
-  let shown = null, settling = false, offer = null, picked = null;
+  let shown = null, settling = false, offer = null;
   const last = { pos: camera.position.clone(), dir: new THREE.Vector3() };
   const dir = new THREE.Vector3();
   const heading = () => { camera.getWorldDirection(dir); return Math.atan2(dir.x, -dir.z); };
@@ -178,18 +149,14 @@ export async function photoSpots({ file, THREE, gsap, camera, scene, toWorld, go
     const moved = camera.position.distanceTo(last.pos) > 0.005 || dir.angleTo(last.dir) > 0.003;
     last.pos.copy(camera.position); last.dir.copy(dir);
     if (shown) { if (moved) leave(); return; }
-    // A spot picked in the panel opens once the glide there ends; one you walk onto is only offered.
-    const p = picked;
-    picked = null;
-    if (p && planDist(p) < NEAR) return settle(p);
+    // A spot you walk onto is only offered.
     offerHere(spots.find(s => planDist(s) < NEAR && angleTo(s.heading) < FACING) || null);
   })();
-  // A spot approved, edited into a new version or deleted just now: on the floor, in the panel and under Renders straight away.
+  // A spot approved, edited into a new version or deleted just now: on the floor and under Renders straight away.
   function refresh() {
     spots.splice(0, spots.length, ...latest());
     markers.clear();
     spots.forEach(mark);
-    fillPanel();
     return renders;
   }
   function add(raw) {

@@ -206,8 +206,9 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
 
   const btn = Object.assign(document.createElement("button"), { id: "edit-ai-btn", title: "Change something in this view with AI" });
   btn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19.5 8.5a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>Make an Edit`;
-  // Undo the last Edit AI change, always under the button while there is one (asks for a second tap first).
-  // On phones and tablets index.html moves this dock into its bottom-left column (#actions).
+  // Undo the last Edit AI change while there is one (asks for a second tap first), under the button in its own corner.
+  // index.html moves this dock into its top bar (desktops, tablets) or its bottom-left column (#actions, phones),
+  // Undo attached to the button's right there as one split pill.
   const undoBtn = Object.assign(document.createElement("button"), { id: "edit-ai-undo", title: "Undo the last Edit AI change", hidden: !live.undo });
   const undoLabel = t => (undoBtn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>${t}`);
   undoLabel("Undo");
@@ -648,7 +649,8 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
   undoBtn.onclick = async () => {
     if (!undoBtn.classList.contains("sure")) {
       undoBtn.classList.add("sure");
-      undoLabel("Undo last edit?");
+      // Beside the button in the phone column there's no room for the long question before the joystick.
+      undoLabel(undoBtn.closest("#actions") ? "Undo?" : "Undo last edit?");
       sure = setTimeout(() => { undoBtn.classList.remove("sure"); undoLabel("Undo"); }, 3500);
       return;
     }

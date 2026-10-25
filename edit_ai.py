@@ -1410,7 +1410,7 @@ def off_view(ws, message, f0, f1, rings):
     return None
 
 
-SHAPE = re.compile(r"\b[a-z]\w*\.(box|cyl)\(([^;]*?)\)\s*(?:;|\.|,|\)|$)", re.M)
+PRIM = re.compile(r"\b[a-z]\w*\.(box|cyl)\(([^;]*?)\)\s*(?:;|\.|,|\)|$)", re.M)  # p.box / p.cyl calls; not the wall SHAPE dict above
 BUILDER = re.compile(r"\bitem\(\s*-?[\d.]+\s*,\s*-?[\d.]+\s*,\s*\"[NSEW]\"\s*,\s*\w+\(")
 
 
@@ -1445,7 +1445,7 @@ def unplanned(ws, f0, f1, new_items):
             if dep <= 0:
                 break
         ext = []  # (across x0, x1, height y0, out z0, z1) of each shape whose numbers can be read
-        for s in SHAPE.finditer(blk):
+        for s in PRIM.finditer(blk):
             a = [t.strip() for t in s[2].split(",")]
             try:
                 if s[1] == "box":

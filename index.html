@@ -45,7 +45,7 @@
   #bar #spots .title { width: 128px; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: #6d645b; }
   #switcher { top: 84px; right: 22px; z-index: 4; }
   #switcher .short { display: none; }
-  body:is(.drawing, .renders) :is(#help, #pad, #caption, #shade) { display: none; }
+  body:is(.drawing, .renders) :is(#help, #stick, #caption, #shade) { display: none; }
   /* Over the drawing and the renders only the version chip stays, so each version's can be looked at. */
   body:is(.drawing, .renders) #bar { z-index: 4; }
   body:is(.drawing, .renders) #bar :is(.row > :not([data-menu=versions]), .panel:not(#versions)) { display: none; }
@@ -126,8 +126,33 @@
   #loader { position: fixed; inset: 0; z-index: 5; background: #f3eee5; display: grid; place-items: center; }
   #loader div { font-family: "Cormorant Garamond", serif; font-size: 46px; letter-spacing: .3em; }
   #loader span { display: inline-block; opacity: 0; }
-  #bar .break, #pad { display: none; }
-  /* Phones: the views up top, rooms folded behind one chip, and arrows to walk with. */
+  #bar .break, #stick, #photogen .short { display: none; }
+  #actions { display: contents; }
+  /* Phones and tablets (a touch screen, or any narrow window): a joystick to walk with bottom-right, and
+     Generate a render, Make an Edit (edit-ai.js's dock, with its undo) and the help in a column bottom-left. */
+  @media (max-width: 760px), (pointer: coarse) {
+    #actions { left: 14px; right: 14px; bottom: 14px; z-index: 4; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; pointer-events: none; }
+    #actions > * { pointer-events: auto; }
+    body.walking #actions { right: 152px; }
+    #actions #help { position: static; border-radius: 12px; }
+    #actions #photogen { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 0; border-radius: 999px; background: #fffaf3e6; color: #2b2622;
+      font: 500 13px Inter, sans-serif; letter-spacing: .02em; box-shadow: 0 2px 10px #0002, 0 0 0 1px #2b262214 inset; backdrop-filter: blur(6px); cursor: pointer; }
+    #actions #photogen svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    #actions #photogen:disabled { opacity: .45; cursor: default; }
+    #actions #photogen[hidden], body:is(:not(.walking), .drawing, .renders) #actions #photogen, #actions #photogen .long { display: none; }
+    #actions #photogen .short { display: inline; }
+    #actions #edit-ai-dock { position: static; align-items: flex-start; }
+    #actions #edit-ai-btn { min-height: 44px; padding: 0 16px; }
+    #actions #edit-ai-undo { min-height: 36px; }
+    body.walking:not(.drawing, .renders) #stick { display: block; }
+    #stick { right: 14px; bottom: 14px; width: 124px; height: 124px; border-radius: 50%; background: #fffaf3b3; box-shadow: 0 1px 6px #0002, 0 0 0 1px #2b262214 inset;
+      backdrop-filter: blur(6px); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+    #stick .knob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: #fffaf3;
+      box-shadow: 0 2px 8px #0003, 0 0 0 1px #2b26221f inset; pointer-events: none; transition: transform .15s; }
+    #stick.held .knob { background: #2b2622; transition: none; }
+    #caption { bottom: 236px; }
+  }
+  /* Phones: the views up top, rooms folded behind one chip. */
   @media (max-width: 760px) {
     #title { top: 12px; left: 14px; right: auto; text-align: left; }
     #title h1 { font-size: 24px; }
@@ -136,17 +161,6 @@
     #bar .break { display: block; flex-basis: 100%; height: 0; }
     #bar .sep { display: none; }
     #bar .panel { max-height: 46vh; overflow-y: auto; }
-    #help { right: 14px; border-radius: 12px; }
-    body.walking #help { right: 176px; }
-    body.walking #pad { display: grid; }
-    #pad { right: 14px; bottom: 14px; grid-template: repeat(2, 48px) / repeat(3, 48px); gap: 6px; touch-action: none; user-select: none; -webkit-user-select: none; }
-    #pad button { border: 0; border-radius: 14px; background: #fffaf3e6; color: #2b2622; font-size: 18px; box-shadow: 0 1px 4px #0002, 0 0 0 1px #2b262214 inset;
-      backdrop-filter: blur(6px); -webkit-touch-callout: none; touch-action: none; }
-    #pad button.held { background: #2b2622; color: #f3eee5; }
-    #pad [data-key=ArrowUp] { grid-area: 1 / 2; }
-    #pad [data-key=ArrowLeft] { grid-area: 2 / 1; }
-    #pad [data-key=ArrowDown] { grid-area: 2 / 2; }
-    #pad [data-key=ArrowRight] { grid-area: 2 / 3; }
     #switcher { top: 10px; right: 12px; }
     #switcher .long { display: none; }
     #switcher .short { display: inline; }
@@ -186,7 +200,7 @@
     <span class="sep"></span>
     <button id="measure" class="tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg>Measure</button>
     <button id="clearMeasure" class="tool" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>Clear</button>
-    <button id="photogen" class="tool" hidden disabled title="Walk to a view first"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h5M21 12v7H3V8"/><circle cx="12" cy="13" r="3.5"/><path d="M19 2v6M16 5h6"/></svg>Generate Photo Spot</button>
+    <button id="photogen" class="tool" hidden disabled title="Walk to a view first"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h5M21 12v7H3V8"/><circle cx="12" cy="13" r="3.5"/><path d="M19 2v6M16 5h6"/></svg><span class="long">Generate Photo Spot</span><span class="short">Generate a render</span></button>
   </div>
   <div class="panel" id="versions"></div>
   <div class="panel" id="rooms"></div>
@@ -202,13 +216,8 @@
 <div id="renders" hidden></div>
 <div id="shade" class="ui"></div>
 <div id="caption" class="ui"><div class="name"></div><div class="meta"></div></div>
-<div id="help" class="ui"></div>
-<div id="pad" class="ui">
-  <button data-key="ArrowUp" aria-label="Forward">▲</button>
-  <button data-key="ArrowLeft" aria-label="Left">◀</button>
-  <button data-key="ArrowDown" aria-label="Back">▼</button>
-  <button data-key="ArrowRight" aria-label="Right">▶</button>
-</div>
+<div id="actions" class="ui"><div id="help" class="ui"></div></div>
+<div id="stick" class="ui" role="application" aria-label="Walk: drag the knob the way to go"><div class="knob"></div></div>
 <script type="module">
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -656,17 +665,18 @@ const HELP = {
   top: "Scroll to zoom · drag to pan",
   walk: "Click to look around · WASD / arrows to move · Shift to hurry · Esc to free the mouse",
 };
-const PHONE = matchMedia("(max-width: 760px)");
-const HELP_PHONE = {
+// Phones and tablets (and narrow windows): touch help, drag to look, the joystick; the same test as the CSS's.
+const TOUCH = matchMedia("(max-width: 760px), (pointer: coarse)");
+const HELP_TOUCH = {
   top: "Pinch to zoom · drag to pan",
-  walk: "Drag to look around · arrows to walk",
+  walk: "Drag to look around · joystick to walk",
 };
 const HELP_MEASURE = "Click or drag to measure · Shift squares it up · Esc cancels · Backspace undoes";
 function showHelp() {
-  if (measure?.active) help.textContent = PHONE.matches
+  if (measure?.active) help.textContent = TOUCH.matches
     ? "Tap or drag to measure · " + (mode === "walk" ? "a second finger looks around" : "two fingers pan / zoom")
     : HELP_MEASURE + (mode === "walk" ? " · right-drag to look" : " · right-drag pans · snaps to the DWG");
-  else help.textContent = (PHONE.matches ? HELP_PHONE : HELP)[mode];
+  else help.textContent = (TOUCH.matches ? HELP_TOUCH : HELP)[mode];
 }
 function setMode(m) {
   mode = m;
@@ -698,14 +708,14 @@ function goRoom(v) {
 const keys = {};
 addEventListener("keydown", e => { keys[e.code] = true; if (glide && /^(Key[WASD]|Arrow)/.test(e.code)) stopGlide(); });
 addEventListener("keyup", e => { keys[e.code] = false; });
-renderer.domElement.addEventListener("click", () => mode === "walk" && !tween && !PHONE.matches && !measure.active && walker.lock());
+renderer.domElement.addEventListener("click", () => mode === "walk" && !tween && !TOUCH.matches && !measure.active && walker.lock());
 
-// Phones have no pointer lock: drag to look, and the on-screen arrows stand in for the arrow keys.
+// Phones and tablets have no pointer lock: drag to look, and the joystick walks.
 // Measuring frees the mouse, but one finger / the left button measures: right-drag or a second finger looks.
 const lookEuler = new THREE.Euler(0, 0, 0, "YXZ");
 let dragFrom = null;  // [x, y, pointerId]
 renderer.domElement.addEventListener("pointerdown", e => {
-  if (mode !== "walk" || tween || !(PHONE.matches || measure.active)) return;
+  if (mode !== "walk" || tween || !(TOUCH.matches || measure.active)) return;
   if (measure.active && e.button === 0 && e.isPrimary) return;
   stopGlide();
   dragFrom = [e.clientX, e.clientY, e.pointerId];
@@ -721,12 +731,33 @@ addEventListener("pointermove", e => {
 });
 addEventListener("pointerup", e => dragFrom?.[2] === e.pointerId && (dragFrom = null));
 addEventListener("pointercancel", e => dragFrom?.[2] === e.pointerId && (dragFrom = null));
-for (const b of document.querySelectorAll("#pad button")) {
-  const hold = on => { keys[b.dataset.key] = on; b.classList.toggle("held", on); if (on) stopGlide(); };
-  b.addEventListener("pointerdown", e => { e.preventDefault(); b.setPointerCapture(e.pointerId); hold(true); });
-  for (const t of ["pointerup", "pointercancel", "lostpointercapture"]) b.addEventListener(t, () => hold(false));
-  b.addEventListener("contextmenu", e => e.preventDefault());
+// The joystick: drag the knob any way to walk that way, the further out the faster; let go to stop.
+const stick = { x: 0, y: 0 };  // -1..1 each, y down (towards you) as on screen
+const stickEl = document.getElementById("stick"), knob = stickEl.firstElementChild;
+const STICK_R = 36;  // px the knob travels from the centre
+function moveStick(e) {
+  const r = stickEl.getBoundingClientRect();
+  let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+  const k = Math.min(1, STICK_R / Math.hypot(dx, dy));
+  dx *= k; dy *= k;
+  knob.style.transform = `translate(${dx}px, ${dy}px)`;
+  stick.x = dx / STICK_R; stick.y = dy / STICK_R;
 }
+function dropStick() {
+  stick.x = stick.y = 0;
+  knob.style.transform = "";
+  stickEl.classList.remove("held");
+}
+stickEl.addEventListener("pointerdown", e => {
+  e.preventDefault();
+  stickEl.setPointerCapture(e.pointerId);
+  stickEl.classList.add("held");
+  stopGlide();
+  moveStick(e);
+});
+stickEl.addEventListener("pointermove", e => stickEl.hasPointerCapture(e.pointerId) && moveStick(e));
+for (const t of ["pointerup", "pointercancel", "lostpointercapture"]) stickEl.addEventListener(t, dropStick);
+stickEl.addEventListener("contextmenu", e => e.preventDefault());
 const ray = new THREE.Raycaster();
 const velocity = new THREE.Vector3();
 function blocked(from, dir, dist) {
@@ -738,15 +769,18 @@ function blocked(from, dir, dist) {
   return false;
 }
 function walkStep(dt) {
-  const fwd = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
-  const side = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0);
+  const pushed = Math.hypot(stick.x, stick.y) > 0.15;  // a small dead zone at the joystick's centre
+  const fwd = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) - (pushed ? stick.y : 0);
+  const side = (keys.KeyD || keys.ArrowRight ? 1 : 0) - (keys.KeyA || keys.ArrowLeft ? 1 : 0) + (pushed ? stick.x : 0);
   const dir = new THREE.Vector3();
   camera.getWorldDirection(dir);
   dir.y = 0;
   dir.normalize();
   const right = new THREE.Vector3().crossVectors(dir, UP);
   const wish = dir.multiplyScalar(fwd).add(right.multiplyScalar(side));
-  if (wish.lengthSq()) wish.normalize().multiplyScalar(keys.ShiftLeft || keys.ShiftRight ? 2.8 : 1.5);
+  // Keys walk at full pace; the joystick at the share of it it is pushed out.
+  const pace = Math.min(1, wish.length());
+  if (pace) wish.normalize().multiplyScalar(pace * (keys.ShiftLeft || keys.ShiftRight ? 2.8 : 1.5));
   velocity.lerp(wish, 1 - Math.exp(-dt * 9));  // ease in and out of each step
   const speed = velocity.length();
   if (speed < 0.01) return;
@@ -947,6 +981,7 @@ function showScreen(next) {
   }
   showing === "drawing" ? drawing.show() : drawing.hide();
   showing === "renders" ? renders.show() : renders.hide();
+  placeActions();
 }
 switcher.querySelectorAll("[data-show]").forEach(b => (b.onclick = () => showScreen(b.dataset.show)));
 
@@ -1021,6 +1056,18 @@ if (!params.has("clean")) createEditAI({
   cutPlane: flat.cutPlane, room: () => flat.roomAt(camera.position.x, -camera.position.z)?.name, drawingFrame: () => drawing.frame(),
   freeMouse: () => walker.isLocked && walker.unlock(),
 });
+
+// Phones and tablets: Generate a render and Make an Edit (edit-ai.js's dock) move to the column bottom-left (#actions);
+// over the 2D the dock goes back to its own corner, clear of the drawing's status. Mouse desktops keep the bar and the corner.
+const actions = document.getElementById("actions"), photogenBtn = document.getElementById("photogen");
+function placeActions() {
+  const dock = document.getElementById("edit-ai-dock");
+  if (TOUCH.matches) actions.prepend(photogenBtn);
+  else document.getElementById("clearMeasure").after(photogenBtn);
+  if (dock) TOUCH.matches && showing === "model" ? photogenBtn.after(dock) : document.body.append(dock);
+}
+placeActions();
+TOUCH.addEventListener("change", () => { placeActions(); showHelp(); });
 
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {

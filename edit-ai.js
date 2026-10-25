@@ -1,4 +1,4 @@
-// Edit AI: change the flat from the viewer, in words. A floating button (3D and 2D, not Renders) freezes the view;
+// Edit AI: change the flat from the viewer, in words. A floating button, Make an Edit (3D and 2D, not Renders), freezes the view;
 // you circle what to change (or pick Whole view), say what you want and may attach reference pictures. edit_ai.py
 // (api/edit-ai.py on Vercel) has an OpenAI model edit furnish.js / materials.js / the version's DXF, rebuilds the
 // model and drawing from the DXF, and stores the result as live overrides of the deployed files; the page then
@@ -205,8 +205,9 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
   document.head.appendChild(style);
 
   const btn = Object.assign(document.createElement("button"), { id: "edit-ai-btn", title: "Change something in this view with AI" });
-  btn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/><circle cx="12" cy="12" r="2.2"/></svg>Edit AI`;
+  btn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19.5 8.5a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>Make an Edit`;
   // Undo the last Edit AI change, always under the button while there is one (asks for a second tap first).
+  // On phones and tablets index.html moves this dock into its bottom-left column (#actions).
   const undoBtn = Object.assign(document.createElement("button"), { id: "edit-ai-undo", title: "Undo the last Edit AI change", hidden: !live.undo });
   const undoLabel = t => (undoBtn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>${t}`);
   undoLabel("Undo");

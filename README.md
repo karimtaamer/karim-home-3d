@@ -384,6 +384,11 @@ that view replaces the model.
 
 **Generate Photo Spot** (Walk view button)
 
+- **Phones and tablets (2026-10-25).** On a touch screen (`pointer: coarse`, any width) or a window ≤ 760 px wide,
+  Walk has a joystick bottom-right (analog: the further out, the faster) instead of arrow buttons, and drag to look.
+  **Generate a render** (this button), **Make an Edit** (Edit AI) and its Undo sit in a column bottom-left over the
+  help. Mouse desktops keep the button in the top bar and Make an Edit bottom-right.
+
 - **Framing first (2026-10-24).** The button opens a preview of the shot from where you stand. **+** steps back
   along the view in 0.4 m steps (up to 3 m, stopping 0.3 m short of the first wall, tall piece or the room's edge;
   never out through a doorway), then widens the lens 6° at a time to 112° across; **−** undoes that, then narrows
@@ -467,7 +472,7 @@ that view replaces the model.
 
 ## 8. Edit AI
 
-The floating **Edit AI** button (3D and 2D only, hidden in Renders) lets anyone with the link change the flat in words:
+The floating **Make an Edit** button (Edit AI; 3D and 2D only, hidden in Renders) lets anyone with the link change the flat in words:
 tap it, the view freezes, circle what to change (or pick **Whole view**), then say what you want and optionally attach reference images.
 
 - **Files:** `edit-ai.js` (button, freeze + highlight, chat, live loading), `edit_ai.py` (the agent and its tools, `/api/edit-ai/*`),

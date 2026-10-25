@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Karim's Apartment</title>
+<title>K&amp;N Home</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -41,29 +41,26 @@
   #bar #versions button.on { background: #2b2622; color: #f3eee5; }
   #bar .panel button { font-weight: 400; padding: 6px 12px; font-size: 11.5px; box-shadow: 0 0 0 1px #2b262214 inset; }
   /* The AI actions, in the bar (desktop, tablet) or the column bottom-left (phone): Make an Edit (edit-ai.js's dock) with
-     its Undo attached on the right as one split pill, and Generate a render. Static, and told apart: Generate gold with
-     dark text, Make an Edit deep brown with cream text. Undo is just its icon until the first tap asks "Undo?" (edit-ai.js);
-     Generate stays readable while disabled. */
+     its Undo attached on the right as one split pill, and Generate a render. Both pills are the same deep brown with cream
+     text; Undo shares that brown and is split off with a separator (not a white chip). Undo is icon-only until the first
+     tap asks "Undo?" (edit-ai.js); Generate stays readable while disabled. */
   :is(#bar, #actions) #edit-ai-dock { position: static; flex-direction: row; align-items: stretch; gap: 0; }
   :is(#bar, #actions) :is(#photogen, #edit-ai-btn) { display: flex; align-items: center; gap: 7px; border: 0; border-radius: 999px; padding: 8px 15px;
-    font: 600 12px Inter, sans-serif; letter-spacing: .03em; cursor: pointer; backdrop-filter: none; transition: transform .15s, filter .15s; }
-  :is(#bar, #actions) #photogen { color: #2b2622; background: linear-gradient(180deg, #ecc27a, #c8973f);
-    box-shadow: 0 3px 12px #0003, 0 0 0 1px #8a6424a6 inset; }
-  :is(#bar, #actions) #edit-ai-btn { color: #fffaf3; background: linear-gradient(180deg, #5a4636, #2b2622);
-    box-shadow: 0 3px 12px #0003, 0 0 0 1px #e7b86640 inset; }
-  :is(#bar, #actions) #photogen:not(:disabled):hover { transform: translateY(-1px); filter: brightness(1.05); }
-  :is(#bar, #actions) #edit-ai-btn:hover { filter: brightness(1.15); }
+    font: 600 12px Inter, sans-serif; letter-spacing: .03em; cursor: pointer; backdrop-filter: none; transition: transform .15s, filter .15s;
+    color: #fffaf3; background: linear-gradient(180deg, #5a4636, #2b2622); box-shadow: 0 3px 12px #0003, 0 0 0 1px #e7b86640 inset; }
+  :is(#bar, #actions) :is(#photogen, #edit-ai-btn):not(:disabled):hover { filter: brightness(1.15); }
   :is(#bar, #actions) :is(#edit-ai-btn, #edit-ai-undo):hover { transform: none; }
   :is(#bar, #actions) :is(#photogen, #edit-ai-btn) svg { width: 15px; height: 15px; margin: 0; fill: none; stroke: #e7b866; stroke-width: 1.8;
     stroke-linecap: round; stroke-linejoin: round; }
-  :is(#bar, #actions) #photogen svg { stroke: #2b2622; }
-  :is(#bar, #actions) #photogen:disabled { opacity: 1; color: #2b2622a6; cursor: default;
-    background: linear-gradient(180deg, #e3cfa6, #cdb27c); box-shadow: 0 0 0 1px #8a642459 inset; }
-  :is(#bar, #actions) #photogen:disabled svg { stroke: #2b262280; }
+  :is(#bar, #actions) #photogen:disabled { opacity: 1; color: #fffaf3a6; cursor: default;
+    background: linear-gradient(180deg, #4a3a2e, #2b2622); box-shadow: 0 0 0 1px #e7b86628 inset; }
+  :is(#bar, #actions) #photogen:disabled svg { stroke: #e7b86680; }
   :is(#bar, #actions) #edit-ai-dock:has(#edit-ai-undo:not([hidden])) #edit-ai-btn { border-radius: 999px 0 0 999px; padding-right: 13px; }
-  :is(#bar, #actions) #edit-ai-undo { gap: 0; padding: 0 11px 0 9px; border-radius: 0 999px 999px 0; font: 600 12px Inter, sans-serif; letter-spacing: .02em; }
-  :is(#bar, #actions) #edit-ai-undo.sure { gap: 5px; padding: 0 13px 0 11px; }
-  :is(#bar, #actions) #edit-ai-undo svg { width: 13px; height: 13px; margin: 0; stroke: #b8862f; stroke-width: 2; }
+  :is(#bar, #actions) #edit-ai-undo { gap: 0; padding: 0 11px 0 9px; border-radius: 0 999px 999px 0; font: 600 12px Inter, sans-serif; letter-spacing: .02em;
+    color: #fffaf3; background: linear-gradient(180deg, #5a4636, #2b2622); box-shadow: 0 3px 12px #0003, 0 0 0 1px #e7b86640 inset;
+    border-left: 1px solid #e7b86655; }
+  :is(#bar, #actions) #edit-ai-undo.sure { gap: 5px; padding: 0 13px 0 11px; filter: brightness(1.12); }
+  :is(#bar, #actions) #edit-ai-undo svg { width: 13px; height: 13px; margin: 0; stroke: #e7b866; stroke-width: 2; }
   :is(#bar, #actions) #edit-ai-undo.sure svg { stroke: #e7b866; }
   #switcher { top: 84px; right: 22px; z-index: 4; }
   #switcher .short { display: none; }
@@ -152,7 +149,7 @@
   .plan-label { font-size: 9px; letter-spacing: .22em; line-height: 1.5; text-transform: uppercase; color: #2b2622; text-align: center; max-width: 84px;
     pointer-events: none; background: #f3eee5d9; padding: 1px 4px; }
   #loader { position: fixed; inset: 0; z-index: 5; background: #f3eee5; display: grid; place-items: center; }
-  #loader div { font-family: "Cormorant Garamond", serif; font-size: 46px; letter-spacing: .3em; }
+  #loader div { font-family: "Cormorant Garamond", serif; font-size: 42px; letter-spacing: .18em; }
   #loader span { display: inline-block; opacity: 0; }
   #bar .break, #stick, :is(#bar, #actions) #photogen[hidden] { display: none; }
   #actions { display: contents; }
@@ -214,7 +211,7 @@
 </script>
 </head>
 <body>
-<div id="loader"><div>KARIM</div></div>
+<div id="loader"><div>K&amp;N Home</div></div>
 <canvas id="scene"></canvas>
 <div id="bar" class="ui">
   <div class="row">
@@ -235,7 +232,7 @@
   <div class="panel" id="versions"></div>
   <div class="panel" id="rooms"></div>
 </div>
-<div id="title" class="ui"><h1>Karim's Apartment</h1><p>Lotus - New Cairo</p></div>
+<div id="title" class="ui"><h1>K&amp;N Home</h1><p>Lotus - New Cairo</p></div>
 <div id="switcher" class="ui"><div class="seg" role="group" aria-label="Show">
   <button data-show="model" class="on">3D</button>
   <button data-show="drawing">2D</button>
@@ -1120,7 +1117,10 @@ renderer.setAnimationLoop(() => {
 });
 
 const loader = document.getElementById("loader");
-loader.firstElementChild.innerHTML = [..."KARIM"].map(c => `<span>${c}</span>`).join("");
+loader.firstElementChild.innerHTML = [..."K&N Home"].map(c => {
+  const ch = c === " " ? "\u00a0" : c === "&" ? "&amp;" : c;
+  return `<span>${ch}</span>`;
+}).join("");
 gsap.timeline()
   .to("#loader span", { opacity: 1, y: 0, duration: 0.45, stagger: 0.07, ease: "power2.out", startAt: { y: 14 } })
   .to(loader, { opacity: 0, duration: 0.5, delay: 0.15, onComplete: () => loader.remove() });

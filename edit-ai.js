@@ -66,9 +66,9 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     #edit-ai-btn:hover { transform: translateY(-1px); }
     #edit-ai-btn svg { width: 16px; height: 16px; fill: none; stroke: #e7b866; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     #edit-ai-undo { display: flex; align-items: center; gap: 0; border: 0; border-radius: 999px; padding: 6px 9px; font: 600 11.5px Inter, sans-serif;
-      letter-spacing: .02em; color: #2b2622; background: #fffaf3e6; box-shadow: 0 2px 10px #0002, 0 0 0 1px #2b26221a inset; cursor: pointer; backdrop-filter: blur(6px); }
-    #edit-ai-undo svg { width: 13px; height: 13px; fill: none; stroke: #b8862f; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    #edit-ai-undo.sure { gap: 5px; padding: 6px 12px; background: #2b2622; color: #fffaf3; }
+      letter-spacing: .02em; color: #fffaf3; background: linear-gradient(180deg, #5a4636, #2b2622); box-shadow: 0 2px 10px #0002, 0 0 0 1px #e7b86640 inset; cursor: pointer; }
+    #edit-ai-undo svg { width: 13px; height: 13px; fill: none; stroke: #e7b866; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    #edit-ai-undo.sure { gap: 5px; padding: 6px 12px; filter: brightness(1.12); }
     #edit-ai-undo:disabled { opacity: .6; cursor: default; }
     #edit-ai-undo[hidden], body.renders #edit-ai-dock, body.edit-ai-open #edit-ai-dock { display: none; }
     @media (max-width: 760px) { #edit-ai-dock { bottom: 128px; right: 14px; } #edit-ai-btn { padding: 10px 14px; } }

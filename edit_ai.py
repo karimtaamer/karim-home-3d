@@ -782,7 +782,8 @@ def tool(ws, name, a):
                                     "no syntax problems found (brackets, strings and templates balance; full JS parse not available here)")
     if name == "discard":
         ws.discard()
-        return "every edit of this message is thrown away; nothing will be saved unless you edit again"
+        return ("every edit of this message is thrown away; nothing will be saved unless you edit again. If you stop now, tell "
+                "the user nothing was changed (don't describe any change as done) and what stopped you")
     return f"unknown tool {name}"
 
 
@@ -1086,8 +1087,8 @@ def chat(req):
                 messages.append({"role": "tool", "tool_call_id": call["id"], "content": str(out)})
             if step == MAX_STEPS - 3 and ws.changed:  # don't lose a finished edit to the step limit
                 messages.append({"role": "user", "content": "Only 2 steps left. If your edits are done and the last check "
-                                 "passed, reply to the user now (no more tool calls); otherwise call discard and say what "
-                                 "couldn't be finished."})
+                                 "passed, reply to the user now (no more tool calls); otherwise call discard and tell the user "
+                                 "nothing was changed and what couldn't be finished."})
         else:
             reply = "I ran out of steps before finishing; nothing was changed. Try a narrower request."
             ws.changed.clear()
@@ -1349,7 +1350,9 @@ def review(ws, message, reply):
                          f"y {c['overlap'][1]}..{c['overlap'][3]}" for c in hits[:4])
         if free:
             desc += (" (" + "; ".join(free) + ": a piece wider than its free span can't fit there as asked; then "
-                     "make it as big as fits, or move the neighbour if the user would expect that, and say so)")
+                     "make it as big as fits: its outline exactly fills that span (resize_piece x_size/y_size = the span, then move_piece so "
+                     "its edges sit on the span ends), with the same size and centre in furnish.js; or move the neighbour if the "
+                     "user would expect that; and say so)")
         return ("Check the fit: on the plan " + desc + ". A real piece can't go into a wall or through another piece. "
                 "Fix it in both views the same way: shift or size the piece so it fits (dxf_edit move_piece / "
                 "resize_piece with grow, and the furnish.js line to match), or, if the user would expect the neighbour to "

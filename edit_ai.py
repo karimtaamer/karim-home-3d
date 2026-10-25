@@ -75,7 +75,8 @@ VERSIONS = {k: c for k, c in json.loads((Path(__file__).resolve().parent / "buil
             if not k.startswith("_")}
 SHARED = ["furnish.js", "materials.js"]  # loaded by the page through the live overrides; shared by every version
 DOCS = ["README.md", "DWG_EDITING.md", "CLAUDE.md",  # read-only context
-        "docs/edit-ai/when-2d-needed.md", "docs/edit-ai/3d-only-patterns.md"]  # decision notes: does an edit need the plan?
+        "docs/edit-ai/when-2d-needed.md", "docs/edit-ai/3d-only-patterns.md",  # decision notes: does an edit need the plan?
+        "docs/edit-ai/version-isolation.md"]  # a change in one version is only for that version
 MIME = {".js": "text/javascript; charset=utf-8", ".json": "application/json", ".dxf": "application/dxf"}
 
 
@@ -543,6 +544,123 @@ def version_scope(text, version):
     return out
 
 
+def for_version(text, version):
+    """furnish.js as `version` runs it, near enough to compare: comments, spacing and the lines in other versions'
+    branches dropped, `version === "x"` conditions folded to true / false and `true ? a : b` to the side taken."""
+    sc = version_scope(text, version)
+    L = text.splitlines()
+    # A line closing another version's block ends in the scope around it, but belongs to that block.
+    keep = [s is not False and not (k and sc[k - 1] is False and l.strip().startswith("}")) for k, (l, s) in enumerate(zip(L, sc))]
+    t = " ".join(re.sub(r"//(?=(?:[^\"'`]|\"[^\"]*\"|'[^']*')*$).*", "", l) for l, k in zip(L, keep) if k)
+    t = re.sub(r"\s*([^\w$\s])\s*", r"\1", re.sub(r"\s+", " ", t)).strip()
+    lit = lambda b: "true" if b else "false"
+    t = re.sub(r"\[([^\]]*)\]\.includes\(version\)",
+               lambda m: lit(version in re.findall(r"[\"']([^\"']*)[\"']", m[1])), t)
+    t = re.sub(r"version(===|!==|==|!=)([\"'])([^\"']*)\2", lambda m: lit((m[3] == version) == ("=" == m[1][0])), t)
+    t = re.sub(r"([\"'])([^\"']*)\1(===|!==|==|!=)version", lambda m: lit((m[2] == version) == ("=" == m[3][0])), t)
+    for _ in range(50):  # fold: !lit, (lit), lit && lit, lit || lit, lit ? a : b
+        t0 = t
+        t = re.sub(r"!(true|false)\b", lambda m: lit(m[1] == "false"), t)
+        t = re.sub(r"\((true|false)\)", r"\1", t)
+        t = re.sub(r"\b(true|false)&&(true|false)\b", lambda m: lit(m[1] == m[2] == "true"), t)
+        if t == t0:
+            t = re.sub(r"\b(true|false)\|\|(true|false)\b(?!&&)", lambda m: lit("true" in (m[1], m[2])), t)
+        if t == t0:
+            t = _fold_ternary(t)
+        if t == t0:  # const KC = version === "x", ... then KC ? a : b
+            for m in re.finditer(r"\b(?:const|let) ([A-Za-z_$][\w$]*)=(true|false)(?=[,;])", t):
+                t = re.sub(r"(?<![\w$.])" + re.escape(m[1]) + r"(?![\w$])(?!=[^=])", m[2], t)
+        if t == t0:
+            break
+    return t
+
+
+def _fold_ternary(t):
+    """The first `true ? a : b` / `false ? a : b` (whose condition is the bare literal) replaced by a or b."""
+    for m in re.finditer(r"\b(true|false)\?", t):
+        if m.start() and t[m.start() - 1] not in "(,=:?[{;>" and not t[:m.start()].endswith("return"):
+            continue  # x && true ? ...: the literal is only part of the condition
+        i, depth, nest, colon = m.end(), 0, 0, None
+        while i < len(t):
+            c = t[i]
+            if c in "\"'`":
+                i = t.find(c, i + 1) if t.find(c, i + 1) > 0 else len(t)
+            elif c in "([{":
+                depth += 1
+            elif c in ")]}":
+                if depth == 0:
+                    break
+                depth -= 1
+            elif depth == 0 and c == "?":
+                nest += 1
+            elif depth == 0 and c == ":":
+                if colon is None and nest == 0:
+                    colon = i
+                elif colon is not None:
+                    break
+                else:
+                    nest -= 1
+            elif depth == 0 and c in ",;" and colon is not None:
+                break
+            i += 1
+        if colon is None:
+            continue
+        return t[:m.start()] + (t[m.end():colon] if m[1] == "true" else t[colon + 1:i]) + t[i:]
+    return t
+
+
+def furnish_versions(text):
+    """Every version furnish.js can run as: the plan versions and any other name it compares `version` with."""
+    named = re.findall(r"version\s*[!=]==?\s*[\"']([^\"']+)|[\"']([^\"']+)[\"']\s*[!=]==?\s*version", text)
+    named += [(s, "") for m in re.finditer(r"\[([^\]]*)\]\.includes\(\s*version\s*\)", text) for s in re.findall(r"[\"']([^\"']+)[\"']", m[1])]
+    return set(VERSIONS) | {a or b for a, b in named}
+
+
+ALL_VERSIONS = re.compile(r"\b(all|every|each|both|other) (the )?(plan )?versions?\b|\bevery ?where\b|\bin all of them\b|"
+                          r"\b(all|every) (the )?(plans|layouts|options)\b", re.I)
+
+
+def other_versions_changed(f0, f1, version):
+    """The other versions whose furnish.js the edit (f0 -> f1) changes: a change for `version` only leaves them as they were."""
+    return sorted(o for o in furnish_versions(f0 + f1) - {version} if for_version(f0, o) != for_version(f1, o))
+
+
+def mats_changed(ws):
+    """Existing materials.js entries the edit changed in place (new names are fine: nothing else uses them yet)."""
+    if "materials.js" not in ws.changed or "materials.js" not in ws.orig:
+        return []
+    defs = lambda t: {m_[1]: m_[2].strip() for m_ in re.finditer(r"^\s+(\w+)\s*:\s*(.+)$", t, re.M)}
+    d0, d1 = defs(ws.orig["materials.js"].decode()), defs(ws.text("materials.js"))
+    return [k for k in d0 if k in d1 and d0[k] != d1[k]]
+
+
+def version_leak(ws, message):
+    """The rule from 26 Oct 2026 (Karim: "any change in any version is only for that version"): a furnish.js edit that
+    also changes what another version builds, when the user didn't ask for every version. A message, or None."""
+    if ALL_VERSIONS.search(message or ""):
+        return None
+    if hit := mats_changed(ws):
+        return (f"Check the version: you changed the existing material(s) {', '.join(hit)} in materials.js, which every "
+                f"version uses. Put them back as they were, add a new material with its own name and use it only for "
+                f"\"{ws.v}\": `version === \"{ws.v}\" ? mat.newName : mat.{hit[0]}` in furnish.js.")
+    if "furnish.js" not in ws.orig:
+        return None
+    f0, f1 = ws.orig["furnish.js"].decode(), ws.text("furnish.js")
+    if f0 == f1 or not (others := other_versions_changed(f0, f1, ws.v)):
+        return None
+    sc = version_scope(f1, ws.v)
+    L0, L1 = f0.splitlines(), f1.splitlines()
+    shared = [f"line {j + 1}: {L1[j].strip()[:140]}" for tag_, i0, i1, j0, j1 in
+              difflib.SequenceMatcher(None, L0, L1, autojunk=False).get_opcodes() if tag_ != "equal"
+              for j in range(j0, j1) if L1[j].strip() and sc[j] is not True]
+    return (f"Check the version: your furnish.js edit also changes version(s) {', '.join(others)}, and a change in "
+            f"\"{ws.v}\" must be for \"{ws.v}\" only (the user didn't ask for every version). Wrap what you changed so the "
+            f"others keep exactly what they had: `version === \"{ws.v}\" ? newValue : oldValue`, or an "
+            f"`if (version === \"{ws.v}\")` branch for whole pieces. A colour change gets a NEW material in materials.js used "
+            f"only through that ternary; never change a material other versions use. "
+            + (f"Shared lines you changed: {'; '.join(shared[:5])}." if shared else ""))
+
+
 CALLS = re.compile(r"\b(?:item|rug|plant|art|ac|sconce|pendant)\(")  # any call, loop bodies too
 PLACE = re.compile(r"\b(?:item|rug|plant|art|ac|sconce|pendant)\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)")
 RUG = re.compile(r"\brug\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)")
@@ -971,8 +1089,10 @@ plus jambs / swing arcs on 1wall), furniture outlines (2furni: closed polylines)
 walls/openings (model JS) and the 2D drawing are rebuilt from the DXF automatically after you edit it. Never add TEXT.
 - furnish.js builds every piece of furniture, joinery and fitting in 3D, in plan metres (x east, y north, origin the \
 plan's south-west corner; heights in metres above the floor), with item(x, y, facing, build). It is shared by all \
-versions and branches on `version === "..."`. Change only version "{version}" unless the user asks otherwise: if a line \
-serves several versions, split it, e.g. `version === "{version}" ? newValue : oldValue`. materials.js holds the \
+versions and branches on `version === "..."`. A change is ONLY for version "{version}" unless the user says all versions: \
+if a line serves several versions, split it, e.g. `version === "{version}" ? newValue : oldValue`, so every other version \
+builds exactly what it did (an edit that changes another version is refused, not saved). Never change an existing \
+material in materials.js (other versions use it): add a new one and pick it with that ternary. materials.js holds the \
 materials (colours, textures) that furnish.js uses by name (mat.whiteLacquer, ...). Use only names that exist there \
 (grep materials.js first): an unknown mat.x breaks the 3D.
 - item(x, y, facing, build): (x, y) is the middle of the piece's BACK, facing (N/S/E/W) is the way its front looks, \
@@ -1599,6 +1719,11 @@ def chat(req):
                 ws.discard()
                 reply = ("Nothing was changed: this edit would undo a decision you already settled — " + lock_note(breaks) +
                          ". If you do want to change that, say so and name it (e.g. the column, the TV wall, the niches or the buffet).")
+            elif leak := version_leak(ws, message):  # and a change in one version stays in that version (26 Oct rule)
+                print(f"[edit-ai] refused, version leak: {leak[:300]}", flush=True)
+                ws.discard()
+                reply = (f"Nothing was changed: the edit would also have changed other plan versions, and a change in "
+                         f"\"{v}\" is only for \"{v}\". Ask again, or say \"in all versions\" if you want it everywhere.")
         result = save(ws, reply or message) if ws.changed else None
     finally:
         shutil.rmtree(ws.tmp, ignore_errors=True)
@@ -2229,11 +2354,8 @@ def review(ws, message, reply):
     f0 = ws.orig["furnish.js"].decode() if "furnish.js" in ws.orig else ws.text("furnish.js")
     f1 = ws.text("furnish.js")
     # An existing material changed in place: every piece and version using it would change.
-    if "materials.js" in ws.changed and "materials.js" in ws.orig:
-        m0_, m1_ = ws.orig["materials.js"].decode(), ws.text("materials.js")
-        defs = lambda t: {m_[1]: m_[2].strip() for m_ in re.finditer(r"^\s+(\w+)\s*:\s*(.+)$", t, re.M)}
-        d0_, d1_ = defs(m0_), defs(m1_)
-        hit_ = [k for k in d0_ if k in d1_ and d0_[k] != d1_[k]]
+    if not ALL_VERSIONS.search(message):
+        hit_ = mats_changed(ws)
         if hit_:
             uses = len(re.findall(r"\bmat\." + re.escape(hit_[0]) + r"\b", f1))
             return (f"Check the material: you changed the existing material {hit_[0]} in materials.js, which {uses} place(s) in "
@@ -2312,6 +2434,8 @@ def review(ws, message, reply):
                     f"Find the line that builds this piece for \"{ws.v}\" (furniture_near lists only the ones that run here; "
                     "pieces shared by several versions sit after the per-version blocks), put the change there instead "
                     "(split it with a version check if the line serves other versions) and revert the edit you made." + tail)
+    if leak := version_leak(ws, message):
+        return leak + tail
     def bare(l):  # a line's code, without its trailing // comment or spacing (a comment-only edit isn't a change)
         return re.sub(r"\s+", "", re.sub(r"\s//.*$", "", l))
     now = {bare(l) for l in f1.splitlines()}
@@ -2814,6 +2938,9 @@ def save(ws, summary):
         dep = deployed(path)
         data = ws.files[path]
         e = {"sha": sha(data), "url": store(data, path), "base": sha(dep), "base_url": store(dep, path) if dep else None}
+        pre = ws.orig.get(path)  # what the version showed before this edit: Undo's target (see undo())
+        if pre is not None and pre != dep:
+            e["pre_url"] = store(pre, path)
         if path.endswith((".js", ".json")) and path in ws.ops and path not in (ws.cfg["model"], ws.cfg["drawing"]):
             e["ops"] = (prev[1].get("ops") or [] if prev and prev[0] in ("live", "replayed") else []) + ws.ops[path]
         if path in (ws.cfg["model"], ws.cfg["drawing"]) and derived_from:
@@ -2836,6 +2963,19 @@ def write_rev(v, files, summary, changed, contents):
     return man
 
 
+def unapply(path, edited, pre, dep):
+    """An edit (pre -> edited) taken back off the deployed file: `pre` when git has nothing newer than the edit, later
+    commits kept when they merge, `pre` as it was when they don't."""
+    if dep in (edited, pre) or not path.endswith((".js", ".json")):
+        return pre
+    try:
+        t = merge3(edited.decode(), pre.decode(), dep.decode())
+    except Exception as err:
+        print(f"[edit-ai] undo merge {path}: {err}", flush=True)
+        t = None
+    return t.encode() if t is not None else pre
+
+
 def undo(req):
     """Put the version back as it was before its last Edit AI change (a new revision, so it can be redone by hand)."""
     v = plan_version(req.get("version"))
@@ -2847,23 +2987,31 @@ def undo(req):
     before = json.loads(get(cur["parent"])) if cur.get("parent") else None
     res_before = resolve(before)
     files = {p: e for p, (st, e, _) in resolve(cur).items() if st in ("live", "replayed", "conflict")}
-    contents = {}
+    contents, shas = {}, {}  # shas: what the page must show after the reload, so the client can tell a no-op Undo
     for path in cur["changed"]:
         e = cur["files"].get(path)
+        dep = deployed(path)
+        data = None
         if path in res_before and res_before[path][0] in ("live", "replayed"):
             data = live_content(path, res_before[path])
-        else:
-            # Nothing live before it: back to what is deployed now (not the file the edit started from, which may be
-            # older than main and would hide later commits).
-            data = deployed(path)
-        dep = deployed(path)
+            if e and sha(data) == e["sha"]:
+                data = None  # the parent replayed onto a deployed file that already has this edit: that's no undo
+        if data is None and e and (e.get("pre_url") or e.get("base_url")):
+            # The file the edit started from. Never plain deployed(): once git_sync has pushed the edit, the deployed
+            # file IS the edit, and "restoring" it changes nothing (26 Oct: 0dfc896, an empty Undo of the black armchair).
+            data = unapply(path, get(e["url"]), get(e.get("pre_url") or e["base_url"]), dep)
+        if data is None:
+            data = dep
         if sha(data) == sha(dep):
             files.pop(path, None)
         else:
             files[path] = {"sha": sha(data), "url": store(data, path), "base": sha(dep), "base_url": store(dep, path) if dep else None}
         contents[path] = data
+        shas[path] = {"from": e and e["sha"], "to": sha(data), "live": path in files}
+    if all(cur["files"].get(p) and sha(d) == cur["files"][p]["sha"] for p, d in contents.items()):
+        raise ValueError("Undo found nothing to go back to: every file would stay exactly as the last edit left it")
     man = write_rev(v, files, f"Undo: {cur.get('summary', '')}", sorted(contents), contents)
-    return {"rev": man["rev"], "changed": sorted(contents), "sync": man.get("sync")}
+    return {"rev": man["rev"], "changed": sorted(contents), "sync": man.get("sync"), "shas": shas}
 
 
 def reset(req):
@@ -2975,6 +3123,8 @@ def github_commit(contents, msg):
         blob = gh("POST", "/git/blobs", {"content": base64.b64encode(data).decode(), "encoding": "base64"})
         entries.append({"path": path, "mode": "100644", "type": "blob", "sha": blob["sha"]})
     new_tree = gh("POST", "/git/trees", {"base_tree": tree, "tree": entries})["sha"]
+    if new_tree == tree:  # the files are already in git like this: no empty commit (0dfc896 was one, an Undo that undid nothing)
+        return "nothing to commit: git already has these files"
     commit = gh("POST", "/git/commits", {"message": msg, "tree": new_tree, "parents": [head]})["sha"]
     gh("PATCH", f"/git/refs/heads/{branch}", {"sha": commit})
     return f"committed {commit[:7]}"

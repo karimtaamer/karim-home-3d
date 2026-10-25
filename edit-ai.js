@@ -21,7 +21,7 @@ function usd(v) { return `Cost: $${v.toFixed(v < 0.01 ? 4 : v < 1 ? 3 : 2)}`; }
 
 // --- Live overrides: the files Edit AI changed for this version, loaded instead of the deployed ones -----------------
 export async function liveFiles(version) {
-  const live = { map: {}, api: false, ready: false, rev: null, summary: null, undo: false, broken: [], version };
+  const live = { map: {}, sha: {}, api: false, ready: false, rev: null, summary: null, undo: false, broken: [], version };
   live.url = p => live.map[p] || p;
   try {
     const ctl = new AbortController();
@@ -33,6 +33,7 @@ export async function liveFiles(version) {
     const p = await r.json();
     Object.assign(live, { api: true, ready: p.ready, rev: p.rev, summary: p.summary, undo: p.undo, model: p.model });
     for (const [path, f] of Object.entries(p.files || {})) {
+      live.sha[path] = f.sha;
       live.map[path] = f.url ? new URL(f.url, location.href).href
         : URL.createObjectURL(new Blob([f.content], { type: path.endsWith(".js") ? "text/javascript" : "application/json" }));
     }
@@ -647,7 +648,13 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     return t;
   }
   const undoAndReload = async () => {
-    await call("undo", { version: live.version });
+    const res = await call("undo", { version: live.version });
+    // An Undo the page wouldn't show is an error, not "undone": the files served after it must be the restored ones,
+    // never the edit's (26 Oct: an Undo that re-saved the edited armchair and toasted "undone").
+    const fresh = await liveFiles(live.version);
+    const stuck = Object.entries(res.shas || {}).filter(([p, s]) =>
+      s.to === s.from || (s.live ? fresh.sha[p] !== s.to : fresh.sha[p] && fresh.sha[p] !== s.to) || (s.from && fresh.sha[p] === s.from));
+    if (stuck.length) throw new Error(`the server still serves the edited ${stuck.map(([p]) => p).join(", ")}, so nothing was undone`);
     history.push({ role: "user", text: "(undid the last change)" });
     store.setItem(histKey, JSON.stringify(history));
     store.setItem("editai-applied", JSON.stringify({ version: live.version, reply: "Undone.", undone: true }));

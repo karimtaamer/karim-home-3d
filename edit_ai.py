@@ -185,10 +185,11 @@ def merge3(base, live, dep):
 def replay(text, ops):
     """Apply recorded search/replace edits to a newer base; None if one neither applies nor is already in."""
     for o in ops:
-        if text.count(o["old"]) == 1:
-            text = text.replace(o["old"], o["new"])
-        elif o["new"] not in text:
+        if o["new"] in text:  # already in (e.g. the edit was pulled into git): applying it again would duplicate an insertion
+            continue
+        if text.count(o["old"]) != 1:
             return None
+        text = text.replace(o["old"], o["new"])
     return text
 
 

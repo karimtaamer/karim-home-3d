@@ -44,7 +44,7 @@ RESPONSES_URL = os.environ.get("EDIT_AI_OPENAI_RESPONSES_URL", "https://api.open
 RESPONSES_MODELS = ("gpt-6.1", "gpt-6-astra")
 # Extra models a request may pick with "model" (comma-separated, e.g. for an A/B run); empty = only MODEL.
 ALLOWED_MODELS = {m.strip() for m in os.environ.get("EDIT_AI_MODELS", "").split(",") if m.strip()} | {MODEL}
-MAX_STEPS = 16  # tool rounds per message
+MAX_STEPS = 20  # tool rounds per message
 MAX_IMAGE = 3_000_000  # bytes of a data URL
 MAX_REFS = 4
 # USD per million tokens (input, cached input, output), OpenAI list prices; only to tell the user what a message cost.
@@ -454,6 +454,27 @@ RUG = re.compile(r"\brug\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*
 ITEM = re.compile(r"\bitem\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*\"([NSEW])\"")
 
 
+def loose_replace(text, old, new):
+    """`old` matched ignoring each line's indentation and trailing spaces (models often miscount the spaces
+    after read_file's line numbers). Returns the new text if exactly one place matches, else None; `new` is
+    re-indented by the same amount the match is."""
+    lines = old.strip("\n").split("\n")
+    if not any(l.strip() for l in lines):
+        return None
+    rx = re.compile("\n".join(r"[ \t]*" + re.escape(l.strip()) + r"[ \t]*" for l in lines), re.M)
+    hits = [m for m in rx.finditer(text) if m.start() == 0 or text[m.start() - 1] == "\n"]
+    if len(hits) != 1:
+        return None
+    m = hits[0]
+    ind = lambda l: len(l) - len(l.lstrip(" "))
+    first = next(l for l in lines if l.strip())
+    delta = ind(text[m.start():m.end()].split("\n")[lines.index(first)]) - ind(first)
+    out = []
+    for l in new.strip("\n").split("\n"):
+        out.append((" " * delta + l) if delta >= 0 else l[min(-delta, ind(l)):])
+    return text[:m.start()] + "\n".join(out) + text[m.end():]
+
+
 def placed_lines(ws, text=None):
     """(line no, x, y, line) for each item( x, y / rug( x0, y0 literal that runs for this version."""
     text = ws.text("furnish.js") if text is None else text
@@ -572,9 +593,12 @@ def tool(ws, name, a):
         if p not in editable(v):
             return f"{p} can't be edited. Editable: {', '.join(editable(v))}; the plan through dxf_edit."
         t, n = ws.text(p), ws.text(p).count(a["old"])
-        if not a["old"] or n != 1:
+        if a["old"] and n == 1:
+            t = t.replace(a["old"], a["new"])
+        elif a["old"] and n == 0 and (t2 := loose_replace(t, a["old"], a["new"])) is not None:
+            t = t2  # same lines, only the indentation was off
+        else:
             return f"`old` occurs {n} times in {p}; it has to match exactly once. Read the lines again and copy them exactly."
-        t = t.replace(a["old"], a["new"])
         ws.write(p, t.encode(), {"old": a["old"], "new": a["new"]})
         if p.endswith(".js") and (err := js_check(ws, p)):  # kept, so it can be fixed; saving checks again
             return f"edited, but {p} no longer parses:\n{err}"
@@ -642,6 +666,18 @@ def tool(ws, name, a):
     if name == "dxf_edit":
         if v == "as-built" and not ws.allow_as_built:
             return "As-built is the survey of the flat as it stands; it can't be edited from another version."
+        ops_ = []
+        for o in a.get("ops") or []:  # {"move_window": {...}} -> {"op": "move_window", ...}
+            if isinstance(o, dict) and "op" not in o and len(o) == 1 and isinstance(next(iter(o.values())), dict):
+                k_, v_ = next(iter(o.items()))
+                o = {"op": k_, **v_}
+            ops_.append(o)
+        if not ops_:
+            return "no ops given: nothing changed on the plan"
+        a = {**a, "ops": ops_}
+        for o in ops_:
+            if o.get("op") == "add_polyline" and o.get("layer") in ("2furni", "2 furni") and len(o.get("points") or []) >= 4:
+                ws.new_outlines.append([pt[:2] for pt in o["points"]])
         out_path = ws.tmp / "plan-next.dxf"
         rugs = {";".join(m_.groups()) for t_ in {ws.text("furnish.js"), (ws.orig.get("furnish.js") or b"").decode()}
                 for m_ in RUG.finditer(t_)}
@@ -733,7 +769,9 @@ wall's ROOM-SIDE face: a wall is two face lines ~11 cm apart (dxf_query, layer 1
 nearer the room's middle (other pieces on that wall in furniture_near show it, e.g. item(2.36, 4.55, "N") = south \
 wall face y 4.55). Something "on the wall facing the bed" goes on the wall opposite the headboard, at that face, \
 never out in the room. A new piece that stands on the floor (table, chair, cabinet) also gets its footprint drawn on \
-the plan: dxf_edit add_polyline on 2furni, closed; wall-hung things (TV, art, shelves, lights) don't. Before adding or moving a piece, check with \
+the plan: dxf_edit add_polyline on 2furni, closed, drawn exactly where the 3D puts it: its back edge through (x, y) \
+and its depth out in the facing direction (facing "E" with depth d: x .. x + d; "N": y .. y + d), width centred on \
+(x, y); wall-hung things (TV, art, shelves, lights) don't. Before adding or moving a piece, check with \
 furniture_near what already stands there and don't overlap it; if the spot is taken, pick the nearest free one and say so.
 - Keep 3D and 2D together: a piece drawn on the plan (2furni) that you move or resize in furnish.js gets exactly the \
 same change in the DXF (furniture_near gives its outline's handle: dxf_edit move_piece / resize_piece), and a DXF \
@@ -747,6 +785,16 @@ the bed when the bed moves, unless the user says otherwise (\"only the bed\"); s
 y1) gives the rug's plan extent directly: to resize a rug, resize_piece grow on its outline and add the same metres \
 to those four numbers (x0 - W, y0 - S, x1 + E, y1 + N); a rug may run under furniture but not into a wall: if a side \
 hits one, stop that side at the wall face and say so.
+- Sizes beside a neighbour: a piece next to the bed (or another piece / a wall) that gets wider grows on its free \
+side (grow {{W: ...}} for a bedside table west of the bed), never into its neighbour. If it is already touching what \
+the user wants it moved toward, don't move it: say it already touches. pendant(x, y, h): h is the height of the \
+lamp's bottom above the floor (raise 20 cm = h + 0.2). Things built inside a loop from the loop variable (the \
+pendants over the bedside tables use the tables' x) already follow it: don't touch their other numbers.
+- Painting / finishing ONE wall (\"paint the wall behind the bed green\"): the walls themselves aren't in furnish.js, \
+so add a thin full-height panel on that wall's room-side face, like the existing feature wall line \
+`item(6.15, 2.25, "W", p => p.box(-1.75, 1.75, 0, M.ceiling, 0, 0.012, mat.limewashTaupe))`: width = the wall's \
+free length (leave out window openings: build it from boxes around them), material from materials.js (add a tinted \
+copy of limewash there if no colour fits). Repainting every wall of a room is the same, one panel per wall.
 - \"Left\" / \"right\" / \"behind\" in a 3D view are as seen from the camera (camera position and look point below), \
 and in the 2D drawing as on screen (x east = right, y north = up). Convert to plan x / y before editing.
 - Windows: move or resize one only with dxf_edit's move_window op (it takes every line of the window and closes / opens the wall faces, so the 3D opening matches the 2D). To centre a window on a piece (e.g. "over the bed"), find the piece's main 2furni outline in dxf_query (the largest closed outline; its "centre" is given) and pass its handle as centre_on, never a hand-worked dx; the result says where the window now runs, so check its centre equals the piece's. Then move what hangs in that window in furnish.js (sheers, curtains, blinds: the edit result lists them) to the window's new centre and width, so the 3D matches.
@@ -927,7 +975,7 @@ def chat(req):
     refs = [check_image(u, f"reference {i + 1}") for i, u in enumerate((req.get("refs") or [])[:MAX_REFS])]
     ws = Workspace(v)
     ws.allow_as_built = v == "as-built"  # only ever reached from the as-built page itself
-    ws.plan_dirty, ws.dxf_furni, ws.pieces, ws.clashes = False, False, {}, {}
+    ws.plan_dirty, ws.dxf_furni, ws.pieces, ws.clashes, ws.new_outlines = False, False, {}, {}, []
     sys_prompt = SYSTEM.format(showing="2D drawing" if ctx.get("showing") == "drawing" else "3D model", version=v,
                                marked="" if ctx.get("wholeView") else ", with what the user circled marked in red")
     if not plan_edits():
@@ -1049,7 +1097,9 @@ def review(ws, message, reply):
                         f"{h} (x {bb[0]}..{bb[2]}, y {bb[1]}..{bb[3]}), didn't change. If you moved or resized that piece, give "
                         "the outline exactly the same change now with dxf_edit move_piece / resize_piece; if only its look "
                         "changed (colour, finish, doors), nothing is needed." + tail)
-    loop_ops = [o for o in ops if re.search(r"\bfor \(const|\bitem\(|\brug\(", o["old"])]
+    loop_ops = [o for o in ops if any(re.search(r"\bfor \(const|\bitem\(|\brug\(", l)
+                                      and l.strip() not in {n_.strip() for n_ in o["new"].splitlines()}
+                                      for l in o["old"].splitlines())]
     if loop_ops and not ws.dxf_furni and not gone:
         return ("Check 2D vs 3D: you moved or resized furniture in furnish.js but nothing on the plan (2furni). If the "
                 "piece is drawn on the plan (furniture_near lists the outlines there), give its outline exactly the same "
@@ -1066,6 +1116,24 @@ def review(ws, message, reply):
                 "so." + tail)
     # A new / moved wall piece standing on the far face of its wall (its front would be inside the wall).
     new_items = [(i, line) for i, _, _, line in placed_lines(ws, f1) if line not in set(f0.splitlines()) and ITEM.search(line)]
+    for i, line in new_items[:4]:  # a new floor piece's plan outline has to start at its back, like the 3D does
+        m = ITEM.search(line)
+        x, y, f = float(m[1]), float(m[2]), m[3]
+        for pts in ws.new_outlines:
+            xs, ys = [q[0] for q in pts], [q[1] for q in pts]
+            b = (min(xs), min(ys), max(xs), max(ys))
+            if not (b[0] - 0.3 <= x <= b[2] + 0.3 and b[1] - 0.3 <= y <= b[3] + 0.3):
+                continue
+            edge = {"E": b[0], "W": b[2], "N": b[1], "S": b[3]}[f]
+            at = x if f in "EW" else y
+            if abs(at - edge) > 0.05:
+                d = b[2] - b[0] if f in "EW" else b[3] - b[1]
+                want = {"E": f"x {x}..{round(x + d, 3)}", "W": f"x {round(x - d, 3)}..{x}",
+                        "N": f"y {y}..{round(y + d, 3)}", "S": f"y {round(y - d, 3)}..{y}"}[f]
+                return (f"Check 2D vs 3D: furnish.js line {i} ({line.strip()[:120]}) puts the piece's BACK at ({x}, {y}) "
+                        f"facing \"{f}\", so in 3D it runs {want}, but its new plan outline runs x {b[0]}..{b[2]}, "
+                        f"y {b[1]}..{b[3]}. Make them the same piece: set the outline's points (dxf_edit set_points) "
+                        "to start at the back and extend the piece's depth in the facing direction, or move the item." + tail)
     if new_items:
         cur = ws.tmp / "plan-now.dxf"
         cur.write_bytes(ws.read(ws.cfg["dxf"]))

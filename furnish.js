@@ -39,6 +39,29 @@ export function furnish(scene, M, mat, version = "main") {
   const root = new THREE.Group();
   const ceilingBits = new THREE.Group();  // shown only with the ceiling (downlights, grilles)
   scene.add(root, ceilingBits);
+  // Make the hallway door interactive without changing its architectural opening.
+  if (version === "kareems-changes") {
+    const swing = (M.swings || []).find(s => Math.hypot(s.hinge[0] - 13.2726, s.hinge[1] - 6.8898) < 0.15);
+    if (swing) {
+      const [hx, hy] = swing.hinge;
+      const leaf = scene.children.find(o => o.isMesh && o.geometry?.type === "BoxGeometry" &&
+        Math.abs(o.geometry.parameters.width - (swing.r - 0.02)) < 0.001 &&
+        Math.hypot(o.position.x - hx, o.position.z + hy) < swing.r * 0.6);
+      if (leaf) {
+        const closed = Math.atan2(swing.closed[1] - hy, swing.closed[0] - hx);
+        const openAngle = leaf.rotation.y;
+        const cabinet = new THREE.Group(), hinge = new THREE.Group();
+        cabinet.position.set(hx, 0, -hy);
+        cabinet.rotation.y = closed;
+        scene.add(cabinet); cabinet.add(hinge); hinge.add(leaf);
+        leaf.position.set(swing.r / 2, (M.doorHead - 0.01) / 2, 0);
+        leaf.rotation.set(0, 0, 0);
+        const turn = Math.atan2(Math.sin(openAngle - closed), Math.cos(openAngle - closed));
+        cabinet.userData.openable = { id: "hallway-door", label: "Hallway door", leaves: [{ obj: hinge, axis: "y", open: turn }],
+          anchor: new THREE.Vector3(swing.r * 0.75, 1.05, 0.06), reach: 2, duration: 0.6 };
+      }
+    }
+  }
   if (version === "as-built") return { root, ceilingBits, setReveal() {} };  // the empty flat as it stands today
 
   // Make the existing master-bedroom entry leaf interactive without altering its opening.

@@ -272,6 +272,46 @@ def piece_members(msp, outline, m=0.08):
     return out, ob
 
 
+def free_span(msp, h, b, walls, top, mine, is_soft, inside):
+    """Free span around box b: [x0, x1], [y0, y1] (absolute; None = open), bounded by wall faces and the
+    other top-level pieces beside / before it."""
+    x0, y0, x1, y1 = b[0] + 0.025, b[1] + 0.025, b[2] - 0.025, b[3] - 0.025
+    cx, cy = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+    lo_x, hi_x, lo_y, hi_y = [], [], [], []
+    for w in walls:
+        (ax, ay), (bx, by) = (w.dxf.start.x, w.dxf.start.y), (w.dxf.end.x, w.dxf.end.y)
+        if abs(ax - bx) < 0.005 and min(ay, by) < y1 and max(ay, by) > y0:
+            (lo_x if ax <= cx else hi_x).append(ax)
+        if abs(ay - by) < 0.005 and min(ax, bx) < x1 and max(ax, bx) > x0:
+            (lo_y if ay <= cy else hi_y).append(ay)
+    for o, b2 in top:
+        if o.dxf.handle in mine or is_soft(b2) or inside(b2, b) or inside(b, b2):
+            continue
+        oy_, ox_ = min(y1, b2[3]) - max(y0, b2[1]), min(x1, b2[2]) - max(x0, b2[0])
+        if oy_ > 0 and oy_ >= ox_:  # beside it: limits x
+            (lo_x.append(b2[2]) if (b2[0] + b2[2]) / 2 <= cx else hi_x.append(b2[0]))
+        elif ox_ > 0:  # before / behind it: limits y
+            (lo_y.append(b2[3]) if (b2[1] + b2[3]) / 2 <= cy else hi_y.append(b2[1]))
+    return [max(lo_x) if lo_x else None, min(hi_x) if hi_x else None], [max(lo_y) if lo_y else None, min(hi_y) if hi_y else None]
+
+
+def room_around(msp, doc, h, soft_b):
+    """free_span for piece h as it stands now, with the same rules as clashes()."""
+    area = lambda b: (b[2] - b[0]) * (b[3] - b[1])
+    near = lambda b, t: all(abs(b[i] - t[i]) < 0.06 for i in range(4))
+    inside = lambda a_, b_: a_[0] >= b_[0] - 0.08 and a_[1] >= b_[1] - 0.08 and a_[2] <= b_[2] + 0.08 and a_[3] <= b_[3] + 0.08
+    is_soft = lambda b: any(near(b, t) for t in soft_b)
+    outl = [(e, ext_of(e)) for e in msp if e.dxf.layer in FURNI and e.dxftype() == "LWPOLYLINE" and len(e) >= 4]
+    outl = [(e, b) for e, b in outl if b and area(b) >= 0.04]
+    top = [(e, b) for e, b in outl if not any(o is not e and area(b2) > area(b) * 1.05 and inside(b, b2) and not is_soft(b2)
+                                              for o, b2 in outl)]
+    e = doc.entitydb.get(h)
+    b = ext_of(e)
+    mine = {x.dxf.handle for x in piece_members(msp, e)[0]}
+    walls = [w for w in msp.query("LINE") if w.dxf.layer == "1wall"]
+    return free_span(msp, h, b, walls, [] if is_soft(b) else top, mine, is_soft, inside)
+
+
 def clashes(msp, doc, handles, soft, ox, oy, soft_h=(), m=0.025):
     """Each listed outline against the wall faces and the other top-level furniture outlines (rugs in `soft` may
     overlap things). Returns [{"piece", "with", "overlap": plan box}]."""
@@ -318,24 +358,7 @@ def clashes(msp, doc, handles, soft, ox, oy, soft_h=(), m=0.025):
                                                 f"y {R(b2[1] - oy)}..{R(b2[3] - oy)})",
                             "overlap": [R(ix0 - ox), R(iy0 - oy), R(ix1 - ox), R(iy1 - oy)]})
         if any(c["piece"] == h for c in out):  # how much room there is, so the fix isn't trial and error
-            cx, cy = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
-            lo_x, hi_x, lo_y, hi_y = [], [], [], []
-            for w in walls:
-                (ax, ay), (bx, by) = (w.dxf.start.x, w.dxf.start.y), (w.dxf.end.x, w.dxf.end.y)
-                if abs(ax - bx) < 0.005 and min(ay, by) < y1 and max(ay, by) > y0:
-                    (lo_x if ax <= cx else hi_x).append(ax)
-                if abs(ay - by) < 0.005 and min(ax, bx) < x1 and max(ax, bx) > x0:
-                    (lo_y if ay <= cy else hi_y).append(ay)
-            for o, b2 in ([] if h in soft_h else top):
-                if o.dxf.handle in mine or is_soft(b2) or inside(b2, b) or inside(b, b2):
-                    continue
-                oy_, ox_ = min(y1, b2[3]) - max(y0, b2[1]), min(x1, b2[2]) - max(x0, b2[0])
-                if oy_ > 0 and oy_ >= ox_:  # beside it: limits x
-                    (lo_x.append(b2[2]) if (b2[0] + b2[2]) / 2 <= cx else hi_x.append(b2[0]))
-                elif ox_ > 0:  # before / behind it: limits y
-                    (lo_y.append(b2[3]) if (b2[1] + b2[3]) / 2 <= cy else hi_y.append(b2[1]))
-            fx = [max(lo_x) if lo_x else None, min(hi_x) if hi_x else None]
-            fy = [max(lo_y) if lo_y else None, min(hi_y) if hi_y else None]
+            fx, fy = free_span(msp, h, b, walls, [] if h in soft_h else top, mine, is_soft, inside)
             sp = lambda f, o_: (f"{R(f[0] - o_)}..{R(f[1] - o_)} ({round((f[1] - f[0]) * 100)} cm)" if None not in f else "open")
             out.append({"piece": h, "with": "(free space)", "free": f"free span around it: x {sp(fx, ox)}, y {sp(fy, oy)}",
                         "overlap": [0, 0, 0, 0]})
@@ -439,6 +462,8 @@ def edit(a):
 
     layers_hit = set()
 
+    soft = [tuple(float(v) for v in t.split(",")) for t in (a.soft or "").split(";") if t.strip()]
+    soft = [(t[0] + ox, t[1] + oy, t[2] + ox, t[3] + oy) for t in soft]
     pieces0 = {}  # furniture outlines touched: their extent before
 
     def get(h):
@@ -553,25 +578,68 @@ def edit(a):
             w, h = b[2] - b[0], b[3] - b[1]
             g = {str(k2).upper(): float(v2 or 0) for k2, v2 in (o.get("grow") or {}).items()}
             if g:
-                kx, ky = (w + g.get("W", 0) + g.get("E", 0)) / w, (h + g.get("S", 0) + g.get("N", 0)) / h
-                if kx <= 0.05 or ky <= 0.05:
-                    raise ValueError("grow would shrink the piece to nothing")
-                (ax, ay), shift = (b[0], b[1]), (-g.get("W", 0), -g.get("S", 0))
+                nb = [b[0] - g.get("W", 0), b[1] - g.get("S", 0), b[2] + g.get("E", 0), b[3] + g.get("N", 0)]
             else:
-                kx = float(o["x_size"]) / w if o.get("x_size") else 1
-                ky = float(o["y_size"]) / h if o.get("y_size") else 1
+                nw = float(o["x_size"]) if o.get("x_size") else w
+                nh = float(o["y_size"]) if o.get("y_size") else h
                 an = (o.get("anchor") or "").upper()
                 ax = b[0] if "W" in an else b[2] if "E" in an else (b[0] + b[2]) / 2
                 ay = b[1] if "S" in an else b[3] if "N" in an else (b[1] + b[3]) / 2
-                shift = (0, 0)
+                kx_, ky_ = nw / w, nh / h
+                nb = [ax + (b[0] - ax) * kx_, ay + (b[1] - ay) * ky_, ax + (b[2] - ax) * kx_, ay + (b[3] - ay) * ky_]
+            if nb[2] - nb[0] <= 0.05 * w or nb[3] - nb[1] <= 0.05 * h:
+                raise ValueError("that would shrink the piece to nothing")
+            # Growing: keep it inside the room it has (walls, the pieces beside it). Too big for the span ->
+            # it fills the span exactly; it fits but was pushed out of it (wrong anchor) -> slide it back in.
+            fits = []
+            try:
+                spans = room_around(msp, doc, o["handle"], soft)
+            except Exception:
+                spans = ([None, None], [None, None])
+            for ai, (lo, hi) in enumerate(spans):
+                i0, i1, old_sz = ai, ai + 2, (w if ai == 0 else h)
+                new_sz = nb[i1] - nb[i0]
+                if new_sz <= old_sz + 0.002:
+                    continue
+                if (lo is not None and b[i0] < lo - 0.01) or (hi is not None and b[i1] > hi + 0.01):
+                    continue  # already overlapping something: leave it to the clash check
+                axis = "xy"[ai]
+                if lo is not None and hi is not None and new_sz > hi - lo + 0.005:
+                    if hi - lo <= old_sz + 0.005:
+                        nb[i0], nb[i1] = b[i0], b[i1]
+                        fits.append(f"NO ROOM to make it bigger along {axis}: it already fills its free span "
+                                    f"{r(lo - (ox if ai == 0 else oy))}..{r(hi - (ox if ai == 0 else oy))} ({round((hi - lo) * 100)} cm, "
+                                    f"between walls / the pieces beside it), so its {axis} size stays {round(old_sz * 100)} cm")
+                    else:
+                        nb[i0], nb[i1] = lo, hi
+                        fits.append(f"ONLY {round((hi - lo) * 100)} cm FITS along {axis} (asked {round(new_sz * 100)} cm): "
+                                    f"it now exactly fills its free span {r(lo - (ox if ai == 0 else oy))}..{r(hi - (ox if ai == 0 else oy))}")
+                    continue
+                if g:  # explicit edges: an edge that would cross stops at the span end (no sliding)
+                    for ii, lim, bad in ((i0, lo, lambda v, L: v < L - 0.005), (i1, hi, lambda v, L: v > L + 0.005)):
+                        if lim is not None and bad(nb[ii], lim):
+                            side = ("W", "S", "E", "N")[ii]
+                            want, got = abs(nb[ii] - b[ii]), max(0.0, abs(lim - b[ii]))
+                            nb[ii] = lim if abs(lim - b[ii]) > 0 and (lim - b[ii]) * (nb[ii] - b[ii]) > 0 else b[ii]
+                            fits.append(f"the {side} edge could only grow {round(got * 100)} cm (asked {round(want * 100)}): "
+                                        f"it stops at the wall / piece at {axis} {r(lim - (ox if ai == 0 else oy))}")
+                    continue
+                if lo is not None and nb[i0] < lo - 0.005:
+                    d_ = lo - nb[i0]; nb[i0] += d_; nb[i1] += d_
+                    fits.append(f"slid {round(d_ * 100)} cm along +{axis} to stay clear of what is beside it")
+                elif hi is not None and nb[i1] > hi + 0.005:
+                    d_ = nb[i1] - hi; nb[i0] -= d_; nb[i1] -= d_
+                    fits.append(f"slid {round(d_ * 100)} cm along -{axis} to stay clear of what is beside it")
+            kx, ky = (nb[2] - nb[0]) / w, (nb[3] - nb[1]) / h
             for e in ents:
                 touched.add(e.dxf.handle)
-                scale_entity(e, (ax, ay), kx, ky)
-                if shift != (0, 0):
-                    e.translate(shift[0], shift[1], 0)
+                scale_entity(e, (b[0], b[1]), kx, ky)
+                e.translate(nb[0] - b[0], nb[1] - b[1], 0)
             b = ext_of(ents[0])
             log.append(f"piece {o['handle']} ({len(ents)} entities) resized {r(w)} x {r(h)} -> {r(b[2] - b[0])} x "
-                       f"{r(b[3] - b[1])}; outline now x {r(b[0] - ox)}..{r(b[2] - ox)}, y {r(b[1] - oy)}..{r(b[3] - oy)}")
+                       f"{r(b[3] - b[1])}; outline now x {r(b[0] - ox)}..{r(b[2] - ox)}, y {r(b[1] - oy)}..{r(b[3] - oy)}"
+                       + (" [" + "; ".join(fits) + ". Make furnish.js match this outline (size AND centre) and TELL THE USER "
+                          "the size it really got and why]" if fits else ""))
         elif k == "move_door":
             arc = get(o["handle"])
             if arc.dxftype() != "ARC":
@@ -655,8 +723,6 @@ def edit(a):
     check = [p_["handle"] for p_ in pieces if p_["new"]] + [
         h for h in new if (e := doc.entitydb.get(h)) is not None and e.dxf.layer in FURNI
         and e.dxftype() == "LWPOLYLINE" and len(e) >= 4]
-    soft = [tuple(float(v) for v in t.split(",")) for t in (a.soft or "").split(";") if t.strip()]
-    soft = [(t[0] + ox, t[1] + oy, t[2] + ox, t[3] + oy) for t in soft]
     soft_h = {h for h, b0 in pieces0.items() if b0 and any(all(abs(b0[i] - t[i]) < 0.06 for i in range(4)) for t in soft)}
     clash = clashes(msp, doc, check, soft, ox, oy, soft_h) if check else []
     auditor = doc.audit()

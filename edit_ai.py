@@ -967,6 +967,7 @@ length inside THIS room only (corner to corner of the room-side face, not into t
 room; leave window openings clear: box left of the window, box right of it, a strip under it (0..M.sill) and over it \
 (M.winHead..M.ceiling), all in local x (along the wall), material from materials.js (add a tinted \
 copy of limewash there if no colour fits). Repainting every wall of a room is the same, one panel per wall.
+- Doors, drawers, shelves, openables and finishes inside a piece whose outer size and place stay the same are 3D only (the plan outline is the footprint): rewrite the cabinet guts in furnish.js, do not touch the DXF, and do not discard for \"2D vs 3D\" — there is nothing on the plan to update. Same for \"make this cabinet open\", \"left door / right drawers\".
 - Height (\"taller\", \"lower\", \"85 cm high\") is 3D only: the plan outline is the footprint and stays as it is. \
 A target height is the top of the piece above the floor (\"85 cm high\" = top at 0.85); stretch or shrink the parts \
 under the top to suit, and nothing goes below the floor (no box starting under 0).
@@ -1451,23 +1452,26 @@ PLANT = re.compile(r"\bplant\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*(?:,\s*([\d.]+)\s
 
 def footprint(txt):
     """What of a furnish.js snippet decides the plan footprint: where items stand (and their builder's arguments) and
-    the across / out extents of its boxes and cylinders, leaving heights out. Equal before and after = height / look only."""
+    the across / out extents of its floor carcass boxes, leaving heights, doors, drawers and shelf styling out.
+    Equal before and after = height / look / openable-only: the plan outline stays as it is."""
     heads = sorted(re.findall(r"\b(?:item|rug)\(([^;]*?)(?:, p =>|\)\s*;|$)", txt, re.M)) + LOOP.findall(txt)  # loop positions too
+    builders = sorted(re.findall(r"\b(bed|wardrobe|vanity|sofa|chair)\(([^)]*)\)", txt))
     ext = []
-    for m in re.finditer(r"\bp\.(box|cyl)\(([^;]*?)\)\s*(?:;|\.|$)", txt, re.M):
-        a = [x.strip() for x in m[2].split(",")]
+    for m in re.finditer(r"\bp\.box\(([^;]*?)\)\s*(?:;|\.|$)", txt, re.M):
+        a = [x.strip() for x in m[1].split(",")]
+        if len(a) < 6:
+            continue
         try:
-            if m[1] == "box":
-                v = [float(eval(a[k], {"__builtins__": {}}, {})) for k in (0, 1, 4, 5)]
-                ext.append((v[0], v[1], v[2], v[3]))
-            else:
-                x_, z_, r_ = (float(eval(a[k], {"__builtins__": {}}, {})) for k in (0, 1, 2))
-                ext.append((x_ - r_, x_ + r_, z_ - r_, z_ + r_))
+            x0, x1, y0, y1, z0, z1 = (float(eval(a[k], {"__builtins__": {}}, {})) for k in range(6))
         except Exception:
-            return (heads, txt)  # can't read it: count it as a footprint change
+            continue
+        # Floor carcass only (sits on / near the floor, deeper than a door leaf): ignore door/drawer/shelf boxes.
+        if y0 > 0.2 or (x1 - x0) * max(0.0, z1 - z0) < 0.08:
+            continue
+        ext.append((x0, x1, z0, z1))
     bb = (round(min(e[0] for e in ext), 3), round(max(e[1] for e in ext), 3), round(min(e[2] for e in ext), 3),
           round(max(e[3] for e in ext), 3)) if ext else None
-    return (heads, bb)
+    return (heads, builders, bb)
 
 
 def blocked_spot(ws, f0, f1):
@@ -2725,11 +2729,11 @@ def github_commit(contents, msg):
 _hits = defaultdict(deque)
 
 
-def limited(ip):
+def limited(ip, rate=None):
     q, now = _hits[ip], time.time()
     while q and now - q[0] > 3600:
         q.popleft()
-    if len(q) >= RATE:
+    if len(q) >= (rate or RATE):
         return True
     q.append(now)
     return False
@@ -2764,12 +2768,14 @@ class Handler(photogen.Handler):
         act, _ = self.edit_action()
         if not act:
             return super().do_POST()
-        routes = {"chat": chat, "undo": undo, "reset": reset}
+        routes = {"chat": chat, "undo": undo, "reset": reset, "transform": lambda r: __import__("move_tool").transform(r)}
         if act not in routes:
             return self.reply(404, {"error": "not found"})
         ip = (self.headers.get("X-Forwarded-For") or self.client_address[0]).split(",")[0].strip()
         if act == "chat" and limited(ip):
             return self.reply(429, {"error": f"That's {RATE} edits this hour from here; try again later."})
+        if act == "transform" and limited("move:" + ip, 120):
+            return self.reply(429, {"error": "That's a lot of moves this hour from here; try again later."})
         try:
             n = int(self.headers.get("Content-Length") or 0)
             if n > 16_000_000:

@@ -57,8 +57,20 @@ export function furnish(scene, M, mat, version = "main") {
     build(part(g));
     g.position.set(x, 0, -y);
     g.rotation.y = typeof facing === "number" ? facing : FACING[facing];
+    // For the Move tool (move.js / move_tool.py): where this item( call sits in furnish.js and what it was given.
+    g.userData.piece = { x, y, facing, lines: callLines() };
     parent.add(g);
     return g;
+  }
+  // Move tool resizes: sized(item(...), across, out) scales an item in its own frame (height untouched).
+  const sized = (g, sx, sz) => (g.scale.set(sx, 1, sz), g);
+  // furnish.js line numbers on the call stack (item()'s own frame left out), e.g. a helper's line and its caller's.
+  const ME = import.meta.url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  function callLines() {
+    const rx = new RegExp(ME + ":(\\d+):\\d+", "g");
+    const out = [];
+    for (const m of String(new Error().stack || "").matchAll(rx)) out.push(+m[1]);
+    return out.slice(2);  // [0] callLines, [1] item
   }
   // Materials that arrive with loaded models join the shared cut plane and the fade-in.
   const late = [];
@@ -180,6 +192,7 @@ export function furnish(scene, M, mat, version = "main") {
       label(text, build) {
         const c = new THREE.Group();
         c.userData.label = text;
+        c.userData.part = true;  // the Move tool can pick it on its own
         g.add(c);
         build(part(c));
         return c;
@@ -1384,8 +1397,28 @@ export function furnish(scene, M, mat, version = "main") {
   // x 0.23 D, top 2.42, its underside 0.12 over the mirror top (2.00) and 0.18 under the ceiling.
   if (NCAC) ac(14.852, 8.79, "E", 2.42, 1.05, 0.3, 0.23, true);
   item(20.474, 9.5, "S", p => {  // coffee corner (DWG, 0.60 deep), column to wall: walnut base, white top, lit shelves
-    p.box(-0.75, 0.75, 0.1, 0.88, 0, 0.58, mat.walnut);
-    fronts(p, -0.75, 0.75, 0.1, 0.88, 0.58, 0.5);
+    // Two bays: left = one swinging door over a single shelf (water dispenser sits on the top above it);
+    // right = drawer stack top to bottom. Opens with a tap / E in Walk.
+    const c = new THREE.Group(), q = part(c), leaves = []; p.g.add(c);
+    const F = 0.58, mid = 0.0;  // front face; split at centre
+    q.box(-0.75, 0.75, 0.1, 0.88, 0, F - 0.02, mat.walnut);  // carcass
+    q.box(-0.75, 0.75, 0.1, 0.12, 0, F, mat.walnut);  // plinth shelf
+    q.box(-0.02, 0.02, 0.12, 0.88, 0, F - 0.02, mat.walnut);  // centre divider
+    // Left bay: one shelf at mid-height, open behind the door.
+    q.box(-0.73, -0.02, 0.48, 0.505, 0.02, F - 0.04, mat.oakVeneer);
+    const dL = new THREE.Group(); dL.position.set(-0.75, 0, F); c.add(dL);
+    part(dL).box(0, 0.73, 0.12, 0.88, 0, 0.02, mat.walnut);
+    leaves.push({ obj: dL, axis: "y", open: -100 * Math.PI / 180 });
+    // Right bay: three drawers, top to bottom.
+    const rh = [[0.12, 0.36], [0.36, 0.60], [0.60, 0.88]];
+    rh.forEach(([y0, y1], k) => {
+      const d = new THREE.Group(); d.position.set(0.02, 0, F); c.add(d);
+      part(d).box(0, 0.73, y0, y1, 0, 0.02, mat.walnut);
+      part(d).box(0.28, 0.45, (y0 + y1) / 2 - 0.01, (y0 + y1) / 2 + 0.01, 0.02, 0.025, mat.blackSteel);  // pull
+      leaves.push({ obj: d, slide: new THREE.Vector3(0, 0, 0.35) });
+    });
+    c.userData.openable = { id: "coffee-corner", label: "Coffee corner", leaves,
+      anchor: new THREE.Vector3(0, 0.5, F + 0.06), reach: 1.8, duration: 0.6 };
     p.box(-0.75, 0.75, 0.88, 0.92, 0, 0.6, mat.marbleTop);
     p.label("two lit floating shelves", p => {
       for (const y of [1.55, 1.8]) { p.box(-0.75, 0.75, y, y + 0.035, 0, 0.28, mat.oakVeneer); p.box(-0.73, 0.73, y - 0.012, y, 0.03, 0.26, mat.ledStrip); }
@@ -1402,7 +1435,7 @@ export function furnish(scene, M, mat, version = "main") {
       p.cyl(0.46, 0.34, 0.005, 0.99, 1.12, mat.chrome, 8);
       p.cyl(0.35, 0.3, 0.032, 0.95, 1.01, mat.whiteLacquer, 16, 0.026);
     });
-    // Fresh 2-tap countertop water dispenser, 31.5 W x 54 H x 42.5 D cm, at the column end
+    // Fresh 2-tap countertop water dispenser, 31.5 W x 54 H x 42.5 D cm, at the column end (over the left bay)
     p.label("two-tap countertop water dispenser", p => {
       p.box(-0.694, -0.379, 0.92, 1.46, 0, 0.425, mat.blackSteel, 0.03);
       p.box(-0.6, -0.47, 1.32, 1.38, 0.425, 0.43, mat.blackGlass);

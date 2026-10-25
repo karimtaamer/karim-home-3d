@@ -30,3 +30,12 @@ for (const [y0, y1] of [[3.165, 5.165], [6.34, 8.08]]) item(21.222, (y0 + y1) / 
 ## Not 3D-only (for contrast)
 - `item(4.13, 7.62, "W", bed())`: stands on a 2furni outline. Moving or resizing it needs `move_piece` / `resize_piece`.
 - A wall desk 60 cm deep at 0.75 m: below head height and reaches into the room, so it needs an outline.
+
+## Cabinet guts (doors / drawers / openables)
+
+Changing only what is *inside* a floor piece — swinging doors, drawer stacks, shelves, openable leaves, colour of
+fronts — while `item(x, y, facing, …)` and the outer carcass size stay the same is **3D-only**. The 2furni outline
+is the footprint; leave it alone. Never discard for "2D vs 3D" on these edits.
+
+Example: coffee corner `item(20.474, 9.5, "S", …)` — left door + right drawers, water dispenser still on the top.
+

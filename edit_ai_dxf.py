@@ -592,8 +592,10 @@ def edit(a):
                         _, oh, ob_ = min(own)
                         details_cut.append(f"{e.dxf.handle} (a {e.dxftype()} drawn inside piece {oh}, x {r(ob_[0] - ox)}..{r(ob_[2] - ox)}, "
                                            f"y {r(ob_[1] - oy)}..{r(ob_[3] - oy)}, which stays)")
+                        if not o.get("detail"):
+                            continue  # kept: a line of a piece that stays isn't a piece of its own
                 msp.delete_entity(e)
-            log.append(f"deleted {len(o['handles'])}")
+            log.append(f"deleted {len(o['handles']) - (0 if o.get('detail') else len(details_cut))}")
         elif k == "add_line":
             e = msp.add_line(W(o["a"]), W(o["b"]), dxfattribs=attrs(o["layer"]))
             new.append(e.dxf.handle)
@@ -890,15 +892,17 @@ def edit(a):
     delta = {k: after[k] - before[k] for k in set(before) | set(after) if after[k] != before[k]}
     print(json.dumps({"log": log, "new_handles": new, "layer_count_change": delta,
                       "removed_zero_length": zero, "audit_errors": len(auditor.errors),
-                      "furniture_changed": bool(layers_hit & set(FURNI)),
+                      "furniture_changed": bool(layers_hit & set(FURNI)) and not (  # not when every piece touched stayed put
+                          touched and touched <= set(pieces0) and not pieces and not new and not any(k in FURNI for k in delta)),
                       **({"handles_remapped": vmap} if vmap else {}),
                       **({"pieces_changed": pieces} if pieces else {}),
                       **({"clashes_checked": check, "clashes": clash} if check else {}),
                       **({"windows_moved": moved} if moved else {}),
-                      **({"warnings": warnings + [f"deleted only a detail line of a piece that is still there: {d}. A part "
-                          "built inside another piece (a stool under a dressing table, a drawer front) has no outline of its "
-                          "own, so removing that part changes nothing on the plan: put the line back (discard, redo without "
-                          "it) unless the user asked to change that piece's drawing" for d in details_cut]}
+                      **({"warnings": warnings + [f"KEPT {d}: it is a detail line of a piece that stays, not a piece of its own. "
+                          "A part built inside another piece (a stool under a dressing table, a drawer front) has no outline "
+                          "of its own, so removing that part is a 3D-only change: keep your furnish.js edit, the plan is right "
+                          "as it is. Only if the user asked to change that piece's drawing, delete it with \"detail\": true"
+                          for d in details_cut]}
                          if warnings or details_cut else {})}))
 
 

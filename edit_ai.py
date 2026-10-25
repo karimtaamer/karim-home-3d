@@ -605,7 +605,7 @@ TOOLS = [
      "parameters": {"type": "object", "properties": {"x0": {"type": "number"}, "y0": {"type": "number"}, "x1": {"type": "number"}, "y1": {"type": "number"},
                                                      "layers": {"type": "string", "description": "comma-separated"}},
                     "required": ["x0", "y0", "x1", "y1"]}},
-    {"name": "dxf_edit", "description": "Edit the version's plan DXF (plan metres). ops: move {handles,dx,dy}; copy {handles,dx,dy}; delete {handles}; "
+    {"name": "dxf_edit", "description": "Edit the version's plan DXF (plan metres). ops: move {handles,dx,dy}; copy {handles,dx,dy}; delete {handles} (a detail line inside a piece that stays is kept unless detail: true); "
                                        "add_line {layer,a:[x,y],b:[x,y]}; add_polyline {layer,points,closed}; set_points {handle,points}; "
                                        "move_window {handle (any one Windows line of it), centre_on? (handle of a piece to centre it on, e.g. the bed outline), centre? [x, y or null], dx?, dy?, width?}: moves (and resizes) the whole window and "
                                        "re-cuts the wall faces around it; ALWAYS use it to move or resize a window, never move window lines one by one. "
@@ -791,8 +791,12 @@ def tool(ws, name, a):
         ws.plan_dirty = True
         try:
             rep_ = json.loads(out)
-            ws.dxf_furni = ws.dxf_furni or rep_.get("furniture_changed", False)
-            for pc in rep_.get("pieces_changed", []):
+            same_ = lambda a_, b_: a_ and b_ and all(abs(u_ - w_) < 0.001 for u_, w_ in zip(a_, b_))
+            real_ = [pc for pc in rep_.get("pieces_changed", []) if not same_(pc["old"], pc["new"])]
+            noop_ = "pieces_changed" in rep_ and not real_ and not any(
+                k_ in ("2furni", "2 furni") for k_ in rep_.get("layer_count_change", {}))
+            ws.dxf_furni = ws.dxf_furni or (rep_.get("furniture_changed", False) and not noop_)
+            for pc in real_:
                 ws.pieces.setdefault(pc["handle"], pc["old"])
                 ws.pieces_now = {**getattr(ws, "pieces_now", {}), pc["handle"]: pc["new"]}
                 o_, n_ = pc["old"], pc["new"]
@@ -1426,7 +1430,7 @@ PLANT = re.compile(r"\bplant\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*(?:,\s*([\d.]+)\s
 def footprint(txt):
     """What of a furnish.js snippet decides the plan footprint: where items stand (and their builder's arguments) and
     the across / out extents of its boxes and cylinders, leaving heights out. Equal before and after = height / look only."""
-    heads = sorted(re.findall(r"\b(?:item|rug)\(([^;]*?)(?:, p =>|\)\s*;|$)", txt, re.M))
+    heads = sorted(re.findall(r"\b(?:item|rug)\(([^;]*?)(?:, p =>|\)\s*;|$)", txt, re.M)) + LOOP.findall(txt)  # loop positions too
     ext = []
     for m in re.finditer(r"\bp\.(box|cyl)\(([^;]*?)\)\s*(?:;|\.|$)", txt, re.M):
         a = [x.strip() for x in m[2].split(",")]
@@ -1633,6 +1637,118 @@ PRIM = re.compile(r"\b[a-z]\w*\.(box|cyl)\(([^;]*?)\)\s*(?:;|\.|,|\)|$)", re.M) 
 BUILDER = re.compile(r"\bitem\(\s*-?[\d.]+\s*,\s*-?[\d.]+\s*,\s*\"[NSEW]\"\s*,\s*\w+\(")
 
 
+def js_num(expr, env):
+    """A small JS number expression (literals, consts from env, version === "v" ? a : b, + - * /) as a float; raises if not."""
+    e = expr.strip().replace("===", "==").replace("!==", "!=").replace("&&", " and ").replace("||", " or ")
+    m = re.fullmatch(r"(.+?)\?(.+?):(.+)", e, re.S)
+    if m:
+        return js_num(m[2], env) if eval(m[1], {"__builtins__": {}}, env) else js_num(m[3], env)
+    return float(eval(e, {"__builtins__": {}}, env))
+
+
+def item_box(L, i, version):
+    """(plan box x0, y0, x1, y1, lowest, deepest) of the item( built inline at 1-based line i of furnish.js lines L,
+    from its readable p.box / p.cyl calls (simple consts and version ternaries resolved); None when it can't be read."""
+    m = ITEM.search(L[i - 1])
+    if not m:
+        return None
+    x, y, f = float(m[1]), float(m[2]), m[3]
+    blk, dep = "", 0
+    for k in range(i - 1, min(i + 60, len(L))):
+        blk += L[k] + "\n"
+        dep += L[k].count("(") - L[k].count(")")
+        if dep <= 0:
+            break
+    env = {"version": version, "M": None}
+    for c in re.finditer(r"\bconst (\w+) = ([^;,]+);", blk):
+        try:
+            env[c[1]] = js_num(c[2], env)
+        except Exception:
+            pass
+    ext = []
+    for s_ in PRIM.finditer(blk):
+        a = [t.strip() for t in s_[2].split(",")]
+        try:
+            if s_[1] == "box":
+                ext.append((js_num(a[0], env), js_num(a[1], env), js_num(a[2], env), js_num(a[4], env), js_num(a[5], env)))
+            else:
+                cx, cz, r_ = js_num(a[0], env), js_num(a[1], env), js_num(a[2], env)
+                ext.append((cx - r_, cx + r_, js_num(a[3], env), cz - r_, cz + r_))
+        except Exception:
+            continue
+    if not ext:
+        return None
+    ux, uy = {"S": (1, 0), "N": (-1, 0), "E": (0, 1), "W": (0, -1)}[f]
+    fx, fy = {"S": (0, -1), "N": (0, 1), "E": (1, 0), "W": (-1, 0)}[f]
+    a0, a1 = min(e[0] for e in ext), max(e[1] for e in ext)
+    z0, z1 = max(0.0, min(e[3] for e in ext)), max(e[4] for e in ext)
+    pts = [(x + ux * u + fx * z, y + uy * u + fy * z) for u in (a0, a1) for z in (z0, z1)]
+    return (min(p_[0] for p_ in pts), min(p_[1] for p_ in pts), max(p_[0] for p_ in pts), max(p_[1] for p_ in pts),
+            min(e[2] for e in ext), z1)
+
+
+def resized_off_plan(ws, f0, f1):
+    """A note when an existing floor piece's 3D build now runs past the plan outline it stands on, or over the spot
+    where a neighbouring piece stands: the 2D and 3D no longer show the same room."""
+    if f0 == f1 or not plan_edits():
+        return None
+    L0, L1 = f0.splitlines(), f1.splitlines()
+    old, old_t = {}, {}
+    for i, px, py, l in placed_lines(ws, f0):
+        if ITEM.search(l):
+            old[(px, py)] = i
+            old_t.setdefault(ITEM.sub("", l).strip(), i)  # the same line with its position changed
+    floor = [(i, px, py, l) for i, px, py, l in placed_lines(ws, f1) if ITEM.search(l) and stands_on_floor(f1, i, l)]
+    cur = None
+    for i, px, py, line in floor:
+        j = old.get((px, py), old_t.get(ITEM.sub("", line).strip()))
+        if j is None:
+            continue  # a new piece: unplanned() looks after it
+        b1, b0 = item_box(L1, i, ws.v), item_box(L0, j, ws.v)
+        if not b1 or not b0 or all(abs(u - w) < 0.01 for u, w in zip(b1[:4], b0[:4])) or b1[4] > 0.05:
+            continue
+        r3 = lambda v_: round(v_, 3)
+        where = f"x {r3(b1[0])}..{r3(b1[2])}, y {r3(b1[1])}..{r3(b1[3])}"
+        for k, qx, qy, l2 in floor:
+            fq = {"S": (0, -1), "N": (0, 1), "E": (1, 0), "W": (-1, 0)}[ITEM.search(l2)[3]]
+            sx, sy = qx + 0.1 * fq[0], qy + 0.1 * fq[1]  # 10 cm in front of its back: inside that piece
+            if k != i and b1[0] + 0.03 < sx < b1[2] - 0.03 and b1[1] + 0.03 < sy < b1[3] - 0.03 \
+                    and not (b0[0] < sx < b0[2] and b0[1] < sy < b0[3]):
+                return (f"Check 2D vs 3D: furnish.js line {i} ({line.strip()[:90]}) now builds x..y {where}, which runs "
+                        f"over line {k} ({l2.strip()[:70]}), standing at ({qx}, {qy}): two pieces in one place. Fit it in "
+                        "the room its neighbours leave (or move / resize the neighbour too, in both views) and keep the "
+                        "plan outline matching, or put it back and tell the user how much room there is.")
+        if cur is None:
+            cur = ws.tmp / "plan-resized.dxf"
+            cur.write_bytes(ws.read(ws.cfg["dxf"]))
+        code, q = run([dwg_python(), str(ROOT / "edit_ai_dxf.py"), "query", str(cur), f"--origin={ORIGIN[0]},{ORIGIN[1]}",
+                       f"--bbox={px - 0.05},{py - 0.05},{px + 0.05},{py + 0.05}", "--layers=2furni,2 furni", "--limit", "400"],
+                      timeout=90)
+        try:
+            ents = json.loads(q).get("entities", [])
+        except ValueError:
+            continue
+        outs = []
+        for d in ents:
+            ps = d.get("points") or []
+            if d["type"] == "LWPOLYLINE" and len(ps) >= 4:
+                c = (min(p_[0] for p_ in ps), min(p_[1] for p_ in ps), max(p_[0] for p_ in ps), max(p_[1] for p_ in ps))
+                if (c[2] - c[0]) * (c[3] - c[1]) >= 0.04:
+                    outs.append((d["handle"], c))
+        if not outs:
+            continue
+        h, c = max(outs, key=lambda t: (t[1][2] - t[1][0]) * (t[1][3] - t[1][1]))
+        grew = (b0[0] - b1[0], b0[1] - b1[1], b1[2] - b0[2], b1[3] - b0[3])  # how far each side went out
+        past = (c[0] - b1[0], c[1] - b1[1], b1[2] - c[2], b1[3] - c[3])
+        over = max((min(g_, p_) for g_, p_ in zip(grew, past)), default=0)
+        if over > 0.03:
+            return (f"Check 2D vs 3D: furnish.js line {i} ({line.strip()[:90]}) now builds {where}, {round(over * 100)} cm past "
+                    f"its plan outline {h} (x {r3(c[0])}..{r3(c[2])}, y {r3(c[1])}..{r3(c[3])}). Give the outline the same "
+                    "change (dxf_edit resize_piece / move_piece) so 2D and 3D match, or fit the 3D inside it; if there "
+                    "isn't room, put it back and tell the user why.")
+    return None
+
+
 def unplanned(ws, f0, f1, new_items):
     """A note when a new piece in furnish.js (on the floor, or fixed to a wall and reaching out into the room) has no
     plan outline (2furni) under it, or a new plan outline has no 3D piece standing on it, else None."""
@@ -1815,6 +1931,8 @@ def review(ws, message, reply):
            if Counter(NUMBER.findall(o["old"])) != Counter(NUMBER.findall(o["new"]))
            and not (o["new"].startswith(o["old"]) or o["new"].endswith(o["old"]))  # not a pure addition
            and footprint(o["old"]) != footprint(o["new"])]  # height / look only: the plan outline is the footprint
+    if (off_ := resized_off_plan(ws, f0, f1)):  # a resized 3D piece now past its outline or over its neighbour
+        return off_ + tail
     in_window = lambda px, py: any(abs(px - wx) <= hw and abs(py - wy) <= 0.3 for wx, wy, hw in getattr(ws, "win_moved", []))
     gone = [(i, px, py, line) for i, px, py, line in placed_lines(ws, f0)
             if bare(line) not in now and not in_window(px, py) and any(len(seg.strip()) > 8 and seg.strip() in line for o in ops for seg in o["old"].splitlines())]
@@ -1834,8 +1952,10 @@ def review(ws, message, reply):
                 ps = d.get("points") or []
                 if d["type"] == "LWPOLYLINE" and len(ps) >= 4 and d["handle"] not in ws.pieces:
                     xs, ys = [p[0] for p in ps], [p[1] for p in ps]
+                    inner = any(o_ and o_[0] - 0.01 <= min(xs) and max(xs) <= o_[2] + 0.01 and o_[1] - 0.01 <= min(ys)
+                                and max(ys) <= o_[3] + 0.01 for o_ in ws.pieces.values())  # moved with a changed piece
                     if min(xs) - 0.15 <= px <= max(xs) + 0.15 and min(ys) - 0.15 <= py <= max(ys) + 0.15 \
-                            and (max(xs) - min(xs)) * (max(ys) - min(ys)) >= 0.04:
+                            and (max(xs) - min(xs)) * (max(ys) - min(ys)) >= 0.04 and not inner:
                         hits.append((d["handle"], [min(xs), min(ys), max(xs), max(ys)]))
             if hits:
                 h, bb = min(hits, key=lambda t: (t[1][2] - t[1][0]) * (t[1][3] - t[1][1]))
@@ -1853,7 +1973,8 @@ def review(ws, message, reply):
                 "piece is drawn on the plan (furniture_near lists the outlines there), give its outline exactly the same "
                 "change now with dxf_edit move_piece / resize_piece; things not drawn on the plan, and changes of height or "
                 "look only (taller, lower, colour: the outline is the footprint), need nothing: keep your 3D edit as it is, "
-                "you're done, reply to the user." + tail)
+                "you're done, reply to the user. If dxf_edit says there's no room that way, put the 3D back too and tell "
+                "the user why: both views always show the same room." + tail)
     # A new piece on a wall overlapping (along the wall and in height) what already stands / hangs there.
     if f1 != f0:
         L1, old_lines, cl = f1.splitlines(), set(f0.splitlines()), 2.6

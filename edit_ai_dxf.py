@@ -258,17 +258,16 @@ def piece_members(msp, outline, m=0.08):
     outlines = [(e, b) for e, b in furni if e.dxftype() == "LWPOLYLINE" and len(e) >= 4 and area(b) >= 0.04]
     ob = ext_of(outline)
     out = [outline]
+    def clips(a_, c_):  # piece a_ only pushes into the edge of c_ (a table run into the bed), not nested / standing on it
+        ov = max(0, min(a_[2], c_[2]) - max(a_[0], c_[0])) * max(0, min(a_[3], c_[3]) - max(a_[1], c_[1]))
+        return area(a_) < area(c_) and 0 < ov < 0.5 * area(a_) and not inside(a_, c_) and not inside(c_, a_)
     for e, b in furni:
         if e is outline or not inside(b, ob):
             continue
-        owners = [(area(b2), o) for o, b2 in outlines if o is not e and inside(b, b2) and area(b2) >= area(b) * 1.05]
-        if owners and min(owners, key=lambda x: x[0])[1] is outline:
-            # Also inside another piece that this one only clips the edge of (a table pushed into the bed): it's
-            # that piece's line (a pillow), not this one's. A piece mostly standing on a rug keeps its own lines.
-            ov = lambda b2: max(0, min(ob[2], b2[2]) - max(ob[0], b2[0])) * max(0, min(ob[3], b2[3]) - max(ob[1], b2[1]))
-            if any(o is not outline and o is not e and inside(b, b2) and not inside(ob, b2) and not inside(b2, ob)
-                   and ov(b2) < 0.5 * area(ob) for o, b2 in outlines):
-                continue
+        owners = [(area(b2), o, b2) for o, b2 in outlines if o is not e and inside(b, b2) and area(b2) >= area(b) * 1.05]
+        # A line inside both a piece and one that clips its edge is the first piece's (the bed's pillow line, not the table's).
+        keep = [w for w in owners if not any(w is not w2 and clips(w[2], w2[2]) for w2 in owners)] or owners
+        if keep and min(keep, key=lambda x: x[0])[1] is outline:
             out.append(e)
     return out, ob
 

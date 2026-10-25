@@ -1084,6 +1084,10 @@ def chat(req):
                 steps.append(name)
                 trace.append({"tool": name, "args": call["function"]["arguments"][:600], "out": str(out)[:700]})
                 messages.append({"role": "tool", "tool_call_id": call["id"], "content": str(out)})
+            if step == MAX_STEPS - 3 and ws.changed:  # don't lose a finished edit to the step limit
+                messages.append({"role": "user", "content": "Only 2 steps left. If your edits are done and the last check "
+                                 "passed, reply to the user now (no more tool calls); otherwise call discard and say what "
+                                 "couldn't be finished."})
         else:
             reply = "I ran out of steps before finishing; nothing was changed. Try a narrower request."
             ws.changed.clear()

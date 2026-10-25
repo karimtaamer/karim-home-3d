@@ -590,8 +590,10 @@ export function furnish(scene, M, mat, version = "main") {
     if (cabinet) {
       const c = o.box ? d : 0.32;  // a deep flush box takes a cabinet flush with its front
       const [c0, c1] = o.cab ?? [1.65, 2.45];  // cabinet bottom and top
-      p.box(x0, b1, c0, c1, 0, c, mat.oakVeneer);
-      p.box(x0 + 0.02, b1 - 0.02, c0 - 0.03, c0 - 0.01, 0.02, c - 0.02, mat.ledStrip);
+      if (version !== "shifted-bedroom") {
+        p.box(x0, b1, c0, c1, 0, c, mat.oakVeneer);
+        p.box(x0 + 0.02, b1 - 0.02, c0 - 0.03, c0 - 0.01, 0.02, c - 0.02, mat.ledStrip);
+      }
     }
   };
   const towelRail = p => {  // towel radiator with a hanging towel, clear of the vanity top
@@ -695,7 +697,7 @@ export function furnish(scene, M, mat, version = "main") {
       p.model("models/plant-vase.glb", null, -0.84, 1.77, 0.08, { height: 0.3, cross: true });
       p.model("models/plant-vase.glb", null, -0.58, 0.75, 0.1, { height: 0.4, cross: true });  // on the top, by the column
       p.model("models/mbath-bottles.glb", null, 0.62, 0.75, 0.06, { width: 0.28 });
-      p.pebble(version === "kareems-changes" ? 0.16265 : -0.05, 1.35, 1.1, 0.75, 0.012, mat.mirror, true);   // 1.10 wide x 0.75 tall, 0.98 to 1.73
+      p.pebble(version === "kareems-changes" || version === "naghams-changes" ? 0.16265 : -0.05, 1.35, 1.1, 0.75, 0.012, mat.mirror, true);   // 1.10 wide x 0.75 tall, 0.98 to 1.73; centred between wardrobe edge and shelf column edge
       p.cyl(-0.05, 0.25, 0.225, 0, 0.43, mat.boucle, 32);           // pouf 45 x 45, pushed in to 2.5 cm off the back panel
       p.cyl(-0.05, 0.25, 0.215, 0.43, 0.45, mat.boucle, 32, 0.225);
     });

@@ -21,7 +21,7 @@
   "functions": {
     "api/photospot.py": {
       "maxDuration": 300,
-      "excludeFiles": "{models,textures,notes,dist,renders}/**"
+      "excludeFiles": "{models,textures,notes,dist,renders,dwg}/**"
     },
     "api/edit-ai.py": {
       "maxDuration": 300,

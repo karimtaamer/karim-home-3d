@@ -252,7 +252,11 @@ def dwg_python():
 
 
 def run(args, cwd=None, stdin=None, timeout=120):
-    p = subprocess.run(args, cwd=cwd, input=stdin, capture_output=True, text=True, timeout=timeout)
+    env = None
+    if args and args[0] == sys.executable:
+        # On Vercel the requirements.txt packages sit on this process's sys.path, not necessarily the child's.
+        env = {**os.environ, "PYTHONPATH": os.pathsep.join(p for p in sys.path if p)}
+    p = subprocess.run(args, cwd=cwd, input=stdin, capture_output=True, text=True, timeout=timeout, env=env)
     return p.returncode, (p.stdout + p.stderr).strip()
 
 
@@ -482,8 +486,13 @@ def check_image(u, what):
 
 
 def plan_edits():
-    """Walls and other DXF edits need the DWG folder and build scripts, which .vercelignore keeps off the deploy."""
-    return (ROOT / "dwg").is_dir() and (ROOT / "build_geometry.py").exists() and (ROOT / "build_drawing.py").exists()
+    """Walls and other DXF edits need the DWG folder, the build scripts and ezdxf + shapely (requirements.txt)."""
+    if not ((ROOT / "dwg").is_dir() and (ROOT / "build_geometry.py").exists() and (ROOT / "build_drawing.py").exists()):
+        return False
+    if dwg_python() != sys.executable:
+        return True
+    import importlib.util
+    return all(importlib.util.find_spec(m) for m in ("ezdxf", "shapely"))
 
 
 def openai(messages, first=False):
@@ -537,7 +546,7 @@ def chat(req):
                                marked="" if ctx.get("wholeView") else ", with what the user circled marked in red")
     if not plan_edits():
         sys_prompt += ("\n\nThis server can't edit the plan DXF (walls, windows, doors): only furnish.js, materials.js and the tour. "
-                       "If the request needs a wall moved, say so plainly and suggest asking Karim to run Edit AI locally.")
+                       "If the request needs a wall, window or door moved, say plainly that plan edits are unavailable right now.")
     messages = [{"role": "system", "content": sys_prompt}]
     for h in (req.get("history") or [])[-8:]:
         if h.get("role") in ("user", "assistant") and isinstance(h.get("text"), str):
@@ -770,7 +779,7 @@ class Handler(photogen.Handler):
             return super().do_GET()
         try:
             if act == "status":
-                return self.reply(200, {"ready": bool(api_key()), "model": MODEL})
+                return self.reply(200, {"ready": bool(api_key()), "model": MODEL, "planEdits": plan_edits()})
             if act == "patches":
                 return self.reply(200, patches(q.get("version", ["main"])[0]))
         except Exception as e:

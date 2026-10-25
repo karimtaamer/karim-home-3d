@@ -772,7 +772,9 @@ never out in the room. A new piece that stands on the floor (table, chair, cabin
 the plan: dxf_edit add_polyline on 2furni, closed, drawn exactly where the 3D puts it: its back edge through (x, y) \
 and its depth out in the facing direction (facing "E" with depth d: x .. x + d; "N": y .. y + d), width centred on \
 (x, y); wall-hung things (TV, art, shelves, lights) don't. Before adding or moving a piece, check with \
-furniture_near what already stands there and don't overlap it; if the spot is taken, pick the nearest free one and say so.
+furniture_near what already stands there and don't overlap it; if the spot is taken, pick the nearest free one and say so. \
+Keep the room usable: ~70 cm clear in front of wardrobe / cabinet fronts and door swings, ~60 cm beside the bed; a \
+new chair or table never goes in front of the wardrobe doors.
 - Keep 3D and 2D together: a piece drawn on the plan (2furni) that you move or resize in furnish.js gets exactly the \
 same change in the DXF (furniture_near gives its outline's handle: dxf_edit move_piece / resize_piece), and a DXF \
 furniture change gets the same change in furnish.js. Move only the pieces asked for (plus their group, below): \
@@ -1106,9 +1108,14 @@ def review(ws, message, reply):
                 "change now with dxf_edit move_piece / resize_piece; things not drawn on the plan need nothing." + tail)
     # A plan piece that now runs into a wall or another piece.
     hits = [c for cs in ws.clashes.values() for c in cs]
-    if hits:
+    if any(not c.get("free") for c in hits):
+        free = [f"{c['piece']}: {c['free']}" for c in hits if c.get("free")]
+        hits = [c for c in hits if not c.get("free")]
         desc = "; ".join(f"{c['piece']} overlaps {c['with']} at x {c['overlap'][0]}..{c['overlap'][2]}, "
                          f"y {c['overlap'][1]}..{c['overlap'][3]}" for c in hits[:4])
+        if free:
+            desc += (" (" + "; ".join(free) + ": a piece wider than its free span can't fit there as asked; then "
+                     "make it as big as fits, or move the neighbour if the user would expect that, and say so)")
         return ("Check the fit: on the plan " + desc + ". A real piece can't go into a wall or through another piece. "
                 "Fix it in both views the same way: shift or size the piece so it fits (dxf_edit move_piece / "
                 "resize_piece with grow, and the furnish.js line to match), or, if the user would expect the neighbour to "
@@ -1116,6 +1123,31 @@ def review(ws, message, reply):
                 "so." + tail)
     # A new / moved wall piece standing on the far face of its wall (its front would be inside the wall).
     new_items = [(i, line) for i, _, _, line in placed_lines(ws, f1) if line not in set(f0.splitlines()) and ITEM.search(line)]
+    try:
+        sm = ws.text(ws.cfg["model"])
+        rings = [f.get("outer") or [] for f in json.loads(sm[sm.index("{"):sm.rindex("}") + 1]).get("floor", [])]
+    except Exception:
+        rings = []
+    def on_floor(px, py):
+        for ring in rings:
+            hit = False
+            for k in range(len(ring)):
+                (ax, ay), (bx, by) = ring[k - 1][:2], ring[k][:2]
+                if (ay > py) != (by > py) and px < ax + (py - ay) * (bx - ax) / (by - ay):
+                    hit = not hit
+            if hit:
+                return True
+        return False
+    for i, line in new_items[:4]:  # its front has to look into a room, not out of the flat
+        m = ITEM.search(line)
+        x, y, f = float(m[1]), float(m[2]), m[3]
+        dx_, dy_ = {"N": (0, 0.3), "S": (0, -0.3), "E": (0.3, 0), "W": (-0.3, 0)}[f]
+        if rings and not on_floor(x + dx_, y + dy_) and on_floor(x - dx_, y - dy_):
+            opp = {"N": "S", "S": "N", "E": "W", "W": "E"}[f]
+            return (f"Check placement: furnish.js line {i} ({line.strip()[:120]}) faces \"{f}\", but 30 cm in front of it "
+                    f"is outside the flat: it is on the outer face of its wall, looking out. Put its back on the wall's "
+                    f"room-side face (dxf_query 1wall: the face line nearer the room, ~11-25 cm in) and face it \"{opp}\"; "
+                    "for a facing flip, local x runs the other way, so mirror any x offsets inside build." + tail)
     for i, line in new_items[:4]:  # a new floor piece's plan outline has to start at its back, like the 3D does
         m = ITEM.search(line)
         x, y, f = float(m[1]), float(m[2]), m[3]

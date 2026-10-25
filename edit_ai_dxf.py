@@ -312,6 +312,28 @@ def clashes(msp, doc, handles, soft, ox, oy, soft_h=(), m=0.025):
                 out.append({"piece": h, "with": f"outline {o.dxf.handle} (x {R(b2[0] - ox)}..{R(b2[2] - ox)}, "
                                                 f"y {R(b2[1] - oy)}..{R(b2[3] - oy)})",
                             "overlap": [R(ix0 - ox), R(iy0 - oy), R(ix1 - ox), R(iy1 - oy)]})
+        if any(c["piece"] == h for c in out):  # how much room there is, so the fix isn't trial and error
+            cx, cy = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+            lo_x, hi_x, lo_y, hi_y = [], [], [], []
+            for w in walls:
+                (ax, ay), (bx, by) = (w.dxf.start.x, w.dxf.start.y), (w.dxf.end.x, w.dxf.end.y)
+                if abs(ax - bx) < 0.005 and min(ay, by) < y1 and max(ay, by) > y0:
+                    (lo_x if ax <= cx else hi_x).append(ax)
+                if abs(ay - by) < 0.005 and min(ax, bx) < x1 and max(ax, bx) > x0:
+                    (lo_y if ay <= cy else hi_y).append(ay)
+            for o, b2 in ([] if h in soft_h else top):
+                if o.dxf.handle in mine or is_soft(b2) or inside(b2, b) or inside(b, b2):
+                    continue
+                oy_, ox_ = min(y1, b2[3]) - max(y0, b2[1]), min(x1, b2[2]) - max(x0, b2[0])
+                if oy_ > 0 and oy_ >= ox_:  # beside it: limits x
+                    (lo_x.append(b2[2]) if (b2[0] + b2[2]) / 2 <= cx else hi_x.append(b2[0]))
+                elif ox_ > 0:  # before / behind it: limits y
+                    (lo_y.append(b2[3]) if (b2[1] + b2[3]) / 2 <= cy else hi_y.append(b2[1]))
+            fx = [max(lo_x) if lo_x else None, min(hi_x) if hi_x else None]
+            fy = [max(lo_y) if lo_y else None, min(hi_y) if hi_y else None]
+            sp = lambda f, o_: (f"{R(f[0] - o_)}..{R(f[1] - o_)} ({round((f[1] - f[0]) * 100)} cm)" if None not in f else "open")
+            out.append({"piece": h, "with": "(free space)", "free": f"free span around it: x {sp(fx, ox)}, y {sp(fy, oy)}",
+                        "overlap": [0, 0, 0, 0]})
     return out
 
 

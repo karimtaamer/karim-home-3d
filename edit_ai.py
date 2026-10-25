@@ -529,6 +529,28 @@ def placed_lines(ws, text=None):
     return out
 
 
+LOOP = re.compile(r"\bfor \(const (\w+) of \[([-\d.,\s]+)\]\)")
+
+
+def loop_placed(ws, text):
+    """(item line no, x, y, [for line, item line]) for each piece a `for (const x of [a, b])` loop places with
+    item(x, y / item(x, y) a few lines below, for this version: placed_lines can't see those (no literal x / y)."""
+    sc = version_scope(text, ws.v)
+    L = text.splitlines()
+    out = []
+    for i, line in enumerate(L):
+        m = LOOP.search(line)
+        if not m or sc[i] is False:
+            continue
+        vals = [float(v) for v in m[2].split(",") if v.strip()]
+        rx = re.compile(r"\bitem\(\s*(?:" + m[1] + r"\s*,\s*(-?[\d.]+)|(-?[\d.]+)\s*,\s*" + m[1] + r"\b)")
+        for j in range(i, min(i + 4, len(L))):
+            if (a := rx.search(L[j])):
+                out += [(j + 1, v, float(a[1]), [line, L[j]]) if a[1] else (j + 1, float(a[2]), v, [line, L[j]]) for v in vals]
+                break
+    return out
+
+
 def mat_names(ws):
     return set(re.findall(r"^\s+(\w+)\s*:", ws.text("materials.js"), re.M))
 
@@ -871,7 +893,10 @@ below lists each mark). Move that piece (3D line and its plan outline together) 
 orientation (re-face it only if it moves onto a different wall); nothing stays behind at Mark 1. Height: if Mark 2's \
 centre hit gives a height ("... m up" on a wall or furniture surface), put the piece at that height, since drawing \
 Mark 2 higher or lower IS the user asking for a new height; only if Mark 2 is on the floor / has no useful height keep \
-the piece's current height. Never ignore a clear vertical difference between Mark 1 and Mark 2 on a wall.
+the piece's current height. Never ignore a clear vertical difference between Mark 1 and Mark 2 on a wall. Move only \
+that piece: if a loop places it together with others (`for (const x of [a, b])`), take it out into its own item() \
+line and leave the others; if it is a part built inside a bigger piece (a pouf or stool under a dressing table), take \
+just that part out into its own item() at Mark 2 and leave the bigger piece and its plan outline where they are.
 - \"At the foot of / beside / in front of\" a piece: line the new piece up with that piece's plan outline (centred on \
 it unless told otherwise) and set it 5-10 cm off it, not across the room. At the foot of a bed whose headboard faces \
 "S" (foot edge at y = F): item(bed centre x, F - 0.05, "S", ...), i.e. the new piece's back toward the bed and its \
@@ -1703,11 +1728,14 @@ def review(ws, message, reply):
     now = {bare(l) for l in f1.splitlines()}
     # A plan piece moved / resized: the 3D line(s) standing on it must have changed too.
     for h, b in ws.pieces.items():
-        lines = [(i, line) for i, px, py, line in placed_lines(ws, f0)
-                 if b[0] - 0.15 <= px <= b[2] + 0.15 and b[1] - 0.15 <= py <= b[3] + 0.15]
-        if lines and all(bare(line) in now for _, line in lines):
+        on = lambda px, py: b[0] - 0.15 <= px <= b[2] + 0.15 and b[1] - 0.15 <= py <= b[3] + 0.15
+        loops = [(i, ls) for i, px, py, ls in loop_placed(ws, f0) if on(px, py)]  # e.g. one of two bedside tables
+        lines = [(i, [line]) for i, px, py, line in placed_lines(ws, f0) if on(px, py)] + loops
+        if lines and all(bare(l) in now for _, ls in lines for l in ls):
             return (f"Check 2D vs 3D: you changed plan piece {h} (was x {b[0]}..{b[2]}, y {b[1]}..{b[3]}) but its 3D line(s) in "
-                    "furnish.js didn't change: " + "; ".join(f"line {i}: {line.strip()[:160]}" for i, line in lines[:4])
+                    "furnish.js didn't change: " + "; ".join(f"line {i}: {ls[-1].strip()[:160]}" for i, ls in lines[:4])
+                    + (" (placed by the loop above it together with other pieces: take this one out of the loop into its own "
+                       "item() line and leave the others where they are)" if loops else "")
                     + ". Give the 3D piece exactly the same move / resize (for this version only), or put the plan piece "
                       "back if it wasn't meant to change." + tail)
     # A 3D piece moved / resized: the plan outline it stands on must have changed too.

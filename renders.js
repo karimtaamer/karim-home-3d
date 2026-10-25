@@ -1,7 +1,10 @@
 // Renders: every designer render from spots.json, grouped by room, as a third view beside the 3D model
 // and the drawing. Click one to see it large; arrow keys step through, Esc closes.
 // With Generate Photo Spot's backend (actions.can()), the large view can also edit a render in words (a new
-// version, the old kept) and delete a generated one, after a confirmation.
+// version, the old kept; up to four inspiration pictures can go with the words, inspiration.js) and delete a
+// generated one, after a confirmation. An edit's cost (EGP) shows on the new version's caption.
+
+import { MAX_INSPO, egp, focusWhenReady, inspirationPicker } from "./inspiration.js";
 
 // Groups in the order of the Rooms panel; anything filed under a room without a viewpoint goes last.
 export function byRoom(list, rooms) {
@@ -29,9 +32,10 @@ export function createRenders(root, rooms, actions = { can: () => false }) {
       </div>
       <form class="rsheet redit" hidden>
         <label>What should change?<textarea placeholder="e.g. walnut nightstands, warmer evening light"></textarea></label>
-        <p class="rnote">Saved as a new version; this one stays.</p>
+        <div class="rinspo"></div>
+        <p class="rnote">Add up to ${MAX_INSPO} inspiration pictures (+ Picture, paste or drop) to copy a look from. Saved as a new version; this one stays.</p>
         <div class="rerr"></div>
-        <div class="rrow"><button type="submit" class="rgo">Make new version</button><button type="button" class="rcancel">Cancel</button></div>
+        <div class="rrow"><button type="submit" class="rgo">Make new version</button><button type="button" class="rattach">+ Picture</button><button type="button" class="rcancel">Cancel</button></div>
       </form>
       <div class="rsheet rdel" hidden>
         <p class="rq"></p>
@@ -46,6 +50,8 @@ export function createRenders(root, rooms, actions = { can: () => false }) {
   const big = box.querySelector("img"), cap = box.querySelector(".rcap");
   const acts = box.querySelector(".racts"), editor = box.querySelector(".redit"), confirm = box.querySelector(".rdel");
   const notes = editor.querySelector("textarea");
+  const inspo = inspirationPicker({ form: editor, button: editor.querySelector(".rattach"), area: notes, thumbs: editor.querySelector(".rinspo"),
+    onError: m => (editor.querySelector(".rerr").textContent = m) });
   let order = [], at = -1, shown = false, busy = false;
 
   function sheet(which) {
@@ -76,7 +82,7 @@ export function createRenders(root, rooms, actions = { can: () => false }) {
     else if (e.key === "ArrowRight") open(at + 1);
   });
 
-  box.querySelector(".redit-open").onclick = () => { sheet(editor); notes.value = ""; notes.focus(); };
+  box.querySelector(".redit-open").onclick = () => { sheet(editor); notes.value = ""; inspo.clear(); focusWhenReady(notes, () => !box.hidden && !editor.hidden); };
   box.querySelector(".rdel-open").onclick = () => {
     const s = order[at];
     confirm.querySelector(".rq").textContent = `Delete “${versioned(s.caption, s)}”? It goes for good, on every device.`;
@@ -103,8 +109,11 @@ export function createRenders(root, rooms, actions = { can: () => false }) {
     e.preventDefault();
     const text = notes.value.trim();
     if (!text) return;
-    const spot = await work(editor, "Editing", () => actions.edit(order[at], text));
-    if (spot) open(order.findIndex(s => s.id === spot.id));
+    const out = await work(editor, "Editing", () => actions.edit(order[at], text, inspo.list()));
+    if (!out?.spot) return;
+    inspo.clear();
+    open(order.findIndex(s => s.id === out.spot.id));
+    cap.textContent += ` · ${out.usd != null ? egp(out.usd) : "Cost not reported"}`;  // what that edit cost
   };
   confirm.querySelector(".rgo").onclick = async () => {
     const i = at;

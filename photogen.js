@@ -2,7 +2,9 @@
 // (photogen.py does the calls, so the key never reaches the page). It sends an untextured clay screenshot of
 // the model (the shapes only; the finishes come from the brief and references), a plan of the room drawn from
 // the DWG, the view's numbers and a list of the named pieces in frame (so none is dropped); the designer's renders go
-// along as style references. Make an edit (a comment typed over the picture) re-runs it on the attempt shown; approve to save it as a photo spot.
+// along as style references. Make an edit (a comment typed over the picture, with up to four inspiration pictures
+// to copy a look from: inspiration.js) re-runs it on the attempt shown; approve to save it as a photo spot. Each
+// attempt shows what it cost (photogen.py's estimate from OpenAI's usage, in EGP).
 // The endpoints are photogen.py's: the local server, or api/photospot.py on Vercel; with neither (a plain
 // static server) the button stays hidden. If PHOTOSPOT_PASSWORD is set there, the page asks for it once.
 // The button first shows a preview of the shot from where you stand, with − / + to frame it: + widens it by
@@ -15,6 +17,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { framedWord, uniqueName, wordFor } from "./spotnames.js";
+import { MAX_INSPO, USD_EGP, egp, focusWhenReady, inspirationPicker } from "./inspiration.js";
 
 const W = 1536, H = 1024;  // the 3:2 frame photogen.py asks for
 // The clay VIEW: matte light grey; glass a faint grey-blue at its own opacity; lamps and LED strips a soft white.
@@ -65,6 +68,10 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     #photogen-box .edit span { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: #6d645b; }
     #photogen-box .edit textarea { min-height: 72px; }
     #photogen-box .edit .actions { margin-top: 0; justify-content: flex-end; }
+    #photogen-box .edit .actions .attach { margin-right: auto; }
+    #photogen-box .edit .hint { font-size: 11.5px; color: #6d645b; }
+    #photogen-box .cost { margin: 0; font-size: 12.5px; color: #2b2622; }
+    #photogen-box .cost:empty { display: none; }
     #photogen-box ol { margin: 0; padding-left: 18px; font-size: 12px; color: #4a423b; }
     #photogen-box ol:empty { display: none; }
     #photogen-box .err { font-size: 12px; color: #b3412e; }
@@ -98,7 +105,9 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     <div class="stage"><img alt=""><div class="wait" hidden><div class="spin"></div><div class="status"></div></div><div class="thumbs"></div>
       <form class="edit" hidden><span>Make an edit</span>
         <textarea placeholder="What should change? e.g. warmer evening light, sofa in oatmeal bouclé, no rug"></textarea>
-        <div class="actions"><button type="button" class="edit-cancel">Cancel</button><button class="approve regen">Regenerate</button></div>
+        <div class="inspo"></div>
+        <p class="hint">Add up to ${MAX_INSPO} inspiration pictures (+, paste or drop) and say what to take from them. The camera and layout stay.</p>
+        <div class="actions"><button type="button" class="attach">+ Picture</button><button type="button" class="edit-cancel">Cancel</button><button class="approve regen">Regenerate</button></div>
       </form></div>
     <aside>
       <h2 class="frame">Frame the shot</h2>
@@ -109,6 +118,7 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
       <p class="gen meta"></p>
       <label class="gen">Name<input class="name"></label>
       <ol class="gen"></ol>
+      <p class="gen cost"></p>
       <div class="err"></div>
       <div class="gen actions">
         <button class="approve save">Approve &amp; save</button>
@@ -119,7 +129,8 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
   document.body.appendChild(box);
   const $ = s => box.querySelector(s);
   const stage = $(".stage > img"), wait = $(".wait"), status = $(".status"), thumbs = $(".thumbs");
-  const name = $(".name"), editor = $(".edit"), notes = $(".edit textarea"), list = $("ol"), err = $(".err");
+  const name = $(".name"), editor = $(".edit"), notes = $(".edit textarea"), list = $("ol"), err = $(".err"), costLine = $(".cost");
+  const inspo = inspirationPicker({ form: editor, button: $(".edit .attach"), area: notes, thumbs: $(".edit .inspo"), onError: m => (err.textContent = m) });
   // Typing here must not walk, measure or step through renders (they all listen on window).
   for (const t of ["keydown", "keyup"]) box.addEventListener(t, e => e.stopPropagation());
 
@@ -436,11 +447,20 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     $(".revise").disabled = !on;
     $(".regen").disabled = !on || !notes.value.trim();
     list.innerHTML = "";
-    for (const c of job?.attempts[job.at]?.comments || []) {  // what led to the attempt shown
+    const a = job?.attempts[job.at];
+    for (const c of a?.comments || []) {  // what led to the attempt shown
       const li = document.createElement("li");
       li.textContent = c;
       list.appendChild(li);
     }
+    // What the attempt shown cost, and the sitting so far.
+    const paid = (job?.attempts || []).filter(x => x.usd != null), total = paid.reduce((t, x) => t + x.usd, 0);
+    costLine.textContent = !a ? "" : [
+      `Attempt ${job.at + 1}`,
+      a.inspo ? `${a.inspo} inspiration picture${a.inspo > 1 ? "s" : ""}` : "",
+      a.usd != null ? egp(a.usd) : "Cost not reported",
+      job.attempts.length > 1 && paid.length ? `all attempts EGP ${(total * USD_EGP).toFixed(2)}` : "",
+    ].filter(Boolean).join(" · ");
   }
   notes.oninput = sync;
   name.oninput = () => { if (job) job.named = true; sync(); };  // a name typed in is never replaced
@@ -461,17 +481,17 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     return out;
   }
 
-  async function run(comment) {
-    // A fresh attempt from the view, or (with a comment) a revision of the attempt shown.
+  async function run(comment, refs = []) {
+    // A fresh attempt from the view, or (with a comment, and any inspiration pictures) a revision of the attempt shown.
     const base = comment ? job.attempts[job.at] : null;
     const comments = [...(base?.comments || []), ...(comment ? [comment] : [])];
     job.busy = true; err.textContent = ""; wait.hidden = false; sync();
     const t0 = performance.now();
     const tick = setInterval(() => (status.textContent = `${comment ? "Revising" : "Generating"} · ${Math.round((performance.now() - t0) / 1000)} s · usually 1–2 min`), 500);
     try {
-      const out = await call("generate", { spots: spotsFile, view: job.clay, plan: job.plan, ctx: job.ctx, cam: job.cam, comments, previous: base?.draft });
-      job.attempts.push({ ...out, comments });
-      notes.value = "";
+      const out = await call("generate", { spots: spotsFile, view: job.clay, plan: job.plan, ctx: job.ctx, cam: job.cam, comments, previous: base?.draft, refs });
+      job.attempts.push({ ...out, comments, inspo: refs.length });
+      notes.value = ""; inspo.clear();
       drawThumbs();
       show(job.attempts.length - 1);
       // No named piece in frame: name it from the picture (a cheap vision call), once, unless a name was typed.
@@ -525,7 +545,7 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     job.plan = plan(r, v);
     // Until the piece is known (from the picture, after the first attempt), a numbered name stands in.
     name.value = uniqueName(caption, word || "view", spotNames(r.name));
-    notes.value = "";
+    notes.value = ""; inspo.clear();
     editor.hidden = true;
     $(".gen.meta").textContent = `${caption}${here.name !== r.name ? ` (from ${captionOf(here.name)})` : ""} · facing ${v.info.facing} · ${v.info.hfov.toFixed(0)}° lens`;
     box.dataset.mode = "generate";
@@ -534,16 +554,16 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     run();
   };
   // Make an edit opens the comment box over the picture; its comment re-runs the attempt shown.
-  $(".revise").onclick = () => { editor.hidden = false; sync(); notes.focus(); };
+  $(".revise").onclick = () => { editor.hidden = false; sync(); focusWhenReady(notes, () => !box.hidden && !editor.hidden); };
   $(".edit-cancel").onclick = () => { editor.hidden = true; };
   editor.onsubmit = e => {
     e.preventDefault();
     const comment = notes.value.trim();
     if (!comment || $(".regen").disabled) return;
     editor.hidden = true;
-    run(comment);
+    run(comment, inspo.list());
   };
-  box.querySelectorAll(".cancel").forEach(b => (b.onclick = () => { box.hidden = true; editor.hidden = true; job = null; shot = null; }));
+  box.querySelectorAll(".cancel").forEach(b => (b.onclick = () => { box.hidden = true; editor.hidden = true; inspo.clear(); job = null; shot = null; }));
   $(".save").onclick = async () => {
     const a = job.attempts[job.at];
     job.busy = true; sync();

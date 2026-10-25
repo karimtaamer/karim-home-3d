@@ -4,6 +4,8 @@
 // model and drawing from the DXF, and stores the result as live overrides of the deployed files; the page then
 // reloads on the same view with them (liveFiles / liveImport below load them), while git catches up behind.
 
+import { egp } from "./inspiration.js";  // USD → EGP, shared with the photo edits
+
 const API = "api/edit-ai";
 const MAX_SIDE = 1280, REF_SIDE = 1024, MAX_REFS = 4;
 const INK = "#e5322d";
@@ -552,9 +554,6 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     $(".scan .phase").textContent = PHASES[0];
     phaseTimer = setInterval(() => (++k < PHASES.length ? phase(PHASES[k], k === PHASES.length - 1) : clearInterval(phaseTimer)), 3800);
   }
-  // USD→EGP: CBE rate ~24 Oct 2026
-  const USD_EGP = 55.25;
-  function egp(usd) { const v = usd * USD_EGP; return `Cost: EGP ${v.toFixed(v < 0.1 ? 3 : 2)}`; }
   async function apply(res, cost) {
     // Make sure the new code loads before showing it; a version that doesn't is undone on the spot.
     const fresh = await liveFiles(live.version);

@@ -15,7 +15,9 @@ seen through the en-suite door would come in). The screenshot alone says what th
 windows, niches, furniture); the other images lend only surfaces and designs. The page also names the pieces in
 frame (ctx.inventory, from furnish.js labels and spotnames.js words), and the prompt lists them as must-keep, so a
 grey block the model can't place (a water dispenser on a counter) isn't dropped. Comments ("Make an edit") re-run
-it on the attempt shown.
+it on the attempt shown, with up to MAX_INSPO inspiration pictures the client attached (refs: data URLs), sent last
+and used only for the look the comment asks for, never their camera or layout. Each generate and edit returns its
+estimated cost (usd, from OpenAI's usage), which the page shows in EGP.
 Approving copies the image into renders/ and adds the spot to spots.json, like a designer render (or to
 the plan version's spots file the page is showing, e.g. spots-bigger-bedroom.json).
 
@@ -57,6 +59,10 @@ PRICE = {"text": 5.0, "image": 10.0, "output": 40.0}
 # are elsewhere and leak into the photo (a living-room door appeared at the edge of a dining view).
 SAME_ROOM, MAX_REFS = 2, 4
 MAX_FURNITURE, MAX_IMAGES = 6, 16  # extra renders sent for their furniture; OpenAI edits take at most 16 images
+# The client's inspiration pictures on an edit (as Edit AI's references): at most MAX_INSPO, each data URL at most
+# MAX_INSPO_BYTES; they take the places of furniture renders when the 16 run short.
+MAX_INSPO, MAX_INSPO_BYTES = 4, 3_000_000
+INSPO_MIME = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
 SOFT = {"LIVING ROOM", "RECEPTION", "MASTER BEDROOM", "DINING"}  # the rooms that show the fabrics and art best
 REF_PX = 1024  # long side of a whole render as sent; the board carries the close-up detail
 TILE, LABEL, COLS = 384, 46, 4  # material board: square swatches with a caption strip, four across
@@ -333,7 +339,7 @@ def board():
     return out
 
 
-def prompt(ctx, refs, comments, revising, has_board):
+def prompt(ctx, refs, comments, revising, has_board, inspo=0):
     """The images go in this order: PREVIOUS (revisions only), VIEW, PLAN, BOARD, then whole renders, each
     (spot, None) for colour and light or (spot, [where, ..]) for its furniture too. The image model holds
     closest to the first one, so that is the model screenshot for a first attempt and the last attempt for a
@@ -385,6 +391,7 @@ def prompt(ctx, refs, comments, revising, has_board):
                      "finishes. Copy their colour, grain, weave, texture and sheen closely. The board is materials "
                      "only: a swatch is not an object to add (the door swatches do not mean this view has a door).")
     lines += [ref_line(next(n), s, w, r["name"], [x["name"] for x in seen]) for s, w in refs]
+    lines += inspo_lines(n, inspo, "the PREVIOUS image" if revising else "the VIEW")
     if furn:
         lines += ["", "Use the EXACT furniture shown in the FURNITURE reference images (same design, shape, fabric, "
                   "colour, wood and details) for the pieces standing where the VIEW's grey shapes are; do not substitute "
@@ -410,7 +417,8 @@ def prompt(ctx, refs, comments, revising, has_board):
         lines += ["", "This is a revision of the PREVIOUS image. Only these comments can add or remove something "
                   "the VIEW has or lacks. Where a comment says a part is wrong, inaccurate or should not be there, "
                   "make that part match the VIEW exactly (a door or opening the VIEW lacks is removed, and plain "
-                  "wall goes back), and do not redraw it more clearly. Fix these client comments now: " + comments[-1]]
+                  "wall goes back), and do not redraw it more clearly. Fix these client comments now: " + comments[-1]
+                  + (" (the INSPIRATION images show the look they mean)" if inspo else "")]
         if len(comments) > 1:
             lines.append("Earlier comments, already fixed - keep them fixed: " + " | ".join(comments[:-1]))
     return "\n".join(lines)
@@ -430,6 +438,28 @@ def inventory_lines(ctx, revising=False):
             "surfaces, but never in place of a labelled piece."
             + (" If the PREVIOUS image dropped or swapped any of them, put it back." if revising else ""),
             *[f"- {x}" for x in inv]]
+
+
+def inspo_lines(n, count, base):
+    """The INSPIRATION images' lines (numbered on from n), for pictures the client attached to an edit."""
+    return [f"{next(n)}. INSPIRATION - a picture the client attached to this edit, from somewhere else. Copy from it only "
+            f"what the client's request refers to: the materials, colours, finishes, mood or the design of a piece. "
+            f"Never its camera, framing, layout, room, walls, doors, windows or objects: those all stay as {base} has "
+            f"them, and nothing of it is added that the request does not ask for." for _ in range(count)]
+
+
+def inspiration(req):
+    """The client's inspiration pictures (req["refs"]: data URLs) -> [(filename, bytes, mime)], capped like Edit AI."""
+    out = []
+    for i, u in enumerate((req.get("refs") or [])[:MAX_INSPO]):
+        what = f"inspiration picture {i + 1}"
+        m = re.match(r"^data:(image/(?:jpeg|png|webp));base64,", u) if isinstance(u, str) else None
+        if not m:
+            raise ValueError(f"{what} must be a JPEG, PNG or WebP image")
+        if len(u) > MAX_INSPO_BYTES:
+            raise ValueError(f"{what} is too large (keep it under ~2 MB)")
+        out.append((f"inspiration-{i + 1}.{INSPO_MIME[m[1]]}", base64.b64decode(u[m.end():]), m[1]))
+    return out
 
 
 def ref_line(k, s, w, room, seen, base="the VIEW"):
@@ -458,7 +488,7 @@ def ref_line(k, s, w, room, seen, base="the VIEW"):
             "colour palette, the light and the render quality; " + rest)
 
 
-def edit_prompt(s, refs, instruction, earlier, has_board):
+def edit_prompt(s, refs, instruction, earlier, has_board, inspo=0):
     """A saved render revised in words: RENDER first (held closest), then BOARD and the FURNITURE renders."""
     n = iter(range(2, 99))
     lines = [
@@ -477,10 +507,12 @@ def edit_prompt(s, refs, instruction, earlier, has_board):
         lines.append(f"{next(n)}. BOARD - the designer's materials, cropped from their renders, each labelled with "
                      "what it is for. Use these finishes for anything the request changes.")
     lines += [ref_line(next(n), x, w, s["room"], [], "image 1") for x, w in refs]
+    lines += inspo_lines(n, inspo, "image 1")
     if any(w is not None for _, w in refs):
         lines += ["", "A piece the request names takes its EXACT design from the FURNITURE images; do not copy their "
                   "layout or camera."]
-    lines += ["", f"Room: {captionish(s['room'])}.", "", "The client's revision, to make now: " + instruction]
+    lines += ["", f"Room: {captionish(s['room'])}.", "", "The client's revision, to make now: " + instruction
+              + (" (the INSPIRATION images show the look they mean)" if inspo else "")]
     if earlier:
         lines.append("Earlier revisions, already made - keep them: " + " | ".join(earlier))
     return "\n".join(lines)
@@ -511,6 +543,15 @@ def cost(usage):
     return round((text * PRICE["text"] + image * PRICE["image"] + usage.get("output_tokens", 0) * PRICE["output"]) / 1e6, 4)
 
 
+def summary(usage):
+    """The token counts of a usage block, for the page (None without one)."""
+    if not usage:
+        return None
+    d = usage.get("input_tokens_details") or {}
+    return {"text_in": d.get("text_tokens", 0), "image_in": d.get("image_tokens", usage.get("input_tokens", 0)),
+            "out": usage.get("output_tokens", 0)}
+
+
 def edit(images, text):
     """-> (PNG bytes, usage) from OpenAI image edit; the usage is logged with its estimated cost."""
     body, ctype = multipart({"model": MODEL, "prompt": text, "size": SIZE, "quality": "high", "n": "1"}, images)
@@ -537,7 +578,7 @@ def data_url(s):
     return base64.b64decode(body), mime, "jpg" if mime == "image/jpeg" else "png"
 
 
-def request(ctx, view, vmime, vext, plan, comments, prev, name):
+def request(ctx, view, vmime, vext, plan, comments, prev, name, inspo=()):
     """The edit to send: (prompt, [(filename, bytes, mime)], [(spot, None or [where, ..])] for the renders, board)."""
     room, seen = ctx["room"]["name"], [s["name"] for s in ctx.get("seen", [])]
     refs = references(room, seen, name)
@@ -549,18 +590,20 @@ def request(ctx, view, vmime, vext, plan, comments, prev, name):
     furn = furniture(room, name)
     shows = {s["photo"]: w for s, w in furn}
     sent = [(s, shows.get(s["photo"])) for s in refs]  # a whole render that shows furniture serves both
-    sent += [(s, w) for s, w in furn if s["photo"] not in {x["photo"] for x in refs}][:max(0, min(MAX_FURNITURE, MAX_IMAGES - len(images) - len(refs)))]
+    sent += [(s, w) for s, w in furn if s["photo"] not in {x["photo"] for x in refs}][:max(0, min(MAX_FURNITURE, MAX_IMAGES - len(images) - len(refs) - len(inspo)))]
     used = []
     for s, w in sent:
         p = picture(s)
         if p:
             images.append((p.name, p.read_bytes(), "image/jpeg" if p.suffix.lower() in (".jpg", ".jpeg") else "image/png"))
             used.append((s, w))
-    return prompt(ctx, used, comments, bool(prev), bool(mats)), images, used, mats
+    images += list(inspo)  # last, after the renders: the prompt numbers them so
+    return prompt(ctx, used, comments, bool(prev), bool(mats), len(inspo)), images, used, mats
 
 
 def generate(req):
-    """{view, plan: data URLs, ctx, comments: [..], previous: draft id?} -> {draft, src}"""
+    """{view, plan: data URLs, ctx, comments: [..], previous: draft id?, refs: [data URL]?} -> {draft, src, usd, usage}.
+    refs (inspiration pictures) go only with a revision: they illustrate its comment."""
     prev = req.get("previous")
     if prev and not DRAFT_ID.match(prev):
         raise ValueError("bad draft id")
@@ -569,29 +612,33 @@ def generate(req):
         raise ValueError("write a comment to revise with")
     ctx = req["ctx"]
     draft = f"d{int(time.time())}-{secrets.token_hex(3)}"
+    inspo = inspiration(req) if prev else []
     (view, vmime, vext), (plan, _, _) = data_url(req["view"]), data_url(req["plan"])
     save(f"renders/drafts/{draft}-view.{vext}", view, vmime)
     save(f"renders/drafts/{draft}-plan.png", plan, "image/png")
-    text, images, refs, mats = request(ctx, view, vmime, vext, plan, comments, prev, req.get("spots", "spots.json"))
+    for fname, data, mime in inspo:
+        save(f"renders/drafts/{draft}-{fname}", data, mime)
+    text, images, refs, mats = request(ctx, view, vmime, vext, plan, comments, prev, req.get("spots", "spots.json"), inspo)
     print(f"[photogen] {draft}: {ctx['room']['caption']}, {len(images)} images{' (revision)' if prev else ''}", flush=True)
     out, usage = (view, None) if DRY else edit(images, text)
     save(f"renders/drafts/{draft}.png", out, vmime if DRY else "image/png")
     save(f"renders/drafts/{draft}.json", json.dumps({"previous": prev, "comments": comments, "ctx": ctx, "cam": req.get("cam"),
                                                     "references": [s["photo"] for s, _ in refs],
                                                     "furniture": [s["photo"] for s, w in refs if w is not None],
-                                                    "board": mats and mats.name, "prompt": text,
-                                                    "usage": usage, "usd": cost(usage)}, indent=1).encode(), "application/json")
-    return {"draft": draft, "src": f"renders/drafts/{draft}.png"}
+                                                    "board": mats and mats.name, "inspiration": [f for f, _, _ in inspo],
+                                                    "prompt": text, "usage": usage, "usd": cost(usage)}, indent=1).encode(), "application/json")
+    return {"draft": draft, "src": f"renders/drafts/{draft}.png", "usd": cost(usage), "usage": summary(usage)}
 
 
 def revise(req):
-    """{spots, id, instruction} -> {spot, usd}: a saved render edited in words, saved as its next version (a new
+    """{spots, id, instruction, refs: [data URL]?} -> {spot, usd, usage}: a saved render edited in words, saved as its next version (a new
     spot with the same room, caption and camera, "of" its first version), the earlier versions kept."""
     name = req.get("spots", "spots.json")
     s, home = find(name, req.get("id", ""))
     instruction = (req.get("instruction") or "").strip()
     if not instruction:
         raise ValueError("write what should change")
+    inspo = inspiration(req)
     first = s.get("of") or s["id"]
     family = [x for x in spots(home) + blob_spots(home) if (x.get("of") or x["id"]) == first]
     src = picture(s)
@@ -604,14 +651,15 @@ def revise(req):
         images.append((mats.name, mats.read_bytes(), "image/jpeg"))
     used = []
     for x, w in furniture(s["room"], name):
-        if x["photo"] == s["photo"] or len(used) >= MAX_FURNITURE or len(images) >= MAX_IMAGES:
+        if x["photo"] == s["photo"] or len(used) >= MAX_FURNITURE or len(images) >= MAX_IMAGES - len(inspo):
             continue
         p = picture(x)
         if p:
             images.append((p.name, p.read_bytes(), "image/jpeg" if p.suffix.lower() in (".jpg", ".jpeg") else "image/png"))
             used.append((x, w))
     earlier = [x["edit"] for x in sorted(family, key=lambda x: x.get("version", 1)) if x.get("edit")]
-    text = edit_prompt(s, used, instruction, earlier, bool(mats))
+    images += inspo  # last: edit_prompt numbers them after the renders
+    text = edit_prompt(s, used, instruction, earlier, bool(mats), len(inspo))
     print(f"[photogen] edit {s['id']}: {len(images)} images", flush=True)
     out, usage = (images[0][1], None) if DRY else edit(images, text)
     sid = next_id()
@@ -627,9 +675,9 @@ def revise(req):
     else:
         add_spot(home, spot)
     save(f"renders/drafts/{sid}-edit.json", json.dumps({"from": s["id"], "prompt": text, "references": [x["photo"] for x, _ in used],
-                                                        "usage": usage, "usd": cost(usage)}, indent=1).encode(), "application/json")
+                                                        "inspiration": len(inspo), "usage": usage, "usd": cost(usage)}, indent=1).encode(), "application/json")
     print(f"[photogen] edited {s['id']} as {photo}", flush=True)
-    return {"spot": spot, "usd": cost(usage)}
+    return {"spot": spot, "usd": cost(usage), "usage": summary(usage)}
 
 
 def delete(req):

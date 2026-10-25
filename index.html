@@ -924,10 +924,10 @@ const switcher = document.getElementById("switcher");
 // Edit (a new version) and delete go through Generate Photo Spot's backend, so they show only where it runs.
 const renders = createRenders(document.getElementById("renders"), viewpoints.map(v => ({ room: v.room, caption: v.caption })), {
   can: () => photogen.ready(),
-  edit: async (s, instruction) => {
-    const { spot } = await photogen.call("edit", { spots: version.spots, id: s.id, instruction });
+  edit: async (s, instruction, refs = []) => {
+    const { spot, usd } = await photogen.call("edit", { spots: version.spots, id: s.id, instruction, refs });
     if (addSpot) showRenders(addSpot(spot));
-    return spot;
+    return { spot, usd };
   },
   remove: async s => {
     await photogen.call("delete", { spots: version.spots, id: s.id });

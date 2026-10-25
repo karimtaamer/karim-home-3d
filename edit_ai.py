@@ -321,7 +321,7 @@ TOOLS = [
                     "required": ["x0", "y0", "x1", "y1"]}},
     {"name": "dxf_edit", "description": "Edit the version's plan DXF (plan metres). ops: move {handles,dx,dy}; copy {handles,dx,dy}; delete {handles}; "
                                        "add_line {layer,a:[x,y],b:[x,y]}; add_polyline {layer,points,closed}; set_points {handle,points}; "
-                                       "move_window {handle (any one Windows line of it), dx, dy, width?}: moves (and resizes) the whole window and "
+                                       "move_window {handle (any one Windows line of it), centre_on? (handle of a piece to centre it on, e.g. the bed outline), centre? [x, y or null], dx?, dy?, width?}: moves (and resizes) the whole window and "
                                        "re-cuts the wall faces around it; ALWAYS use it to move or resize a window, never move window lines one by one. "
                                        "The 3D model and the 2D drawing are rebuilt from it when you finish.",
      "parameters": {"type": "object", "properties": {"ops": {"type": "array", "items": {"type": "object"}}}, "required": ["ops"]}},
@@ -458,7 +458,7 @@ materials (colours, textures) that furnish.js uses by name (mat.whiteLacquer, ..
 change in the DXF, and a DXF furniture change gets the same change in furnish.js. A wall moved in the DXF must keep \
 both faces, close its junctions exactly (snap endpoints to existing ones within 0.1 mm), and the furniture against it \
 moves with it in furnish.js.
-- Windows: move or resize one only with dxf_edit's move_window op (it takes every line of the window and closes / opens the wall faces, so the 3D opening matches the 2D). To centre a window on a piece (e.g. "over the bed"), take the piece's centre from its 2furni outline in dxf_query and set dx so the window's new centre equals it. Then move what hangs in that window in furnish.js (sheers, curtains, blinds: the edit result lists them) to the window's new centre and width, so the 3D matches.
+- Windows: move or resize one only with dxf_edit's move_window op (it takes every line of the window and closes / opens the wall faces, so the 3D opening matches the 2D). To centre a window on a piece (e.g. "over the bed"), find the piece's main 2furni outline in dxf_query (the largest closed outline; its "centre" is given) and pass its handle as centre_on, never a hand-worked dx; the result says where the window now runs, so check its centre equals the piece's. Then move what hangs in that window in furnish.js (sheers, curtains, blinds: the edit result lists them) to the window's new centre and width, so the 3D matches.
 - DXF coordinates in the tools are plan metres (the same frame as furnish.js and the camera numbers below).
 
 Work fast and cheap: find the code with furniture_near / grep around the plan point the user marked, read only the \

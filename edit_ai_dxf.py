@@ -13,9 +13,12 @@ Edit ops (a JSON list), handles as `query` gives them:
     {"op": "add_polyline", "layer": "2furni", "points": [[x, y], ...], "closed": true}
     {"op": "set_points", "handle": "1A2", "points": [[x, y], ...]}  a LINE's two ends or an LWPOLYLINE's vertices
     {"op": "move_window", "handle": "163A", "dx": 0.7, "dy": 0, "width": 1.2}
+    {"op": "move_window", "handle": "163A", "centre_on": "1692"}      or "centre": [3.185, null] (plan metres)
         the whole window (every Windows-layer line joined to that one: both glazing faces, jambs, mullions) slides by
         dx, dy and, with width, is resized about its new centre; the wall face lines it sits in are re-cut so the old
         opening is closed with wall and the new one left open. Reports the window's old and new centre and width.
+        Instead of dx, dy: "centre_on" (a handle, or a list of handles, of a piece to centre it on) or "centre"
+        ([x, y], either may be null); the window only slides along its own wall towards it.
 Any edit that leaves one window's long lines out of line with each other (one glazing line left behind) is reported
 under "warnings".
 New entities copy colour and linetype ByLayer. No TEXT is ever added (every TEXT becomes a room label in the 3D).
@@ -45,6 +48,9 @@ def describe(e, ox, oy):
     elif t == "LWPOLYLINE":
         d["points"] = [P(p) for p in e.get_points("xy")]
         d["closed"] = bool(e.closed)
+        if len(d["points"]) >= 4:  # an outline (bed, table, rug): its centre, so nobody has to do the sum
+            xs, ys = [q[0] for q in d["points"]], [q[1] for q in d["points"]]
+            d["centre"] = [r((min(xs) + max(xs)) / 2), r((min(ys) + max(ys)) / 2)]
     elif t in ("ARC", "CIRCLE"):
         d["centre"], d["radius"] = P(e.dxf.center), r(e.dxf.radius)
         if t == "ARC":
@@ -284,6 +290,17 @@ def edit(a):
             w2 = float(o["width"]) if o.get("width") else w
             mid = (t0 + t1) / 2
             c_old = (c[0] + u[0] * mid, c[1] + u[1] * mid)
+            target = None
+            if o.get("centre_on"):  # centre it on a piece (its outline's or block's extent), along the wall only
+                from ezdxf import bbox as _bbox
+                ext = _bbox.extents([get(h) for h in ([o["centre_on"]] if isinstance(o["centre_on"], str) else o["centre_on"])])
+                target = ((ext.extmin.x + ext.extmax.x) / 2, (ext.extmin.y + ext.extmax.y) / 2)
+            elif o.get("centre") is not None:  # plan metres; a null coordinate keeps the window's own
+                cx, cy = o["centre"]
+                target = (c_old[0] if cx is None else float(cx) + ox, c_old[1] if cy is None else float(cy) + oy)
+            if target is not None:
+                s_ = (target[0] - c_old[0]) * u[0] + (target[1] - c_old[1]) * u[1]
+                dx, dy = u[0] * s_, u[1] * s_
             c_new = (c_old[0] + dx, c_old[1] + dy)
             walls = recut_walls(msp, c, u, n, t0, t1, n0, n1, c_new, w2)
             k_ = w2 / w
@@ -301,7 +318,10 @@ def edit(a):
             P = lambda q: [r(q[0] - ox), r(q[1] - oy)]
             moved.append({"window": [e.dxf.handle for e in ents], "old_centre": P(c_old), "new_centre": P(c_new),
                           "old_width": r(w), "new_width": r(w2), "walls": walls})
-            log.append(f"window of {len(ents)} lines moved by ({dx}, {dy}), width {r(w)} -> {r(w2)}")
+            e0, e1 = P((c_new[0] - u[0] * w2 / 2, c_new[1] - u[1] * w2 / 2)), P((c_new[0] + u[0] * w2 / 2, c_new[1] + u[1] * w2 / 2))
+            moved[-1]["new_ends"] = [e0, e1]
+            log.append(f"window of {len(ents)} lines moved by ({r(dx)}, {r(dy)}), width {r(w)} -> {r(w2)}; "
+                       f"it now runs {e0} to {e1}, centre {P(c_new)}")
         else:
             raise ValueError(f"unknown op {k!r}")
     # No zero-length lines left behind.

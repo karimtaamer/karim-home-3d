@@ -1198,7 +1198,7 @@ def review(ws, message, reply):
             return (f"Check the panel: furnish.js line {i} ({line.strip()[:140]}): " + "; ".join(problems[:3]) + ". "
                     f"This room's wall here runs plan {ax_} {rng(w0, w1)}" + (f", window(s) at plan {ax_} " + ", ".join(wl)
                     if wl else "") + f". Cover exactly that: full-height boxes from the room corner to each window and "
-                    "between windows, plus a strip under each window (0..M.sill) and over it (M.winHead..M.ceiling). Box "
+                    "between windows, plus a strip under each window (0..M.sill) and over it (M.winHead..M.ceiling). Box " +
                     (f"x values are local to the item: local = plan {ax_} - {x if ux else y} " if ux + uy > 0 else
                      f"x values are local to the item: local = {x if ux else y} - plan {ax_} ") +
                     f"(\"{f}\" runs along plan {'+' if ux + uy > 0 else '-'}{ax_})." + tail)

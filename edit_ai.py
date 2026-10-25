@@ -223,7 +223,7 @@ class Workspace:
         self.v, self.cfg = v, VERSIONS[v]
         self.man = latest(v)
         self.res = resolve(self.man)
-        self.files, self.ops, self.changed = {}, defaultdict(list), set()
+        self.files, self.ops, self.changed, self.orig = {}, defaultdict(list), set(), {}
         self.tmp = Path(tempfile.mkdtemp(prefix="edit-ai-"))
         self.dxf_path = None  # the working DXF once the plan is touched (or read)
 
@@ -237,6 +237,8 @@ class Workspace:
         return self.read(path).decode()
 
     def write(self, path, data, op=None):
+        if path not in self.orig:
+            self.orig[path] = self.read(path)
         self.files[path] = data
         self.changed.add(path)
         if op:
@@ -244,12 +246,12 @@ class Workspace:
 
     def discard(self):
         for p in list(self.changed):
-            self.files.pop(p, None)
+            self.files[p] = self.orig.pop(p, self.files.get(p))
             self.ops.pop(p, None)
         self.changed.clear()
         if self.dxf_path:
             self.dxf_path.write_bytes(self.read(self.cfg["dxf"]))
-        self.plan_dirty, self.dxf_furni = False, False
+        self.plan_dirty, self.dxf_furni, self.pieces = False, False, {}
         if hasattr(self, "model0"):
             del self.model0
 
@@ -393,6 +395,77 @@ def js_balance(src):
     return None
 
 
+def version_scope(text, version):
+    """Per line of furnish.js: False when the line sits in (or is guarded by) a version branch that doesn't run for
+    `version`, True when the version branches around it all do, None when there are none or it can't tell."""
+    def ev(cond):
+        if "version" not in cond:
+            return None
+        c = re.sub(r"\[([^\]]*)\]\.includes\(\s*version\s*\)", r"(version in [\1])", cond)
+        c = c.replace("!==", " != ").replace("===", " == ").replace("&&", " and ").replace("||", " or ")
+        c = re.sub(r"!(?!=)", " not ", c)
+        if re.search(r"[A-Za-z_]\w*", re.sub(r'"[^"]*"|\'[^\']*\'|\b(version|and|or|not|in)\b', "", c)):
+            return None  # other names in the condition
+        try:
+            return bool(eval(c, {"__builtins__": {}}, {"version": version}))
+        except Exception:
+            return None
+    out, stack, last, chain = [], [], {}, {}
+    for raw in text.splitlines():
+        line = re.sub(r"//(?=(?:[^\"'`]|\"[^\"]*\"|'[^']*')*$).*", "", raw)  # drop the comment
+        code = re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`[^`]*`', lambda m: "_" * len(m.group(0)), line)
+        guard = None
+        m = re.match(r"\s*if\s*\((.*?)\)\s*[A-Za-z_]", line)  # a one-line guard: if (version === "x") item(... {
+        if m and not re.match(r"\s*if\s*\(.*\)\s*\{\s*$", code):
+            guard = ev(m.group(1))
+        pushed_guard = False
+        for j, ch in enumerate(code):
+            if ch == "}":
+                if stack:
+                    last[len(stack)] = stack.pop()
+            elif ch == "{":
+                head = code[:j]
+                mm = re.search(r"\bif\s*\((.*)\)\s*$", head)
+                d = len(stack)
+                if mm:
+                    v = ev(line[mm.start(1):mm.end(1)])  # same positions in the line with its strings
+                    if re.search(r"\belse\s+if\s*\(", head):  # runs only if no branch before it did
+                        prev = chain.get(d)
+                        v = False if prev is True else v if prev is False else (False if v is False else None)
+                        chain[d] = True if prev is True or v is True else (False if prev is False and v is False else None)
+                    else:
+                        chain[d] = v
+                    stack.append(v)
+                elif re.search(r"\belse\s*$", head):
+                    prev = chain.get(d)
+                    stack.append(None if prev is None else not prev)
+                elif guard is not None and not pushed_guard:  # the guarded call's own block
+                    stack.append(guard)
+                    pushed_guard = True
+                else:
+                    stack.append("plain")
+        allv = [c for c in stack if c != "plain"] + ([guard] if guard is not None else [])
+        out.append(False if False in allv else (True if allv and all(v is True for v in allv) else None))
+    return out
+
+
+PLACE = re.compile(r"\b(?:item|rug)\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)")
+
+
+def placed_lines(ws, text=None):
+    """(line no, x, y, line) for each item( x, y / rug( x0, y0 literal that runs for this version."""
+    text = ws.text("furnish.js") if text is None else text
+    sc = version_scope(text, ws.v)
+    out = []
+    for i, line in enumerate(text.splitlines(), 1):
+        if sc[i - 1] is False:
+            continue
+        for m in PLACE.finditer(line):
+            out.append((i, float(m[1]), float(m[2]), line))
+            break
+    return out
+
+
 def mat_names(ws):
     return set(re.findall(r"^\s+(\w+)\s*:", ws.text("materials.js"), re.M))
 
@@ -511,27 +584,34 @@ def tool(ws, name, a):
         return f"edited {p}"
     if name == "furniture_near":
         x, y, rad = float(a["x"]), float(a["y"]), float(a.get("radius") or 1.0)
-        out = []
-        for i, line in enumerate(ws.text("furnish.js").splitlines(), 1):
-            for m in re.finditer(r"\bitem\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)", line):
-                if ((float(m[1]) - x) ** 2 + (float(m[2]) - y) ** 2) ** 0.5 <= rad:
-                    out.append(f"furnish.js:{i}: {line.strip()[:240]}")
-                    break
-        res = "\n".join(out[:40]) or "no item( x, y ) literal that near; try grep for the room or the piece's name"
+        text = ws.text("furnish.js")
+        hidden = sum(1 for i, line in enumerate(text.splitlines(), 1) for m in PLACE.finditer(line)
+                     if ((float(m[1]) - x) ** 2 + (float(m[2]) - y) ** 2) ** 0.5 <= rad) 
+        pieces, boxes = [], []
         if plan_edits():
             try:
                 code, q = run([dwg_python(), str(ROOT / "edit_ai_dxf.py"), "query", str(ws.dxf()), f"--origin={ORIGIN[0]},{ORIGIN[1]}",
                                f"--bbox={x - rad},{y - rad},{x + rad},{y + rad}", "--layers=2furni,2 furni", "--limit", "400"], timeout=90)
-                pieces = []
                 for d in json.loads(q).get("entities", []):
                     ps = d.get("points") or []
                     if d["type"] == "LWPOLYLINE" and len(ps) >= 4:
                         xs, ys = [p[0] for p in ps], [p[1] for p in ps]
                         if (max(xs) - min(xs)) * (max(ys) - min(ys)) >= 0.04:
+                            boxes.append((min(xs), min(ys), max(xs), max(ys)))
                             pieces.append(f"{d['handle']}: x {min(xs)}..{max(xs)}, y {min(ys)}..{max(ys)}")
-                res += "\nPlan furniture outlines here (2furni handle: extent):\n" + ("\n".join(pieces[:25]) or "none")
             except Exception:
                 pass
+        out = []
+        for i, px, py, line in placed_lines(ws, text):  # near the point, or standing on a plan outline found here
+            near = ((px - x) ** 2 + (py - y) ** 2) ** 0.5 <= rad
+            on = any(b[0] - 0.15 <= px <= b[2] + 0.15 and b[1] - 0.15 <= py <= b[3] + 0.15 for b in boxes)
+            if near or on:
+                out.append(f"furnish.js:{i}: {line.strip()[:240]}")
+        res = "\n".join(out[:40]) or "no item( x, y ) literal that near; try grep for the room or the piece's name"
+        if hidden > len(out):
+            res += f"\n({hidden - len(out)} more near here belong to other versions' branches and don't show in {ws.v}: leave them)"
+        if pieces:
+            res += "\nPlan furniture outlines here (2furni handle: extent):\n" + "\n".join(pieces[:25])
         return res
     if name == "plan_rooms":
         s = ws.text(ws.cfg["model"])
@@ -568,7 +648,10 @@ def tool(ws, name, a):
         ws.write(ws.cfg["dxf"], ws.dxf().read_bytes())
         ws.plan_dirty = True
         try:
-            ws.dxf_furni = ws.dxf_furni or json.loads(out).get("furniture_changed", False)
+            rep_ = json.loads(out)
+            ws.dxf_furni = ws.dxf_furni or rep_.get("furniture_changed", False)
+            for pc in rep_.get("pieces_changed", []):
+                ws.pieces.setdefault(pc["handle"], pc["old"])
         except ValueError:
             pass
         try:  # what hangs in a moved window (sheers, curtains) has to follow it in furnish.js
@@ -612,7 +695,7 @@ def lost_openings(ws):
         return None
     return ("WARNING: the rebuilt 3D lost " + ", ".join(f"{n} {k} opening(s)" for k, n in gone.items())
             + " (a door or window no longer cuts its wall). Unless the user asked to remove it, fix the plan "
-              "(move_door / move_window keep openings intact) or call discard.")
+              "(move_door / move_window keep openings intact) or call discard. Then reply to the user (don't mention this check).")
 
 
 SYSTEM = """\
@@ -632,10 +715,14 @@ versions and branches on `version === "..."`. Change only version "{version}" un
 serves several versions, split it, e.g. `version === "{version}" ? newValue : oldValue`. materials.js holds the \
 materials (colours, textures) that furnish.js uses by name (mat.whiteLacquer, ...). Use only names that exist there \
 (grep materials.js first): an unknown mat.x breaks the 3D.
-- item(x, y, facing, build): (x, y) is the middle of the piece's BACK, facing (N/S/E/W) is the way its front looks; \
-inside build, local x runs across the piece, y up and z out from its back. A piece against a wall has (x, y) on that \
-wall's face (read the face line from dxf_query, layer 1wall); something "on the wall facing the bed" goes on the wall \
-opposite the headboard, at that wall's face, never out in the room. Before adding or moving a piece, check with \
+- item(x, y, facing, build): (x, y) is the middle of the piece's BACK, facing (N/S/E/W) is the way its front looks, \
+i.e. away from its wall into the room: a piece on a room's south wall faces "N", on its east wall "W". Inside build, \
+local x runs across the piece, y up and z out from its back into the room. A piece against a wall has (x, y) on the \
+wall's ROOM-SIDE face: a wall is two face lines ~11 cm apart (dxf_query, layer 1wall) and the right one is the one \
+nearer the room's middle (other pieces on that wall in furniture_near show it, e.g. item(2.36, 4.55, "N") = south \
+wall face y 4.55). Something "on the wall facing the bed" goes on the wall opposite the headboard, at that face, \
+never out in the room. A new piece that stands on the floor (table, chair, cabinet) also gets its footprint drawn on \
+the plan: dxf_edit add_polyline on 2furni, closed; wall-hung things (TV, art, shelves, lights) don't. Before adding or moving a piece, check with \
 furniture_near what already stands there and don't overlap it; if the spot is taken, pick the nearest free one and say so.
 - Keep 3D and 2D together: a piece drawn on the plan (2furni) that you move or resize in furnish.js gets exactly the \
 same change in the DXF (furniture_near gives its outline's handle: dxf_edit move_piece / resize_piece), and a DXF \
@@ -822,7 +909,7 @@ def chat(req):
     refs = [check_image(u, f"reference {i + 1}") for i, u in enumerate((req.get("refs") or [])[:MAX_REFS])]
     ws = Workspace(v)
     ws.allow_as_built = v == "as-built"  # only ever reached from the as-built page itself
-    ws.plan_dirty, ws.dxf_furni = False, False
+    ws.plan_dirty, ws.dxf_furni, ws.pieces = False, False, {}
     sys_prompt = SYSTEM.format(showing="2D drawing" if ctx.get("showing") == "drawing" else "3D model", version=v,
                                marked="" if ctx.get("wholeView") else ", with what the user circled marked in red")
     if not plan_edits():
@@ -890,7 +977,8 @@ def review(ws, message, reply):
         return None
     if GAVE_UP.search(reply or "") and not re.search(r"\binstead\b|\b(so|but) I(\'ve| have)? (made|set|went|used|put|moved|added|changed|widened|resized)\b", reply or "", re.I):
         return ("You say it couldn't be done, but your edits are still pending and would be saved as they are. If you're "
-                "giving up, call discard now and then answer; if the change is in fact done, check it and say what changed.")
+                "giving up, call discard now and then answer; if the change is in fact done, check it and tell the user "
+                "what changed (don't mention this check).")
     if ws.plan_dirty:
         try:
             rebuild(ws)
@@ -899,17 +987,55 @@ def review(ws, message, reply):
             return f"The plan no longer rebuilds ({str(e)[:600]}). Fix it or call discard."
     if (lost := lost_openings(ws)) and not REMOVAL.search(message):
         return lost
-    ops = ws.ops.get("furnish.js") or []
-    moved3d = any(Counter(NUMBER.findall(o["old"])) != Counter(NUMBER.findall(o["new"])) for o in ops)
-    if moved3d and not ws.dxf_furni:
-        return ("Check 2D vs 3D: you changed positions or sizes in furnish.js but no furniture on the plan (2furni). "
-                "If the piece you changed is drawn on the plan (furniture_near lists the outlines there), give its outline "
-                "exactly the same move / resize now with dxf_edit move_piece / resize_piece. Things not drawn on the plan "
-                "(lights, lamps, curtains, art, a TV, decor) need nothing: then just answer again.")
-    if ws.dxf_furni and not moved3d:
-        return ("Check 2D vs 3D: you changed furniture on the plan (2furni) but no position or size in furnish.js, so the "
-                "3D piece stays where it was. Make the same change to its item(...) in furnish.js now, or undo the plan "
-                "change if it wasn't wanted, then answer again.")
+    tail = " Then reply to the user as you normally would, about the change itself (don't mention this check)."
+    f0 = ws.orig["furnish.js"].decode() if "furnish.js" in ws.orig else ws.text("furnish.js")
+    f1 = ws.text("furnish.js")
+    now = set(f1.splitlines())
+    # A plan piece moved / resized: the 3D line(s) standing on it must have changed too.
+    for h, b in ws.pieces.items():
+        lines = [(i, line) for i, px, py, line in placed_lines(ws, f0)
+                 if b[0] - 0.15 <= px <= b[2] + 0.15 and b[1] - 0.15 <= py <= b[3] + 0.15]
+        if lines and all(line in now for _, line in lines):
+            return (f"Check 2D vs 3D: you changed plan piece {h} (was x {b[0]}..{b[2]}, y {b[1]}..{b[3]}) but its 3D line(s) in "
+                    "furnish.js didn't change: " + "; ".join(f"line {i}: {line.strip()[:160]}" for i, line in lines[:4])
+                    + ". Give the 3D piece exactly the same move / resize (for this version only), or put the plan piece "
+                      "back if it wasn't meant to change." + tail)
+    # A 3D piece moved / resized: the plan outline it stands on must have changed too.
+    ops = [o for o in ws.ops.get("furnish.js") or []
+           if Counter(NUMBER.findall(o["old"])) != Counter(NUMBER.findall(o["new"]))
+           and not (o["new"].startswith(o["old"]) or o["new"].endswith(o["old"]))]  # not a pure addition
+    gone = [(i, px, py, line) for i, px, py, line in placed_lines(ws, f0)
+            if line not in now and any(len(seg.strip()) > 8 and seg.strip() in line for o in ops for seg in o["old"].splitlines())]
+    if gone and plan_edits():
+        src = ws.tmp / "plan-before.dxf"
+        src.write_bytes(ws.orig.get(ws.cfg["dxf"]) or ws.read(ws.cfg["dxf"]))
+        for i, px, py, line in gone:
+            code, q = run([dwg_python(), str(ROOT / "edit_ai_dxf.py"), "query", str(src), f"--origin={ORIGIN[0]},{ORIGIN[1]}",
+                           f"--bbox={px - 0.05},{py - 0.05},{px + 0.05},{py + 0.05}", "--layers=2furni,2 furni", "--limit", "400"],
+                          timeout=90)
+            try:
+                ents = json.loads(q).get("entities", [])
+            except ValueError:
+                continue
+            hits = []
+            for d in ents:
+                ps = d.get("points") or []
+                if d["type"] == "LWPOLYLINE" and len(ps) >= 4 and d["handle"] not in ws.pieces:
+                    xs, ys = [p[0] for p in ps], [p[1] for p in ps]
+                    if min(xs) - 0.15 <= px <= max(xs) + 0.15 and min(ys) - 0.15 <= py <= max(ys) + 0.15 \
+                            and (max(xs) - min(xs)) * (max(ys) - min(ys)) >= 0.04:
+                        hits.append((d["handle"], [min(xs), min(ys), max(xs), max(ys)]))
+            if hits:
+                h, bb = min(hits, key=lambda t: (t[1][2] - t[1][0]) * (t[1][3] - t[1][1]))
+                return (f"Check 2D vs 3D: you changed furnish.js line {i} ({line.strip()[:120]}) but the plan outline it stands on, "
+                        f"{h} (x {bb[0]}..{bb[2]}, y {bb[1]}..{bb[3]}), didn't change. If you moved or resized that piece, give "
+                        "the outline exactly the same change now with dxf_edit move_piece / resize_piece; if only its look "
+                        "changed (colour, finish, doors), nothing is needed." + tail)
+    loop_ops = [o for o in ops if re.search(r"\bfor \(const|\bitem\(|\brug\(", o["old"])]
+    if loop_ops and not ws.dxf_furni and not gone:
+        return ("Check 2D vs 3D: you moved or resized furniture in furnish.js but nothing on the plan (2furni). If the "
+                "piece is drawn on the plan (furniture_near lists the outlines there), give its outline exactly the same "
+                "change now with dxf_edit move_piece / resize_piece; things not drawn on the plan need nothing." + tail)
     return None
 
 

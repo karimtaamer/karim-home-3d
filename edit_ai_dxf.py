@@ -345,7 +345,8 @@ def door_frame(msp, arc):
         ts, ns = [T(p) for p in corners], [N(p) for p in corners]
         if min(ts) >= t0 - 0.02 and max(ts) <= t1 + 0.02 and min(ns) >= sw_lo - 0.05 and max(ns) <= sw_hi + 0.05:
             parts.append(e)
-    return c, rad, u, n, t0, t1, n0, n1, s, parts
+    opened = max(ends, key=lambda p: abs(N(p)))
+    return c, rad, u, n, t0, t1, n0, n1, s, parts, opened
 
 
 def edit(a):
@@ -359,12 +360,16 @@ def edit(a):
 
     layers_hit = set()
 
+    pieces0 = {}  # furniture outlines touched: their extent before
+
     def get(h):
         touched.add(h)
         e = doc.entitydb.get(h)
         if e is None or not e.is_alive or e.get_layout() is None or e.get_layout().name != msp.name:
             raise ValueError(f"no model-space entity with handle {h}")
         layers_hit.add(e.dxf.layer)
+        if h not in pieces0 and e.dxf.layer in FURNI and e.dxftype() == "LWPOLYLINE" and len(e) >= 4:
+            pieces0[h] = ext_of(e)
         return e
 
     def attrs(layer):
@@ -483,7 +488,7 @@ def edit(a):
             if arc.dxftype() != "ARC":
                 raise ValueError(f"{o['handle']} is a {arc.dxftype()}; give the door's swing ARC. A door drawn as a "
                                  "block (INSERT) can't be moved or resized here: tell the user it needs the engineer")
-            c, rad, u, n, t0, t1, n0, n1, s, parts = door_frame(msp, arc)
+            c, rad, u, n, t0, t1, n0, n1, s, parts, opened = door_frame(msp, arc)
             if o.get("along") is not None:
                 sh = float(o["along"])
             else:
@@ -509,11 +514,9 @@ def edit(a):
             if dw:
                 arc.dxf.radius = r2
                 kk = r2 / rad
+                d = math.dist(opened, c) or 1
+                L = ((opened[0] - c[0]) / d, (opened[1] - c[1]) / d)  # the leaf as drawn: hinge to the swing's open end
                 for e in leaf:  # stretch the leaf along its own length, from the hinge
-                    b = ext_of(e)
-                    fp = max([(b[0], b[1]), (b[2], b[1]), (b[0], b[3]), (b[2], b[3])], key=lambda p: math.dist(p, c))
-                    d = math.dist(fp, c) or 1
-                    L = ((fp[0] - c[0]) / d, (fp[1] - c[1]) / d)
                     def f(p):
                         a_ = (p[0] - c[0]) * L[0] + (p[1] - c[1]) * L[1]
                         return (p[0] + L[0] * a_ * (kk - 1), p[1] + L[1] * a_ * (kk - 1))
@@ -553,6 +556,13 @@ def edit(a):
         if bad := misaligned(ents):
             warnings.append(f"window {sorted(seen & {x.dxf.handle for x in ents})}: lines {bad} don't line up with the "
                             "rest of the window (left behind?). Move a window with move_window, which takes all its lines.")
+    pieces = []
+    for h, b0 in pieces0.items():
+        e = doc.entitydb.get(h)
+        b1 = ext_of(e) if e is not None and e.is_alive else None
+        if b0 and b1 != b0:
+            B = lambda b: b and [r(b[0] - ox), r(b[1] - oy), r(b[2] - ox), r(b[3] - oy)]
+            pieces.append({"handle": h, "old": B(b0), "new": B(b1)})
     auditor = doc.audit()
     doc.saveas(a.out)
     after = Counter(e.dxf.layer for e in msp)
@@ -560,6 +570,7 @@ def edit(a):
     print(json.dumps({"log": log, "new_handles": new, "layer_count_change": delta,
                       "removed_zero_length": zero, "audit_errors": len(auditor.errors),
                       "furniture_changed": bool(layers_hit & set(FURNI)),
+                      **({"pieces_changed": pieces} if pieces else {}),
                       **({"windows_moved": moved} if moved else {}), **({"warnings": warnings} if warnings else {})}))
 
 

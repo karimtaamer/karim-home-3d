@@ -2703,6 +2703,18 @@ def git_token():
         return None
 
 
+def git_sync_status():
+    """What git_sync would do now, for GET /api/edit-ai/status. No token value, no GitHub call."""
+    if os.environ.get("EDIT_AI_GIT_SYNC", "1") == "0":
+        return "off"
+    if ON_VERCEL or BLOB:
+        if not os.environ.get("EDIT_AI_GITHUB_TOKEN"):
+            return "off (no EDIT_AI_GITHUB_TOKEN): live in Blob only"
+        return "on: GitHub API -> %s@%s" % (os.environ.get("EDIT_AI_GITHUB_REPO", "karimtaamer/karim-home-3d"),
+                                             os.environ.get("EDIT_AI_GITHUB_BRANCH", "main"))
+    return "on: local git commit + push"
+
+
 def git_sync(v, contents, summary):
     msg = "Edit AI (%s): %s" % (v, re.sub(r"\s+", " ", summary).strip()[:120])
     if os.environ.get("EDIT_AI_GIT_SYNC", "1") == "0":
@@ -2796,7 +2808,7 @@ class Handler(photogen.Handler):
         try:
             if act == "status":
                 return self.reply(200, {"ready": bool(api_key()), "model": MODEL, "api": "responses" if uses_responses(MODEL) else "chat",
-                                        "models": sorted(ALLOWED_MODELS), "planEdits": plan_edits()})
+                                        "models": sorted(ALLOWED_MODELS), "planEdits": plan_edits(), "gitSync": git_sync_status()})
             if act == "patches":
                 return self.reply(200, patches(q.get("version", ["main"])[0]))
         except Exception as e:

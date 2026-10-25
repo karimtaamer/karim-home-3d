@@ -1209,6 +1209,25 @@ def review(ws, message, reply):
                         f"facing \"{f}\", so in 3D it runs {want}, but its new plan outline runs x {b[0]}..{b[2]}, "
                         f"y {b[1]}..{b[3]}. Make them the same piece: set the outline's points (dxf_edit set_points) "
                         "to start at the back and extend the piece's depth in the facing direction, or move the item." + tail)
+    # A new piece parked in front of wardrobe doors (the room has to stay usable).
+    fronts = []
+    for i, px, py, line in placed_lines(ws, f1):
+        wm = re.search(r"\bwardrobe\(\s*([\d.]+)", line)
+        im = ITEM.search(line)
+        if wm and im and line not in {l for _, l in new_items}:
+            hw, f = float(wm[1]) / 2, im[3]
+            fronts.append((i, {"E": (px + 0.6, py - hw, px + 1.2, py + hw), "W": (px - 1.2, py - hw, px - 0.6, py + hw),
+                               "N": (px - hw, py + 0.6, px + hw, py + 1.2), "S": (px - hw, py - 1.2, px + hw, py - 0.6)}[f]))
+    for pts in ws.new_outlines:
+        xs, ys = [q[0] for q in pts], [q[1] for q in pts]
+        b = (min(xs), min(ys), max(xs), max(ys))
+        for i, z in fronts:
+            if min(b[2], z[2]) - max(b[0], z[0]) > 0.08 and min(b[3], z[3]) - max(b[1], z[1]) > 0.08:
+                return (f"Check the room still works: the new piece's outline (x {round(b[0], 3)}..{round(b[2], 3)}, y "
+                        f"{round(b[1], 3)}..{round(b[3], 3)}) stands in front of the wardrobe doors of furnish.js line {i}, "
+                        f"in the ~60 cm that has to stay clear to open them (x {round(z[0], 3)}..{round(z[2], 3)}, y "
+                        f"{round(z[1], 3)}..{round(z[3], 3)}). Move it (plan outline and furnish.js line together) out of "
+                        "that strip, or tell the user why there is nowhere else." + tail)
     if new_items:
         cur = ws.tmp / "plan-now.dxf"
         cur.write_bytes(ws.read(ws.cfg["dxf"]))

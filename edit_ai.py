@@ -43,7 +43,7 @@ MAX_STEPS = 16  # tool rounds per message
 MAX_IMAGE = 3_000_000  # bytes of a data URL
 MAX_REFS = 4
 # USD per million tokens (input, cached input, output), OpenAI list prices; only to tell the user what a message cost.
-PRICES = {"gpt-6-luna": (5.0, 0.5, 30.0), "gpt-4.1": (2.0, 0.5, 8.0), "gpt-4.1-mini": (0.4, 0.1, 1.6), "gpt-4.1-nano": (0.1, 0.025, 0.4),
+PRICES = {"gpt-6.1-sol": (2.0, 0.1, 10.0), "gpt-6-luna": (0.1, 0.01, 0.5), "gpt-6-sol": (2.0, 0.2, 10.0), "gpt-5.6-sol": (4.0, 0.4, 20.0), "gpt-4.1": (2.0, 0.5, 8.0), "gpt-4.1-mini": (0.4, 0.1, 1.6), "gpt-4.1-nano": (0.1, 0.025, 0.4),
           "gpt-4o": (2.5, 1.25, 10.0), "gpt-4o-mini": (0.15, 0.075, 0.6)}
 ORIGIN = (190.4049651574427, -121.6132067325871)  # DWG -> plan, the same for every version (model*.js "origin")
 
@@ -315,7 +315,9 @@ TOOLS = [
                                                      "layers": {"type": "string", "description": "comma-separated"}},
                     "required": ["x0", "y0", "x1", "y1"]}},
     {"name": "dxf_edit", "description": "Edit the version's plan DXF (plan metres). ops: move {handles,dx,dy}; copy {handles,dx,dy}; delete {handles}; "
-                                       "add_line {layer,a:[x,y],b:[x,y]}; add_polyline {layer,points,closed}; set_points {handle,points}. "
+                                       "add_line {layer,a:[x,y],b:[x,y]}; add_polyline {layer,points,closed}; set_points {handle,points}; "
+                                       "move_window {handle (any one Windows line of it), dx, dy, width?}: moves (and resizes) the whole window and "
+                                       "re-cuts the wall faces around it; ALWAYS use it to move or resize a window, never move window lines one by one. "
                                        "The 3D model and the 2D drawing are rebuilt from it when you finish.",
      "parameters": {"type": "object", "properties": {"ops": {"type": "array", "items": {"type": "object"}}}, "required": ["ops"]}},
     {"name": "check", "description": "Check the edits so far: JS syntax of furnish.js / materials.js and, if the plan changed, a trial rebuild of the model and drawing.",
@@ -407,6 +409,14 @@ def tool(ws, name, a):
         out_path.replace(ws.dxf())
         ws.write(ws.cfg["dxf"], ws.dxf().read_bytes())
         ws.plan_dirty = True
+        try:  # what hangs in a moved window (sheers, curtains) has to follow it in furnish.js
+            for w in json.loads(out).get("windows_moved", []):
+                (x, y), half = w["old_centre"], w["old_width"] / 2 + 0.3
+                near = tool(ws, "furniture_near", {"x": x, "y": y, "radius": half})
+                out += (f"\nfurnish.js items within {half:.2f} m of the window's old centre ({x}, {y}); move any curtain / "
+                        f"sheer / blind among them to the new centre {w['new_centre']} (width {w['new_width']} m):\n{near}")
+        except ValueError:
+            pass
         return out
     if name == "check":
         notes = []
@@ -443,6 +453,7 @@ materials (colours, textures) that furnish.js uses by name (mat.whiteLacquer, ..
 change in the DXF, and a DXF furniture change gets the same change in furnish.js. A wall moved in the DXF must keep \
 both faces, close its junctions exactly (snap endpoints to existing ones within 0.1 mm), and the furniture against it \
 moves with it in furnish.js.
+- Windows: move or resize one only with dxf_edit's move_window op (it takes every line of the window and closes / opens the wall faces, so the 3D opening matches the 2D). To centre a window on a piece (e.g. "over the bed"), take the piece's centre from its 2furni outline in dxf_query and set dx so the window's new centre equals it. Then move what hangs in that window in furnish.js (sheers, curtains, blinds: the edit result lists them) to the window's new centre and width, so the 3D matches.
 - DXF coordinates in the tools are plan metres (the same frame as furnish.js and the camera numbers below).
 
 Work fast and cheap: find the code with furniture_near / grep around the plan point the user marked, read only the \

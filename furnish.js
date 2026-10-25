@@ -1118,7 +1118,7 @@ export function furnish(scene, M, mat, version = "main") {
   // run's front (y 8.49) just a 0.05 m filler shows, closed by the column's side panel.
   run(K.x1, (8.438 + K.y1) / 2, "W", K.y1 - 8.438);
   item(K.x1, 8.1265, "W", dishwasher);
-  if (version === "kareems-changes") item(9.30, 9.02, "S", p => {
+  if (version === "kareems-changes") item(9.93, 8.80, "W", p => {
     // Countertop dispenser: nominal 31.5 W x 42.5 D x 54 H cm; sits on the 92 cm counter.
     const b = 0.92;
     p.box(-0.1575, 0.1575, b, b + 0.54, 0, 0.34, mat.whiteLacquer);

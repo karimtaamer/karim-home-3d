@@ -695,11 +695,11 @@ export function furnish(scene, M, mat, version = "main") {
       p.model("models/plant-vase.glb", null, -0.84, 1.77, 0.08, { height: 0.3, cross: true });
       p.model("models/plant-vase.glb", null, -0.58, 0.75, 0.1, { height: 0.4, cross: true });  // on the top, by the column
       p.model("models/mbath-bottles.glb", null, 0.62, 0.75, 0.06, { width: 0.28 });
-      p.pebble(-0.05, 1.35, 1.1, 0.75, 0.012, mat.mirror, true);   // 1.10 wide x 0.75 tall, 0.98 to 1.73
+      p.pebble(version === "kareems-changes" ? 0.16265 : -0.05, 1.35, 1.1, 0.75, 0.012, mat.mirror, true);   // 1.10 wide x 0.75 tall, 0.98 to 1.73
       p.cyl(-0.05, 0.25, 0.225, 0, 0.43, mat.boucle, 32);           // pouf 45 x 45, pushed in to 2.5 cm off the back panel
       p.cyl(-0.05, 0.25, 0.215, 0.43, 0.45, mat.boucle, 32, 0.225);
     });
-    ac(3.332, 4.475, "N");  // over the mirror (knee-space centre)
+    ac(version === "kareems-changes" ? 3.35435 : 3.332, 4.475, "N");  // aligned with mirror between wardrobe and shelf column
     if (NC) {
     const champagne = mat.brass.clone(); champagne.color.setRGB(0.78, 0.67, 0.51); champagne.roughness = 0.5;  // brushed champagne bronze
     champagne.clippingPlanes = mat.brass.clippingPlanes;

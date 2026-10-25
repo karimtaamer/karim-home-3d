@@ -1057,7 +1057,7 @@ def chat(req):
             messages.append({k: msg[k] for k in ("role", "content", "tool_calls") if msg.get(k) is not None})
             if not msg.get("tool_calls"):
                 reply = msg.get("content") or ""
-                nudge = None if nudged >= 2 or step >= MAX_STEPS - 3 else review(ws, message, reply)
+                nudge = None if nudged >= 3 or step >= MAX_STEPS - 3 else review(ws, message, reply)
                 if nudge:  # up to two second looks before saving: 2D and 3D out of step, a lost opening, a give-up with edits left
                     nudged += 1
                     trace.append({"tool": "(review)", "args": "", "out": nudge[:700]})
@@ -1426,10 +1426,19 @@ def review(ws, message, reply):
                     bare.append((round(t, 2), h_))
             t += 0.05
         if len(bare) >= 2 and not problems:
-            xs_ = [b2[0] for b2 in bare]
-            problems.append(f"it leaves the wall bare between local x {min(xs_)} and {max(xs_)} at heights "
-                            f"{sorted({round(b2[1], 2) for b2 in bare})} m (beside a window the boxes have to run full height, "
-                            "0..M.ceiling)")
+            under = [b2 for b2 in bare if any(a_ <= b2[0] <= c_ for a_, c_ in wspans)]
+            side = [b2 for b2 in bare if b2 not in under]
+            if side:
+                xs_ = [b2[0] for b2 in side]
+                problems.append(f"it leaves the wall bare between local x {min(xs_)} and {max(xs_)} (plan {ax_} "
+                                f"{rng(min(xs_), max(xs_))}) at heights {sorted({round(b2[1], 2) for b2 in side})} m: away from "
+                                "the windows the boxes run full height, 0..M.ceiling")
+            if under:
+                xs_ = [b2[0] for b2 in under]
+                hs_ = sorted({round(b2[1], 2) for b2 in under})
+                problems.append(f"it leaves the wall bare under / over the window around local x {min(xs_)}..{max(xs_)} at "
+                                f"heights {hs_} m: add a box 0..M.sill under the window and M.winHead..M.ceiling over it, "
+                                "spanning the window's width, never one box across the window opening itself")
         if problems:
             wl = sorted({rng(min(ts), max(ts)) for wo in wins
                          for ds in [[(px - x) * fx + (py - y) * fy for px, py in wo]]

@@ -331,7 +331,7 @@ To add a version:
   - pass `null` to keep a mixed-material model's own textures.
 
 **Openable cabinets: `interact.js`**
-- In Walk, standing within 1.8 m (in plan) of a cabinet and looking at it shows a soft glowing circle on it. Tap / click it, or press E, to open or close it. With the mouse captured, a click opens it too.
+- In Walk, looking at a cabinet (view centre on it, no wall between) shows a soft glowing circle on it, from up to 7 m away (in plan; smaller and softer beyond reach). Within `reach` (1.8 m), tap / click it, or press E, to open or close it; with the mouse captured, a click opens it too. Out of reach those only show "Come closer · Open …".
 - Make a piece openable by building it in its own Group, with each door or drawer front in its own child Group (pivot on the hinge). Then mark the Group with data:
   ```js
   g.userData.openable = { id: "pantry", label: "Pantry", anchor: new THREE.Vector3(0, 1.2, 0.65),  // cue spot, in g's frame

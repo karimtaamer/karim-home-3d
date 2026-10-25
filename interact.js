@@ -1,5 +1,6 @@
-// Openable cabinets in Walk: face one within reach and a soft glowing circle sits on it; tap / click it (or press E,
-// or click with the mouse captured) to open its doors, again to close them.
+// Openable cabinets in Walk: look at one and a soft glowing circle sits on it (smaller from across the room); within
+// reach, tap / click it (or press E, or click with the mouse captured) to open its doors, again to close them. Out of
+// reach the same gestures only say "Come closer".
 //
 // furnish.js marks a cabinet's Group (everything in it counts as the cabinet when aimed at) with:
 //   g.userData.openable = {
@@ -7,14 +8,16 @@
 //     leaves: [{ obj, axis: "y", open: rad }            // a hinged leaf: obj turns `open` radians about its own axis
 //            | { obj, slide: Vector3 }],                //   or a sliding one: obj moves by `slide` (its parent's frame)
 //     anchor: Vector3,                                  // where the cue sits, in g's frame (the doors' centre, a little out)
-//     reach: 1.8, duration: 0.6,                        // plan metres from the anchor to offer it; seconds to open
+//     reach: 1.8, duration: 0.6,                        // plan metres from the anchor it opens from; seconds to open
 //     peek: 1.0, peekAt: Vector3,                       // optional, low cabinets: crouch to this eye height on opening,
 //   };                                                  //   turned to peekAt (g's frame; default the anchor)
 // createInteract() collects them from the scene; call update() every frame. Leaves start from their built pose (closed).
 // See README §5 "Openable cabinets".
 
-const REACH = 1.8;     // metres (in plan) from the cue that count as standing at the cabinet
-const CONE = 13;       // degrees off the view centre the cue may be and still count as looking at it
+const REACH = 1.8;     // metres (in plan) from the cue that count as standing at the cabinet: it opens from here
+const LOOK = 7;        // metres (in plan) from the cue it still shows at when looked at (room-scale), smaller, not opening
+const CONE = 13;       // degrees off the view centre the cue may be and still count as looking at it, within reach
+const SPREAD = 0.45;   // metres off the view centre (at the cue) it may be beyond reach: the cone narrows with distance
 const CHECK = 0.1;     // seconds between aim checks (one raycast against the openables)
 
 // isActive(): Walk, free to look (no tween, measure, dialog); isLocked(): the mouse is captured, so a click toggles too;
@@ -27,6 +30,9 @@ export function createInteract({ THREE, camera, scene, renderer, isActive, isLoc
       border-radius: 50%; background: none; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .2s;
       -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
     #interact-cue.on { opacity: 1; pointer-events: auto; }
+    #interact-cue.on.far { opacity: .8; }
+    #interact-cue.far > * { scale: .7; }
+    #interact-cue.hint::after { opacity: .9; }
     #interact-cue:focus { outline: none; }
     #interact-cue .glow { position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
       background: radial-gradient(circle, #fffaf3f2 0 30%, #fff1dc99 46%, #ffe9cc00 70%); box-shadow: 0 0 16px 4px #fff2df40;
@@ -96,40 +102,52 @@ export function createInteract({ THREE, camera, scene, renderer, isActive, isLoc
     if (crouch.aim0) camera.lookAt(crouch.aim0.clone().lerp(crouch.aim1, e));
     if (crouch.t >= 1 && crouch.y1 === crouch.stand) crouch = null;
   }
-  const label = () => target && (cue.dataset.label = `${target.to ? "Close" : "Open"} ${target.label.toLowerCase()} · E`);
+  const label = () => target && (cue.dataset.label = far
+    ? `Come closer · ${target.to ? "Close" : "Open"} ${target.label.toLowerCase()}`
+    : `${target.to ? "Close" : "Open"} ${target.label.toLowerCase()} · E`);
+  // Out of reach a tap / E / click opens nothing: the label shows for a moment instead.
+  let hintTimer = 0;
+  function act() {
+    if (!far) return toggle();
+    cue.classList.add("hint");
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(() => cue.classList.remove("hint"), 1600);
+  }
   cue.setAttribute("aria-label", "Open or close");
   cue.addEventListener("pointerdown", e => e.stopPropagation());
-  cue.addEventListener("click", e => { e.stopPropagation(); toggle(); });
+  cue.addEventListener("click", e => { e.stopPropagation(); act(); });
   // With the mouse captured the cursor is the view centre, which is what the cue answers to; E works either way.
-  document.addEventListener("click", e => target && isLocked() && e.target !== cue && toggle());
-  addEventListener("keydown", e => e.code === "KeyE" && !e.repeat && target && !/INPUT|TEXTAREA/.test(e.target.tagName) && toggle());
+  document.addEventListener("click", e => target && isLocked() && e.target !== cue && act());
+  addEventListener("keydown", e => e.code === "KeyE" && !e.repeat && target && !/INPUT|TEXTAREA/.test(e.target.tagName) && act());
 
   // What you are looking at: the first openable the view centre's ray hits, else one whose cue is near the
-  // centre, within reach and with no wall in between.
+  // centre (CONE within reach, SPREAD metres beyond it), within LOOK and with no wall in between.
   const ray = new THREE.Raycaster(), eye = new THREE.Vector3(), dir = new THREE.Vector3(), to = new THREE.Vector3();
   const clear = (d, far) => { ray.set(eye, d); ray.far = far; return !ray.intersectObjects(occluders, false).length; };
+  const plan = o => Math.hypot(o.at.x - eye.x, o.at.z - eye.z);
   function aimed() {
     camera.getWorldPosition(eye);
     camera.getWorldDirection(dir);
-    const near = list.filter(o => Math.hypot(o.at.x - eye.x, o.at.z - eye.z) <= o.reach);
-    if (!near.length) return null;
+    const seen = list.filter(o => plan(o) <= Math.max(LOOK, o.reach));
+    if (!seen.length) return null;
     ray.set(eye, dir);
-    ray.far = 4;
-    const hit = ray.intersectObjects(near.map(o => o.root), true)[0];
+    ray.far = LOOK + 2;
+    const hit = ray.intersectObjects(seen.map(o => o.root), true)[0];
     if (hit) {
       let o = null;
-      for (let p = hit.object; p && !o; p = p.parent) o = near.find(n => n.root === p);
+      for (let p = hit.object; p && !o; p = p.parent) o = seen.find(n => n.root === p);
       if (o && clear(dir, hit.distance)) return o;
     }
-    let best = null, bestAngle = THREE.MathUtils.degToRad(CONE);
-    for (const o of near) {
-      const a = dir.angleTo(to.subVectors(o.at, eye));
-      if (a < bestAngle && clear(to.clone().normalize(), to.length() - 0.05)) { best = o; bestAngle = a; }
+    let best = null, bestAngle = Infinity;
+    for (const o of seen) {
+      const d = to.subVectors(o.at, eye).length(), a = dir.angleTo(to);
+      const cone = plan(o) <= o.reach ? THREE.MathUtils.degToRad(CONE) : Math.min(THREE.MathUtils.degToRad(CONE), Math.atan(SPREAD / d));
+      if (a < cone && a < bestAngle && clear(to.clone().normalize(), d - 0.05)) { best = o; bestAngle = a; }
     }
     return best;
   }
 
-  let target = null, wait = 0, last = performance.now();
+  let target = null, far = false, wait = 0, last = performance.now();
   const v = new THREE.Vector3();
   function update() {
     // Real time, not the loop's capped step: a swing takes `duration` even on a slow phone.
@@ -150,10 +168,15 @@ export function createInteract({ THREE, camera, scene, renderer, isActive, isLoc
     const r = renderer.domElement.getBoundingClientRect();
     cue.style.transform = `translate(${r.left + (v.x + 1) / 2 * r.width}px, ${r.top + (1 - v.y) / 2 * r.height}px)`;
   }
+  // far: shown but out of reach (eye as of the last aim check).
   function show(o) {
-    if (o === target) return;
+    const f = !!o && plan(o) > o.reach;
+    if (o === target && f === far) return;
     target = o;
+    far = f;
     cue.classList.toggle("on", !!o);
+    cue.classList.toggle("far", f);
+    if (!o) cue.classList.remove("hint");
     label();
   }
 

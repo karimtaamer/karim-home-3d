@@ -646,7 +646,7 @@ def chat(req):
                {"type": "image_url", "image_url": {"url": image, "detail": "high"}}]
     content += [{"type": "image_url", "image_url": {"url": u, "detail": "low"}} for u in refs]
     messages.append({"role": "user", "content": content})
-    total, reply, steps = {"prompt_tokens": 0, "completion_tokens": 0, "cached": 0}, "", []
+    total, reply, steps, trace = {"prompt_tokens": 0, "completion_tokens": 0, "cached": 0}, "", [], []
     try:
         for step in range(MAX_STEPS):
             res = openai(messages, first=step == 0, model=model)  # look before answering: no "done" without a tool call
@@ -663,6 +663,7 @@ def chat(req):
                 except Exception as e:
                     out = f"error: {type(e).__name__}: {e}"
                 steps.append(name)
+                trace.append({"tool": name, "args": call["function"]["arguments"][:600], "out": str(out)[:700]})
                 messages.append({"role": "tool", "tool_call_id": call["id"], "content": str(out)})
         else:
             reply = "I ran out of steps before finishing; nothing was changed. Try a narrower request."
@@ -676,7 +677,8 @@ def chat(req):
     print(f"[edit-ai] {v} ({model}): {len(steps)} tool calls, {total['prompt_tokens']} in ({total['cached']} cached) / "
           f"{total['completion_tokens']} out tokens, ${usd}; changed {sorted(ws.changed) or 'nothing'}", flush=True)
     return {"reply": reply or "Done.", "changed": sorted(ws.changed), "rev": result and result["rev"], "model": model,
-            "tokens": total, "usd": usd, "steps": len(steps), "sync": result and result.get("sync")}
+            "tokens": total, "usd": usd, "steps": len(steps), "sync": result and result.get("sync"),
+            **({"trace": trace} if req.get("debug") else {})}
 
 
 def save(ws, summary):

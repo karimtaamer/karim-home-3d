@@ -1367,6 +1367,13 @@ def chat(req):
                     trace.append({"tool": "(review)", "args": "", "out": nudge[:700]})
                     messages.append({"role": "user", "content": nudge})
                     continue
+                if ws.changed and (nudged >= 3 or step >= MAX_STEPS - 3):  # out of second looks: never save 2D and 3D apart
+                    last_ = review(ws, message, reply)
+                    if last_ and last_.startswith("Check 2D vs 3D"):
+                        trace.append({"tool": "(review, final)", "args": "", "out": last_[:700]})
+                        ws.changed.clear()
+                        reply = ("I couldn't finish this with the 2D plan and the 3D model matching, so I left both as they "
+                                 "were. Try a smaller or more specific change.")
                 break
             for call in msg["tool_calls"]:
                 name = call["function"]["name"]
@@ -1899,6 +1906,36 @@ def review(ws, message, reply):
                     f"{'; '.join(wrong_)} got {'BIGGER' if want_ < 0 else 'SMALLER'}. In resize_piece grow, a positive value "
                     "pushes that edge OUT (bigger) and a negative one pulls it IN (smaller). Redo the outline the right way "
                     "(the same change as the 3D piece), so the plan and the 3D agree." + tail)
+    if want_ and f0 != f1:  # and the 3D: a builder's size arguments (bed(1.9, 2.15)) all went the other way
+        def args_(line, text):
+            m = re.search(r'\bitem\([^,]+,[^,]+,\s*"[NSEW]"\s*,\s*(\w+)\(([^()]*)\)', line)
+            if not m:
+                return None
+            d = re.search(r"\bconst " + m[1] + r" = \(([^)]*)\) =>", text)
+            defs = [a.split("=")[1].strip() if "=" in a else None for a in d[1].split(",")] if d else []
+            got = [a.strip() for a in m[2].split(",")] if m[2].strip() else []
+            out = []
+            for k in range(max(len(defs), len(got))):
+                v = got[k] if k < len(got) else (defs[k] if k < len(defs) else None)
+                try:
+                    out.append(float(v))
+                except (TypeError, ValueError):
+                    out.append(None)
+            return m[1], out
+        L0d, L1d = f0.splitlines(), f1.splitlines()
+        for tag_, i0, i1, j0, j1 in difflib.SequenceMatcher(None, L0d, L1d, autojunk=False).get_opcodes():
+            if tag_ != "replace" or i1 - i0 != j1 - j0:
+                continue
+            for a_, b_ in zip(L0d[i0:i1], L1d[j0:j1]):
+                o_, n_ = args_(a_, f0), args_(b_, f1)
+                if not o_ or not n_ or o_[0] != n_[0]:
+                    continue
+                ds = [y - x for x, y in zip(o_[1], n_[1]) if x is not None and y is not None and abs(y - x) > 0.005]
+                if ds and all(d_ * want_ < 0 for d_ in ds):
+                    return (f"Check 2D vs 3D: the user asked for it {'smaller' if want_ < 0 else 'bigger'}, but in the 3D "
+                            f"{b_.strip()[:100]} makes {n_[0]}() {'BIGGER' if want_ < 0 else 'SMALLER'} than before "
+                            f"({', '.join(str(x) for x in o_[1] if x is not None)} -> {', '.join(str(y) for y in n_[1] if y is not None)}). "
+                            "Redo the 3D the way the user asked, the same change as the plan outline, so both agree." + tail)
     # furnish.js edits that only touch lines which never run for this version.
     if f0 != f1:
         sc0, sc1 = version_scope(f0, ws.v), version_scope(f1, ws.v)

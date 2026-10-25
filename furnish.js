@@ -1211,7 +1211,11 @@ export function furnish(scene, M, mat, version = "main") {
   // --- Reception: TV wall with lit oak niches, two sofas, armchair -----------------------------
   item(17.25, 3.67, "E", p => {  // per render 10: a plaster TV box standing proud of a built-out run
     // holding two tall rounded oak-lined niches (south), and a lit rounded oak recess under the TV.
+    // North end (local x 1.72) meets the reception column at plan y 5.3914 — keep that edge flat/flush.
     const H = M.ceiling, edge = -0.46, D0 = 0.28, D1 = 0.36;  // run depth, TV box depth
+    const KC = version === "kareems-changes";
+    // Kareem's: TV 166.8 x 95.8 x 7.7 cm in a flat rectangular opening centred over the niche (render).
+    const TW = KC ? 1.668 : 1.50, TH = KC ? 0.958 : 0.85, TD = KC ? 0.077 : 0.03;
     const slab = (x0, x1, d, holes) => {
       const s = new THREE.Shape([new THREE.Vector2(x0, 0), new THREE.Vector2(x1, 0), new THREE.Vector2(x1, H), new THREE.Vector2(x0, H)]);
       for (const h of holes) s.holes.push(roundRect(new THREE.Path(), ...h));
@@ -1224,8 +1228,13 @@ export function furnish(scene, M, mat, version = "main") {
       mesh(new THREE.ExtrudeGeometry(roundRect(new THREE.Shape(), x0, x1, y0, y1, r), { depth: 0.01, bevelEnabled: false, curveSegments: 12 }), honeyOak, p.g);
     };
     const tall = [[-1.59, -1.25], [-1.11, -0.77]], low = [-0.4, 1.38, 0.33, 0.69, 0.1];
+    const tcx = (low[0] + low[1]) / 2;
+    const tvX0 = tcx - TW / 2, tvX1 = tcx + TW / 2;
+    const tvY0 = KC ? 0.83 : 0.92, tvY1 = tvY0 + TH;
+    // Opening slightly larger than the TV so the set sits in a flat plaster pocket (render).
+    const open = KC ? [tvX0 - 0.025, tvX1 + 0.025, tvY0 - 0.025, tvY1 + 0.025, 0.02] : null;
     slab(-1.72, edge, D0, tall.map(([x0, x1]) => [x0, x1, 0.42, 2.2, 0.13]));
-    slab(edge, 1.72, D1, [low]);
+    slab(edge, 1.72, D1, open ? [low, open] : [low]);
     // A splayed return instead of a square step between the run and the TV box: 0.08 m out over 0.2 m.
     const splay = 0.2, L = Math.hypot(splay, D1 - D0), a = Math.atan2(D1 - D0, splay);
     const wedge = new THREE.Shape([new THREE.Vector2(edge - splay, -D0), new THREE.Vector2(edge, -D0), new THREE.Vector2(edge, -D1)]);
@@ -1248,9 +1257,10 @@ export function furnish(scene, M, mat, version = "main") {
     p.cyl(-1.42, 0.15, 0.05, 0.445, 0.6, mat.planter, 16);
     p.box(0.95, 1.15, 0.345, 0.4, 0.08, 0.26, mat.whiteLacquer);
     p.cyl(0.2, 0.15, 0.05, 0.345, 0.52, mat.clearGlass, 16);
-    // Slim TV centred over the recess, and skirting along both faces.
-    p.box(-0.26, 1.24, 0.92, 1.77, D1, D1 + 0.03, mat.blackSteel);
-    p.face(-0.25, 1.23, 0.93, 1.76, D1 + 0.031, mat.screen);
+    // TV centred over the niche; on Kareem's it sits in the opening so the face reads flat with the plaster.
+    const z0 = KC ? D1 - TD : D1, z1 = KC ? D1 : D1 + TD;
+    p.box(tvX0, tvX1, tvY0, tvY1, z0, z1, mat.blackSteel);
+    p.face(tvX0 + 0.01, tvX1 - 0.01, tvY0 + 0.01, tvY1 - 0.01, z1 + 0.001, mat.screen);
     p.box(-1.72, edge - splay, 0, 0.08, D0, D0 + 0.012, mat.oakVeneer);
     p.box(edge, 1.72, 0, 0.08, D1, D1 + 0.012, mat.oakVeneer);
     const skirt = p.box(-L / 2, L / 2, 0, 0.08, -0.006, 0.006, mat.oakVeneer);

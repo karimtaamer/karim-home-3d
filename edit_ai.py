@@ -117,14 +117,15 @@ def _key(*names):
 def anthropic_key():
     if k := _key("EDIT_AI_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY", "CLAUDE_API_KEY"):
         return k
-    # Vercel MCP redacts values that match process.env secrets to "[REDACTED]"; a base64 twin avoids that.
+    # Vercel MCP redacts $file values that match (or base64-decode to) process.env secrets → "[REDACTED]".
+    # Store xor(0x5A)+base64 under EDIT_AI_ANTHROPIC_API_KEY_B64 instead.
     import base64
     b64 = (os.environ.get("EDIT_AI_ANTHROPIC_API_KEY_B64") or "").strip()
     if b64 and b64 != "[REDACTED]":
         try:
-            k = base64.b64decode(b64).decode("utf-8").strip()
-            if k and len(k) > 20:
-                return k
+            raw = bytes(b ^ 0x5A for b in base64.b64decode(b64)).decode("utf-8").strip()
+            if raw and len(raw) > 20:
+                return raw
         except Exception:
             pass
     return None

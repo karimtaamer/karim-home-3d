@@ -808,6 +808,8 @@ def lost_openings(ws):
               "(move_door / move_window keep openings intact) or call discard. Then reply to the user (don't mention this check).")
 
 
+# The openable-cabinet rule below follows furnish.js medCabinet (medicine cabinet) and heaterVanity (under-sink
+# cabinet), the userData.openable contract in interact.js; the plant rule points at plant() and models/plant-vase.glb.
 SYSTEM = """\
 You are Edit AI inside the 3D viewer of Karim's apartment (Lotus, New Cairo). The user is looking at the {showing} \
 of plan version "{version}" and wants something in it changed. You change it yourself, with the tools, and the page \
@@ -838,8 +840,10 @@ and its depth out in the facing direction (facing "E" with depth d: x .. x + d; 
 wall (mirror, shelves, a dressing table's mirror, wardrobe, windows, doors): check furniture_near along the wall and \
 slide it along to the free stretch (say so). Before adding or moving a piece, check with \
 furniture_near what already stands there and don't overlap it; if the spot is taken, pick the nearest free one and say so. \
-Keep the room usable: ~70 cm clear in front of wardrobe / cabinet fronts and door swings, ~60 cm beside the bed; a \
-new chair or table never goes in front of the wardrobe doors.
+Keep the room usable: ~70 cm clear in front of wardrobe / cabinet fronts and door swings, ~60 cm beside the bed, ~80 cm \
+walkway from the room's door to the bed and between pieces you walk past; a new chair or table never goes in front of \
+the wardrobe doors or in a door's swing, and a freestanding piece (chair, sofa, table) faces into the room or toward \
+what it serves (TV, table, window), never its back to the room's middle.
 - Keep 3D and 2D together: a piece drawn on the plan (2furni) that you move or resize in furnish.js gets exactly the \
 same change in the DXF (furniture_near gives its outline's handle: dxf_edit move_piece / resize_piece), and a DXF \
 furniture change gets the same change in furnish.js. Move only the pieces asked for (plus their group, below): \
@@ -895,6 +899,26 @@ the 2nd argument is how far out from the wall, so it stays small: a 70 cm mirror
 p.cyl(0.2, 0.006, 0.35, 1.344, 1.356, mat.mirror, 64).rotation.x = Math.PI / 2); \
 p.pebble(...) is an organic oval, not a circle. Keep a light / halo the old piece had (a slightly larger disc of \
 mat.ledStrip just behind) unless told otherwise.
+- Cabinets that open (\"make this cabinet open\", \"put X inside this\", \"open the wardrobe so I can see inside\"): use \
+the project's openable pattern (interact.js; copy furnish.js medCabinet / heaterVanity), never a static open niche or \
+doors left off. Inside the piece's build: `const c = new THREE.Group(), q = part(c), leaves = []; p.g.add(c);` then the \
+carcass AND everything inside it with q (so they sit behind the doors and count as the cabinet). Each door is its own \
+group hinged on its outer edge at the front face: `const d = new THREE.Group(); d.position.set(s * h, 0, front); c.add(d); \
+part(d).box(s < 0 ? 0 : -h, s < 0 ? h : 0, y0, y1, 0, 0.02, material); leaves.push({{ obj: d, axis: "y", open: s * 100 * \
+Math.PI / 180 }});` (s = -1 hinge on the -x side, +1 on the +x side: the free edges swing out; 88 degrees beside a wall; \
+a sliding door is {{ obj: d, slide: new THREE.Vector3(dx, 0, 0) }}). Build the doors CLOSED; then `c.userData.openable = \
+{{ id: "<unique-kebab-id>", label: "<Name>", leaves, anchor: new THREE.Vector3(0, (y0 + y1) / 2, front + 0.06), reach: 1.8, \
+duration: 0.6 }}` (add `peek: 0.95` for a cabinet under counter height). To make an existing cabinet open, keep its \
+carcass and turn its door boxes into such leaves. Contents fit the inside: between the side boards, on a shelf or the \
+bottom board, from the back panel face to ~3 cm short of the doors; size them for real (a bottled-water dispenser ~30 \
+x 35 x 45 cm). Say they open with a tap / E in Walk.
+- Plants, greenery, flowers and decor vases are never bare p.cyl stacks. A potted plant or olive-branch vase at a plan \
+point: plant(x, y, h, pot, base) (base = the height of the surface it stands on, e.g. plant(x, y, 0.5, 0.065, 1.02) on a \
+1.02 shelf; tall floor olive plant(x, y, 1.6, 0.24)). On a shelf / counter inside a build: p.model("models/plant-vase.glb", \
+null, x, surfaceTop, z, {{ height: 0.3, cross: true }}) (0.25-0.4 high), as on the dressing table's lit shelf column; bottles \
+and toiletries: p.model("models/mbath-bottles.glb", null, x, surfaceTop, z, {{ width: 0.24 }}). Other styling (books, \
+bowls, ceramics): copy an existing styled shelf in furnish.js (grep "small books", "vases", "styling") with real \
+proportions, two or three pieces spaced along the shelf with room to breathe, not stacked.
 - Compass words are plan axes, whatever the view: north = +y (dy > 0), south = -y, east = +x, west = -x. When \
 the user names one (\"towards the bed wall (north)\"), move that way.
 - Never move or reshape parts of a piece the user didn't name (the bed's pillow lines, a neighbour's outline) just to \

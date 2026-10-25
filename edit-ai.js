@@ -57,13 +57,19 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
   if (!live.api) return null;  // no backend: no button
   const style = document.createElement("style");
   style.textContent = `
-    #edit-ai-btn { position: fixed; right: 18px; bottom: 52px; z-index: 4; display: flex; align-items: center; gap: 7px; border: 0; border-radius: 999px;
+    #edit-ai-dock { position: fixed; right: 18px; bottom: 52px; z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    #edit-ai-btn { display: flex; align-items: center; gap: 7px; border: 0; border-radius: 999px;
       padding: 11px 17px; font: 600 13px Inter, sans-serif; letter-spacing: .02em; color: #fffaf3; background: linear-gradient(135deg, #2b2622, #5a4636);
       box-shadow: 0 4px 16px #0003, 0 0 0 1px #ffffff1c inset; cursor: pointer; transition: transform .15s; }
     #edit-ai-btn:hover { transform: translateY(-1px); }
     #edit-ai-btn svg { width: 16px; height: 16px; fill: none; stroke: #e7b866; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-    body.renders #edit-ai-btn, body.edit-ai-open #edit-ai-btn { display: none; }
-    @media (max-width: 760px) { #edit-ai-btn { bottom: 128px; right: 14px; padding: 10px 14px; } }
+    #edit-ai-undo { display: flex; align-items: center; gap: 5px; border: 0; border-radius: 999px; padding: 6px 12px; font: 600 11.5px Inter, sans-serif;
+      letter-spacing: .02em; color: #2b2622; background: #fffaf3e6; box-shadow: 0 2px 10px #0002, 0 0 0 1px #2b26221a inset; cursor: pointer; backdrop-filter: blur(6px); }
+    #edit-ai-undo svg { width: 13px; height: 13px; fill: none; stroke: #b8862f; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    #edit-ai-undo.sure { background: #2b2622; color: #fffaf3; }
+    #edit-ai-undo:disabled { opacity: .6; cursor: default; }
+    #edit-ai-undo[hidden], body.renders #edit-ai-dock, body.edit-ai-open #edit-ai-dock { display: none; }
+    @media (max-width: 760px) { #edit-ai-dock { bottom: 128px; right: 14px; } #edit-ai-btn { padding: 10px 14px; } }
     #edit-ai { position: fixed; inset: 0; z-index: 7; font: 13px Inter, sans-serif; color: #2b2622; }
     #edit-ai[hidden] { display: none; }
     #edit-ai .freeze, #edit-ai .ink { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -111,6 +117,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
       #edit-ai .chat { top: auto; left: 0; width: auto; height: 80vh; height: calc(100dvh - 64px); max-height: 82dvh; border-radius: 18px 18px 0 0; box-shadow: 0 -6px 24px #0003; }
       #edit-ai.chatting .x { top: 10px; }
       #edit-ai .ask { top: 62px; border-radius: 16px; }
+      #edit-ai textarea { font-size: 16px; }  /* under 16px iOS zooms the page on focus and the first paste misses */
     }
     #edit-ai .demo { position: absolute; left: 50%; top: 92px; transform: translateX(-50%); pointer-events: none; width: 170px;
       filter: drop-shadow(0 10px 24px #0005); animation: eai-in .4s ease-out; }
@@ -135,8 +142,53 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
       62% { transform: translate(84px, 78px) scale(.94); }
       72% { transform: translate(96px, 160px) scale(1); opacity: 1; }
       90%, 100% { transform: translate(110px, 210px); opacity: 0; } }
-    @media (max-width: 760px) { #edit-ai .demo { top: 168px; width: 160px; } }
+    #edit-ai .demo.plan { width: 250px; }
+    #edit-ai .demo.plan .d3, #edit-ai .demo:not(.plan) .d2 { display: none; }
+    #edit-ai .demo .d2 .hand { animation-name: eai-hand2; }
+    @keyframes eai-hand2 {
+      0% { transform: translate(40px, 190px) rotate(-8deg); opacity: 0; }
+      10% { transform: translate(64px, 16px) rotate(-8deg); opacity: 1; }
+      12% { transform: translate(64px, 16px) scale(.94); }
+      24% { transform: translate(98px, 60px) scale(.94); }
+      36% { transform: translate(60px, 98px) scale(.94); }
+      48% { transform: translate(28px, 52px) scale(.94); }
+      62% { transform: translate(66px, 18px) scale(.94); }
+      72% { transform: translate(120px, 140px) scale(1); opacity: 1; }
+      90%, 100% { transform: translate(140px, 200px); opacity: 0; } }
+    @media (max-width: 760px) { #edit-ai .demo { top: 168px; width: 160px; } #edit-ai .demo.plan { width: 220px; } }
     @media (prefers-reduced-motion: reduce) { #edit-ai .demo .hand, #edit-ai .demo .loop, #edit-ai .demo .pick { animation: none; stroke-dashoffset: 0; } }
+    /* While an edit runs: a scan over the frozen view (beside the chat; on phones instead of it). */
+    #edit-ai .scan { position: absolute; inset: 0; display: none; pointer-events: none; overflow: hidden;
+      background: radial-gradient(ellipse at 50% 50%, #1a151226 0%, #1a1512c4 78%); }
+    #edit-ai.working .scan { display: block; animation: eai-fade .6s ease-out; }
+    #edit-ai .scan .grid { position: absolute; left: -50%; right: -50%; bottom: 0; height: 58%; transform: perspective(520px) rotateX(64deg); transform-origin: 50% 100%;
+      background: linear-gradient(#e7b86630 1px, transparent 1px) 0 0 / 56px 56px, linear-gradient(90deg, #e7b86630 1px, transparent 1px) 0 0 / 56px 56px;
+      -webkit-mask-image: linear-gradient(to top, #000 15%, transparent 92%); mask-image: linear-gradient(to top, #000 15%, transparent 92%); animation: eai-grid 1.8s linear infinite; }
+    #edit-ai .scan .beam { position: absolute; left: 0; right: 0; top: 0; height: 24vh; animation: eai-beam 3s cubic-bezier(.45, 0, .55, 1) infinite;
+      background: linear-gradient(to bottom, transparent, #e7b86614 65%, #f6d69a55 97%, #fffaf3aa 99%, transparent); }
+    #edit-ai .scan .core { position: absolute; top: 50%; left: 50%; width: 200px; transform: translate(-50%, -50%); text-align: center; }
+    @media (min-width: 761px) { #edit-ai .scan .core { left: calc(50% - 180px); } }  /* the middle of what the 360px chat leaves */
+    #edit-ai .scan svg { display: block; width: 168px; height: 168px; margin: 0 auto; overflow: visible; filter: drop-shadow(0 0 12px #e7b86680); }
+    #edit-ai .scan svg * { transform-box: fill-box; transform-origin: 50% 50%; fill: none; }
+    #edit-ai .scan .r1 { stroke: #e7b866; stroke-width: 1; stroke-dasharray: 1.5 4.2; opacity: .75; animation: eai-rot 16s linear infinite; }
+    #edit-ai .scan .r2 { stroke: #f6d69a; stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 62 214; animation: eai-rot 1.6s linear infinite reverse; }
+    #edit-ai .scan .r3 { stroke: #e7b86666; stroke-width: 1; stroke-dasharray: 22 9; animation: eai-rot 7s linear infinite; }
+    #edit-ai .scan .hex { stroke: #fffaf3cc; stroke-width: 1.2; fill: #e7b86614; animation: eai-pulse 2.2s ease-in-out infinite alternate; }
+    #edit-ai .scan .orb { animation: eai-rot 2.4s linear infinite; }
+    #edit-ai .scan .orb circle, #edit-ai .scan .dot { fill: #fffaf3; }
+    #edit-ai .scan .dot { animation: eai-glow 1.1s ease-in-out infinite alternate; }
+    #edit-ai .scan .phase { margin: 16px 0 0; font: 600 11px Inter, sans-serif; letter-spacing: .24em; text-transform: uppercase; color: #f6e3c0;
+      text-shadow: 0 0 12px #e7b86699, 0 1px 3px #000c; transition: opacity .3s; }
+    #edit-ai .scan .phase.out { opacity: 0; }
+    #edit-ai .scan .sub { margin: 6px 0 0; font: 400 15px "Cormorant Garamond", serif; font-style: italic; color: #fffaf3b0; text-shadow: 0 1px 3px #000c; }
+    @keyframes eai-fade { from { opacity: 0; } }
+    @keyframes eai-rot { to { transform: rotate(1turn); } }
+    @keyframes eai-pulse { from { transform: scale(.88); opacity: .7; } to { transform: scale(1.06); opacity: 1; } }
+    @keyframes eai-glow { from { opacity: .45; } to { opacity: 1; } }
+    @keyframes eai-grid { to { background-position: 0 56px, 0 56px; } }
+    @keyframes eai-beam { from { transform: translateY(-24vh); } to { transform: translateY(100vh); } }
+    @media (max-width: 760px) { #edit-ai.working .chat, #edit-ai.working .x { display: none; } }
+    @media (prefers-reduced-motion: reduce) { #edit-ai .scan * { animation: none !important; } }
     #edit-ai-toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 6; display: flex; gap: 8px; align-items: center;
       max-width: min(340px, calc(100vw - 24px)); padding: 10px 10px 10px 16px; border-radius: 16px; background: #2b2622f2; color: #f3eee5; font: 12.5px Inter, sans-serif;
       box-shadow: 0 6px 20px #0004; }
@@ -149,16 +201,51 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
 
   const btn = Object.assign(document.createElement("button"), { id: "edit-ai-btn", title: "Change something in this view with AI" });
   btn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/><circle cx="12" cy="12" r="2.2"/></svg>Edit AI`;
-  document.body.appendChild(btn);
+  // Undo the last Edit AI change, always under the button while there is one (asks for a second tap first).
+  const undoBtn = Object.assign(document.createElement("button"), { id: "edit-ai-undo", title: "Undo the last Edit AI change", hidden: !live.undo });
+  const undoLabel = t => (undoBtn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>${t}`);
+  undoLabel("Undo");
+  const dock = Object.assign(document.createElement("div"), { id: "edit-ai-dock" });
+  dock.append(btn, undoBtn);
+  document.body.appendChild(dock);
 
   const box = document.createElement("div");
   box.id = "edit-ai";
   box.hidden = true;
   box.innerHTML = `
     <img class="freeze" alt=""><canvas class="ink"></canvas><div class="tint"></div>
+    <div class="scan" aria-live="polite"><div class="grid"></div><div class="beam"></div>
+      <div class="core"><svg viewBox="-60 -60 120 120" aria-hidden="true">
+        <circle class="r1" r="56"/><circle class="r2" r="44"/><circle class="r3" r="33"/>
+        <path class="hex" d="M0 -22 L19 -11 L19 11 L0 22 L-19 11 L-19 -11 Z"/>
+        <g class="orb"><circle cx="0" cy="-44" r="2.6"/></g><circle class="dot" r="3.6"/></svg>
+        <p class="phase"></p><p class="sub">Edit AI is reshaping your home</p></div></div>
     <div class="ask"><span>Highlight what to change: circle or scribble on it.</span>
       <button class="whole">Whole view</button><button class="clear" hidden>Clear</button><button class="go next" disabled>Next</button></div>
-    <div class="demo" aria-hidden="true"><svg viewBox="0 0 150 250">
+    <div class="demo" aria-hidden="true"><svg class="d2" viewBox="0 0 200 150">
+      <defs><pattern id="eai-plangrid"width="10" height="10" patternUnits="userSpaceOnUse"><path d="M10 0H0V10" fill="none" stroke="#ffffff0a" stroke-width=".5"/></pattern></defs>
+      <rect x="4" y="4" width="192" height="142" rx="10" fill="#212830" stroke="#3a4552" stroke-width="1.2"/>
+      <rect x="6" y="6" width="188" height="138" rx="8" fill="url(#eai-plangrid)"/>
+      <g fill="none" stroke="#ff0000" stroke-width="1">
+        <rect x="16" y="16" width="168" height="118"/><rect x="20" y="20" width="160" height="110"/>
+        <path d="M108 20V72M112 20V72M108 72H112M108 96V130M112 96V130M108 96H112"/></g>
+      <path d="M40 15.5H80V20.5H40Z" fill="#212830"/><path d="M40 16H80M40 18H80M40 20H80M40 16V20M80 16V20" stroke="#4d7cff" stroke-width=".8" fill="none"/>
+      <path d="M112 72H136M136 72A24 24 0 0 1 112 96" stroke="#ffff00" stroke-width=".7" fill="none"/>
+      <g fill="none" stroke="#00ff00" stroke-width=".8">
+        <rect x="40" y="22" width="44" height="64"/><rect x="43" y="25" width="17" height="8" rx="2"/><rect x="64" y="25" width="17" height="8" rx="2"/>
+        <path d="M40 44H84M40 44L50 52"/><rect x="26" y="22" width="11" height="10"/><rect x="87" y="22" width="11" height="10"/>
+        <rect x="26" y="112" width="54" height="16"/><path d="M26 120H80M40 112V128M53 112V128M66 112V128"/>
+        <rect x="124" y="110" width="52" height="18"/><path d="M128 110V124H172V110M141 110V124M158 110V124"/><rect x="138" y="86" width="24" height="12" rx="2"/>
+        <rect x="148" y="22" width="30" height="16"/></g>
+      <rect x="156" y="25" width="14" height="10" rx="3" fill="none" stroke="#007ca5" stroke-width=".8"/>
+      <g font-family="ui-monospace, Menlo, monospace" font-size="5" fill="#c9d1d9" letter-spacing=".5"><text x="44" y="100">BEDROOM</text><text x="134" y="66">LIVING</text></g>
+      <rect class="pick" x="40" y="22" width="44" height="64" fill="${INK}" fill-opacity="0"/>
+      <path class="loop" pathLength="190" d="M62 14 C 94 12, 98 40, 96 58 C 94 84, 76 98, 60 96 C 36 94, 26 74, 28 52 C 30 30, 44 14, 68 16"/>
+      <g class="hand"><g transform="translate(-4,4) scale(.7) translate(-8,-4)">
+        <path d="M10 2 C 10 -2, 17 -2, 17 2 L 17 30 L 18 22 C 18 18, 25 18, 25 22 L 25 32 L 26 26 C 26 22, 33 22, 33 26 L 33 36 L 34 31 C 34 27, 41 27, 41 31 L 41 52 C 41 66, 33 74, 22 74 C 12 74, 6 68, 3 58 L -4 40 C -6 35, 0 32, 4 36 L 10 46 Z"
+          fill="#efbb92" stroke="#5c3a22" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M17 30 L17 40 M25 32 L25 41 M33 36 L33 43" stroke="#8a5d3b" stroke-width="1" stroke-linecap="round" fill="none"/></g></g>
+    </svg><svg class="d3" viewBox="0 0 150 250">
       <defs><linearGradient id="eai-wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9c8b4"/><stop offset="1" stop-color="#efe5d8"/></linearGradient>
         <linearGradient id="eai-floor" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b86f3c"/><stop offset="1" stop-color="#8f5129"/></linearGradient>
         <clipPath id="eai-screen"><rect x="14" y="20" width="102" height="196" rx="12"/></clipPath></defs>
@@ -226,6 +313,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     document.body.classList.add("edit-ai-open");
     sizeInk();
     markStep();
+    $(".demo").classList.toggle("plan", showing() === "drawing");  // circling on a plan in 2D, on a phone's 3D view in 3D
     showDemo(true);
   }
   // The looping "circle it" demo on the highlight step, until the first stroke (or Whole view).
@@ -279,7 +367,14 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     if (!msgs.children.length) for (const h of history.slice(-6)) say(h.role === "user" ? "me" : "bot", h.text);
     if (!live.ready) say("err", "Edit AI isn't switched on yet: the server has no EDIT_AI_OPENAI_API_KEY. You can still try; it will say the same.");
     say("bot", greeting);
-    setTimeout(() => area.focus(), 50);
+    focusArea();
+  }
+  // Focus the composer once the chat is laid out and the mouse is free: focusing while pointer lock is still letting go
+  // (it ends asynchronously) or before the panel shows leaves the caret elsewhere, and the first paste went nowhere.
+  function focusArea() {
+    const go = () => requestAnimationFrame(() => { if (!box.hidden && !$(".chat").hidden) area.focus({ preventScroll: true }); });
+    if (document.pointerLockElement) document.addEventListener("pointerlockchange", go, { once: true });
+    else go();
   }
   function say(kind, text, img) {
     const m = document.createElement("div");
@@ -312,7 +407,25 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
   }
   $(".attach").onclick = () => fileInput.click();
   fileInput.onchange = async () => { for (const f of fileInput.files) await addRef(f); fileInput.value = ""; };
-  area.addEventListener("paste", e => { for (const it of e.clipboardData?.items || []) if (it.type.startsWith("image/")) addRef(it.getAsFile()); });
+  // Text is put in by hand, so it lands on the first paste whatever else is listening; a picture alone becomes a
+  // reference (a copy from Word / Notes carries an image of the text too: that one is skipped).
+  area.addEventListener("paste", e => {
+    const data = e.clipboardData;
+    if (!data) return;
+    const text = data.getData("text/plain");
+    if (text) {
+      e.preventDefault();
+      area.focus();
+      area.setRangeText(text, area.selectionStart, area.selectionEnd, "end");
+      area.dispatchEvent(new Event("input", { bubbles: true }));
+      return;
+    }
+    for (const it of data.items) if (it.kind === "file" && it.type.startsWith("image/")) {
+      e.preventDefault();
+      const f = it.getAsFile();
+      if (f) addRef(f).catch(err => say("err", `Couldn't read that picture (${err.message}).`));
+    }
+  });
   area.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !PHONE.matches) { e.preventDefault(); send(); } });
   area.addEventListener("input", () => { area.style.height = "auto"; area.style.height = Math.min(160, area.scrollHeight) + "px"; });
   $("form").onsubmit = e => { e.preventDefault(); send(); };
@@ -384,34 +497,56 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     return j;
   }
   async function send() {
-    const text = area.value.trim();
+    const text = area.value.trim(), sent = refs;
     if (busy || !text) return;
     busy = true;
     $(".send").disabled = true;
+    // The composer empties as soon as it is sent; the prompt lives on in the chat above (and comes back on an error).
+    area.value = ""; area.style.height = ""; refs = []; showRefs();
     say("me", text);
-    refs.forEach(u => say("me", "", u).classList.add("ref"));
+    sent.forEach(u => say("me", "", u).classList.add("ref"));
     const wait = say("note", "");
     wait.classList.add("busy");
     wait.append("Working on it: finding the piece, editing, rebuilding…");
+    working(true);
     try {
-      const res = await call("chat", { version: live.version, message: text, image: marked(), refs, context: context(), history });
+      const res = await call("chat", { version: live.version, message: text, image: marked(), refs: sent, context: context(), history });
       wait.remove();
       history.push({ role: "user", text }, { role: "assistant", text: res.reply });
       history = history.slice(-12);
       store.setItem(histKey, JSON.stringify(history));
-      area.value = ""; refs = []; showRefs();
       say("bot", res.reply);
       const cost = res.usd != null ? ` · ${egp(res.usd)}` : "";
       if (!res.changed?.length) { say("note", `No change made${cost}`); return; }
       say("note", `Applying the change${cost}…`);
+      phase("Loading your edit", true);
       await apply(res, cost);
     } catch (e) {
       wait.remove();
       say("err", e.message);
+      if (!area.value) area.value = text;
     } finally {
       busy = false;
       $(".send").disabled = false;
+      if (!leaving) working(false);
     }
+  }
+  // The scan over the frozen view while an edit runs; its line steps through what the server is doing, roughly.
+  const PHASES = ["Reading the view", "Finding the piece", "Editing the model", "Rebuilding the home", "Almost there"];
+  let phaseTimer = null, leaving = false;
+  function phase(text, last) {
+    const el = $(".scan .phase");
+    el.classList.add("out");
+    setTimeout(() => { el.textContent = text; el.classList.remove("out"); }, 300);
+    if (last) clearInterval(phaseTimer);
+  }
+  function working(on) {
+    box.classList.toggle("working", on);
+    clearInterval(phaseTimer);
+    if (!on) return;
+    let k = 0;
+    $(".scan .phase").textContent = PHASES[0];
+    phaseTimer = setInterval(() => (++k < PHASES.length ? phase(PHASES[k], k === PHASES.length - 1) : clearInterval(phaseTimer)), 3800);
   }
   // USD→EGP: CBE rate ~24 Oct 2026
   const USD_EGP = 55.25;
@@ -435,6 +570,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     if (mode() === "walk") q.set("cam", camQuery().join(","));
     else q.set("view", mode());
     if (showing() !== "model") q.set("show", showing());
+    leaving = true;  // keep the scan up until the page goes
     location.search = q;
   }
 
@@ -459,6 +595,24 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     store.setItem(histKey, JSON.stringify(history));
     store.setItem("editai-applied", JSON.stringify({ version: live.version, reply: "Undone.", undone: true }));
     reloadHere();
+  };
+  let sure = null;
+  undoBtn.onclick = async () => {
+    if (!undoBtn.classList.contains("sure")) {
+      undoBtn.classList.add("sure");
+      undoLabel("Undo last edit?");
+      sure = setTimeout(() => { undoBtn.classList.remove("sure"); undoLabel("Undo"); }, 3500);
+      return;
+    }
+    clearTimeout(sure);
+    undoBtn.disabled = true;
+    undoLabel("Undoing…");
+    try { await undoAndReload(); } catch (e) {
+      undoBtn.disabled = false;
+      undoBtn.classList.remove("sure");
+      undoLabel("Undo");
+      toast(`Couldn't undo: ${e.message}`, [["×", () => document.getElementById("edit-ai-toast").remove(), true]], true);
+    }
   };
   const applied = JSON.parse(store.getItem("editai-applied") || "null");
   store.removeItem("editai-applied");

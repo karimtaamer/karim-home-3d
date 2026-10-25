@@ -1118,6 +1118,21 @@ export function furnish(scene, M, mat, version = "main") {
   // run's front (y 8.49) just a 0.05 m filler shows, closed by the column's side panel.
   run(K.x1, (8.438 + K.y1) / 2, "W", K.y1 - 8.438);
   item(K.x1, 8.1265, "W", dishwasher);
+  if (version === "kareems-changes") item(9.30, 9.02, "S", p => {
+    // Countertop dispenser: nominal 31.5 W x 42.5 D x 54 H cm; sits on the 92 cm counter.
+    const b = 0.92;
+    p.box(-0.1575, 0.1575, b, b + 0.54, 0, 0.34, mat.whiteLacquer);
+    p.box(-0.1575, 0.1575, b + 0.31, b + 0.54, 0.34, 0.425, mat.blackSteel);
+    p.box(-0.1575, -0.13, b + 0.04, b + 0.31, 0.34, 0.425, mat.whiteLacquer);
+    p.box(0.13, 0.1575, b + 0.04, b + 0.31, 0.34, 0.425, mat.whiteLacquer);
+    p.box(-0.13, 0.13, b + 0.04, b + 0.31, 0.339, 0.345, mat.blackSteel);
+    p.box(-0.1575, 0.1575, b, b + 0.04, 0.34, 0.425, mat.blackSteel);
+    for (const x of [-0.065, 0.065]) {
+      p.box(x - 0.018, x + 0.018, b + 0.285, b + 0.315, 0.35, 0.395, mat.chrome);
+      p.cyl(x, 0.385, 0.009, b + 0.26, b + 0.29, mat.chrome, 12);
+    }
+    for (let i = 0; i < 7; i++) p.box(-0.11, 0.11, b + 0.041, b + 0.044, 0.35 + i * 0.01, 0.354 + i * 0.01, mat.chrome);
+  });
   item(K.x1, 7.3235, "W", p => {
     p.box(-0.4955, 0.4955, 0, 1.9, 0.02, 0.6, mat.blackSteel, 0.01);         // fridge
     for (const x of [-0.03, 0.01]) p.box(x, x + 0.02, 0.9, 1.4, 0.6, 0.62, mat.chrome);  // pulls of the two doors

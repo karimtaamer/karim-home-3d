@@ -256,6 +256,8 @@ def run(args, cwd=None, stdin=None, timeout=120):
     if args and args[0] == sys.executable:
         # On Vercel the requirements.txt packages sit on this process's sys.path, not necessarily the child's.
         env = {**os.environ, "PYTHONPATH": os.pathsep.join(p for p in sys.path if p)}
+        if not os.access(Path.home(), os.W_OK):  # Vercel's home is read-only; ezdxf wants a cache dir
+            env["XDG_CACHE_HOME"] = tempfile.gettempdir()
     p = subprocess.run(args, cwd=cwd, input=stdin, capture_output=True, text=True, timeout=timeout, env=env)
     return p.returncode, (p.stdout + p.stderr).strip()
 
@@ -388,10 +390,10 @@ def tool(ws, name, a):
         return json.dumps({"heights": {k: m[k] for k in ("ceiling", "doorHead", "sill", "winHead", "sliderHead")},
                            "bounds": m["bounds"], "labels": labels, "floor_areas": floors})[:6000]
     if name == "dxf_query":
-        args = [dwg_python(), str(ROOT / "edit_ai_dxf.py"), "query", str(ws.dxf()), "--origin", f"{ORIGIN[0]},{ORIGIN[1]}",
-                "--bbox", f"{a['x0']},{a['y0']},{a['x1']},{a['y1']}", "--limit", "120"]
+        args = [dwg_python(), str(ROOT / "edit_ai_dxf.py"), "query", str(ws.dxf()), f"--origin={ORIGIN[0]},{ORIGIN[1]}",
+                f"--bbox={a['x0']},{a['y0']},{a['x1']},{a['y1']}", "--limit", "120"]
         if a.get("layers"):
-            args += ["--layers", a["layers"]]
+            args += [f"--layers={a['layers']}"]
         code, out = run(args, timeout=90)
         return out[:24000]
     if name == "dxf_edit":
@@ -399,7 +401,7 @@ def tool(ws, name, a):
             return "As-built is the survey of the flat as it stands; it can't be edited from another version."
         out_path = ws.tmp / "plan-next.dxf"
         code, out = run([dwg_python(), str(ROOT / "edit_ai_dxf.py"), "edit", str(ws.dxf()), str(out_path),
-                         "--origin", f"{ORIGIN[0]},{ORIGIN[1]}"], stdin=json.dumps(a["ops"]), timeout=120)
+                         f"--origin={ORIGIN[0]},{ORIGIN[1]}"], stdin=json.dumps(a["ops"]), timeout=120)
         if code:
             return f"nothing changed: {out[-1500:]}"
         out_path.replace(ws.dxf())

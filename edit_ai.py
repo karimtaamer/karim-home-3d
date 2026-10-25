@@ -1458,6 +1458,18 @@ def review(ws, message, reply):
                 a2, c2 = sorted(((o2 + sg_ * float(b_[1]) - o_) * sg_, (o2 + sg_ * float(b_[2]) - o_) * sg_))
                 boxes.append((a2, c2, b_[4], b_[3]))
         lo_b, hi_b = min(bx[0] for bx in boxes), max(bx[1] for bx in boxes)
+        for q1 in range(len(boxes)):  # two coats on the same plane flicker (z-fighting): they must meet edge to edge
+            for q2 in range(q1 + 1, len(boxes)):
+                (a1, c1, t1, z1), (a2, c2, t2, z2) = boxes[q1], boxes[q2]
+                h1, h2 = (hnum(z1) or 0.0, hnum(t1) or 9.0), (hnum(z2) or 0.0, hnum(t2) or 9.0)
+                if min(c1, c2) - max(a1, a2) > 0.03 and min(h1[1], h2[1]) - max(h1[0], h2[0]) > 0.03:
+                    problems.append(f"two paint boxes overlap along the wall at local x {round(max(a1, a2), 3)}..{round(min(c1, c2), 3)} "
+                                    f"(plan {ax_} {rng(max(a1, a2), min(c1, c2))}): coplanar panels flicker in 3D; keep ONE item "
+                                    "per wall and trim the boxes so they meet edge to edge")
+                    break
+            else:
+                continue
+            break
         if re.search(r"\b(paint|colou?r|wall|finish|limewash|wallpaper)|دهان|لون|حيط", message, re.I) \
                 and not re.search(r"\b(strip|band|stripe|half|part|panel|section|accent)\b|نص|جزء", message, re.I):
             lo_b, hi_b = w0, w1  # a whole-wall finish runs corner to corner

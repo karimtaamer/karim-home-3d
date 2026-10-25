@@ -4,7 +4,7 @@
 Coordinates are plan metres relative to model.js's origin, so the drawing lines up with the 3D model.
 
 Usage: ~/.dwg-tools/bin/python build_drawing.py <plan.dxf> [--model model.js] [--out drawing.json]
-(another plan version pairs its own files, e.g. --model model-bigger-bedroom.js --out drawing-bigger-bedroom.json)
+(another plan version pairs its own files, e.g. --model model-naghams-changes.js --out drawing-naghams-changes.json)
 """
 import json
 import math

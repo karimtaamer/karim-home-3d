@@ -391,7 +391,7 @@ def changed_box(rep, handle, old):
 
 
 def transform(req):
-    v = req.get("version") or "main"
+    v = E.plan_version(req.get("version"))
     if v not in E.VERSIONS:
         raise ValueError(f"unknown version {v!r}")
     if v == "as-built":

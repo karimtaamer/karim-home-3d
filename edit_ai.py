@@ -68,12 +68,10 @@ ORIGIN = (190.4049651574427, -121.6132067325871)  # DWG -> plan, the same for ev
 # Each plan version: its DXF, the files built from it and the build flags (README §3-4).
 NC_FLAGS = ["--wall", "190.9609,-112.8031,190.9609,-112.3428", "--cut", "191.0309,-114.2431,191.7309,-114.0731",
             "--window", "192.2087,-112.47,1.5,2.1,frosted"]
+# Since 2026-10-25 the page's Main (and "Karim's version") load the kareems-changes plan; Bigger / Shifted Bedroom
+# are retired. A request for "main" (or with no version) is an edit to that plan.
+ALIASES = {"main": "kareems-changes"}
 VERSIONS = {
-    "main": {"dxf": "dwg/main.dxf", "model": "model.js", "drawing": "drawing.json", "tour": "tour.json", "flags": []},
-    "bigger-bedroom": {"dxf": "dwg/bigger-bedroom.dxf", "model": "model-bigger-bedroom.js", "drawing": "drawing-bigger-bedroom.json",
-                       "tour": "tour-bigger-bedroom.json", "flags": ["--wall", "196.65,-112.594,196.65,-115.017"]},
-    "shifted-bedroom": {"dxf": "dwg/shifted-bedroom.dxf", "model": "model-shifted-bedroom.js", "drawing": "drawing-shifted-bedroom.json",
-                        "tour": "tour-shifted-bedroom.json", "flags": ["--cut", "191.0809,-112.944,191.2609,-112.724"]},
     "naghams-changes": {"dxf": "dwg/naghams-changes.dxf", "model": "model-naghams-changes.js", "drawing": "drawing-naghams-changes.json",
                         "tour": "tour-naghams-changes.json", "flags": NC_FLAGS},
     "kareems-changes": {"dxf": "dwg/kareems-changes.dxf", "model": "model-kareems-changes.js", "drawing": "drawing-kareems-changes.json",
@@ -293,7 +291,14 @@ def live_content(path, st):
     return deployed(path)
 
 
+def plan_version(v):
+    """The plan version a request's version names (ALIASES resolved; none = Main)."""
+    v = v or "main"
+    return ALIASES.get(v, v)
+
+
 def patches(v):
+    v = plan_version(v)
     if v not in VERSIONS:
         raise ValueError(f"unknown version {v!r}")
     man = latest(v)
@@ -1500,7 +1505,7 @@ def pick_model(message, refs=()):
 
 
 def chat(req):
-    v = req.get("version") or "main"
+    v = plan_version(req.get("version"))
     if v not in VERSIONS:
         raise ValueError(f"unknown version {v!r}")
     if not ready():
@@ -2787,7 +2792,7 @@ def write_rev(v, files, summary, changed, contents):
 
 def undo(req):
     """Put the version back as it was before its last Edit AI change (a new revision, so it can be redone by hand)."""
-    v = req.get("version") or "main"
+    v = plan_version(req.get("version"))
     if v not in VERSIONS:
         raise ValueError(f"unknown version {v!r}")
     cur = latest(v)
@@ -2821,7 +2826,7 @@ def reset(req):
     Live overrides are the user's edits that may not be in git yet (on Vercel without EDIT_AI_GITHUB_TOKEN they are
     in Blob only), so this refuses while any remain unless the caller names the revision it is throwing away
     ({"discard": "<rev>"}). Bring them into git first: python3 edit_ai_pull.py <version>, commit, push."""
-    v = req.get("version") or "main"
+    v = plan_version(req.get("version"))
     if v not in VERSIONS:
         raise ValueError(f"unknown version {v!r}")
     cur = latest(v)

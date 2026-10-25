@@ -2,7 +2,7 @@
 """suite_merge: BASE plan everywhere except the master suite, which comes from SUITE.
 
 Run with the DWG venv: ~/.dwg-tools/bin/python suite_merge.py BASE.dxf SUITE.dxf OUT.dxf [--dry]
-  e.g. after a shared-room edit in dwg/main.dxf: BASE = dwg/main.dxf, SUITE = OUT = dwg/bigger-bedroom.dxf.
+  e.g. after a shared-room edit in dwg/kareems-changes.dxf: BASE = dwg/kareems-changes.dxf, SUITE = OUT = dwg/naghams-changes.dxf.
        suite_merge.py --check dwg/*.dxf   lists entities that differ between the files outside the suite
                                               (skips dwg/as-built*.dxf, the survey of the flat as it stands).
 

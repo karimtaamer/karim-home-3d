@@ -32,10 +32,10 @@ in-viewer **Generate a render** button that turns a Walk view into a photoreal r
 | `publish_renders.sh` | Uploads renders, reference copies and the material board to Blob | Yes |
 | `build_geometry.py`, `build_drawing.py` | DXF → `model.js` / `drawing.json` | Yes |
 | `dwgtool.py` | Inspect a DWG/DXF and render cropped, marked-up PNGs (see `DWG_EDITING.md` §1) | Yes |
-| `dwg/main.dxf`, `dwg/bigger-bedroom.dxf`, `dwg/shifted-bedroom.dxf`, `dwg/naghams-changes.dxf` | The plan drawing for each version: the only build sources (§3) | Yes, see `DWG_EDITING.md` |
+| `dwg/kareems-changes.dxf` (Main), `dwg/naghams-changes.dxf`, `dwg/as-built.dxf` | The plan drawing for each version: the only build sources (§3). `dwg/main.dxf` is the retired pre-25-Oct Main | Yes, see `DWG_EDITING.md` |
 | `suite_merge.py` | One plan everywhere except the master suite, taken from another; `--check` compares the versions (§3) | Yes |
 | `check_furnish.py` | Runs `furnish.js` in node and compares its key pieces (kitchen appliances, laundry, entrance, coffee corner, guest WC counter, v12 bed/nightstands/cupboard) with the version's DXF; flags > 2 cm (§3) | Yes |
-| `*-bigger-bedroom.*`, `*-shifted-bedroom.*`, `*-naghams-changes.*`, `*-as-built.*` | The other plan versions (see §4); `dwg/as-built.dxf` is the survey of the empty flat | Same rules as the main files |
+| `*-kareems-changes.*`, `*-naghams-changes.*`, `*-as-built.*` | The plan versions (see §4): Main loads `*-kareems-changes.*`; `dwg/as-built.dxf` is the survey of the empty flat | Same rules as the main files |
 | `models/*.glb` | Fixtures made from the renders with Meshy (image-to-3D) | Replace only |
 | `textures/` | Poly Haven PBR scans (CC0, see `CREDITS.txt`) | Add only |
 | `renders/` | Designer renders and approved AI renders (**git-ignored**, served from Blob live) | Add files |
@@ -60,7 +60,7 @@ python3 photogen.py 8765         # another port
 
 | Param | Effect |
 |---|---|
-| `?v=bigger-bedroom` | Load a plan version (default: main) |
+| `?v=naghams-changes` | Load a plan version: `as-built`, `kareems-changes` (Karim's version, the same plan as Main), `naghams-changes` (default: Main) |
 | (none) | Start in Walk inside the reception |
 | `?view=top` | Start in the Top view (`?view=dollhouse`, from before Dollhouse was removed, starts as with no param) |
 | `?room=master` | Start in Walk at the first room whose caption starts with this |
@@ -104,9 +104,7 @@ that kitchen run.
    node). It exits non-zero when a key piece of furniture is more than 2 cm off the DXF: move the piece in
    `furnish.js` (or fix the drawing), don't loosen the check.
    ```sh
-   ~/.dwg-tools/bin/python check_furnish.py dwg/main.dxf --version main
-   ~/.dwg-tools/bin/python check_furnish.py dwg/bigger-bedroom.dxf --version bigger-bedroom
-   ~/.dwg-tools/bin/python check_furnish.py dwg/shifted-bedroom.dxf --version shifted-bedroom
+   ~/.dwg-tools/bin/python check_furnish.py dwg/kareems-changes.dxf --version kareems-changes   # Main / Karim's version
    ~/.dwg-tools/bin/python check_furnish.py dwg/naghams-changes.dxf --version naghams-changes
    ```
 5. Commit the DXF and the rebuilt files together, and push.
@@ -153,11 +151,13 @@ then rebuild all of them (§3 / §4):
 
 ```sh
 PY=~/.dwg-tools/bin/python
-$PY suite_merge.py dwg/main.dxf dwg/bigger-bedroom.dxf  dwg/bigger-bedroom.dxf
-$PY suite_merge.py dwg/main.dxf dwg/shifted-bedroom.dxf dwg/shifted-bedroom.dxf
-$PY suite_merge.py dwg/main.dxf dwg/naghams-changes.dxf dwg/naghams-changes.dxf
-$PY suite_merge.py --check dwg/*.dxf
+$PY suite_merge.py dwg/kareems-changes.dxf dwg/naghams-changes.dxf dwg/naghams-changes.dxf
+$PY suite_merge.py --check dwg/kareems-changes.dxf dwg/naghams-changes.dxf
 ```
+
+Since 2026-10-25 Kareem's plan (Main) also differs from Nagham's outside the suite on purpose: the reception TV wall,
+the guest WC (door, glass, build-out, niches) and the Edit AI moves (dining desks, ACs). So `--check` lists those.
+Copy a shared-room edit across only where both plans should have it.
 
 A merge can reorder the lines in the built model file without changing the geometry. **Editing the suite:** edit
 that version's file only.
@@ -199,14 +199,23 @@ bath end wall, which used to push 37 cm of wall into the doorway.
 
 ## 4. Plan versions
 
-| Version | `?v=` | DWG | Files |
+**Version menu (2026-10-25, confirmed by Karim):** Main · As-built · ┄ · Karim's version · Nagham's version. In
+`index.html`, `VERSIONS` entries carry `data`: the plan version whose files, Edit AI live edits and `furnish.js` branch
+they load. **Main** (the default) and **Karim's version** (`?v=kareems-changes`) both load the `kareems-changes` plan:
+an alias, not a copy, so an edit on either shows on both, and Edit AI treats `main` as `kareems-changes`
+(`ALIASES` in `edit_ai.py`). `sep` draws the divider. Bigger Master Bedroom and Shifted Bedroom are retired; their
+files were deleted (in git history before 2026-10-25), and old `?v=` links open Main. `model.js`, `drawing.json`
+and `dwg/main.dxf` are the retired pre-25-Oct Main layout. Nothing on the page loads them, but `tour.json` and
+`spots.json` are still the base files the versions extend.
+
+| Menu | `?v=` | DWG | Files |
 |---|---|---|---|
-| Main | *(none)* / `main` | `dwg/main.dxf` (suite from the designer's `master-bed186-v6-shoes2.dwg`, rest from `master-v12.dwg`) | `model.js`, `drawing.json`, `tour.json`, `spots.json` |
-| Bigger Master Bedroom | `bigger-bedroom` | `dwg/bigger-bedroom.dxf` (suite from `master-bed-v9.dwg`, rest from `master-v12.dwg`) | `model-bigger-bedroom.js`, `drawing-bigger-bedroom.json`, `tour-bigger-bedroom.json`, `spots-bigger-bedroom.json` |
-| Shifted Bedroom | `shifted-bedroom` | `dwg/shifted-bedroom.dxf` (all from `master-v12.dwg`) | `model-shifted-bedroom.js`, `drawing-shifted-bedroom.json`, `tour-shifted-bedroom.json`, `spots-shifted-bedroom.json` |
-| Nagham's Changes | `naghams-changes` | `dwg/naghams-changes.dxf` (a copy of `dwg/shifted-bedroom.dxf`, 2026-10-24) | `model-naghams-changes.js`, `drawing-naghams-changes.json`, `tour-naghams-changes.json`, `spots-naghams-changes.json` |
-| Kareem's Changes | `kareems-changes` | `dwg/kareems-changes.dxf` (a copy of `dwg/naghams-changes.dxf`, 2026-10-25) | `model-kareems-changes.js`, `drawing-kareems-changes.json`, `tour-kareems-changes.json`, `spots-kareems-changes.json` |
+| Main | *(none)* / `main` | `dwg/kareems-changes.dxf` | the Kareem's Changes files below |
 | As-built | `as-built` | `dwg/as-built.dxf` (the surveyor's `as-built-original.dwg`, Sep 2026) | `model-as-built.js`, `drawing-as-built.json`, `tour-as-built.json`, `spots-as-built.json` (empty) |
+| Karim's version | `kareems-changes` | `dwg/kareems-changes.dxf` (a copy of `dwg/naghams-changes.dxf`, 2026-10-25, edited since) | `model-kareems-changes.js`, `drawing-kareems-changes.json`, `tour-kareems-changes.json`, `spots-kareems-changes.json` |
+| Nagham's version | `naghams-changes` | `dwg/naghams-changes.dxf` (a copy of the retired Shifted Bedroom drawing, 2026-10-24) | `model-naghams-changes.js`, `drawing-naghams-changes.json`, `tour-naghams-changes.json`, `spots-naghams-changes.json` |
+
+The notes below on Bigger / Shifted Bedroom are history: they explain where Nagham's and Karim's plans came from.
 
 Bigger Master Bedroom (v9) folds the passage into the master toilet, which **needs façade approval**. Never present it
 as settled.

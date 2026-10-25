@@ -22,7 +22,7 @@ data URLs), sent last and used only for the look the notes ask for, never their 
 plain comments (comments, the last one new) still work. Each generate and edit returns its estimated cost (usd,
 from OpenAI's usage), which the page shows in EGP.
 Approving copies the image into renders/ and adds the spot to spots.json, like a designer render (or to
-the plan version's spots file the page is showing, e.g. spots-bigger-bedroom.json).
+the plan version's spots file the page is showing, e.g. spots-naghams-changes.json).
 
 The key comes from OPENAI_API_KEY, or a line OPENAI_API_KEY=... in .env next to this file (git-ignored).
 OPENAI_IMAGE_MODEL picks the model (default gpt-image-2). Drafts are kept in renders/drafts/.

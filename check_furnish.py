@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """check_furnish: compare key furnish.js pieces with the DWG furniture they stand for.
 
-Run with the DWG venv: ~/.dwg-tools/bin/python check_furnish.py dwg/shifted-bedroom.dxf --version shifted-bedroom
+Run with the DWG venv: ~/.dwg-tools/bin/python check_furnish.py dwg/kareems-changes.dxf --version kareems-changes
 
 furnish.js runs in node against a stand-in for three.js that only records boxes (p.box), so the
 check sees the real placements. Each key item's footprint (the boxes of the listed materials whose
@@ -22,8 +22,8 @@ from ezdxf import recover, bbox as ebbox
 ROOT = Path(__file__).resolve().parent
 ORIGIN = (190.4049651574427, -121.6132067325871)  # model*.js "origin": plan = DWG - origin
 TOL = 0.02
-MODELS = {'main': 'model.js', 'bigger-bedroom': 'model-bigger-bedroom.js', 'shifted-bedroom': 'model-shifted-bedroom.js',
-          'naghams-changes': 'model-naghams-changes.js', 'kareems-changes': 'model-kareems-changes.js'}
+# Main on the page loads kareems-changes (2026-10-25); 'main' here is the retired pre-25-Oct layout (model.js, dwg/main.dxf).
+MODELS = {'main': 'model.js', 'naghams-changes': 'model-naghams-changes.js', 'kareems-changes': 'model-kareems-changes.js'}
 
 # name, versions (None = all), DWG source, axes to check, 3D materials, margin (m, or (x, y)) round the outline.
 # Source: ('block', name) or ('outline', seed x, seed y, width cm, depth cm) for a closed 2furni polyline (plan m).

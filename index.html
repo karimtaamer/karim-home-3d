@@ -38,6 +38,7 @@
   #bar[data-open=versions] #versions, #bar[data-open=rooms] #rooms { display: flex; }
   #bar #versions { flex-direction: column; align-items: stretch; gap: 4px; }
   #bar #versions button { text-align: left; }
+  #bar #versions .vsep { border: 0; border-top: 1px solid currentColor; opacity: 0.2; margin: 3px 6px; width: auto; }
   #bar #versions button.on { background: #2b2622; color: #f3eee5; }
   #bar .panel button { font-weight: 400; padding: 6px 12px; font-size: 11.5px; box-shadow: 0 0 0 1px #2b262214 inset; }
   /* The AI actions, in the bar (desktop, tablet) or the column bottom-left (phone): Make an Edit (edit-ai.js's dock) with
@@ -288,22 +289,23 @@ import { createInteract } from "./interact.js";
 
 // --- Plan versions: the main plan and alternatives to it, each built from its own DWG ----------------
 // (build_geometry.py --out / --tour, build_drawing.py --out). ?v=<id> picks one; the main plan is the default.
+// `data`: the plan version whose files, Edit AI live edits and furnish.js branch an entry loads (default: its id).
+// Main is Karim's layout (2026-10-25): it loads the kareems-changes plan, and "Karim's version" is a labelled alias
+// to the same plan, so an edit on either shows on both. `sep`: a divider above the entry in the menu.
+const KAREEM = { data: "kareems-changes", model: "model-kareems-changes.js", drawing: "drawing-kareems-changes.json",
+  spots: "spots-kareems-changes.json" };
 const VERSIONS = [
-  { id: "main", name: "Main", model: "model.js", drawing: "drawing.json", spots: "spots.json" },
-  { id: "bigger-bedroom", name: "Bigger Master Bedroom", model: "model-bigger-bedroom.js", drawing: "drawing-bigger-bedroom.json",
-    spots: "spots-bigger-bedroom.json" },
-  { id: "shifted-bedroom", name: "Shifted Bedroom", model: "model-shifted-bedroom.js", drawing: "drawing-shifted-bedroom.json",
-    spots: "spots-shifted-bedroom.json" },
-  { id: "naghams-changes", name: "Nagham's Changes", model: "model-naghams-changes.js", drawing: "drawing-naghams-changes.json",
-    spots: "spots-naghams-changes.json" },
-  { id: "kareems-changes", name: "Kareem's Changes", model: "model-kareems-changes.js", drawing: "drawing-kareems-changes.json",
-    spots: "spots-kareems-changes.json" },
+  { id: "main", name: "Main", ...KAREEM },
   { id: "as-built", name: "As-built", model: "model-as-built.js", drawing: "drawing-as-built.json", spots: "spots-as-built.json" },
+  { id: "kareems-changes", name: "Karim's version", ...KAREEM, sep: true },
+  { id: "naghams-changes", name: "Nagham's version", model: "model-naghams-changes.js", drawing: "drawing-naghams-changes.json",
+    spots: "spots-naghams-changes.json" },
 ];
 const params = new URLSearchParams(location.search);
 const version = VERSIONS.find(v => v.id === params.get("v")) || VERSIONS[0];
+const vid = version.data || version.id;  // the plan version on screen
 // Edit AI's live changes to this version (edit-ai.js): its files stand in for the deployed ones until git catches up.
-const live = await liveFiles(version.id);
+const live = await liveFiles(vid);
 const { makeMaterials } = await liveImport(live, "materials.js");
 const { furnish } = await liveImport(live, "furnish.js");
 await new Promise((onload, onerror) => document.head.appendChild(Object.assign(document.createElement("script"), { src: live.url(version.model), onload, onerror })));
@@ -536,7 +538,7 @@ function buildFlat(M, scene) {
     if (r.light) r.light.intensity = 2 * t;
   }
 
-  const furniture = furnish(scene, M, lib, version.id);
+  const furniture = furnish(scene, M, lib, vid);
   return { cutPlane, solids, rooms, roomAt, setReveal, materials: mat, lib, furniture, leaves };
 }
 
@@ -951,6 +953,7 @@ document.querySelector("#bar .vname").textContent = version.name;
 if (version !== VERSIONS[0]) document.querySelector("#title p").textContent += ` · ${version.name}`;
 const versionBar = document.getElementById("versions");
 for (const v of VERSIONS) {
+  if (v.sep) versionBar.appendChild(Object.assign(document.createElement("hr"), { className: "vsep" }));
   const b = document.createElement("button");
   b.textContent = v.name;
   b.classList.toggle("on", v === version);
@@ -1013,7 +1016,7 @@ const moveBtn2D = Object.assign(moveBtn.cloneNode(true), { id: "" });
 moveBtn2D.dataset.tool = "move";
 document.querySelector("#drawing .dbar [data-tool=measure]").after(moveBtn2D);
 const move = createMove({
-  camera, renderer, scene, root: flat.furniture.root, cutPlane: flat.cutPlane, live, version: version.id,
+  camera, renderer, scene, root: flat.furniture.root, cutPlane: flat.cutPlane, live, version: vid,
   showing: () => showing, mode: () => mode, drawingFrame: () => drawing.frame(), drawingRoot: document.getElementById("drawing"),
   freeMouse: () => walker.isLocked && walker.unlock(),
   reload: () => reloadHere(),
@@ -1077,7 +1080,7 @@ switcher.querySelectorAll("[data-show]").forEach(b => (b.onclick = () => showScr
 let renderList = [], addSpot = null, removeSpot = null;
 const FLOOR_NAME = { wood: "warm oak", tile: "honed beige stone tiles", decking: "timber decking" };
 const photogen = createPhotoGen({
-  THREE, camera, scene, composer, renderer, M, spotsFile: version.spots, version: version.id,
+  THREE, camera, scene, composer, renderer, M, spotsFile: version.spots, version: vid,
   furniture: flat.furniture.root, solids: flat.solids,
   roomAt: (x, y) => {
     const r = flat.roomAt(x, y);

@@ -2,8 +2,8 @@
 """Turn a DXF floor plan into model.js (walls, openings, furniture, labels) for the Three.js viewer.
 
 Usage: ~/.dwg-tools/bin/python build_geometry.py <plan.dxf> [--out model.js] [--tour tour.json] [--wall x0,y0,x1,y1 ...] [--window x,y,sill,head[,frosted] ...] [--debug debug.png]
-(--out / --tour name another plan version's model and tour, e.g. model-bigger-bedroom.js and
-tour-bigger-bedroom.json; see VERSIONS in index.html. --wall adds a wall face line the drawing
+(--out / --tour name another plan version's model and tour, e.g. model-naghams-changes.js and
+tour-naghams-changes.json; see VERSIONS in index.html. --wall adds a wall face line the drawing
 left out, in DWG coordinates; repeat it for several. --window gives one window its own sill and head,
 and frosted glass, without touching the others.)
 """

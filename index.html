@@ -27,7 +27,7 @@
   #bar .tool { font-weight: 400; }
   :is(#bar, #drawing .dbar) button svg { width: 14px; height: 14px; vertical-align: -3px; margin-right: 6px; fill: none; stroke: currentColor; stroke-width: 1.8;
     stroke-linecap: round; stroke-linejoin: round; }
-  #bar #measure.on { background: #ff8a3d; color: #fff; }
+  #bar :is(#measure, #move).on, #drawing .dbar [data-tool=move].on { background: #ff8a3d; color: #fff; }
   #bar button:disabled { opacity: .45; cursor: default; transform: none; }
   /* Versions and rooms: one panel at a time, folded under its chip. */
   #bar .menu::after { content: " ▾"; }
@@ -125,6 +125,28 @@
   .measure-overlay circle { fill: #ff8a3d; stroke: #fffaf3; stroke-width: 2; }
   .measure-overlay circle.hover { fill: none; stroke: #ff8a3d; stroke-width: 2.5; }
   .measure-overlay .snap { fill: none; stroke: #2b2622; stroke-width: 2; }
+  /* Move / Resize (move.js): the picked piece's plan box with edge and corner handles, its name and size, part chips. */
+  .move-overlay { position: fixed; inset: 0; z-index: 3; pointer-events: none; }
+  body.drawing .move-overlay { z-index: 4; }
+  .move-overlay svg { width: 100%; height: 100%; }
+  .move-overlay polygon { fill: #ff8a3d1f; stroke: #ff8a3d; stroke-width: 2; stroke-linejoin: round; }
+  .move-overlay polygon.halo { fill: none; stroke: #fffaf3; stroke-width: 5; }
+  .move-overlay circle { fill: #fffaf3; stroke: #ff8a3d; stroke-width: 2.5; }
+  .move-overlay circle.corner { fill: #ff8a3d; stroke: #fffaf3; stroke-width: 2; }
+  .move-label { position: absolute; transform: translate(-50%, calc(-100% - 10px)); background: #2b2622; color: #f3eee5; font: 500 12px Inter, sans-serif;
+    padding: 3px 9px; border-radius: 999px; white-space: nowrap; box-shadow: 0 1px 4px #0003; }
+  .move-chips { position: absolute; transform: translateX(-50%); display: flex; gap: 6px; pointer-events: auto; }
+  .move-chips button { font: 500 12px Inter, sans-serif; padding: 5px 11px; border-radius: 999px; border: 0; background: #fffaf3f2; color: #2b2622;
+    box-shadow: 0 1px 4px #0003; cursor: pointer; white-space: nowrap; }
+  .move-chips button.on { background: #ff8a3d; color: #fff; }
+  #move-toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 6; display: flex; gap: 8px; align-items: center;
+    max-width: min(420px, calc(100vw - 24px)); padding: 10px 10px 10px 16px; border-radius: 16px; background: #2b2622f2; color: #f3eee5;
+    font: 12.5px Inter, sans-serif; box-shadow: 0 6px 20px #0004; }
+  #move-toast.bad { background: #7a2b22f2; }
+  #move-toast span { flex: 1; }
+  #move-toast button { border: 0; border-radius: 999px; padding: 6px 12px; font: 600 12px Inter, sans-serif; background: #f3eee5; color: #2b2622; cursor: pointer; }
+  #move-toast button.ghost { background: none; color: #f3eee5; padding: 6px 8px; }
+  @media (pointer: fine) { body.drawing.moving #drawing canvas { cursor: default; } }
   .measure-overlay .labels div { position: absolute; transform: translate(-50%, -150%); background: #2b2622; color: #f3eee5; font: 500 12px Inter, sans-serif;
     padding: 3px 9px; border-radius: 999px; white-space: nowrap; box-shadow: 0 1px 4px #0003; }
   #drawing { position: fixed; inset: 0; z-index: 3; background: #212830; }
@@ -226,6 +248,7 @@
     <span class="sep"></span>
     <button id="measure" class="tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg>Measure</button>
     <button id="clearMeasure" class="tool" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>Clear</button>
+    <button id="move" class="tool" title="Move or resize a piece"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3 9 6M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg>Move</button>
     <span class="sep"></span>
     <button id="photogen" hidden disabled title="Walk to a view first"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h5M21 12v7H3V8"/><circle cx="12" cy="13" r="3.5"/><path d="M19 2v6M16 5h6"/></svg>Generate a render</button>
   </div>
@@ -258,6 +281,7 @@ import gsap from "gsap";
 import { liveFiles, liveImport, createEditAI } from "./edit-ai.js";
 import { createDrawing, loadDrawing } from "./drawing.js";
 import { createMeasure } from "./measure.js";
+import { createMove } from "./move.js";
 import { createRenders } from "./renders.js";
 import { createPhotoGen } from "./photogen.js";
 import { createInteract } from "./interact.js";
@@ -695,8 +719,12 @@ const HELP = {
 // They get help only while measuring (the joystick speaks for itself), so the empty pill hides.
 const TOUCH = matchMedia("(max-width: 760px), (pointer: coarse)");
 const HELP_MEASURE = "Click or drag to measure · Shift squares it up · Esc cancels · Backspace undoes";
+const HELP_MOVE = "Click a piece, then drag it to move it or pull a handle to resize it · Esc cancels";
 function showHelp() {
-  if (measure?.active) help.textContent = TOUCH.matches
+  if (move?.active) help.textContent = TOUCH.matches
+    ? "Tap a piece, drag it to move it or a handle to resize it · " + (mode === "walk" ? "a second finger looks around" : "two fingers pan / zoom")
+    : HELP_MOVE + (mode === "walk" ? " · drag elsewhere to look" : " · drag elsewhere to pan");
+  else if (measure?.active) help.textContent = TOUCH.matches
     ? "Tap or drag to measure · " + (mode === "walk" ? "a second finger looks around" : "two fingers pan / zoom")
     : HELP_MEASURE + (mode === "walk" ? " · right-drag to look" : " · right-drag pans · snaps to the DWG");
   else help.textContent = TOUCH.matches ? "" : HELP[mode];
@@ -731,14 +759,14 @@ function goRoom(v) {
 const keys = {};
 addEventListener("keydown", e => { keys[e.code] = true; if (glide && /^(Key[WASD]|Arrow)/.test(e.code)) stopGlide(); });
 addEventListener("keyup", e => { keys[e.code] = false; });
-renderer.domElement.addEventListener("click", () => mode === "walk" && !tween && !TOUCH.matches && !measure.active && walker.lock());
+renderer.domElement.addEventListener("click", () => mode === "walk" && !tween && !TOUCH.matches && !measure.active && !move?.active && walker.lock());
 
 // Phones and tablets have no pointer lock: drag to look, and the joystick walks.
 // Measuring frees the mouse, but one finger / the left button measures: right-drag or a second finger looks.
 const lookEuler = new THREE.Euler(0, 0, 0, "YXZ");
 let dragFrom = null;  // [x, y, pointerId]
 renderer.domElement.addEventListener("pointerdown", e => {
-  if (mode !== "walk" || tween || !(TOUCH.matches || measure.active)) return;
+  if (mode !== "walk" || tween || !(TOUCH.matches || measure.active || move?.active)) return;
   if (measure.active && e.button === 0 && e.isPrimary) return;
   stopGlide();
   dragFrom = [e.clientX, e.clientY, e.pointerId];
@@ -972,11 +1000,48 @@ const measure = createMeasure({
 });
 document.getElementById("measure").onclick = () => {
   if (walker.isLocked) walker.unlock();
+  if (!measure.active) move.setActive(false);  // one tool at a time
   measure.setActive(!measure.active);
 };
 document.getElementById("clearMeasure").onclick = () => measure.clear();
 
 const drawing = createDrawing(document.getElementById("drawing"), live.url(version.drawing));
+
+// --- Move / Resize (move.js, move_tool.py): beside Measure in the bar, and beside the drawing's own Measure ------------
+const moveBtn = document.getElementById("move");
+const moveBtn2D = Object.assign(moveBtn.cloneNode(true), { id: "" });
+moveBtn2D.dataset.tool = "move";
+document.querySelector("#drawing .dbar [data-tool=measure]").after(moveBtn2D);
+const move = createMove({
+  camera, renderer, scene, root: flat.furniture.root, cutPlane: flat.cutPlane, live, version: version.id,
+  showing: () => showing, mode: () => mode, drawingFrame: () => drawing.frame(), drawingRoot: document.getElementById("drawing"),
+  freeMouse: () => walker.isLocked && walker.unlock(),
+  reload: () => reloadHere(),
+  onChange: () => {
+    for (const b of [moveBtn, moveBtn2D]) b.classList.toggle("on", move.active);
+    showHelp();
+  },
+});
+const toggleMove = () => {
+  if (walker.isLocked) walker.unlock();
+  if (!move.active) { measure.setActive(false); drawing.setMeasuring(false); }
+  move.setActive(!move.active);
+};
+moveBtn.onclick = moveBtn2D.onclick = toggleMove;
+document.getElementById("drawing").addEventListener("measure-on", () => move.setActive(false));
+if (move.resume) move.setActive(true);
+if (params.has("debug")) window.__move = move;  // the Move suite's hook
+// After a move the page reloads where it was (the same as Edit AI's), with Move still on.
+function reloadHere() {
+  const q = new URLSearchParams(location.search);
+  for (const k of ["cam", "view", "room", "show"]) q.delete(k);
+  if (mode === "walk") {
+    const d = camera.getWorldDirection(new THREE.Vector3()), p = camera.position;
+    q.set("cam", [p.x, -p.z, p.y, p.x + d.x, -(p.z + d.z), p.y + d.y, camera.fov].map(v => +v.toFixed(3)).join(","));
+  } else q.set("view", mode);
+  if (showing !== "model") q.set("show", showing);
+  location.search = q;
+}
 const switcher = document.getElementById("switcher");
 // Edit (a new version) and delete go through Generate a render's backend, so they show only where it runs.
 const renders = createRenders(document.getElementById("renders"), viewpoints.map(v => ({ room: v.room, caption: v.caption })), {
@@ -1033,7 +1098,7 @@ function showRenders(list) {
 // --- Cabinets that open (furnish.js marks them, interact.js): a soft cue on the one you face in Walk, tap to open / close ---
 const interact = createInteract({
   THREE, camera, scene, renderer, occluders: flat.solids, isLocked: () => walker.isLocked,
-  isActive: () => mode === "walk" && showing === "model" && !tween && !glide && !measure.active
+  isActive: () => mode === "walk" && showing === "model" && !tween && !glide && !measure.active && !move.active
     && document.getElementById("photogen-box")?.hidden !== false && !(+document.getElementById("photo")?.style.opacity > 0),
 });
 
@@ -1101,6 +1166,7 @@ const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   interact.update();
+  move.render();
   if (showing !== "model") return;  // the drawing or the renders cover the scene; no need to keep rendering it
   if (mode === "walk" && !tween && !glide) {
     walkStep(dt);

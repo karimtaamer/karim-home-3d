@@ -518,6 +518,7 @@ export function createDrawing(root, url) {
   function setMeasuring(on) {
     measuring = on;
     button("measure").classList.toggle("on", measuring);
+    if (on) root.dispatchEvent(new CustomEvent("measure-on"));  // the Move tool steps aside (index.html)
     if (!measuring) { dropGesture(); start = null; sel = hover = -1; }
     helpText();
     status();
@@ -536,6 +537,8 @@ export function createDrawing(root, url) {
       if (!data) await load();
     },
     hide() { shown = false; root.hidden = true; shift = space = false; },
-    frame: () => ({ toWorld, toScreen }),  // screen px <-> plan metres, for Edit AI's highlight
+    frame: () => ({ toWorld, toScreen }),  // screen px <-> plan metres, for Edit AI's highlight and the Move tool
+    get measuring() { return measuring; },
+    setMeasuring: on => on !== measuring && setMeasuring(on),
   };
 }

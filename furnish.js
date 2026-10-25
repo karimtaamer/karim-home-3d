@@ -699,7 +699,7 @@ export function furnish(scene, M, mat, version = "main") {
       p.cyl(-0.05, 0.25, 0.225, 0, 0.43, mat.boucle, 32);           // pouf 45 x 45, pushed in to 2.5 cm off the back panel
       p.cyl(-0.05, 0.25, 0.215, 0.43, 0.45, mat.boucle, 32, 0.225);
     });
-    ac(3.567, 4.55, "N");  // over the mirror (knee-space centre)
+    ac(3.332, 4.475, "N");  // over the mirror (knee-space centre)
     if (NC) {
     const champagne = mat.brass.clone(); champagne.color.setRGB(0.78, 0.67, 0.51); champagne.roughness = 0.5;  // brushed champagne bronze
     champagne.clippingPlanes = mat.brass.clippingPlanes;

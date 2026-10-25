@@ -476,6 +476,41 @@ def loose_replace(text, old, new):
     return text[:m.start()] + "\n".join(out) + text[m.end():]
 
 
+NUMV = r"(-?[\d.]+|M\.ceiling)"
+SHAPE = {"box": re.compile(r"\bp\.box\(\s*" + r",\s*".join([NUMV] * 4)),
+         "face": re.compile(r"\bp\.face\(\s*" + r",\s*".join([NUMV] * 4)),
+         "pebble": re.compile(r"\bp\.pebble\(\s*" + r",\s*".join([NUMV] * 4))}
+
+
+def wall_shapes(lines, i, ceil=2.6):
+    """(along0, along1, z0, z1) in plan coords along the wall for the literal p.box / p.face / p.pebble of the
+    item( block starting at 1-based line i; [] when it builds through a helper we can't read."""
+    m = ITEM.search(lines[i - 1])
+    if not m:
+        return []
+    x, y, f = float(m[1]), float(m[2]), m[3]
+    block, depth = [], 0
+    for line in lines[i - 1:i + 60]:
+        block.append(line)
+        depth += line.count("(") - line.count(")")
+        if depth <= 0:
+            break
+    text = "\n".join(block)
+    v = lambda t: ceil if t == "M.ceiling" else float(t)
+    out = []
+    for kind, rx in SHAPE.items():
+        for a in rx.finditer(text):
+            try:
+                n = [v(t) for t in a.groups()]
+            except ValueError:
+                continue
+            l0, l1, z0, z1 = (n[0] - n[2] / 2, n[0] + n[2] / 2, n[1] - n[3] / 2, n[1] + n[3] / 2) if kind == "pebble" else n
+            s_, o = {"S": (1, x), "N": (-1, x), "E": (1, y), "W": (-1, y)}[f]
+            a0, a1 = sorted((o + s_ * l0, o + s_ * l1))
+            out.append((a0, a1, min(z0, z1), max(z0, z1)))
+    return out
+
+
 def placed_lines(ws, text=None):
     """(line no, x, y, line) for each item( x, y / rug( x0, y0 literal that runs for this version."""
     text = ws.text("furnish.js") if text is None else text
@@ -1155,6 +1190,34 @@ def review(ws, message, reply):
         return ("Check 2D vs 3D: you moved or resized furniture in furnish.js but nothing on the plan (2furni). If the "
                 "piece is drawn on the plan (furniture_near lists the outlines there), give its outline exactly the same "
                 "change now with dxf_edit move_piece / resize_piece; things not drawn on the plan need nothing." + tail)
+    # A new piece on a wall overlapping (along the wall and in height) what already stands / hangs there.
+    if f1 != f0:
+        L1, old_lines, cl = f1.splitlines(), set(f0.splitlines()), 2.6
+        on_wall = [(i, ITEM.search(l)) for i, _, _, l in placed_lines(ws, f1) if ITEM.search(l)]
+        for i, m in on_wall:
+            if L1[i - 1] in old_lines:
+                continue
+            mine = wall_shapes(L1, i, cl)
+            if not mine:
+                continue
+            fa, back = m[3], float(m[2] if m[3] in "NS" else m[1])
+            for j, m2 in on_wall:
+                if j == i or L1[j - 1] not in old_lines or m2[3] != fa or abs(float(m2[2] if fa in "NS" else m2[1]) - back) > 0.08:
+                    continue
+                theirs = wall_shapes(L1, j, cl)
+                hit = [(a, b) for a in mine for b in theirs
+                       if min(a[1], b[1]) - max(a[0], b[0]) > 0.03 and min(a[3], b[3]) - max(a[2], b[2]) > 0.03]
+                if hit:
+                    a, b = hit[0]
+                    ax2 = "x" if fa in "NS" else "y"
+                    spans = sorted({(round(min(t[0] for t in wall_shapes(L1, k, cl)), 2), round(max(t[1] for t in wall_shapes(L1, k, cl)), 2))
+                                    for k, m3 in on_wall if k != i and m3[3] == fa and wall_shapes(L1, k, cl)
+                                    and abs(float(m3[2] if fa in "NS" else m3[1]) - back) <= 0.08})
+                    return (f"Check the wall: your new furnish.js line {i} ({L1[i - 1].strip()[:100]}) spans plan {ax2} "
+                            f"{round(a[0], 2)}..{round(a[1], 2)} at height {round(a[2], 2)}..{round(a[3], 2)}, which runs into line {j} "
+                            f"({L1[j - 1].strip()[:100]}) at {ax2} {round(b[0], 2)}..{round(b[1], 2)}, height {round(b[2], 2)}.."
+                            f"{round(b[3], 2)} on the same wall. Taken stretches of this wall ({ax2}): {spans}. Move it along to a free "
+                            "stretch (make it smaller if none is wide enough, and say so), with its plan outline to match." + tail)
     # A resized / moved plan piece: a new or changed item line standing on it sits at the middle of its back.
     if ws.pieces:
         cur_ = ws.tmp / "plan-pieces.dxf"

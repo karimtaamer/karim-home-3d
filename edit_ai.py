@@ -23,7 +23,7 @@ a token there is no git sync and the edit lives in Blob only.
 
 Public: anyone may use it. Each IP gets EDIT_AI_RATE requests an hour (default 20); the key's own cap does the rest.
 """
-import base64, difflib, hashlib, json, os, re, secrets, shutil, subprocess, sys, tempfile, threading, time, urllib.error, \
+import base64, difflib, hashlib, json, math, os, re, secrets, shutil, subprocess, sys, tempfile, threading, time, urllib.error, \
     urllib.parse, urllib.request
 from collections import Counter, defaultdict, deque
 from http.server import ThreadingHTTPServer
@@ -450,7 +450,7 @@ def version_scope(text, version):
     return out
 
 
-PLACE = re.compile(r"\b(?:item|rug)\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)")
+PLACE = re.compile(r"\b(?:item|rug|plant|art|ac|sconce|pendant)\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)")
 RUG = re.compile(r"\brug\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)")
 ITEM = re.compile(r"\bitem\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*\"([NSEW])\"")
 
@@ -842,6 +842,13 @@ other neighbours stay unless the user wants them to follow, and then they move i
 a neighbour overlapping or with an odd gap (bedside tables beside a narrower bed) moves that neighbour too, both views. A wall moved in the DXF must keep \
 both faces, close its junctions exactly (snap endpoints to existing ones within 0.1 mm), and the furniture against it \
 moves with it in furnish.js.
+- Where a NEW piece goes: a place the user names (\"at the foot of the bed\", \"in the corner left of the bed\", \"in the \
+kitchen\") wins. Otherwise (\"add X\", \"put X here\") it goes where the user is pointing, because that is where they \
+will look for it: at the circled spot (beside it if that exact spot is taken), or in Whole view somewhere inside the \
+picture: in the room the camera is in, in front of the camera and inside its field of view (the context below gives \
+the view's centre on the floor and its width), on the free floor / wall stretch nearest the view's centre that suits \
+the piece. Never put it behind the camera, out of frame or in another room because a spot there looks emptier; if \
+nothing in view fits, use the nearest free spot in this room and say where it went.
 - \"At the foot of / beside / in front of\" a piece: line the new piece up with that piece's plan outline (centred on \
 it unless told otherwise) and set it 5-10 cm off it, not across the room. At the foot of a bed whose headboard faces \
 "S" (foot edge at y = F): item(bed centre x, F - 0.05, "S", ...), i.e. the new piece's back toward the bed and its \
@@ -863,6 +870,22 @@ length inside THIS room only (corner to corner of the room-side face, not into t
 room; leave window openings clear: box left of the window, box right of it, a strip under it (0..M.sill) and over it \
 (M.winHead..M.ceiling), all in local x (along the wall), material from materials.js (add a tinted \
 copy of limewash there if no colour fits). Repainting every wall of a room is the same, one panel per wall.
+- Height (\"taller\", \"lower\", \"85 cm high\") is 3D only: the plan outline is the footprint and stays as it is. \
+A target height is the top of the piece above the floor (\"85 cm high\" = top at 0.85); stretch or shrink the parts \
+under the top to suit, and nothing goes below the floor (no box starting under 0).
+- Colours and finishes: never change an existing material in materials.js (every piece in every version that uses it \
+would change); add a new named one (a tinted copy) and use it only on the pieces asked for. Change the surfaces you \
+actually see in the picture (a wardrobe's door leaves and frame, a cabinet's fronts): read the builder and follow \
+the branch that runs for this call's arguments; editing a branch that doesn't run changes nothing.
+- Replacing a piece (\"replace X with Y\", \"make X round instead\"): the new one takes X's place and size unless told \
+otherwise. If X has its own plan outline, that outline becomes Y's footprint; a part built inside another piece's \
+item (a stool tucked under a dressing table, a mirror over it) has no outline of its own: leave the host piece and its \
+outline alone.
+- Shapes in build: p.box(x0, x1, y0, y1, z0, z1) is a block; p.cyl(x, z, r, y0, y1) stands upright (a leg, pot, lamp \
+base, column); a round disc facing out from the wall (round mirror, clock, plate) is an upright cyl turned: \
+p.cyl(x, z + t / 2, r, y - t / 2, y + t / 2, material, 64).rotation.x = Math.PI / 2 (centre at height y, t thick); \
+p.pebble(...) is an organic oval, not a circle. Keep a light / halo the old piece had (a slightly larger disc of \
+mat.ledStrip just behind) unless told otherwise.
 - Compass words are plan axes, whatever the view: north = +y (dy > 0), south = -y, east = +x, west = -x. When \
 the user names one (\"towards the bed wall (north)\"), move that way.
 - Never move or reshape parts of a piece the user didn't name (the bed's pillow lines, a neighbour's outline) just to \
@@ -887,7 +910,62 @@ Answer the user in one to three short sentences, plain words, sizes in cm: what 
 check. No code, no file names unless asked."""
 
 
-def context_text(ctx):
+def image_aspect(u):
+    """Width / height of a data-URL PNG or JPEG (None if it can't be read)."""
+    try:
+        b = base64.b64decode(u.split(",", 1)[1][:60000] + "===")
+        if b[:8] == b"\x89PNG\r\n\x1a\n":
+            return int.from_bytes(b[16:20], "big") / int.from_bytes(b[20:24], "big")
+        i = 2
+        while i < len(b) - 9:
+            if b[i] != 0xFF:
+                i += 1
+                continue
+            mk, ln = b[i + 1], int.from_bytes(b[i + 2:i + 4], "big")
+            if 0xC0 <= mk <= 0xCF and mk not in (0xC4, 0xC8, 0xCC):
+                return int.from_bytes(b[i + 7:i + 9], "big") / int.from_bytes(b[i + 5:i + 7], "big")
+            i += 2 + ln
+    except Exception:
+        pass
+    return None
+
+
+def half_hfov(cam, aspect):
+    vf = math.radians(float(cam[6]) if len(cam) > 6 and cam[6] else 60.0)
+    return math.degrees(math.atan(math.tan(vf / 2) * (aspect or 1.5)))
+
+
+def in_ring(ring, px, py):
+    hit = False
+    for k in range(len(ring)):
+        (ax, ay), (bx, by) = ring[k - 1][:2], ring[k][:2]
+        if (ay > py) != (by > py) and px < ax + (py - ay) * (bx - ax) / (by - ay):
+            hit = not hit
+    return hit
+
+
+def view_floor(cam, aspect, rings=None):
+    """(x, y, half horizontal FOV) where the middle of a walk view meets the floor (capped at 5 m out, and kept
+    inside the room the camera stands in, ~25 cm off its far wall)."""
+    try:
+        x, y, h, lx, ly, lh = map(float, cam[:6])
+    except (TypeError, ValueError):
+        return None
+    d = math.hypot(lx - x, ly - y)
+    if d < 1e-6:
+        return None
+    t = h / (h - lh) if lh < h else 99
+    r = min(d * t, 5.0)
+    home = next((g for g in rings or [] if g and in_ring(g, x, y)), None)
+    if home:
+        k = 0.05
+        while k < r and in_ring(home, x + (lx - x) / d * (k + 0.25), y + (ly - y) / d * (k + 0.25)):
+            k += 0.05
+        r = min(r, k)
+    return round(x + (lx - x) / d * r, 2), round(y + (ly - y) / d * r, 2), round(half_hfov(cam, aspect))
+
+
+def context_text(ctx, aspect=None, rings=None):
     c = ctx or {}
     lines = [f"Screen: {'2D drawing' if c.get('showing') == 'drawing' else '3D model'}"
              + (f", {c.get('mode')} view" if c.get("showing") != "drawing" and c.get("mode") else "")]
@@ -897,6 +975,9 @@ def context_text(ctx):
         x, y, h, lx, ly, lh, *fov = c["cam"]
         lines.append(f"Camera at plan ({x}, {y}), eye height {h} m, looking toward ({lx}, {ly}, {lh})"
                      + (f", vertical FOV {fov[0]}°" if fov else ""))
+        if c.get("mode") in (None, "walk") and (v_ := view_floor(c["cam"], aspect, rings)):
+            lines.append(f"Centre of the view meets the floor at about plan ({v_[0]}, {v_[1]}); the picture spans about "
+                         f"{v_[2]}° either side of the look direction (anything outside that is out of frame)")
     if c.get("planBox"):
         lines.append(f"Plan area on screen (x0, y0, x1, y1 m): {c['planBox']}")
     if c.get("highlightBox"):
@@ -1058,7 +1139,13 @@ def chat(req):
     for h in (req.get("history") or [])[-8:]:
         if h.get("role") in ("user", "assistant") and isinstance(h.get("text"), str):
             messages.append({"role": h["role"], "content": h["text"][:2000]})
-    content = [{"type": "text", "text": f"{context_text(ctx)}\n\nRequest: {message}"},
+    ws.ctx, ws.aspect = ctx, image_aspect(image)
+    try:
+        sm_ = ws.text(ws.cfg["model"])
+        rings_ = [f.get("outer") or [] for f in json.loads(sm_[sm_.index("{"):sm_.rindex("}") + 1]).get("floor", [])]
+    except Exception:
+        rings_ = []
+    content = [{"type": "text", "text": f"{context_text(ctx, ws.aspect, rings_)}\n\nRequest: {message}"},
                {"type": "image_url", "image_url": {"url": image, "detail": "high"}}]
     content += [{"type": "image_url", "image_url": {"url": u, "detail": "low"}} for u in refs]
     messages.append({"role": "user", "content": content})
@@ -1116,6 +1203,148 @@ GAVE_UP = re.compile(r"\b(couldn'?t|could not|can'?t|cannot|unable|wasn'?t able|
 REMOVAL = re.compile(r"\b(remove|delete|close|block|wall up|fill in|get rid)\b|شيل|امسح|اقفل|اقفل|سد", re.I)
 
 
+PLANT = re.compile(r"\bplant\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*(?:,\s*([\d.]+)\s*)?(?:,\s*([\d.]+)\s*)?(?:,\s*([\d.]+))?")
+
+
+def blocked_spot(ws, f0, f1):
+    """A note when a newly added floor piece stands in a door's swing or a new pot stands inside another piece."""
+    was = set(f0.splitlines())
+    feet = [(f"the new plan outline x {round(min(q[0] for q in pts), 2)}..{round(max(q[0] for q in pts), 2)}, "
+             f"y {round(min(q[1] for q in pts), 2)}..{round(max(q[1] for q in pts), 2)}",
+             (min(q[0] for q in pts), min(q[1] for q in pts), max(q[0] for q in pts), max(q[1] for q in pts)))
+            for pts in ws.new_outlines if pts]
+    pots = []
+    for i, px, py, line in placed_lines(ws, f1):
+        m = PLANT.search(line)
+        if line in was or not m or (m[5] and float(m[5]) > 0.05):
+            continue
+        r_ = float(m[4]) / 2 + 0.02 if m[4] else 0.13
+        b = (px - r_, py - r_, px + r_, py + r_)
+        pots.append((i, line, b))
+        feet.append((f"furnish.js line {i} ({line.strip()[:90]})", b))
+    try:
+        sm = ws.text(ws.cfg["model"])
+        swings = json.loads(sm[sm.index("{"):sm.rindex("}") + 1]).get("swings", [])
+    except Exception:
+        swings = []
+    for what, b in feet:
+        for sw in swings:
+            (hx, hy), r = sw["hinge"], float(sw["r"])
+            nx, ny = min(max(hx, b[0]), b[2]), min(max(hy, b[1]), b[3])
+            if math.hypot(nx - hx, ny - hy) < r - 0.05:
+                return (f"Check the door: {what} stands where the door hinged at plan ({round(hx, 2)}, {round(hy, 2)}) "
+                        f"swings ({round(r * 100)} cm leaf), so the door would hit it or the doorway is blocked. Keep a new "
+                        "piece out of door swings and doorways: put it on the nearest free stretch clear of the swing "
+                        "(3D line and plan outline together), or if nothing fits there, say so.")
+    if pots and plan_edits():
+        src = ws.tmp / "plan-pots.dxf"
+        src.write_bytes(ws.orig.get(ws.cfg["dxf"]) or ws.read(ws.cfg["dxf"]))
+        for i, line, b in pots[:3]:
+            cx, cy = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+            code, q = run([dwg_python(), str(ROOT / "edit_ai_dxf.py"), "query", str(src), f"--origin={ORIGIN[0]},{ORIGIN[1]}",
+                           f"--bbox={b[0]},{b[1]},{b[2]},{b[3]}", "--layers=2furni,2 furni", "--limit", "200"], timeout=90)
+            try:
+                ents = json.loads(q).get("entities", [])
+            except ValueError:
+                continue
+            for d in ents:
+                ps = d.get("points") or []
+                if d["type"] != "LWPOLYLINE" or len(ps) < 4:
+                    continue
+                xs, ys = [p_[0] for p_ in ps], [p_[1] for p_ in ps]
+                if (max(xs) - min(xs)) * (max(ys) - min(ys)) < 0.04:
+                    continue
+                if min(xs) + 0.03 < cx < max(xs) - 0.03 and min(ys) + 0.03 < cy < max(ys) - 0.03:
+                    return (f"Check the fit: furnish.js line {i} ({line.strip()[:100]}) puts a new floor pot at plan "
+                            f"({round(cx, 2)}, {round(cy, 2)}), inside plan piece {d['handle']} (x {min(xs)}..{max(xs)}, "
+                            f"y {min(ys)}..{max(ys)}): it would stand inside that piece. Use furniture_near, put it on free "
+                            "floor beside the piece (or on top of it with plant's base height if the user wants it there), "
+                            "smaller if the gap is tight, and say so.")
+    return None
+
+
+NAMED_PLACE = re.compile(r"\b(at|on|in|by|beside|next to|near|behind|under|above|over|opposite|facing|between|corner|"
+                         r"foot|left|right|wall)\b|جنب|فوق|تحت|ورا|قدام|عند|على|في|يمين|شمال", re.I)
+POINTED = re.compile(r"\b(here|there|this (spot|place|corner|area|room))\b|هنا|هناك", re.I)
+
+
+def off_view(ws, message, f0, f1, rings):
+    """A note when a newly added piece sits away from where the user pointed (circle, or the picture), else None."""
+    c = getattr(ws, "ctx", None) or {}
+    cam = c.get("cam") if c.get("showing") != "drawing" and c.get("mode") in (None, "walk") else None
+    try:
+        sm = ws.text(ws.cfg["model"])
+        names = [(f.get("room") or "").strip() for f in json.loads(sm[sm.index("{"):sm.rindex("}") + 1]).get("floor", [])]
+    except Exception:
+        names = [""] * len(rings)
+    def room_of(px, py):
+        for n, ring in enumerate(rings):
+            hit = False
+            for k in range(len(ring)):
+                (ax, ay), (bx, by) = ring[k - 1][:2], ring[k][:2]
+                if (ay > py) != (by > py) and px < ax + (py - ay) * (bx - ax) / (by - ay):
+                    hit = not hit
+            if hit:
+                return n
+        return -1
+    old_pts = [(px, py) for _, px, py, _ in placed_lines(ws, f0)]
+    was = set(f0.splitlines())
+    added = []
+    for i, px, py, line in placed_lines(ws, f1):
+        if line in was or any(abs(px - a) < 0.02 and abs(py - b) < 0.02 for a, b in old_pts):
+            continue
+        m = ITEM.search(line)
+        if m:  # stand 15 cm in front of its back, inside the room it faces
+            dx, dy = {"N": (0, 0.15), "S": (0, -0.15), "E": (0.15, 0), "W": (-0.15, 0)}[m[3]]
+            px, py = px + dx, py + dy
+        added.append((i, round(px, 2), round(py, 2), line))
+    if not added or len(placed_lines(ws, f1)) <= len(placed_lines(ws, f0)):
+        return None  # nothing new (a move, resize or swap in place)
+    named = NAMED_PLACE.search(message) and not POINTED.search(message)
+    msg_l = message.lower()
+    say = lambda i, line: f"furnish.js line {i} ({line.strip()[:110]})"
+    if cam and len(cam) >= 6:
+        home = room_of(float(cam[0]), float(cam[1]))
+        for i, px, py, line in added[:4]:
+            r = room_of(px, py)
+            other = names[r] if 0 <= r < len(names) else ""
+            if home >= 0 and r >= 0 and r != home and not any(w in msg_l for w in other.lower().split() if len(w) > 3):
+                return (f"Check placement: {say(i, line)} puts the new piece in the {other.title() or 'next room'}, but the "
+                        f"user is standing in the {names[home].title() or 'room the camera is in'} and didn't name another room. "
+                        "Put it in this room, where the user is looking (move the 3D line and its plan outline together), "
+                        "and say where it went.")
+    if named:
+        return None
+    if not c.get("wholeView") and (c.get("hits") or c.get("highlightBox")):
+        pts = [(float(h["x"]), float(h["y"])) for h in c.get("hits") or [] if h.get("x") is not None and h.get("y") is not None]
+        if (b := c.get("highlightBox")) and len(b) == 4:
+            pts.append(((b[0] + b[2]) / 2, (b[1] + b[3]) / 2))
+        for i, px, py, line in added[:4]:
+            d = min((math.hypot(px - a, py - b) for a, b in pts), default=0)
+            if d > 1.2:
+                a, b = min(pts, key=lambda q: math.hypot(px - q[0], py - q[1]))
+                return (f"Check placement: the user circled the spot for it around plan ({round(a, 2)}, {round(b, 2)}), but "
+                        f"{say(i, line)} puts the new piece at about ({px}, {py}), {round(d, 1)} m away. Put it at the circled "
+                        "spot (if that exact spot is taken, the nearest free spot right beside it), 3D line and plan outline "
+                        "together, and say where it went.")
+        return None
+    if cam and len(cam) >= 6:
+        x, y = float(cam[0]), float(cam[1])
+        hh = half_hfov(cam, getattr(ws, "aspect", None))
+        look = math.atan2(float(cam[4]) - y, float(cam[3]) - x)
+        vf = view_floor(cam, getattr(ws, "aspect", None), rings)
+        for i, px, py, line in added[:4]:
+            off = abs((math.degrees(math.atan2(py - y, px - x) - look) + 180) % 360 - 180)
+            if math.hypot(px - x, py - y) > 0.4 and off > hh + 10:
+                return (f"Check placement: {say(i, line)} puts the new piece at about ({px}, {py}), {round(off)}° off the "
+                        f"camera's look direction, so it is out of the picture the user is looking at (the view spans about "
+                        f"{round(hh)}° either side{f'; its centre meets the floor near ({vf[0]}, {vf[1]})' if vf else ''}). "
+                        "They asked without naming a place, so put it where they can see it: the free floor / wall stretch "
+                        "inside the view nearest its centre that suits the piece, in this room (3D line and plan outline "
+                        "together), and say where it went.")
+    return None
+
+
 def review(ws, message, reply):
     """What to point out to the model before its edits are saved, or None."""
     if not ws.changed:
@@ -1132,9 +1361,21 @@ def review(ws, message, reply):
             return f"The plan no longer rebuilds ({str(e)[:600]}). Fix it or call discard."
     if (lost := lost_openings(ws)) and not REMOVAL.search(message):
         return lost
-    tail = " Then reply to the user as you normally would, about the change itself (don't mention this check)."
+    tail = (" Then reply to the user as you normally would, about the change itself compared with how it was before their "
+            "request (a piece you added is \"added\", not \"moved\"; don't mention this check).")
     f0 = ws.orig["furnish.js"].decode() if "furnish.js" in ws.orig else ws.text("furnish.js")
     f1 = ws.text("furnish.js")
+    # An existing material changed in place: every piece and version using it would change.
+    if "materials.js" in ws.changed and "materials.js" in ws.orig:
+        m0_, m1_ = ws.orig["materials.js"].decode(), ws.text("materials.js")
+        defs = lambda t: {m_[1]: m_[2].strip() for m_ in re.finditer(r"^\s+(\w+)\s*:\s*(.+)$", t, re.M)}
+        d0_, d1_ = defs(m0_), defs(m1_)
+        hit_ = [k for k in d0_ if k in d1_ and d0_[k] != d1_[k]]
+        if hit_:
+            uses = len(re.findall(r"\bmat\." + re.escape(hit_[0]) + r"\b", f1))
+            return (f"Check the material: you changed the existing material {hit_[0]} in materials.js, which {uses} place(s) in "
+                    "furnish.js use (other pieces, other versions). Put it back as it was, add a new material next to it "
+                    "(a tinted copy with its own name) and use that only on the piece(s) the user asked about." + tail)
     # A compass direction the user named, and every move went the other way.
     named = {d for d, rx in COMPASS.items() if rx.search(message)}
     if len(named) == 1 and ws.moves:
@@ -1204,7 +1445,8 @@ def review(ws, message, reply):
                 return (f"Check 2D vs 3D: you changed furnish.js line {i} ({line.strip()[:120]}) but the plan outline it stands on, "
                         f"{h} (x {bb[0]}..{bb[2]}, y {bb[1]}..{bb[3]}), didn't change. If you moved or resized that piece, give "
                         "the outline exactly the same change now with dxf_edit move_piece / resize_piece; if only its look "
-                        "changed (colour, finish, doors), nothing is needed." + tail)
+                        "or height changed (colour, finish, doors, taller / lower: the outline is the footprint), nothing "
+                        "is needed: leave the plan as it is and just answer." + tail)
     was = {bare(l) for l in f0.splitlines()}  # only lines that stood before this message (not the model's own new piece)
     loop_ops = [o for o in ops if any(re.search(r"\bfor \(const|\bitem\(|\brug\(", l) and bare(l) in was
                                       and bare(l) not in {bare(n_) for n_ in o["new"].splitlines()}
@@ -1212,7 +1454,8 @@ def review(ws, message, reply):
     if loop_ops and not ws.dxf_furni and not gone:
         return ("Check 2D vs 3D: you moved or resized furniture in furnish.js but nothing on the plan (2furni). If the "
                 "piece is drawn on the plan (furniture_near lists the outlines there), give its outline exactly the same "
-                "change now with dxf_edit move_piece / resize_piece; things not drawn on the plan need nothing." + tail)
+                "change now with dxf_edit move_piece / resize_piece; things not drawn on the plan, and changes of height or "
+                "look only (taller, lower, colour: the outline is the footprint), need nothing: then just answer." + tail)
     # A new piece on a wall overlapping (along the wall and in height) what already stands / hangs there.
     if f1 != f0:
         L1, old_lines, cl = f1.splitlines(), set(f0.splitlines()), 2.6
@@ -1223,6 +1466,14 @@ def review(ws, message, reply):
             mine = wall_shapes(L1, i, cl)
             if not mine:
                 continue
+            blk, dep = "", 0
+            for k in range(i - 1, min(i + 40, len(L1))):
+                blk += L1[k] + "\n"
+                dep += L1[k].count("(") - L1[k].count(")")
+                if dep <= 0:
+                    break
+            if re.search(r"p\.box\([^()]*,\s*0(?:\.0+)?\s*,\s*M\.ceiling\s*,\s*-?0(?:\.0+)?\s*,\s*0\.0[0-4]\d*\s*,", blk):
+                continue  # a paint / cladding panel: it runs behind what stands on the wall (its own check is below)
             fa, back = m[3], float(m[2] if m[3] in "NS" else m[1])
             for j, m2 in on_wall:
                 if j == i or L1[j - 1] not in old_lines or m2[3] != fa or abs(float(m2[2] if fa in "NS" else m2[1]) - back) > 0.08:
@@ -1386,6 +1637,10 @@ def review(ws, message, reply):
                 if o.get("kind") == "window" and o.get("outer")]
     except Exception:
         wins, sill, win_head, ceil_h = [], 0.9, 2.1, 2.6
+    if (blk_ := blocked_spot(ws, f0, f1)):  # a new floor piece in a door's swing, or a pot inside another piece
+        return blk_ + tail
+    if rings and (off := off_view(ws, message, f0, f1, rings)):  # a new piece where the user isn't looking
+        return off + tail
     for i, line in new_items[:4]:  # its front has to look into a room, not out of the flat
         m = ITEM.search(line)
         x, y, f = float(m[1]), float(m[2]), m[3]
@@ -1547,7 +1802,7 @@ def review(ws, message, reply):
         xs, ys = [q[0] for q in pts], [q[1] for q in pts]
         b = (min(xs), min(ys), max(xs), max(ys))
         for i, z in fronts:
-            if min(b[2], z[2]) - max(b[0], z[0]) > 0.08 and min(b[3], z[3]) - max(b[1], z[1]) > 0.08:
+            if min(b[2], z[2]) - max(b[0], z[0]) > 0.03 and min(b[3], z[3]) - max(b[1], z[1]) > 0.03:
                 return (f"Check the room still works: the new piece's outline (x {round(b[0], 3)}..{round(b[2], 3)}, y "
                         f"{round(b[1], 3)}..{round(b[3], 3)}) stands in front of the wardrobe doors of furnish.js line {i}, "
                         f"in the ~60 cm that has to stay clear to open them (x {round(z[0], 3)}..{round(z[2], 3)}, y "

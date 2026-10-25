@@ -795,7 +795,9 @@ pendants over the bedside tables use the tables' x) already follow it: don't tou
 - Painting / finishing ONE wall (\"paint the wall behind the bed green\"): the walls themselves aren't in furnish.js, \
 so add a thin full-height panel on that wall's room-side face, like the existing feature wall line \
 `item(6.15, 2.25, "W", p => p.box(-1.75, 1.75, 0, M.ceiling, 0, 0.012, mat.limewashTaupe))`: width = the wall's \
-free length (leave out window openings: build it from boxes around them), material from materials.js (add a tinted \
+length inside THIS room only (corner to corner of the room-side face, not into the next room), facing into the \
+room; leave window openings clear: box left of the window, box right of it, a strip under it (0..M.sill) and over it \
+(M.winHead..M.ceiling), all in local x (along the wall), material from materials.js (add a tinted \
 copy of limewash there if no colour fits). Repainting every wall of a room is the same, one panel per wall.
 - \"Left\" / \"right\" / \"behind\" in a 3D view are as seen from the camera (camera position and look point below), \
 and in the 2D drawing as on screen (x east = right, y north = up). Convert to plan x / y before editing.
@@ -1128,16 +1130,23 @@ def review(ws, message, reply):
         rings = [f.get("outer") or [] for f in json.loads(sm[sm.index("{"):sm.rindex("}") + 1]).get("floor", [])]
     except Exception:
         rings = []
-    def on_floor(px, py):
-        for ring in rings:
+    def ring_at(px, py):
+        for n, ring in enumerate(rings):
             hit = False
             for k in range(len(ring)):
                 (ax, ay), (bx, by) = ring[k - 1][:2], ring[k][:2]
                 if (ay > py) != (by > py) and px < ax + (py - ay) * (bx - ax) / (by - ay):
                     hit = not hit
             if hit:
-                return True
-        return False
+                return n
+        return -1
+    on_floor = lambda px, py: ring_at(px, py) >= 0
+    try:
+        sill = float(json.loads(sm[sm.index("{"):sm.rindex("}") + 1]).get("sill") or 0.9)
+        wins = [o["outer"] for o in json.loads(sm[sm.index("{"):sm.rindex("}") + 1]).get("openings", [])
+                if o.get("kind") == "window" and o.get("outer")]
+    except Exception:
+        wins, sill = [], 0.9
     for i, line in new_items[:4]:  # its front has to look into a room, not out of the flat
         m = ITEM.search(line)
         x, y, f = float(m[1]), float(m[2]), m[3]
@@ -1148,6 +1157,40 @@ def review(ws, message, reply):
                     f"is outside the flat: it is on the outer face of its wall, looking out. Put its back on the wall's "
                     f"room-side face (dxf_query 1wall: the face line nearer the room, ~11-25 cm in) and face it \"{opp}\"; "
                     "for a facing flip, local x runs the other way, so mirror any x offsets inside build." + tail)
+    PANEL = re.compile(r"p\.box\(\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*([\w.]+)\s*,\s*-?0(?:\.0+)?\s*,\s*(0\.0[0-4]\d*)")
+    for i, line in new_items[:4]:  # a paint / cladding panel stays on this room's wall and leaves the windows open
+        m = ITEM.search(line)
+        x, y, f = float(m[1]), float(m[2]), m[3]
+        ux, uy = {"S": (1, 0), "N": (-1, 0), "E": (0, 1), "W": (0, -1)}[f]
+        fx, fy = {"S": (0, -1), "N": (0, 1), "E": (1, 0), "W": (-1, 0)}[f]
+        boxes = [(float(b_[1]), float(b_[2]), b_[4]) for b_ in PANEL.finditer(line) if float(b_[2]) - float(b_[1]) > 0.3]
+        if not boxes or not rings:
+            continue
+        home = ring_at(x + fx * 0.05, y + fy * 0.05)
+        if home < 0:
+            continue
+        run = []
+        for sgn in (-1, 1):  # how far this room's face of the wall runs each way
+            t = 0.0
+            while abs(t) < 12 and ring_at(x + ux * (t + sgn * 0.02) + fx * 0.05, y + uy * (t + sgn * 0.02) + fy * 0.05) == home:
+                t += sgn * 0.02
+            run.append(round(t, 2))
+        w0, w1 = run
+        problems = []
+        for a_, b_, top in boxes:
+            if a_ < w0 - 0.03 or b_ > w1 + 0.03:
+                problems.append(f"box {a_}..{b_} runs past this room's wall, which spans local x {w0}..{w1} here "
+                                "(beyond that it is inside the next wall or room)")
+            for wo in wins:  # window on this wall: close to the back line, overlapping along it
+                ds = [(px - x) * fx + (py - y) * fy for px, py in wo]
+                ts = [(px - x) * ux + (py - y) * uy for px, py in wo]
+                if min(ds) < 0.05 and max(ds) > -0.6 and min(ts) < min(b_, w1) - 0.05 and max(ts) > max(a_, w0) + 0.05 and (top == "M.ceiling" or (re.fullmatch(r"[\d.]+", top) and float(top) > sill + 0.02)):
+                    problems.append(f"box {a_}..{b_} covers the window at local x {round(min(ts), 2)}..{round(max(ts), 2)}")
+        if problems:
+            return (f"Check the panel: furnish.js line {i} ({line.strip()[:140]}): " + "; ".join(problems[:3]) + ". Local x "
+                    f"runs along the wall (for \"{f}\" that is plan {'+' if ux + uy > 0 else '-'}{'x' if ux else 'y'}). Keep "
+                    "it to this room's wall and leave windows (and doors) open: one box each side of the window, plus a strip "
+                    "under it (0..M.sill) and over it (M.winHead..M.ceiling)." + tail)
     for i, line in new_items[:4]:  # a new floor piece's plan outline has to start at its back, like the 3D does
         m = ITEM.search(line)
         x, y, f = float(m[1]), float(m[2]), m[3]

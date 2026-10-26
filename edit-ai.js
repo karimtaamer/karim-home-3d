@@ -35,9 +35,12 @@ function costLine(res, checkUsd) {
 
 
 // --- Live overrides: the files Edit AI changed for this version, loaded instead of the deployed ones -----------------
+// Every version has its own furniture and materials (26 Oct 2026): "furnish.js" / "materials.js" name the version's
+// furnish-<v>.js / materials-<v>.js (edit_ai.py own()).
+export const own = (version, p) => (["furnish.js", "materials.js"].includes(p) ? p.replace(".js", `-${version}.js`) : p);
 export async function liveFiles(version) {
   const live = { map: {}, sha: {}, api: false, ready: false, rev: null, summary: null, undo: false, broken: [], version };
-  live.url = p => live.map[p] || p;
+  live.url = p => live.map[own(version, p)] || own(version, p);
   try {
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), 5000);
@@ -58,7 +61,8 @@ export async function liveFiles(version) {
 
 // A module (furnish.js, materials.js) from its live override when there is one. If the override won't load, or one of
 // its functions throws, the deployed module stands in, so a bad edit never blanks the page (Edit AI offers to undo it).
-export async function liveImport(live, path) {
+export async function liveImport(live, name) {
+  const path = own(live.version, name);
   const base = () => import(`./${path}`);
   if (!live.map[path]) return base();
   const [mod, fallback] = await Promise.all([import(live.map[path]).catch(e => (console.error(e), null)), base()]);
@@ -696,7 +700,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
   async function apply(res, cost, body) {
     // Make sure the new code loads before showing it; a version that doesn't is undone on the spot.
     const fresh = await liveFiles(live.version);
-    for (const p of ["furnish.js", "materials.js"]) {
+    for (const p of ["furnish.js", "materials.js"].map(n => own(live.version, n))) {
       if (!fresh.map[p]) continue;
       try { await import(fresh.map[p]); } catch (e) {
         await call("undo", { version: live.version });

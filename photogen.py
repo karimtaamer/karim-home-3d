@@ -231,6 +231,16 @@ def find(name, sid):
     raise ValueError("no such render")
 
 
+def elsewhere(photo, home):
+    """Does a spots file other than `home` (in git, or approved into it on Vercel) still list this image?"""
+    for f in ROOT.glob("spots*.json"):
+        if f.name == home or not SPOTS_FILE.match(f.name):
+            continue
+        if any(s.get("photo") == photo for s in spots(f.name) + blob_spots(f.name)):
+            return True
+    return False
+
+
 def next_id(prefix="ai"):
     """ai-NN (up-NN for an uploaded photo), numbered across every version's file, so images never share a name in
     renders/ (nor, on Vercel, with a deleted one the Blob cache may still hold)."""
@@ -916,7 +926,8 @@ def delete(req):
     stays, as other spots and the furniture references may use it."""
     name = req.get("spots", "spots.json")
     s, home = find(name, req.get("id", ""))
-    made = s.get("ai") or s.get("user")
+    # Each version has its own spots (26 Oct 2026): deleting one there never takes an image another version still lists.
+    made = (s.get("ai") or s.get("user")) and not elsewhere(s["photo"], home)
     if BLOB:
         save(f"renders/ai-deleted/{home}/{s['id']}.json", json.dumps(s, ensure_ascii=False).encode(), "application/json")
         photogen_blob.delete(([s["photo"]] if made else []) + photogen_blob.names(f"renders/ai-spots/{home}/{s['id']}.json"))
@@ -1080,4 +1091,5 @@ if __name__ == "__main__":
     port = next((int(a) for a in sys.argv[1:] if a.isdigit()), 8000)
     print(f"Serving http://127.0.0.1:{port}  ·  photo spots: {'dry run' if DRY else MODEL}"
           f"{'' if DRY or api_key() else '  (no OPENAI_API_KEY: generating is off)'}", flush=True)
+    ThreadingHTTPServer.request_queue_size = 128  # the page asks for ~60 textures / models at once; the default 5 resets some
     ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()

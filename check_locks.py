@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""check_locks: fail when furnish.js or a built model breaks a settled decision in design-locks.json.
+"""check_locks: fail when a version's furnish-<version>.js or built model breaks a settled decision in design-locks.json.
 
     python3 check_locks.py            # exit 1 and list what broke
 
@@ -142,12 +142,13 @@ def violations(read=None):
     """{lock id: [problems]} for every broken lock; read(path) -> bytes (defaults to the repo files)."""
     read = read or (lambda p: (ROOT / p).read_bytes())
     locks = load_locks(read)
-    paths = {"furnish.js"} | {l["model"] for l in locks if "model" in l}
-    files = {p: read(p).decode() for p in paths}
     out = {}
     for lock in locks:
         if lock.get("suspended"):
             continue
+        # Each version has its own furniture (26 Oct 2026): a lock reads its version's furnish-<version>.js as "furnish.js".
+        files = {"furnish.js": read(f"furnish-{lock['version']}.js").decode(),
+                 **({lock["model"]: read(lock["model"]).decode()} if "model" in lock else {})}
         try:
             probs = check(lock, files)
         except Exception as e:  # noqa: BLE001 - a lock that can't be checked counts as broken

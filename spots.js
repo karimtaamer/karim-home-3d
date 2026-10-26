@@ -5,8 +5,8 @@
 // are kept out of git; on the live site vercel.json serves renders/ from Vercel Blob (publish_renders.sh).
 // Spots approved in Generate a render (photogen.js, "ai": true) are added while the page is open, as are
 // renders edited or deleted under Renders (an edit is a new version: "of" the first, with a "version" number).
-// A plan version's file is { extends: "spots.json", replaces: [rooms], spots: [...] }: the main plan's spots
-// except in the rooms the version redraws, plus its own.
+// Every plan version has its own standalone spots-<v>.json (26 Oct 2026): a render added, edited or deleted in one
+// version never shows in another. (A file of the old form { extends, replaces, spots } still loads.)
 
 const NEAR = 0.4;      // metres from the spot that count as "on it"
 const FACING = 20;     // degrees of heading either way that count as facing the view

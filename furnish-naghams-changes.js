@@ -1,3 +1,6 @@
+// Nagham's version (plan version "naghams-changes") only. Every version has its own furnish-<version>.js since 26 Oct 2026, so nothing
+// here reaches another version. The `version === "..."` checks are left from when all versions shared one file:
+// only the branches that run for "naghams-changes" matter.
 // Furniture, joinery and fittings, room by room. Positions are plan metres in model.js's frame
 // (x east, y north, origin at the DWG plan's corner): taken from the DWG furniture layer where
 // it has the piece, otherwise standard sizes fitted to the room as the Notion renders show it.
@@ -110,8 +113,11 @@ export function furnish(scene, M, mat, version = "main") {
     return m;
   }
 
+  // Move and Resize deletes: "x,y,facing" keys, one version-guarded line each.
+  const REMOVED = new Set();
   // Move and Resize (move_tool.py) for pieces a loop or shared code places, which have no line of their own to change:
-  // "x,y,facing" as the code places them -> [x, y, across, out] where they go instead, one version-guarded line each.
+  // "x,y,facing" as the code places them -> [x, y, across, out(, up, lift)] where they go instead (up: height scale,
+  // lift: metres raised), one version-guarded line each.
   const MOVED = {};
   if (version === "karims-version") MOVED["21.47,5,E"] = [21.635, 5.63, 1, 1];  // Move and Resize: wall sconce
   if (version === "kareems-changes") MOVED["21.47,5,E"] = [21.51, 5.775, 1, 1];  // Move and Resize: wall sconce
@@ -159,17 +165,19 @@ export function furnish(scene, M, mat, version = "main") {
     g.rotation.y = typeof facing === "number" ? facing : FACING[facing];
     // For Move and Resize (move.js / move_tool.py): where this item( call sits in furnish.js and what it was given.
     g.userData.piece = { x, y, facing, lines: callLines() };
-    const moved = MOVED[`${+x.toFixed(4)},${+y.toFixed(4)},${facing}`];
+    const key = `${+x.toFixed(4)},${+y.toFixed(4)},${facing}`, moved = MOVED[key];
     if (moved) {
-      g.position.set(moved[0], levelAt(moved[0], moved[1]), -moved[1]);
-      g.scale.set(moved[2], 1, moved[3]);
+      g.position.set(moved[0], levelAt(moved[0], moved[1]) + (moved[5] ?? 0), -moved[1]);
+      g.scale.set(moved[2], moved[4] ?? 1, moved[3]);
       g.userData.piece.moved = true;
     }
+    if (REMOVED.has(key)) { g.userData.piece.removed = true; return g; }  // built, never added to the scene
     parent.add(g);
     return g;
   }
-  // Move tool resizes: sized(item(...), across, out) scales an item in its own frame (height untouched).
-  const sized = (g, sx, sz) => (g.scale.set(sx, 1, sz), g);
+  // Move tool resizes: sized(item(...), across, out[, up, lift]) scales an item in its own frame (up: its height,
+  // from its base) and raises it by lift metres.
+  const sized = (g, sx, sz, sy = 1, lift = 0) => (g.scale.set(sx, sy, sz), g.position.y += lift, g);
   // furnish.js line numbers on the call stack (item()'s own frame left out), e.g. a helper's line and its caller's.
   const ME = import.meta.url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   function callLines() {
@@ -348,7 +356,7 @@ export function furnish(scene, M, mat, version = "main") {
       }
     }
     mesh(mergeGeometries(leaves), mat.leaf, p.g, false);
-  }); g.position.y = base; return named(g, base > 0.3 ? "small potted plant" : "potted plant"); };
+  }); g.position.y += base; return named(g, base > 0.3 ? "small potted plant" : "potted plant"); };
   const rug = (x0, y0, x1, y1, m = mat.rug) => named(item((x0 + x1) / 2, (y0 + y1) / 2, "S", p => p.box(-(x1 - x0) / 2, (x1 - x0) / 2, 0.003, 0.016, -(y1 - y0) / 2, (y1 - y0) / 2, m, 0.006)), "rug");
   const art = (x, y, facing, w, h, zc, k, light = true) => named(item(x, y, facing, p => {
     p.box(-w / 2 - 0.025, w / 2 + 0.025, zc - h / 2 - 0.025, zc + h / 2 + 0.025, 0, 0.03, mat.walnut);
@@ -777,7 +785,6 @@ export function furnish(scene, M, mat, version = "main") {
     // to the partition) and is 0.60 deep; the backlit mirror becomes a 0.80 x 0.75 mirrored medicine cabinet, 0.30
     // out from the battens, bottom 1.32 (0.46 over the counter), three glass shelves, all centred on the bowl.
     if (["kareems-changes", "karims-version"].includes(version)) item(0.556, 6.7276, "E", vanity(1.185, true, 0.6, medCabinet(), heaterVanity));  // centre DWG y -114.8856
-   if (version === "karims-version") item(0.556, 6.7276, "E", vanity(1.185, true, 0.6, medCabinet(), heaterVanity));
     else item(0.556, 6.7435, "E", vanity(1.153, true));  // centre DWG y -114.8697, bowl, mixer and mirror on it
     item(1.8037, 9.0201, "S", p => {  // WC bay 1.416..2.192 (local +x east)
       const h = 0.3878, d = 0.3, top = 1.12;

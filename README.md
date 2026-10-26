@@ -18,8 +18,8 @@ in-viewer **Generate a render** button that turns a Walk view into a photoreal r
 | `model.js` | Walls, openings, rooms, labels and tour grid, as `window.MODEL` | **No**: built by `build_geometry.py` |
 | `drawing.json` | DWG linework, text and snap points for the 2D drawing view | **No**: built by `build_drawing.py` |
 | `tour.json` | Room seeds, room viewpoints ("stops"), entry point, floor-finish overrides | Yes |
-| `furnish.js` | Furniture, joinery and fittings, room by room | Yes |
-| `materials.js` | Material library (oak, limewash, stone, …) using the textures in `textures/` | Yes |
+| `furnish-<version>.js` | Furniture, joinery and fittings, room by room: one file per plan version (26 Oct 2026). "`furnish.js`" below means the version's own file | Yes, that version's only |
+| `materials-<version>.js` | Material library (oak, limewash, stone, …) using the textures in `textures/`: one file per plan version | Yes, that version's only |
 | `spots.json` | Photo spots: designer renders plus approved AI renders, each with a camera | Yes (or via Approve) |
 | `photogen-brief.json` | Finishes text and material-board swatches for Generate Photo Spot | Yes |
 | `spots.js`, `renders.js` | Photo-spot UI in Walk; the Renders gallery screen | Yes |
@@ -33,7 +33,7 @@ in-viewer **Generate a render** button that turns a Walk view into a photoreal r
 | `build_geometry.py`, `build_drawing.py` | DXF → `model.js` / `drawing.json` | Yes |
 | `dwgtool.py` | Inspect a DWG/DXF and render cropped, marked-up PNGs (see `DWG_EDITING.md` §1) | Yes |
 | `dwg/kareems-changes.dxf` (Main), `dwg/karims-version.dxf` (Karim's version), `dwg/naghams-changes.dxf`, `dwg/as-built.dxf` | The plan drawing for each version: the only build sources (§3). `dwg/main.dxf` is the retired pre-25-Oct Main | Yes, see `DWG_EDITING.md` |
-| `suite_merge.py` | One plan everywhere except the master suite, taken from another; `--check` compares the versions (§3) | Yes |
+| `suite_merge.py` | Retired 26 Oct 2026 (versions are fully separate now). `--check` still lists how two versions' DXFs differ | Only to compare |
 | `check_furnish.py` | Runs `furnish.js` in node and compares its key pieces (kitchen appliances, laundry, entrance, coffee corner, guest WC counter, v12 bed/nightstands/cupboard) with the version's DXF; flags > 2 cm (§3) | Yes |
 | `*-kareems-changes.*`, `*-karims-version.*`, `*-naghams-changes.*`, `*-as-built.*` | The plan versions (see §4): Main loads `*-kareems-changes.*`, Karim's version `*-karims-version.*`; `dwg/as-built.dxf` is the survey of the empty flat | Same rules as the main files |
 | `models/*.glb` | Fixtures made from the renders with Meshy (image-to-3D) | Replace only |
@@ -82,6 +82,12 @@ P=dwg/main.dxf
 ~/.dwg-tools/bin/python build_geometry.py $P --debug debug.png  # plan image for checking walls
 ```
 
+**Every version is fully separate (26 Oct 2026, Karim: "any change in 2D, 3D, furnishing, or anything I do in a plan
+should only apply to that plan; even renders").** Each version has its own DXF, model, drawing, `tour-<v>.json`,
+`spots-<v>.json` (both standalone, no `extends`), `furnish-<v>.js` and `materials-<v>.js`. A change goes in the version
+asked for only; never copy it to another version unless asked. The "identical outside the master suite" rule and
+`suite_merge.py` below are history. See `docs/edit-ai/version-isolation.md`.
+
 **One drawing per version, in `dwg/` (2026-10-23).** These DXFs are the only build sources: edit them in
 place and commit them. They are identical outside the master suite and differ only inside it.
 `~/.dwg-tools/bin/python suite_merge.py --check dwg/*.dxf` must print `outside the suite: identical` after any edit
@@ -95,8 +101,7 @@ that kitchen run.
 **Changing the plan, step by step** (anyone with repo access):
 1. Pull, then edit the version's file in `dwg/` (AutoCAD, DraftSight, LibreCAD or ezdxf). Save it back **as DXF,
    under the same name**: a DWG, or a file with another name, is not picked up by the build.
-2. Master bedroom or master bathroom: edit that version's file only. Any other room: edit one file, copy the change to
-   the others with `suite_merge.py` (below), then run `--check`.
+2. Edit that version's file only, whatever the room (26 Oct 2026: versions are fully separate).
 3. Rebuild that version's `model*.js` and `drawing*.json` (commands below and in §4). The viewer reads these, not
    the DXF, so a drawing edit doesn't show until it's rebuilt. Rebuilding needs the `~/.dwg-tools` venv and libredwg
    (above). Without them, push the DXF and ask someone who has them to rebuild.
@@ -201,15 +206,15 @@ bath end wall, which used to push 37 cm of wall into the doorway.
 ## 4. Plan versions
 
 **Version menu (2026-10-25, confirmed by Karim):** Main · As-built · ┄ · Karim's version · Nagham's version. In
-`index.html`, `VERSIONS` entries carry `data`: the plan version whose files, Edit AI live edits and `furnish.js` branch
-they load. **Main** (the default) loads the `kareems-changes` plan, and Edit AI treats `main` as `kareems-changes`
+`index.html`, `VERSIONS` entries carry `data`: the plan version whose files (its own `furnish-<v>.js` and
+`materials-<v>.js` too) and Edit AI live edits they load. **Main** (the default) loads the `kareems-changes` plan, and Edit AI treats `main` as `kareems-changes`
 (`ALIASES` in `edit_ai.py`). **Karim's version** (`?v=kareems-changes`) was an alias to it until 26 Oct 2026; it now
 loads its own `karims-version` plan, a copy of Main from just before Main's laundry/WC change (partition 20.2 cm
-west, 26 Oct), so an edit on one no longer shows on the other. In `furnish.js` and `check_furnish.py` the code both
-share names both (`["kareems-changes", "karims-version"].includes(version)`); a change for one names that one alone. `sep` draws the divider. Bigger Master Bedroom and Shifted Bedroom are retired; their
+west, 26 Oct), so an edit on one no longer shows on the other. Each has its own `furnish-<v>.js` / `materials-<v>.js` (26 Oct 2026); the
+`version === ...` checks left in them from the shared file only matter for the version whose file it is. `sep` draws the divider. Bigger Master Bedroom and Shifted Bedroom are retired; their
 files were deleted (in git history before 2026-10-25), and old `?v=` links open Main. `model.js`, `drawing.json`
-and `dwg/main.dxf` are the retired pre-25-Oct Main layout. Nothing on the page loads them, but `tour.json` and
-`spots.json` are still the base files the versions extend.
+and `dwg/main.dxf` are the retired pre-25-Oct Main layout. Nothing on the page loads them, nor `tour.json` /
+`spots.json` (the old shared bases: since 26 Oct 2026 every version's tour and spots file stands alone).
 
 | Menu | `?v=` | DWG | Files |
 |---|---|---|---|
@@ -390,24 +395,24 @@ A=dwg/as-built.dxf
 ~/.dwg-tools/bin/python build_drawing.py $A --model model-as-built.js --out drawing-as-built.json
 ```
 
-**Rule: a version may differ from Main only in the master suite.** Any other DWG difference is a mistake to
-flag, not to build. When a new DWG changes rooms outside the suite, ask whether it should become the shared base
-for every version (as v12 did).
+**Rule (26 Oct 2026): every version is fully separate.** A version may differ from any other anywhere; a change in
+one never reaches another. (Until then a version could differ from Main only in the master suite.)
 
 To add a version:
 1. Diff its DWG against the main one and confirm only the intended rooms changed.
-2. Write `tour-<id>.json` and `spots-<id>.json` that **extend** the main files. Copy `*-bigger-bedroom.json` as a template.
-   - Tour: `{ "extends": "tour.json", "seeds": [...], "stops": [...], "doorsAsDrawn": [...] }`. Seeds and stops replace the main ones with the same name or room. `doorsAsDrawn` lists door hinges that open the way the DWG swings them.
-   - Spots: `{ "extends": "spots.json", "replaces": [rooms], "spots": [...] }`. Drops the main spots in those rooms and adds its own.
+2. Copy the version it starts from: `tour-<from>.json` -> `tour-<id>.json`, `spots-<from>.json` -> `spots-<id>.json`,
+   `furnish-<from>.js` -> `furnish-<id>.js`, `materials-<from>.js` -> `materials-<id>.js` (fix the header comment).
+   No `extends`: each version's files stand alone. `doorsAsDrawn` in the tour lists door hinges that open the way the DWG swings them.
 3. Run both build scripts with `--out` / `--tour` / `--model` as above.
 4. Add an entry to `VERSIONS` in `index.html`.
-5. If furniture differs, branch on `version === "<id>"` in `furnish.js` (see the `bigger-bedroom` and `shifted-bedroom` blocks).
+5. Change its furniture in its own `furnish-<id>.js` directly; no `version === ...` branches. Add it to `build_flags.json`,
+   `edit_ai_pull.py` VERSIONS and `check_furnish.py` MODELS.
 
 ---
 
 ## 5. Editing the model by hand
 
-**Quick changes.** If the ask is a small furniture or fitting tweak (swap a mirror for a cabinet, move one piece a few centimetres, change a material), edit `furnish.js` for that piece and — when it is drawn on the plan — the matching `2furni` outline in that version's DXF only. Then run `check_furnish.py` for the version(s) you touched. Rebuild model/drawing only when the DXF walls or openings changed. Leave the full rebuild + multi-version screenshot pass for real layout work (walls, doors, room moves).
+**Quick changes.** If the ask is a small furniture or fitting tweak (swap a mirror for a cabinet, move one piece a few centimetres, change a material), edit that version's `furnish-<version>.js` for that piece and — when it is drawn on the plan — the matching `2furni` outline in that version's DXF only. Then run `check_furnish.py` for the version(s) you touched. Rebuild model/drawing only when the DXF walls or openings changed. Leave the full rebuild + multi-version screenshot pass for real layout work (walls, doors, room moves).
 
 **Furniture: `furnish.js`**
 - Each piece is built in its own frame: x across, y up, z out from the wall.
@@ -634,6 +639,30 @@ tap it, the view freezes, circle what to change (or pick **Whole view**), then s
 - **Run locally:** `python3 edit_ai.py [port]` serves the site with both APIs (reads `.env`).
 - **Limits:** the rate limit is per server instance; on Vercel only furniture/finishes/tour edits (no DXF, since `.vercelignore`
   drops `dwg/` and the build scripts); concurrent edits are last-write-wins; the 2D zoom isn't kept across the reload.
+
+## 9. Move and Resize (2D and 3D, like AutoCAD)
+
+The **Move and Resize** button (beside Measure, in 3D and on the drawing) edits the flat by hand, no AI: `move.js` (UI),
+`move_tool.py` (`POST /api/edit-ai/transform`). Nothing is saved until **Accept**; each Accept is one revision (Edit AI's
+store, so its Undo works), changes the version's furniture file and, where the piece is drawn, its plan DXF, then
+rebuilds, so the 2D and the 3D always agree.
+
+- **Pieces:** tap to pick (on the drawing, what stands on the floor wins over what hangs above it; **Tab** cycles through
+  everything under the tap). Drag to move; **X** / **Y** lock the drag to that axis (again: free), **Shift**-drag goes
+  straight along whichever axis it mostly runs; arrows nudge 1 cm (Shift 10 cm). Edge / corner dots resize, the round
+  dot turns (R = 90°). **Delete** / Backspace (or the red Delete chip) deletes it: a version-guarded `REMOVED` line in
+  the furniture file and its outline, block or lines on the plan.
+- **Groups:** **Shift-click** adds a piece to the selection or takes it out; the group moves, nudges and deletes
+  together and saves as one revision (`op: "batch"`), so one Undo takes it all back. Resize and turn stay one at a time.
+- **Walls, doors and windows (drawing only):** tap one with no piece under it. A wall drags across itself (the walls
+  meeting it follow, `move_wall`); a door or window slides along its wall and its end dots make it wider or narrower
+  (`move_window`, or `convert_opening` for a door drawn as a block, which is redrawn: check its swing); Delete removes
+  the wall (with its openings) or walls the opening up. The 3D follows after the rebuild (no 3D preview before Accept).
+- **Tests (local only, never the live site):** copy the repo to a sandbox, serve it with
+  `env -u BLOB_READ_WRITE_TOKEN EDIT_AI_GIT_SYNC=0 python3 edit_ai.py 8853` (no Blob, no git sync) and run
+  `python3 tests/run_move_e2e_karim.py` (Karim's version only: 2D / 3D moves, X/Y lock, nudges, resizes, deletes, groups,
+  walls / doors / windows; every saved case is undone). It needs puppeteer-core (`MOVE_E2E_PUPPETEER`: its
+  `package.json`) and Chrome (`MOVE_E2E_CHROME`). Unit tests: `python3 tests/test_move_tool.py`.
 
 ## Design locks (`design-locks.json`, `check_locks.py`)
 

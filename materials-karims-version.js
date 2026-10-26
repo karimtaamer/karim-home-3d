@@ -1,3 +1,5 @@
+// Karim's version (plan version "karims-version") only. Every version has its own materials-<version>.js since 26 Oct 2026, so a
+// material changed or added here shows in this version alone.
 // Material library for the finished flat. Looks follow the Notion renders (warm oak, limewash,
 // beige stone, white flat-panel joinery); textures are Poly Haven scans (CC0) in textures/.
 // UVs are in metres (floors use plan x/y, extruded sides use length/height), so `size` is the

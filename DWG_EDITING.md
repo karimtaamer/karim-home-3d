@@ -4,10 +4,9 @@ Rules for changing the floor plan itself. Read this before any edit to a plan DX
 
 ## 1. Files and tools
 
-- **Edit the DXF in `dwg/`, not a DWG.** One file per version: `dwg/main.dxf`, `dwg/bigger-bedroom.dxf`,
-  `dwg/shifted-bedroom.dxf`, `dwg/naghams-changes.dxf`. Outside the master suite all of them are identical (v12): change a shared room in one,
-  copy it to the others with `suite_merge.py`, and run `suite_merge.py --check dwg/*.dxf` (README §3). A suite
-  change goes in that version's file only.
+- **Edit the DXF in `dwg/`, not a DWG.** One file per version: `dwg/kareems-changes.dxf` (Main), `dwg/karims-version.dxf`,
+  `dwg/naghams-changes.dxf`, `dwg/as-built.dxf`. Since 26 Oct 2026 every version is fully separate: a change, in any
+  room, goes in the version asked for only. Never copy it to another version unless asked (`suite_merge.py` is retired).
   Since 26 Oct 2026 Main (`dwg/kareems-changes.dxf`) and Karim's version (`dwg/karims-version.dxf`) are separate
   files: Main's laundry / guest WC partition is 20.2 cm west of Karim's version's. Edit only the one asked for. Git is the backup: don't leave `.before-*` copies in `dwg/`.
 - **A new DWG from the designer:** convert it (below), diff it against the matching `dwg/` file, and bring the
@@ -83,8 +82,8 @@ leaf must open against a wall or into clear space.
 - **Clearance targets** (face to face): corridors ≥ 90 cm (entrances ideally ≥ 120), in front of kitchen runs
   100–120 cm, in front of a WC or basin 60–70 cm, in front of an appliance door about 60 cm. Door swings must not hit
   furniture. A washer and dryer side by side need ≥ 120 cm plus gaps; otherwise stack them.
-- Keep the furniture in `furnish.js` and the drawing in step: same positions, same sizes.
-- **Quick furniture tweak:** change the `2furni` outline for that piece in the version's DXF, keep `furnish.js` in step, run `check_furnish.py`. Don't treat it like a wall-layout job.
+- Keep the furniture in the version's `furnish-<version>.js` and its drawing in step: same positions, same sizes.
+- **Quick furniture tweak:** change the `2furni` outline for that piece in the version's DXF, keep that version's `furnish-<version>.js` in step, run `check_furnish.py`. Don't treat it like a wall-layout job.
 
 ## 5. Checks before rebuilding
 

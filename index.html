@@ -137,6 +137,9 @@
   .move-overlay circle.corner { fill: #ff8a3d; stroke: #fffaf3; stroke-width: 2; }
   .move-overlay line.rot { stroke: #ff8a3d; stroke-width: 1.5; }
   .move-overlay circle.rot { fill: #ff8a3d; stroke: #fffaf3; stroke-width: 2.5; }
+  .move-overlay line.z { stroke: #ff8a3d; stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .move-overlay rect.z { fill: #fffaf3; stroke: #ff8a3d; stroke-width: 2.5; }
+  .move-overlay circle.z { fill: #2b2622; stroke: #ff8a3d; stroke-width: 2.5; }
   .move-label { position: absolute; transform: translate(-50%, calc(-100% - 10px)); background: #2b2622; color: #f3eee5; font: 500 12px Inter, sans-serif;
     padding: 3px 9px; border-radius: 999px; white-space: nowrap; box-shadow: 0 1px 4px #0003; }
   .move-chips { position: absolute; transform: translateX(-50%); display: flex; gap: 6px; pointer-events: auto; }
@@ -144,6 +147,7 @@
     box-shadow: 0 1px 4px #0003; cursor: pointer; white-space: nowrap; }
   .move-chips button.on { background: #ff8a3d; color: #fff; }
   .move-chips button.part { background: #2b2622e6; color: #f3eee5; }
+  .move-chips button.del { background: #b3261e; color: #fff; }
   .move-overlay polygon.was { fill: none; stroke: #2b2622; stroke-width: 1.5; stroke-dasharray: 5 4; opacity: 0.7; }
   .move-label.draft { background: #ff8a3d; color: #fff; }
   #move-accept { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 7; display: flex; gap: 8px; align-items: center;
@@ -304,10 +308,12 @@ import { createInteract } from "./interact.js";
 
 // --- Plan versions: the main plan and alternatives to it, each built from its own DWG ----------------
 // (build_geometry.py --out / --tour, build_drawing.py --out). ?v=<id> picks one; the main plan is the default.
-// `data`: the plan version whose files, Edit AI live edits and furnish.js branch an entry loads (default: its id).
+// `data`: the plan version whose files and Edit AI live edits an entry loads (default: its id). Every version has its
+// own everything (26 Oct 2026): DXF, model, drawing, tour, spots, and furnish-<data>.js / materials-<data>.js (loaded
+// below by their generic names, edit-ai.js own()), so a change in one never shows in another.
 // Main is Karim's layout (2026-10-25): it loads the kareems-changes plan. "Karim's version" was an alias to it until
-// 26 Oct 2026; it now loads its own karims-version plan (a copy of Main from before Main's laundry/WC change), so an
-// edit on one no longer shows on the other. `sep`: a divider above the entry in the menu.
+// 26 Oct 2026; it now loads its own karims-version plan (a copy of Main from before Main's laundry/WC change).
+// `sep`: a divider above the entry in the menu.
 const VERSIONS = [
   { id: "main", name: "Main", data: "kareems-changes", model: "model-kareems-changes.js", drawing: "drawing-kareems-changes.json",
     spots: "spots-kareems-changes.json" },
@@ -924,13 +930,14 @@ const HELP = {
 // They get help only while measuring (the joystick speaks for itself), so the empty pill hides.
 const TOUCH = matchMedia("(max-width: 760px), (pointer: coarse)");
 const HELP_MEASURE = "Click or drag to measure · Shift squares it up · Esc cancels · Backspace undoes";
-const HELP_MOVE = "Click a piece, drag it or pull a handle, then Accept · double-click for a part inside · Esc cancels";
+const HELP_MOVE = "Click a piece, drag it or pull a handle, then Accept · PageUp / PageDown raise or lower it (Alt: taller / shorter) · X / Y lock the axis · Shift-drag goes straight · arrows nudge 1 cm (Shift 10) · Delete removes · double-click for a part inside · Esc cancels";
 function showHelp() {
   if (move?.pending) help.textContent = TOUCH.matches ? "Adjust, then Accept to save · Cancel puts it back"
     : "Keep adjusting, then Accept (Enter) to save · Cancel (Esc) puts it back";
   else if (move?.active) help.textContent = TOUCH.matches
     ? "Tap a piece, drag it or a handle, then Accept · double-tap for a part inside · " + (mode === "walk" ? "a second finger looks around" : "two fingers pan / zoom")
-    : HELP_MOVE + (mode === "walk" ? " · drag elsewhere to look" : " · drag elsewhere to pan");
+    : HELP_MOVE + (showing === "drawing" ? " · tap a wall, door or window: drag a wall across, slide a door / window along its wall, pull its end dots to resize; Delete removes"
+      : mode === "walk" ? " · drag elsewhere to look" : " · drag elsewhere to pan");
   else if (measure?.active) help.textContent = TOUCH.matches
     ? "Tap or drag to measure · " + (mode === "walk" ? "a second finger looks around" : "two fingers pan / zoom")
     : HELP_MEASURE + (mode === "walk" ? " · right-drag to look" : " · right-drag pans · snaps to the DWG");

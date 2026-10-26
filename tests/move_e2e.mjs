@@ -43,8 +43,9 @@ const M = (fn, ...a) => page.evaluate((fn, a) => window.__move[fn](...a), fn, a)
 const state = () => page.evaluate(() => window.__move.state());
 const rev = () => page.evaluate(async v => (await (await fetch(`api/edit-ai/patches?version=${v}`)).json()).rev, V);
 const furnish = () => page.evaluate(async v => {
-  const p = await (await fetch(`api/edit-ai/patches?version=${v}`)).json(), f = p.files["furnish.js"];
-  return f ? (f.content ?? await (await fetch(f.url)).text()) : await (await fetch("furnish.js")).text();
+  const name = `furnish-${v}.js`;  // the version's own file (26 Oct 2026)
+  const p = await (await fetch(`api/edit-ai/patches?version=${v}`)).json(), f = p.files[name];
+  return f ? (f.content ?? await (await fetch(f.url)).text()) : await (await fetch(name)).text();
 }, V);
 async function on() {
   if (!(await page.evaluate(() => window.__move.active))) {

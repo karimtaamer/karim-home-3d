@@ -130,13 +130,13 @@ class Home(unittest.TestCase):
         tmp = self.ws.tmp / "root"
         tmp.mkdir()
         edit_ai.ROOT = tmp  # revisions go to a scratch store
-        saved_fns = {n: getattr(edit_ai, n) for n in ("git_sync", "review", "lock_breaks", "version_leak")}
+        saved_fns = {n: getattr(edit_ai, n) for n in ("git_sync", "review", "lock_breaks")}
         edit_ai.git_sync = lambda v, c, s: "test"
         edit_ai.review = lambda ws, m, r: None  # the gates have their own tests; here: the part is saved
         edit_ai.lock_breaks = lambda ws, m, record=False: None
-        edit_ai.version_leak = lambda ws, m: None
         try:
             for f in ("furnish.js", "materials.js"):
+                f = edit_ai.own(self.ws.v, f)
                 (tmp / f).write_bytes((REPO / f).read_bytes())
             self.ws.write("furnish.js", self.ws.read("furnish.js") + b"\n// part one\n")
             self.ws.plan_dirty = False

@@ -87,21 +87,34 @@ ORIGIN = (190.4049651574427, -121.6132067325871)  # DWG -> plan, the same for ev
 ALIASES = {"main": "kareems-changes"}
 VERSIONS = {k: c for k, c in json.loads((Path(__file__).resolve().parent / "build_flags.json").read_text()).items()
             if not k.startswith("_")}
-SHARED = ["furnish.js", "materials.js"]  # loaded by the page through the live overrides; shared by every version
+# Every version has its own furniture and materials since 26 Oct 2026 (Karim: "each version should have its own
+# everything"): furnish-<v>.js and materials-<v>.js. The model, the tools and the checks call them by these names;
+# own() turns a name into the version's file wherever a file is read, stored or committed (the page does the same).
+OWN = ["furnish.js", "materials.js"]
 DOCS = ["README.md", "DWG_EDITING.md", "CLAUDE.md",  # read-only context
         "docs/edit-ai/when-2d-needed.md", "docs/edit-ai/3d-only-patterns.md",  # decision notes: does an edit need the plan?
-        "docs/edit-ai/version-isolation.md"]  # a change in one version is only for that version
+        "docs/edit-ai/version-isolation.md"]  # every version has its own files
 MIME = {".js": "text/javascript; charset=utf-8", ".json": "application/json", ".dxf": "application/dxf"}
+
+
+def own(v, path):
+    """The version's own file for a generic name ("furnish.js" -> "furnish-karims-version.js"); other paths as they are."""
+    return path.replace(".js", f"-{v}.js") if path in OWN else path
+
+
+# Live overrides (by sha) already pulled into git when each version got its own files: the shared furnish.js ones and
+# Main's tour, which git now holds in its standalone form. They drop out instead of merging onto the new files.
+PULLED = {"kareems-changes": {"9924d0735c024e622ba3", "c3d4ac30615a61048d3a"}, "naghams-changes": {"99b962fa671a0b66c38a"}}
 
 
 def editable(v):
     c = VERSIONS[v]
-    return SHARED + [c["tour"]]
+    return OWN + [c["tour"]]
 
 
 def readable(v):
     c = VERSIONS[v]
-    return editable(v) + DOCS + ["index.html", "drawing.js", "check_furnish.py", "design-locks.json", "build_flags.json", "tour.json"] + [c["tour"]]
+    return editable(v) + DOCS + ["index.html", "drawing.js", "check_furnish.py", "design-locks.json", "build_flags.json"]
 
 
 def _key(*names):
@@ -266,6 +279,12 @@ def resolve(man):
     if not man:
         return out
     for path, e in man["files"].items():
+        if e["sha"] in PULLED.get(man["version"], ()):
+            continue
+        if path in OWN:  # a revision from before the split (26 Oct 2026), when every version shared furnish.js / materials.js
+            if (st := legacy(man["version"], path, e)):
+                out[own(man["version"], path)] = st
+            continue
         dep = deployed(path)
         if sha(dep) == e["sha"]:
             out[path] = ("synced", e, None)
@@ -289,6 +308,19 @@ def resolve(man):
         if e.get("derived") and out.get(e["derived"], ("synced",))[0] == "conflict":
             out[path] = ("conflict", e, None)
     return out
+
+
+def legacy(v, path, e):
+    """A live furnish.js / materials.js override from before the split, for the version's own file now: None when it
+    was pulled into git with the split (PULLED) or its edits are already in the file, else its search/replace ops
+    replayed onto the file, else a conflict (kept for edit_ai_pull.py)."""
+    if e["sha"] in PULLED.get(v, ()):
+        return None
+    dep = deployed(own(v, path))
+    t = replay(dep.decode(), e["ops"]) if e.get("ops") else None
+    if t is not None and t.encode() == dep:
+        return None
+    return ("replayed", e, t.encode()) if t is not None else ("conflict", e, None)
 
 
 def live_content(path, st):
@@ -336,8 +368,9 @@ class Workspace:
 
     def read(self, path):
         if path not in self.files:
-            st = self.res.get(path)
-            self.files[path] = live_content(path, st) if st else deployed(path)
+            p = own(self.v, path)
+            st = self.res.get(p)
+            self.files[path] = live_content(p, st) if st else deployed(p)
         return self.files[path]
 
     def text(self, path):
@@ -590,7 +623,8 @@ def for_version(text, version):
 
 
 def _unsized(t):
-    """sized(x,1,1) is x: Move and Resize's size for one version folds to that in the others."""
+    """sized(x,1,1) (and sized(x,1,1,1,0): height scale 1, lift 0) is x: Move and Resize's size for one version folds to
+    that in the others."""
     k = 0
     while (i := t.find("sized(", k)) >= 0:
         depth, j, cut = 0, i + 5, []
@@ -604,7 +638,12 @@ def _unsized(t):
             elif t[j] == "," and depth == 1:
                 cut.append(j)
             j += 1
-        if len(cut) == 2 and t[cut[0] + 1:cut[1]] == "1" and t[cut[1] + 1:j] == "1" and (i == 0 or not (t[i - 1].isalnum() or t[i - 1] in "_$.") or t[:i].endswith(("true", "false"))):  # iffalsesized(
+        vals = [t[a + 1:b] for a, b in zip(cut, cut[1:] + [j])]
+        is_call = i == 0 or not (t[i - 1].isalnum() or t[i - 1] in "_$.") or t[:i].endswith(("true", "false"))  # iffalsesized(
+        if is_call and len(cut) > 2 and vals[2:] == ["1", "0"][:len(cut) - 2]:  # height 1, lift 0: as sized(x, a, o)
+            t = t[:cut[2]] + t[j:]
+            k = i
+        elif is_call and len(cut) == 2 and vals == ["1", "1"]:
             t = t[:i] + t[i + 6:cut[0]] + t[j + 1:]
             k = i
         else:
@@ -669,33 +708,6 @@ def mats_changed(ws):
     defs = lambda t: {m_[1]: m_[2].strip() for m_ in re.finditer(r"^\s+(\w+)\s*:\s*(.+)$", t, re.M)}
     d0, d1 = defs(ws.orig["materials.js"].decode()), defs(ws.text("materials.js"))
     return [k for k in d0 if k in d1 and d0[k] != d1[k]]
-
-
-def version_leak(ws, message):
-    """The rule from 26 Oct 2026 (Karim: "any change in any version is only for that version"): a furnish.js edit that
-    also changes what another version builds, when the user didn't ask for every version. A message, or None."""
-    if ALL_VERSIONS.search(message or ""):
-        return None
-    if hit := mats_changed(ws):
-        return (f"Check the version: you changed the existing material(s) {', '.join(hit)} in materials.js, which every "
-                f"version uses. Put them back as they were, add a new material with its own name and use it only for "
-                f"\"{ws.v}\": `version === \"{ws.v}\" ? mat.newName : mat.{hit[0]}` in furnish.js.")
-    if "furnish.js" not in ws.orig:
-        return None
-    f0, f1 = ws.orig["furnish.js"].decode(), ws.text("furnish.js")
-    if f0 == f1 or not (others := other_versions_changed(f0, f1, ws.v)):
-        return None
-    sc = version_scope(f1, ws.v)
-    L0, L1 = f0.splitlines(), f1.splitlines()
-    shared = [f"line {j + 1}: {L1[j].strip()[:140]}" for tag_, i0, i1, j0, j1 in
-              difflib.SequenceMatcher(None, L0, L1, autojunk=False).get_opcodes() if tag_ != "equal"
-              for j in range(j0, j1) if L1[j].strip() and sc[j] is not True]
-    return (f"Check the version: your furnish.js edit also changes version(s) {', '.join(others)}, and a change in "
-            f"\"{ws.v}\" must be for \"{ws.v}\" only (the user didn't ask for every version). Wrap what you changed so the "
-            f"others keep exactly what they had: `version === \"{ws.v}\" ? newValue : oldValue`, or an "
-            f"`if (version === \"{ws.v}\")` branch for whole pieces. A colour change gets a NEW material in materials.js used "
-            f"only through that ternary; never change a material other versions use. "
-            + (f"Shared lines you changed: {'; '.join(shared[:5])}." if shared else ""))
 
 
 CALLS = re.compile(r"\b(?:item|rug|plant|art|ac|sconce|pendant)\(")  # any call, loop bodies too
@@ -851,7 +863,8 @@ TOOLS = [
                                             "reflective), panes? transoms? (bars), style? (door: flush | panelled | glazed | louvred | "
                                             "hidden; slider: bifold | pocket | barn), arch? (true), fanlight? (m of glass over a door), "
                                             "shape? (round window), clear?: true (back to the defaults)}]; home?: {ceiling?, door?, "
-                                            "sill?, window?, slider?, parapet?} home-wide heights in m. For this version only; the 3D is rebuilt.",
+                                            "sill?, window?, slider?, parapet?, parapetGlass? (true: every terrace parapet a glass balustrade)} home-wide "
+                                            "heights in m. For this version only; the 3D is rebuilt.",
      "parameters": {"type": "object", "properties": {"openings": {"type": "array", "items": {"type": "object"}},
                                                      "home": {"type": "object"}}}},
     {"name": "set_room", "description": "A room's finishes and settings, this version only: room (its name, as plan_rooms gives it); "
@@ -1154,7 +1167,7 @@ def tool(ws, name, a):
         return out
     if name == "check":
         notes = []
-        for p in SHARED:
+        for p in OWN:
             if p in ws.changed and (err := js_check(ws, p)):
                 notes.append(f"{p}: {err}")
         if getattr(ws, "plan_dirty", False) or ws.cfg["tour"] in ws.changed:
@@ -1531,8 +1544,6 @@ def save_progress(ws, message, reply):
         return "not saved, fix this first: " + nudge[:800]
     if breaks := lock_breaks(ws, message):
         return "not saved: it breaks " + lock_note(breaks)
-    if leak := version_leak(ws, message):
-        return "not saved: " + leak[:600]
     res = save(ws, f"(part) {reply or message}"[:300])
     ws.saved_parts = getattr(ws, "saved_parts", 0) + 1
     for p in list(ws.changed):  # the saved state is the new starting point
@@ -1590,7 +1601,14 @@ def set_openings(ws, a):
         log.append(f"{hit['kind']} at {[round(v, 3) for v in c]} ({round(max(max(xs) - min(xs), max(ys) - min(ys)), 2)} m): {f}")
     if a.get("home"):
         h = dict(t.get("heights") or {})
-        for k, v in a["home"].items():
+        home = dict(a["home"])
+        if "parapetGlass" in home:  # every terrace parapet as a glass balustrade (or back to solid)
+            if home.pop("parapetGlass"):
+                t["parapet"] = {"glass": True}
+            else:
+                t.pop("parapet", None)
+            log.append(f"terrace parapets: {'glass' if t.get('parapet') else 'solid'}")
+        for k, v in home.items():
             if k not in HOME_HEIGHTS:
                 raise ValueError(f"home heights are {', '.join(HOME_HEIGHTS)}, not {k!r}")
             lo, hi = HOME_HEIGHTS[k]
@@ -1638,11 +1656,10 @@ wall is two parallel face lines, 0.11-0.12 m apart inside, 0.25 m outside), wind
 plus jambs / swing arcs on 1wall), furniture outlines (2furni: closed polylines) and room names (ISLAK TEXT). The 3D \
 walls/openings (model JS) and the 2D drawing are rebuilt from the DXF automatically after you edit it. Never add TEXT.
 - furnish.js builds every piece of furniture, joinery and fitting in 3D, in plan metres (x east, y north, origin the \
-plan's south-west corner; heights in metres above the floor), with item(x, y, facing, build). It is shared by all \
-versions and branches on `version === "..."`. A change is ONLY for version "{version}" unless the user says all versions: \
-if a line serves several versions, split it, e.g. `version === "{version}" ? newValue : oldValue`, so every other version \
-builds exactly what it did (an edit that changes another version is refused, not saved). Never change an existing \
-material in materials.js (other versions use it): add a new one and pick it with that ternary. materials.js holds the \
+plan's south-west corner; heights in metres above the floor), with item(x, y, facing, build). furnish.js and materials.js \
+here are version "{version}"'s own files: nothing you change in them can reach another version, so edit the lines \
+directly and never add `version === ...` checks. Some `version === "..."` checks are left over from when the versions \
+shared one file; only the branches that run for "{version}" matter, and the others never run here. materials.js holds the \
 materials (colours, textures) that furnish.js uses by name (mat.whiteLacquer, ...). Use only names that exist there \
 (grep materials.js first): an unknown mat.x breaks the 3D.
 - item(x, y, facing, build): (x, y) is the middle of the piece's BACK, facing (N/S/E/W) is the way its front looks, \
@@ -1729,7 +1746,7 @@ copy of limewash there if no colour fits). Repainting every wall of a room is th
 - Height (\"taller\", \"lower\", \"85 cm high\") is 3D only: the plan outline is the footprint and stays as it is. \
 A target height is the top of the piece above the floor (\"85 cm high\" = top at 0.85); stretch or shrink the parts \
 under the top to suit, and nothing goes below the floor (no box starting under 0).
-- Colours and finishes: never change an existing material in materials.js (every piece in every version that uses it \
+- Colours and finishes: never change an existing material in materials.js (every piece that uses it \
 would change); add a new named one (a tinted copy in the colour asked for, not the nearest existing material) and use it only on \
 the pieces asked for. Change the surfaces you \
 actually see in the picture (a wardrobe's door leaves and frame, a cabinet's fronts): read the builder and follow \
@@ -1790,8 +1807,8 @@ home door height. All of it is for this version only. How openings look is set_o
 colour, glass (frosted, tinted, bronze, reflective), panes and transoms, door style (panelled, glazed, louvred, hidden \
 flush), a slider's style (bifold, pocket, barn), arch, a glass fanlight over a door, a round window.
 - Walls: only with dxf_edit's wall ops (add_wall, remove_wall, move_wall, set_wall_thickness, mark_wall), never face \
-lines by hand: they keep junctions closed. A half / low wall or a glass wall or balustrade = height / glass on add_wall or \
-mark_wall; a curved wall = add_wall through. A wall that splits a room makes a new room: add_room_label it (its name \
+lines by hand: they keep junctions closed. A half / low wall or a glass wall = height / glass on add_wall or mark_wall; a glass \
+balustrade round the terrace = set_openings home {{ parapet: height, parapetGlass: true }} (all parapets at once); a curved wall = add_wall through. A wall that splits a room makes a new room: add_room_label it (its name \
 sets wet / dry: "BATH", "WC", "KITCHEN", "LAUNDRY" are wet). Mind what the result warns (furniture in the way, ends that \
 no longer meet a wall) and fix it. Removing or moving a wall is structural: say the engineer has to confirm it.
 - Rooms: rename_room / add_room_label (dxf_edit) for names. set_room for a room's floor (any materials.js name, e.g. \
@@ -2248,6 +2265,7 @@ where it goes); if the words name a piece the circle doesn't cover, score 2 and 
 name the piece: if only one of that kind is in view, naming the kind is enough ("this window"), don't ask which; if
 several are, the words must pick one (left / right, nearest, by the sofa...), else score 2 and ask which.
 Without the view: naming the kind is enough.
+A room named in words (kitchen, laundry, living room, terrace...) is named even when it isn't in view: this home has one of each, never ask "which". A wall "between" two named rooms is named too.
 A question about the home (sizes, areas, how much paint / tile, what is where) is fine: score 5.
 Reply in the request's language.
 Answer JSON only: {"score":n,"tip":"what to add, max 15 words; empty when 5"}"""
@@ -2492,11 +2510,6 @@ def chat(req, emit=None):
                 ws.discard()
                 reply = ("Nothing was changed: this edit would undo a decision you already settled — " + lock_note(breaks) +
                          ". If you do want to change that, say so and name it (e.g. the column, the TV wall, the niches or the buffet).")
-            elif leak := version_leak(ws, message):  # and a change in one version stays in that version (26 Oct rule)
-                print(f"[edit-ai] refused, version leak: {leak[:300]}", flush=True)
-                ws.discard()
-                reply = (f"Nothing was changed: the edit would also have changed other plan versions, and a change in "
-                         f"\"{v}\" is only for \"{v}\". Ask again, or say \"in all versions\" if you want it everywhere.")
         if ws.changed:
             emit("Saving your edit")
         result = save(ws, reply or message) if ws.changed else None
@@ -3137,13 +3150,13 @@ def review(ws, message, reply):
             "request (a piece you added is \"added\", not \"moved\"; don't mention this check).")
     f0 = ws.orig["furnish.js"].decode() if "furnish.js" in ws.orig else ws.text("furnish.js")
     f1 = ws.text("furnish.js")
-    # An existing material changed in place: every piece and version using it would change.
+    # An existing material changed in place: every piece using it would change.
     if not ALL_VERSIONS.search(message):
         hit_ = mats_changed(ws)
         if hit_:
             uses = len(re.findall(r"\bmat\." + re.escape(hit_[0]) + r"\b", f1))
             return (f"Check the material: you changed the existing material {hit_[0]} in materials.js, which {uses} place(s) in "
-                    "furnish.js use (other pieces, other versions). Put it back as it was, add a new material next to it "
+                    "furnish.js use (other pieces too). Put it back as it was, add a new material next to it "
                     "(a tinted copy with its own name) and use that only on the piece(s) the user asked about." + tail)
     # A compass direction the user named, and every move went the other way.
     named = {d for d, rx in COMPASS.items() if rx.search(message)}
@@ -3213,13 +3226,10 @@ def review(ws, message, reply):
                 continue
             touched += [sc1[j] for j in range(j0, j1) if L1_[j].strip()] + [sc0[i] for i in range(i0, i1) if L0[i].strip() and tag_ in ("delete", "replace")]
         if touched and all(t_ is False for t_ in touched):
-            return (f"Check the version: every line you changed in furnish.js sits in a branch that doesn't run for version "
-                    f"\"{ws.v}\" (another version's `if (version === ...)` block), so nothing changes in what the user sees. "
-                    f"Find the line that builds this piece for \"{ws.v}\" (furniture_near lists only the ones that run here; "
-                    "pieces shared by several versions sit after the per-version blocks), put the change there instead "
-                    "(split it with a version check if the line serves other versions) and revert the edit you made." + tail)
-    if leak := version_leak(ws, message):
-        return leak + tail
+            return (f"Check the version: every line you changed in furnish.js sits in a branch that never runs here "
+                    f"(a leftover `if (version === ...)` block for another version), so nothing changes in what the user sees. "
+                    f"Find the line that builds this piece for \"{ws.v}\" (furniture_near lists only the ones that run here), "
+                    "put the change there instead and revert the edit you made." + tail)
     def bare(l):  # a line's code, without its trailing // comment or spacing (a comment-only edit isn't a change)
         return re.sub(r"\s+", "", re.sub(r"\s//.*$", "", l))
     now = {bare(l) for l in f1.splitlines()}
@@ -3707,7 +3717,7 @@ def review(ws, message, reply):
 
 def save(ws, summary):
     """Make the workspace's changes live: rebuild what the plan needs, store the files, write a revision."""
-    for p in SHARED:
+    for p in OWN:
         if p in ws.changed and (err := js_check(ws, p)):
             raise RuntimeError(f"the edit left {p} broken, so nothing was saved:\n{err}")
     if ws.plan_dirty or ws.cfg["tour"] in ws.changed:
@@ -3717,23 +3727,25 @@ def save(ws, summary):
     for path, (status, e, _) in resolve(ws.man).items():  # what stays live from before (conflicts kept for edit_ai_pull.py)
         if status in ("live", "replayed", "conflict"):
             files[path] = e
-    for path in ws.changed:
+    for name in ws.changed:  # stored, committed and listed under the version's own file names (own())
+        path = own(ws.v, name)
         prev = ws.res.get(path)
         dep = deployed(path)
-        data = ws.files[path]
+        data = ws.files[name]
         e = {"sha": sha(data), "url": store(data, path), "base": sha(dep), "base_url": store(dep, path) if dep else None}
-        pre = ws.orig.get(path)  # what the version showed before this edit: Undo's target (see undo())
+        pre = ws.orig.get(name)  # what the version showed before this edit: Undo's target (see undo())
         if pre is not None and pre != dep:
             e["pre_url"] = store(pre, path)
-        if path.endswith((".js", ".json")) and path in ws.ops and path not in (ws.cfg["model"], ws.cfg["drawing"]):
-            e["ops"] = (prev[1].get("ops") or [] if prev and prev[0] in ("live", "replayed") else []) + ws.ops[path]
+        if path.endswith((".js", ".json")) and name in ws.ops and path not in (ws.cfg["model"], ws.cfg["drawing"]):
+            e["ops"] = (prev[1].get("ops") or [] if prev and prev[0] in ("live", "replayed") else []) + ws.ops[name]
         if path in (ws.cfg["model"], ws.cfg["drawing"]) and derived_from:
             e["derived"] = derived_from
         if e["sha"] == e["base"]:
             files.pop(path, None)  # back to what is deployed
         else:
             files[path] = e
-    return write_rev(ws.v, files, summary, sorted(ws.changed), {p: ws.files[p] for p in ws.changed})
+    return write_rev(ws.v, files, summary, sorted(own(ws.v, p) for p in ws.changed),
+                     {own(ws.v, p): ws.files[p] for p in ws.changed})
 
 
 def write_rev(v, files, summary, changed, contents):
@@ -3768,6 +3780,9 @@ def undo(req):
     cur = latest(v)
     if not cur or not cur.get("changed"):
         raise ValueError("there is no Edit AI change to undo here")
+    if set(cur["changed"]) & set(OWN):
+        raise ValueError("that change was made before each version got its own files (26 Oct 2026), so it can't be "
+                         "undone from here; ask for the opposite change instead")
     before = json.loads(get(cur["parent"])) if cur.get("parent") else None
     res_before = resolve(before)
     files = {p: e for p, (st, e, _) in resolve(cur).items() if st in ("live", "replayed", "conflict")}
@@ -4009,4 +4024,5 @@ if __name__ == "__main__":
     print(f"Serving http://127.0.0.1:{port}  ·  Edit AI: {live_model(EASY_MODEL)} / {live_model(COMPLEX_MODEL)}"
           f"{f', check {PRECHECK_MODEL}, review {REVIEW_MODEL}' if gates_on() else ''}"
           f"{'' if ready() else '  (no ANTHROPIC_API_KEY or EDIT_AI_OPENAI_API_KEY: editing is off)'}", flush=True)
+    ThreadingHTTPServer.request_queue_size = 128  # the page asks for ~60 textures / models at once; the default 5 resets some
     ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()

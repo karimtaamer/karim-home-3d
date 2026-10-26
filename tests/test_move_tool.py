@@ -8,7 +8,7 @@ import edit_ai as E  # noqa: E402
 import move_tool as MT  # noqa: E402
 
 V = "kareems-changes"
-SRC = (Path(__file__).resolve().parent.parent / "furnish.js").read_text()
+SRC = (Path(__file__).resolve().parent.parent / f"furnish-{V}.js").read_text()  # the version's own file (26 Oct 2026)
 
 
 def call_at(text, needle, kind="item"):
@@ -95,10 +95,58 @@ class Gating(unittest.TestCase):
         t = MT.set_facing(SRC, c, "E", V, MT.scopes(SRC, V)(n))
         self.assertEqual(MT.find_call(t, {"x": 19.342, "y": 2.103, "facing": "E", "lines": [n]}, V)["how"], "expr")
 
+    def test_removed_line(self):
+        piece = {"x": 18.4, "y": 6.55, "facing": "N"}
+        t = MT.set_removed(SRC, piece, V, "chair")
+        self.assertIn('if (version === "kareems-changes") REMOVED.add("18.4,6.55,N");  // Move and Resize: deleted chair', t)
+        self.assertEqual(self.leak(t), [])
+        self.assertEqual(MT.set_removed(t, piece, V, "chair"), t)  # deleting it again doesn't add a second line
+        self.assertEqual(MT.set_removed(t, piece, V, "chair", gone=False), SRC)  # brought back: the line goes
+        t2 = MT.set_removed(SRC, {**piece, "twins": 3, "twin": 2}, V, "pendant")  # one of several at the same spot
+        self.assertIn('REMOVED.add("18.4,6.55,N#2");', t2)
+
     def test_fold_chained_ternary_and_unsized(self):
         self.assertEqual(E.for_version('x=version==="a"?1:K?2:3;', "b"), E.for_version("x=K?2:3;", "b"))
         self.assertEqual(E.for_version('f(sized(g(1),version==="a"?2:1,1));', "b"), "f(g(1));")
 
+
+
+KV = "karims-version"
+KSRC = (Path(__file__).resolve().parent.parent / f"furnish-{KV}.js").read_text()
+
+
+class Heights(unittest.TestCase):
+    """Z (Move and Resize up / down, taller / shorter) in Karim's version's file."""
+
+    def test_sized_lift_and_height_fold_for_other_versions(self):
+        n, c = call_at(KSRC, 'item(4.645, 2.529, "S"')
+        t = MT.set_size(KSRC, c, 1, 1, KV, True, 1.2, 0.1)
+        self.assertIn('sized(item(4.645', t)
+        self.assertIn('1, 1, version === "karims-version" ? 1.2 : 1, version === "karims-version" ? 0.1 : 0)', t)
+        self.assertEqual(E.other_versions_changed(KSRC, t, KV), [])
+        c2 = next(x for x in MT.calls_on_line(t, n) if x["kind"] == "item")
+        self.assertEqual(MT.sized_args(t, c2)[2:], ['version === "karims-version" ? 1.2 : 1', 'version === "karims-version" ? 0.1 : 0'])
+        back = MT.set_size(t, c2, 1, 1, KV, True, 1, 0)  # back to as it was: no wrapper left
+        self.assertEqual(back, KSRC)
+
+    def test_table_up_lift_and_twin_key(self):
+        piece = {"x": 18.4, "y": 7.6, "facing": "S", "twins": 3, "twin": 2}
+        t = MT.set_table(KSRC, piece, 18.4, 7.6, 1, 1, KV, "pendant light", 1, 0.2)
+        self.assertIn('MOVED["18.4,7.6,S#2"] = [18.4, 7.6, 1, 1, 1, 0.2];', t)
+        self.assertEqual(MT.table_entry(t, piece, KV), [18.4, 7.6, 1, 1, 1, 0.2])
+        self.assertEqual(MT.set_table(t, piece, 18.4, 7.6, 1, 1, KV, "pendant light"), KSRC)
+
+    def test_two_pieces_on_one_line_refind_the_right_one(self):
+        # item(16.95, 7.6, "E", ...); item(19.85, 7.6, "W", ...): after moving the second, re-finding it by where its
+        # call starts keeps the second (the first of its kind on the line is the other chair)
+        n, _ = call_at(KSRC, 'item(19.85, 7.6, "W"')
+        c = next(x for x in MT.calls_on_line(KSRC, n) if x["args"][0].strip() == "19.85")
+        t = MT.set_xy(KSRC, c, 19.85, 7.625, KV, True)
+        c2 = next(x for x in MT.calls_on_line(t, n) if x["name"] == c["name"])
+        self.assertEqual(MT.arg_num(c2["args"][1], KV), 7.625)
+        t2 = MT.set_size(t, c2, 1.09, 1, KV, True)
+        self.assertIn('sized(item(version === "karims-version" ? 19.85 : 19.85', t2)
+        self.assertIn('item(16.95, 7.6, "E"', t2)
 
 if __name__ == "__main__":
     unittest.main()

@@ -12,6 +12,7 @@ os.environ["EDIT_AI_GIT_SYNC"] = "0"
 import edit_ai  # noqa: E402
 
 V = "kareems-changes"
+F = f"furnish-{V}.js"  # the version's own furniture file (26 Oct 2026)
 PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
 USAGE = {"prompt_tokens": 1000, "completion_tokens": 100}
 
@@ -19,8 +20,8 @@ USAGE = {"prompt_tokens": 1000, "completion_tokens": 100}
 class Gates(unittest.TestCase):
     def setUp(self):
         self.root = Path(tempfile.mkdtemp(prefix="edit-ai-gates-"))
-        (self.root / "furnish.js").write_text("const sofa = 1;\n")
-        names = ("ROOT", "BLOB", "git_sync", "post", "openai", "tool", "review", "lock_breaks", "version_leak")
+        (self.root / F).write_text("const sofa = 1;\n")
+        names = ("ROOT", "BLOB", "git_sync", "post", "openai", "tool", "review", "lock_breaks")
         self.saved = {n: getattr(edit_ai, n) for n in names}
         self.key = os.environ.get("EDIT_AI_OPENAI_API_KEY")
         os.environ["EDIT_AI_OPENAI_API_KEY"] = "sk-test-" + "x" * 30
@@ -29,7 +30,6 @@ class Gates(unittest.TestCase):
         edit_ai.git_sync = lambda v, contents, summary: "test"
         edit_ai.review = lambda ws, message, reply: None  # the rule checks have their own tests
         edit_ai.lock_breaks = lambda ws, message, record=False: None
-        edit_ai.version_leak = lambda ws, message: None
         self.sent, self.scores, self.turns = [], [], []
         edit_ai.post = self.fake_post
         edit_ai.openai = self.fake_editor
@@ -95,7 +95,7 @@ class Gates(unittest.TestCase):
         res, phases = self.chat()
         self.assertEqual(res["review"]["score"], 9)
         self.assertFalse(res["review"]["improved"])
-        self.assertEqual(res["changed"], ["furnish.js"])
+        self.assertEqual(res["changed"], ["furnish.js"])  # chat() reports the generic names
         self.assertEqual(phases, ["Checking the edit", "Saving your edit"])
         self.assertIsNone(res["costs"]["fix"])
         self.assertAlmostEqual(res["costs"]["total"], res["costs"]["edit"] + res["costs"]["review"])
@@ -110,7 +110,7 @@ class Gates(unittest.TestCase):
         self.assertEqual((res["review"]["score"], res["review"]["final"], res["review"]["improved"]), (4, 9, True))
         self.assertIn("We found improvements, please wait a moment", phases)
         self.assertTrue(any("Make it 3, not 2." in t for t in self.turns), "the editor gets Sol's notes")
-        live = edit_ai.patches(V)["files"]["furnish.js"]
+        live = edit_ai.patches(V)["files"][F]
         self.assertIn("sofa = 3", live.get("content") or (self.root / live["url"].lstrip("/")).read_text())
         c = res["costs"]
         self.assertGreater(c["fix"], 0)
@@ -131,7 +131,7 @@ class Gates(unittest.TestCase):
         self.scores = ["{broken"]
         res, _ = self.chat()
         self.assertIsNone(res["review"])
-        self.assertEqual(res["changed"], ["furnish.js"])
+        self.assertEqual(res["changed"], ["furnish.js"])  # chat() reports the generic names
 
     # --- "No, try again" on the done toast ---
     def test_retry_runs_on_the_strong_model(self):

@@ -22,8 +22,9 @@ from ezdxf import recover, bbox as ebbox
 ROOT = Path(__file__).resolve().parent
 ORIGIN = (190.4049651574427, -121.6132067325871)  # model*.js "origin": plan = DWG - origin
 TOL = 0.02
-# Main on the page loads kareems-changes (2026-10-25), Karim's version karims-version (26 Oct); 'main' here is the retired pre-25-Oct layout (model.js, dwg/main.dxf).
-MODELS = {'main': 'model.js', 'naghams-changes': 'model-naghams-changes.js', 'kareems-changes': 'model-kareems-changes.js',
+# Main on the page loads kareems-changes (2026-10-25), Karim's version karims-version (26 Oct). Each version has its
+# own furniture, furnish-<version>.js (26 Oct 2026); the retired pre-25-Oct 'main' (model.js) has none any more.
+MODELS = {'naghams-changes': 'model-naghams-changes.js', 'kareems-changes': 'model-kareems-changes.js',
           'karims-version': 'model-karims-version.js'}
 
 # name, versions (None = all), DWG source, axes to check, 3D materials, margin (m, or (x, y)) round the outline.
@@ -154,7 +155,7 @@ console.log(JSON.stringify(out));
 
 def boxes_3d(version):
     """Every box furnish.js builds for this version: (material, x0, x1, y0, y1, h0, h1), plan metres."""
-    src = (ROOT / 'furnish.js').read_text()
+    src = (ROOT / f'furnish-{version}.js').read_text()
     src = re.sub(r'from "three[^"]*"', 'from "./three.mjs"', src)
     with tempfile.TemporaryDirectory() as d:
         Path(d, 'three.mjs').write_text(MOCK)
@@ -163,7 +164,7 @@ def boxes_3d(version):
         r = subprocess.run(['node', str(Path(d, 'run.mjs')), str(ROOT / MODELS[version]), version],
                            capture_output=True, text=True)
     if r.returncode:
-        sys.exit(f'furnish.js failed under node:\n{r.stderr}')
+        sys.exit(f'furnish-{version}.js failed under node:\n{r.stderr}')
     return [b for b in json.loads(r.stdout) if None not in b]  # NaN (sizes from stand-in values) -> null
 
 
@@ -197,7 +198,7 @@ def main():
     msp = recover.readfile(a.dxf)[0].modelspace()
     boxes = boxes_3d(a.version)
     flags = 0
-    print(f'{a.dxf} / furnish.js ({a.version}), cm: DWG size @ centre vs 3D size @ centre')
+    print(f'{a.dxf} / furnish-{a.version}.js, cm: DWG size @ centre vs 3D size @ centre')
     for name, versions, src, axes, mats, margin in ITEMS:
         if versions and a.version not in versions:
             continue

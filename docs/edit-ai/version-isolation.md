@@ -1,30 +1,35 @@
-# One version's change stays in that version
+# Every version has its own everything
 
-Karim, 26 Oct 2026: *"From now on, any change in any version is only for that version."*
+Karim, 26 Oct 2026: *"Each version should be totally separate: everything. Any change in 2D, 3D, furnishing, or
+anything I do in a plan should only apply to that plan. Even renders."*
 
-`furnish.js` and `materials.js` are shared by every plan version, so an Edit AI change has to be split:
+Every plan version has its own copy of every file it is built from or shows. Nothing is shared or inherited:
 
-* **A value on a shared line:** `version === "kareems-changes" ? newValue : oldValue`. Every other version must
-  build exactly what it did before.
-* **A whole piece:** an `if (version === "kareems-changes") { ... }` branch.
-* **A colour / finish:** add a NEW material to `materials.js` and pick it with the ternary above. Never change an
-  existing material (`walnut`, `linenSlate`, ...) in place: other versions use it.
+| What | File per version |
+|---|---|
+| Plan (2D) | `dwg/<v>.dxf` |
+| Walls, openings (3D) | `model-<v>.js`, `drawing-<v>.json` (built from the DXF) |
+| Furniture, joinery, fittings | `furnish-<v>.js` |
+| Materials, colours | `materials-<v>.js` |
+| Tour, room / opening specs | `tour-<v>.json` (standalone; no `extends`) |
+| Photo spots, renders | `spots-<v>.json` (standalone; no `extends`), plus that file's Blob spots |
 
-**Main and Karim's version are separate plans** (26 Oct 2026): Main is `kareems-changes`, Karim's version is
-`karims-version` (`?v=kareems-changes` on the page). Code both of them share reads
-`["kareems-changes", "karims-version"].includes(version)` (or `KC` / `GKC` / ... built from it); a change for one
-of them names that one alone, e.g. `version === "karims-version" ? newValue : oldValue`.
+Versions: `kareems-changes` (Main), `karims-version` (Karim's version, `?v=kareems-changes` on the page),
+`naghams-changes`, `as-built`.
 
-Only when the user says so ("in all versions", "everywhere", "both versions") may a change reach every version.
+## Edit AI
 
-## How it is enforced (`edit_ai.py`)
-
-* `SYSTEM` tells the model the rule, and that an edit breaking it is refused.
-* `version_leak()` runs before saving. It builds `furnish.js` as each OTHER version runs it (`for_version()`: other
-  versions' branches dropped, `version === "x"` and `const KC = version === "x"` folded, `true ? a : b` resolved)
-  before and after the edit; if any differ, or an existing material changed, `review()` sends the model back to
-  wrap its change, and the last gate in `chat()` discards the edit with a clear reply if it still leaks.
-* Tests: `python3 tests/test_edit_ai.py`.
+* The model, its tools and the checks call the files `furnish.js` / `materials.js`; `own(v, path)` in `edit_ai.py`
+  turns that into the version's file wherever a file is read, stored in the live store or committed. `edit-ai.js`
+  does the same in the page (`liveImport(live, "furnish.js")`, `live.url("furnish.js")`).
+* An edit simply changes the version's own file. There is no "in all versions": a change you want in several
+  versions is made in each of them.
+* Each `furnish-<v>.js` started as an exact copy of the old shared `furnish.js`, so some `version === "..."` checks
+  remain. Only the branches that run for that version matter; `version_scope()` still marks the others for the model
+  (grep / furniture_near) and `review()` still catches an edit that only touches a branch that never runs.
+* Live overrides from before the split were stored as `furnish.js` / `materials.js`. `resolve()` drops the ones
+  already pulled into git (`PULLED`), replays any later one onto the version's own file (`legacy()`), and
+  `edit_ai_pull.py` merges such a leftover into `furnish-<v>.js`. Undo of a pre-split change is refused.
 
 ## Undo
 

@@ -81,9 +81,10 @@ class Gating(unittest.TestCase):
 
     def test_turn_is_gated(self):
         self.assertEqual([MT.turned("S", 90), MT.turned("S", -90), MT.turned("W", 180), MT.turned("S", 45)], ["E", "W", "E", 0.7854])
-        n, c = call_at(SRC, 'item(19.1, 5.95, "S"')
+        n = SRC[:SRC.index("// DWG armchair")].count("\n") + 1  # its x, y may carry other versions' gates
+        c = next(x for x in MT.calls_on_line(SRC, n) if x["kind"] == "item")
         t = MT.set_facing(SRC, c, "E", V, MT.scopes(SRC, V)(n))
-        self.assertIn('item(19.1, 5.95, version === "kareems-changes" ? "E" : "S", p => {', t)
+        self.assertIn(', version === "kareems-changes" ? "E" : "S", p => {  // DWG armchair', t)
         self.assertEqual(self.leak(t), [])
         c2 = next(x for x in MT.calls_on_line(t, n) if x["kind"] == "item")
         self.assertEqual(MT.facing_of(c2["args"][2], V), "E")

@@ -9,6 +9,10 @@ version's DXF through edit_ai_dxf.py's move_piece / resize_piece. The plan's ans
 span) is what the 3D gets, so both views move by the same metres. Then edit_ai.save() rebuilds the model and drawing,
 stores the live override and git-syncs, exactly like an Edit AI change (and Edit AI's Undo takes it back).
 
+Where each piece started: move-origins-<version>.json lists, for every piece Move and Resize has changed, its plan box
+and turn (rotation.y) before its FIRST change, found by its label and where its plan box is now; move.js measures
+"moved" and "turned" from there, not from the last Accept. It is stored, undone and git-synced with the change.
+
 One version's change stays in that version (docs/edit-ai/version-isolation.md): a number on a line other versions
 also run becomes `version === "<v>" ? new : old`; a piece a loop or shared code places gets a version-guarded line in
 furnish.js's MOVED table; and before saving, other_versions_changed() must find every other version unchanged.
@@ -280,7 +284,7 @@ def outlines_near(ws, box, pad=0.3):
             xs, ys = [p[0] for p in ps], [p[1] for p in ps]
             b = (min(xs), min(ys), max(xs), max(ys))
             if (b[2] - b[0]) * (b[3] - b[1]) >= 0.02:
-                out.append({"handle": d["handle"], "box": b})
+                out.append({"handle": d["handle"], "box": b, "pts": d.get("points")})  # pts: None for a curve (box only)
     return out
 
 
@@ -290,6 +294,15 @@ def area(b):
 
 def inter(a, b):
     return area((max(a[0], b[0]), max(a[1], b[1]), min(a[2], b[2]), min(a[3], b[3])))
+
+
+def inside(p, pts):
+    """Is plan point p inside the polygon pts (closed or not: its last point joins its first)?"""
+    hit = False
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:] + pts[:1]):
+        if (y0 > p[1]) != (y1 > p[1]) and p[0] < (x1 - x0) * (p[1] - y0) / (y1 - y0) + x0:
+            hit = not hit
+    return hit
 
 
 def outline_of(ws, piece):
@@ -308,7 +321,10 @@ def outline_of(ws, piece):
                 blk, blk_iou = o, iou
         elif iou > best_iou:
             best, best_iou = o, iou
-        if not o.get("block") and area(box) and i / area(box) >= 0.8 and (cover is None or area(o["box"]) < area(cover["box"])):
+        # a group outline it stands in: its real shape, not just its extent (a plant in the crook of the terrace's L planter)
+        mid = ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
+        if not o.get("block") and area(box) and i / area(box) >= 0.8 and (not o.get("pts") or inside(mid, o["pts"])) \
+                and (cover is None or area(o["box"]) < area(cover["box"])):
             cover = o
     if best and best_iou >= 0.45:
         return "own", best["handle"], best["box"]
@@ -335,6 +351,37 @@ def solve(A, P, S, Si, sign, b0, b1, n0, n1):
     um = (sign * (c - A) / Si - P) / S
     S2 = S * k
     return A, sign * (c2 - A) / Si - S2 * um, S2
+
+
+# --- Where each piece started (move-origins-<version>.json) -----------------------------------------------------------
+def origins_path(v):
+    return f"move-origins-{v}.json"
+
+
+def origin_at(entries, label, box, tol=0.05):
+    """The entry for the piece with this label whose plan box is now centred within tol of box's centre, or None."""
+    c = ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
+    best = min((e for e in entries if e["label"] == label), default=None,
+               key=lambda e: math.hypot(e["at"][0] - c[0], e["at"][1] - c[1]))
+    return best if best and math.hypot(best["at"][0] - c[0], best["at"][1] - c[1]) <= tol else None
+
+
+def record_origin(ws, v, label, box, rot, nbox, nrot):
+    """Carry the piece's first box / turn over to where it is now (dropped once it is back where it started)."""
+    path = origins_path(v)
+    try:
+        entries = json.loads(ws.text(path) or "[]")
+    except ValueError:
+        entries = []
+    o = origin_at(entries, label, box)
+    if o:
+        entries.remove(o)
+    first = {"box": o["box"], "rot": o["rot"]} if o else {"box": [r4(t) for t in box], "rot": r4(rot)}
+    if not (all(abs(a - b) < 0.003 for a, b in zip(first["box"], nbox)) and abs(first["rot"] - nrot) < 1e-3):
+        entries.append({"label": label, "at": [r4((nbox[0] + nbox[2]) / 2), r4((nbox[1] + nbox[3]) / 2)], **first})
+    entries.sort(key=lambda e: (e["label"], e["at"]))
+    body = "[\n" + ",\n".join(json.dumps(e) for e in entries) + "\n]\n" if entries else "[]\n"
+    ws.write(path, body.encode())  # a line each: merges cleanly
 
 
 # --- Editing furnish.js ------------------------------------------------------------------------------------------------
@@ -722,6 +769,8 @@ def transform(req):
         raise ValueError(f"That change would also show in {', '.join(others)}, and a change in one version must stay in it, "
                          "so nothing was saved. Make an Edit can do it.")
     write_furnish(ws, text)
+    rot0 = float(piece.get("rot") or 0)
+    record_origin(ws, v, label, box, rot0, nbox, rot0 + math.radians(rot))
     if (breaks := E.lock_breaks(ws, "")):  # a settled decision: saved on purpose (Accept), its lock suspended; Undo restores it
         E.lock_breaks(ws, " ".join(l["names"][0] for l, _ in breaks), record=True)
         notes.append("this changes a settled design decision (" + "; ".join(l["what"][:90] for l, _ in breaks)

@@ -103,6 +103,7 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
       box: pb.box.map(r4), low: r4(pb.low), high: r4(pb.high),
       hasParts: item.children.some(c => c.userData.part) && !host,
       anchor: [r4(item.position.x), r4(-item.position.z)], moved: !!item.userData.piece.moved, twins: twinsOf(item),
+      rot: r4(o.rotation.y),
     };
     if (host) {
       Object.assign(d, { part: o.userData.label, pos: [r4(o.position.x), r4(o.position.z)], pscale: [r4(o.scale.x), r4(o.scale.z)],
@@ -184,6 +185,7 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
   function select(o) {
     if (draft) discard(true);
     sel = o && { o, ...planBox(o), path: pathTo(o), pos0: o.position.clone(), scale0: o.scale.clone(), rot0: o.rotation.y };
+    if (sel) sel.first = firstOf(nameOf(o), sel.box) || { box: sel.box, rot: sel.rot0 };
     if (sel) sel.h = Math.min(sel.high, Math.max(sel.low, 0.9));
     showChips();
     onChange?.();
@@ -205,6 +207,23 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     };
     chips.replaceChildren(...trail.map((c, i) => chip(c, (i ? "› " : "Whole ") + nameOf(c), "crumb")),
       ...parts.slice(0, 6).map(c => chip(c, "+ " + nameOf(c), "part")));
+  }
+
+  // --- Where a piece started: its box and turn before its first Accept (move_tool.py keeps move-origins-<v>.json) -----
+  let origins = [];
+  function loadOrigins() {
+    const f = `move-origins-${version === "main" ? "kareems-changes" : version}.json`;
+    fetch(live.url(f), { cache: "no-store" }).then(r => (r.ok ? r.json() : [])).then(j => (origins = Array.isArray(j) ? j : [])).catch(() => {});
+  }
+  // The entry for the piece with this label whose box is now centred within 5 cm of b's centre (as move_tool.py finds it).
+  function firstOf(name, b) {
+    const c = [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
+    let best = null, bd = 0.05;
+    for (const e of origins) {
+      const d = Math.hypot(e.at[0] - c[0], e.at[1] - c[1]);
+      if (e.label === name && d <= bd) { best = e; bd = d; }
+    }
+    return best;
   }
 
   // --- The draft: a preview in place, saved only on Accept -----------------------------------------------------------
@@ -249,16 +268,19 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     const w = o.parent.localToWorld(o.position.clone()).add(shift);
     o.position.copy(o.parent.worldToLocal(w));
   }
-  // What the draft does, in words: its size (and what it was), how far it moved.
+  // What the piece / draft is, in words: its size (and what it was), how far it has moved and turned since it started
+  // (its first position, not the last Accept).
   function draftText() {
-    const b = sel.box, n = shown(), w = n[2] - n[0], d = n[3] - n[1];
+    let b = sel.first.box;
+    const n = shown(), w = n[2] - n[0], d = n[3] - n[1];
     const size = `${Math.round(w * 100)} × ${Math.round(d * 100)} cm`;
-    if (!draft) return `${nameOf(sel.o)} · ${size}`;
-    if (draft.rot) {
-      const c = [(n[0] + n[2] - b[0] - b[2]) / 2, (n[1] + n[3] - b[1] - b[3]) / 2], r = Math.round(draft.rot * 10) / 10;
+    const r = Math.round((((turn() + (sel.rot0 - sel.first.rot) * 180 / Math.PI) % 360 + 540) % 360 - 180) * 10) / 10;
+    if (r && !(draft && !same(sizeOf(n), sizeOf(sel.box)))) {
+      const c = [(n[0] + n[2] - b[0] - b[2]) / 2, (n[1] + n[3] - b[1] - b[3]) / 2];
       const moved = Math.abs(c[0]) >= 0.005 || Math.abs(c[1]) >= 0.005;
       return `${nameOf(sel.o)} · turned ${Math.abs(r)}° ${r > 0 ? "↺" : "↻"}${moved ? " · moved " + dirText(c) : ""}`;
     }
+    if (r) b = sel.box;  // a turned piece being resized: its size against how it stands now
     const resized = !same([w, d], [b[2] - b[0], b[3] - b[1]]);
     const c = [(n[0] + n[2] - b[0] - b[2]) / 2, (n[1] + n[3] - b[1] - b[3]) / 2];
     const bits = [];
@@ -532,7 +554,8 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     if (on === active) return;
     active = on;
     if (!on) { discard(true); select(null); }
-    else if (furnishText === null) {
+    if (on) loadOrigins();
+    if (on && furnishText === null) {
       furnishText = "";
       fetch(live.url("furnish.js")).then(r => r.text()).then(t => (furnishText = t)).catch(() => {});
     }

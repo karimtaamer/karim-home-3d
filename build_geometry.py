@@ -6,6 +6,21 @@ Usage: ~/.dwg-tools/bin/python build_geometry.py <plan.dxf> [--out model.js] [--
 tour-naghams-changes.json; see VERSIONS in index.html. --wall adds a wall face line the drawing
 left out, in DWG coordinates; repeat it for several. --window gives one window its own sill and head,
 and frosted glass, without touching the others.)
+
+The version's tour JSON may also carry (Edit AI writes them; DWG coordinates):
+    "heights": {"ceiling": 2.6, "door": 2.1, "sill": 0.9, "window": 2.1, "slider": 2.4, "parapet": 1.1}
+        home-wide heights in metres (any left out keep the defaults below)
+    "openings": [{"at": [x, y], "kind": "window" | "slider" | "door", "sill": 0.6, "head": 2.4, "frosted": true,
+                  "panel": "glass" | "wood"}]
+        the opening holding point `at` becomes that kind (a terrace window stays a window instead of a slider, a bare
+        doorway becomes a sliding door) and gets its own sill / head (doors and sliders: head) / glass / panel; any
+        other keys (frame, leaf, glass, panes, style, handle, arch, fanlight...) go to the viewer as they are.
+    "rooms": {"NAME": {"kind": "wet" | "dry" | "outdoor", ...}}   a room's kind (floor / lining defaults); the rest
+        (floor, walls, ceiling, ceilingHeight, skirting, tileHeight, floorLevel, light, skylights) goes to the viewer
+    "walls": [{"a": [x, y], "b": [x, y], "thickness": 0.12, "height": 1.1, "glass": true}]
+        that stretch of wall built low (height) and / or as glass instead of a full-height solid wall
+    "niches": [{"box": [[x, y], ...4], "bottom": 0.9, "top": 1.5}]   a recess carved into the wall, solid below / above
+    "notes": [{"at": [x, y], "text": "..."}]   pinned notes; "start": [x, y] where the walk-through starts
 """
 import heapq
 import json
@@ -22,6 +37,7 @@ from shapely.validation import make_valid
 
 WALL_LAYER, WINDOW_LAYER, DOOR_LAYER, FURNI_LAYERS = "1wall", "Windows", "3door", ("2furni", "2 furni")
 CEILING, DOOR_HEAD, SILL, WIN_HEAD, PARAPET, SLIDER_HEAD = 2.6, 2.1, 0.9, 2.1, 1.1, 2.4
+LOOK = ("frame", "leaf", "glass", "panes", "transoms", "style", "handle", "arch", "fanlight", "shape")  # opening looks
 CLEARANCE, GRID = 0.18, 0.1  # tour camera keeps this far from walls; path-finding grid (m)
 WET = ("kitchen", "toilet", "bath", "wc", "laundry", "shower", "مطبخ", "حمام", "غسيل")
 OUTDOOR = ("terrace", "balcony", "garden", "roof", "تراس", "بلكونة", "شرفة", "حديقة")
@@ -230,6 +246,7 @@ def main():
     doc, _ = recover.readfile(src)
     msp = doc.modelspace()
     B = plan_bounds(msp)
+    tour = load_tour(Path(__file__).parent / (arg("--tour") or "tour.json"))
     inb = lambda s: B.contains(LineString(s))
 
     wall_segs, window_segs, closed_wall = [], [], []
@@ -327,6 +344,12 @@ def main():
                 if B.contains(c) and (door_block_at is None or c.distance(door_block_at) < 0.3):
                     swings.setdefault((round(c.x, 2), round(c.y, 2)), ([], door_block_at is not None))[0].append(e)
     collect(msp)
+    # Double doors: two swings whose closed leaves meet in the middle (each leaf's end lands on the other's, not a jamb).
+    all_ends = [(h, (a.start_point.x, a.start_point.y)) for h, (arcs_, _) in swings.items() for a in arcs_] + \
+               [(h, (a.end_point.x, a.end_point.y)) for h, (arcs_, _) in swings.items() for a in arcs_]
+    leaf_ends = {}
+    for h, e in all_ends:
+        leaf_ends.setdefault(h, []).extend(f for h2, f in all_ends if h2 != h and math.dist(e, f) < 0.03)
     # The open leaf is drawn (a hatched panel); the closed position is empty - that's the opening.
     # Only lines running a good part of the leaf count: the other states of a dynamic door block
     # next door leave a litter of short jamb pieces over this one's closed position.
@@ -349,7 +372,7 @@ def main():
             # A closed leaf crosses the gap and ends on the far jamb; an open leaf ends out in the
             # room (the gap closing also fills small rooms, so crossing gap alone isn't enough).
             across = [e for e in ends if LineString([c, e]).intersection(gaps).length >= 0.4 * r
-                      and Point(e).distance(walls) < 0.2]
+                      and (Point(e).distance(walls) < 0.2 or any(math.dist(e, f) < 0.03 for f in leaf_ends.get(c, ())))]
             # A door drawn over a wall the drawing kept continuous: closed leaf lies inside the wall.
             buried = [e for e in ends if LineString([c, e]).intersection(wall_band).length >= 0.8 * r]
             if not across and not buried and not from_block:
@@ -427,7 +450,9 @@ def main():
         if w <= MAX_T + 0.1 and 0.6 <= l <= 2.0 and rectangularity(g) > 0.8 and \
                 g.exterior.intersection(wall_edge).length < 0.8 * l:
             doors.append(g.minimum_rotated_rectangle)
-    openings += [("door", d) for d in doors]
+    for d in doors:
+        if not any(k == "door" and g.symmetric_difference(d).area < 0.01 for k, g in openings):
+            openings.append(("door", d))
     # A wall-thin gap narrower than any door is wall the drawing left out (e.g. behind an open leaf).
     taken = unary_union([g for _, g in openings]).buffer(0.01, join_style=2)
     fills = []
@@ -445,6 +470,15 @@ def main():
         if k == "--cut":
             x0, y0, x1, y1 = map(float, sys.argv[i + 1].split(","))
             walls = walls.difference(box(x0, y0, x1, y1))
+    niches = []  # the tour's recesses: carved full height here, solid below `bottom` and above `top` in the viewer
+    for nc in tour.get("niches", []):
+        try:
+            poly = Polygon([tuple(q) for q in nc["box"]])
+        except Exception:
+            continue
+        if poly.is_valid and poly.area > 0.001 and poly.intersects(walls):
+            walls = walls.difference(poly.buffer(0.002, join_style=2))
+            niches.append((poly, float(nc.get("bottom", 0)), float(nc.get("top", CEILING))))
 
     # Floor: the flat's outline (walls + openings, small gaps bridged), with holes filled.
     solid = make_valid(unary_union([walls] + [g for _, g in openings])).buffer(0.005, join_style=2)
@@ -492,10 +526,17 @@ def main():
     regions = [(q, closed_in) for gs, closed_in in ((enclosed, True), ([g for g in as_polys(leftover) if g.area > 0.3], False))
                for g in gs for q in as_polys(g.difference(cut)) if q.area > 0.3]
     # A region holding several room names (open-plan) is split between them by nearest name.
-    tour = load_tour(Path(__file__).parent / (arg("--tour") or "tour.json"))
     moved = {sd["name"] for sd in tour.get("seeds", []) if sd.get("replace")}
     seeds = [(l["text"], (l["x"] + 0.3, l["y"] + 0.1)) for l in labels if l["text"] not in moved] + \
             [(sd["name"], tuple(sd["at"])) for sd in tour.get("seeds", [])]
+    # Home-wide heights from the version's tour (Edit AI): the rest keep the defaults.
+    hts = tour.get("heights") or {}
+    ceiling, door_head, sill_h, win_head, slider_head, parapet_h = (
+        float(hts.get(k, d)) for k, d in (("ceiling", CEILING), ("door", DOOR_HEAD), ("sill", SILL), ("window", WIN_HEAD),
+                                           ("slider", SLIDER_HEAD), ("parapet", PARAPET)))
+    specs_r = {k.upper().rstrip("."): v for k, v in (tour.get("rooms") or {}).items() if isinstance(v, dict)}
+    kind_of = lambda n: specs_r.get(n.upper().rstrip("."), {}).get("kind") if specs_r.get(n.upper().rstrip("."), {}).get("kind") \
+        in ("wet", "dry", "outdoor") else room_kind(n)
     rooms = []  # (name, kind, polygon)
     for g, closed_in in regions:
         inside = [(n, pt) for n, pt in seeds if g.contains(Point(pt))]
@@ -510,7 +551,7 @@ def main():
             cells = voronoi_diagram(MultiPoint([pt for _, pt in inside]), envelope=g.envelope.buffer(5)).geoms
             parts = [(n, next(c for c in cells if c.contains(Point(pt))).intersection(g)) for n, pt in inside]
         for n, part in parts:
-            rooms.append((n, room_kind(n), part.intersection(floor)))
+            rooms.append((n, kind_of(n), part.intersection(floor)))
     # One entry per room name.
     merged_rooms = {}
     for n, k, g in rooms:
@@ -522,12 +563,31 @@ def main():
     # Walls bounding only the outdoor space are parapets, not full-height walls.
     parapet = walls.intersection(outdoor.buffer(0.6, join_style=2)).difference(indoor.buffer(0.6, join_style=2))
     full = walls.difference(parapet)
+    special = []  # the tour's low / glass stretches of wall, taken out of the full-height and parapet walls
+    for ws_ in tour.get("walls", []):
+        try:
+            seg = LineString([tuple(ws_["a"]), tuple(ws_["b"])])
+            region = seg.buffer(float(ws_.get("thickness", 0.12)) / 2 + 0.01, cap_style=2, join_style=2)
+        except Exception:
+            continue
+        part = walls.intersection(region)
+        if part.is_empty:
+            continue
+        full, parapet = full.difference(region), parapet.difference(region)
+        special.append((part, float(ws_.get("height", CEILING)), bool(ws_.get("glass"))))
 
     # Windows between an indoor room and the terrace are full-height sliding doors (per renders).
     named = {n: g for n, _, g in rooms}
     for i, (k, g) in enumerate(openings):
         if k == "window" and g.buffer(0.3).intersects(outdoor) and g.buffer(0.3).intersects(indoor):
             openings[i] = ("slider", g)
+    # The tour's opening specs: a kind of its own (before the route, which walks only through doors and sliders) and
+    # its own heights / glass / panel for the model.
+    specs = [o for o in tour.get("openings", []) if isinstance(o, dict) and len(o.get("at") or []) == 2]
+    spec_of = lambda g: next((o for o in specs if g.buffer(0.05).contains(Point(*o["at"]))), {})
+    for i, (k, g) in enumerate(openings):
+        if spec_of(g).get("kind") in ("window", "slider", "door"):
+            openings[i] = (spec_of(g)["kind"], g)
 
     # Tour route: outside the front door, then stop to stop, walking through doors and sliders.
     legs, start, nav = [], None, None
@@ -543,7 +603,7 @@ def main():
         nx, ny = nx / L, ny / L
         if floor.contains(Point(c.x + nx * 0.5, c.y + ny * 0.5)):
             nx, ny = -nx, -ny
-        start = (c.x + nx * 1.6, c.y + ny * 1.6)
+        start = tuple(tour["start"]) if len(tour.get("start") or []) == 2 else (c.x + nx * 1.6, c.y + ny * 1.6)
         apron = LineString([(c.x, c.y), start]).buffer(0.5)
         walkable = unary_union([floor, passable.buffer(0.15), apron]).difference(walls.buffer(CLEARANCE, join_style=2))
         walkable = unary_union([walkable, apron.difference(walls.buffer(0.05))])
@@ -585,24 +645,50 @@ def main():
     # (and frosted glass), the rest keep SILL / WIN_HEAD. Nothing is written for windows without one.
     overrides = [sys.argv[i + 1].split(",") for i, k in enumerate(sys.argv) if k == "--window"]
     def window_override(k, g):
+        own = {}
         for o in overrides:
             if k == "window" and g.buffer(0.01).contains(Point(float(o[0]), float(o[1]))):
-                return {"sill": float(o[2]), "head": float(o[3]), **({"frosted": True} if "frosted" in o[4:] else {})}
-        return {}
+                own = {"sill": float(o[2]), "head": float(o[3]), **({"frosted": True} if "frosted" in o[4:] else {})}
+                break
+        sp = spec_of(g)  # the tour's spec wins over --window
+        for key in (("sill", "head") if k == "window" else ("head",)):
+            if sp.get(key) is not None:
+                own[key] = float(sp[key])
+        if k == "window" and sp.get("frosted") is not None:
+            own.pop("frosted", None)
+            own.update({"frosted": True} if sp["frosted"] else {})
+        if k == "slider" and sp.get("panel") in ("glass", "wood"):
+            own["panel"] = sp["panel"]
+        for key in LOOK:  # how it looks: the viewer's business
+            if sp.get(key) is not None:
+                own[key] = sp[key]
+        return own
+    # A swing whose opening is no longer a door (made a window or a slider) isn't drawn; one whose door has its own
+    # head gets it for the leaf.
+    door_at = lambda c: next(((k, g) for k, g in openings if g.buffer(0.15).contains(Point(c))), (None, None))
+    door_swings = [sw for sw in door_swings if door_at(sw[0])[0] in ("door", None)]
     ox, oy = B.bounds[0], B.bounds[1]
     ring = lambda p: [[round(x - ox, 4), round(y - oy, 4)] for x, y in p.exterior.coords[:-1]]
     holes = lambda p: [[[round(x - ox, 4), round(y - oy, 4)] for x, y in h.coords[:-1]] for h in p.interiors]
     model = {
-        "ceiling": CEILING, "doorHead": DOOR_HEAD, "sill": SILL, "winHead": WIN_HEAD, "sliderHead": SLIDER_HEAD,
+        "ceiling": ceiling, "doorHead": door_head, "sill": sill_h, "winHead": win_head, "sliderHead": slider_head,
         "bounds": [B.bounds[2] - ox, B.bounds[3] - oy],
-        "walls": [{"outer": ring(p), "holes": holes(p), "height": CEILING} for p in as_polys(full) if p.area > 0.002]
-                 + [{"outer": ring(p), "holes": holes(p), "height": PARAPET} for p in as_polys(parapet) if p.area > 0.002],
+        "walls": [{"outer": ring(p), "holes": holes(p), "height": ceiling} for p in as_polys(full) if p.area > 0.002]
+                 + [{"outer": ring(p), "holes": holes(p), "height": parapet_h} for p in as_polys(parapet) if p.area > 0.002]
+                 + [{"outer": ring(p), "holes": holes(p), "height": min(h_, ceiling), **({"glass": True} if gl_ else {})}
+                    for part_, h_, gl_ in special for p in as_polys(part_) if p.area > 0.002],
+        "niches": [{"outer": ring(p), "bottom": b_, "top": t_} for p, b_, t_ in niches],
+        "rooms": {n: v for n, v in (tour.get("rooms") or {}).items() if isinstance(v, dict)},
+        "notes": [{"at": [round(n_["at"][0] - ox, 3), round(n_["at"][1] - oy, 3)], "text": str(n_.get("text", ""))[:200]}
+                  for n_ in tour.get("notes", []) if len(n_.get("at") or []) == 2],
         "floor": [{"outer": ring(p), "holes": holes(p), "kind": k, "room": n} for n, k, g in rooms for p in as_polys(g)],
         "skins": [{"outer": ring(p), "holes": holes(p), "kind": k, "room": n} for n, k, p in skins],
         "lines": [{"kind": c, "pts": [[round(x - ox, 3), round(y - oy, 3)] for x, y in pts]} for c, pts in drawn],
         "swings": [{"hinge": [round(c[0] - ox, 3), round(c[1] - oy, 3)], "r": round(r, 3),
                     "closed": [round(e[0] - ox, 3), round(e[1] - oy, 3)],
-                    **({"open": [round(o[0] - ox, 3), round(o[1] - oy, 3)]} if as_drawn(c) else {})}
+                    **({"open": [round(o[0] - ox, 3), round(o[1] - oy, 3)]} if as_drawn(c) else {}),
+                    **({k_: v_ for k_, v_ in window_override("door", door_at(c)[1]).items() if k_ in ("head",) + LOOK}
+                       if door_at(c)[1] is not None else {})}
                    for c, r, e, o in door_swings],
         "origin": [ox, oy],
         "tour": {

@@ -581,6 +581,24 @@ tap it, the view freezes, circle what to change (or pick **Whole view**), then s
   It greps and reads the repo, edits `furnish.js`,
   `materials.js` and the version's tour, and (where `dwg/` and the build scripts exist, i.e. locally) moves walls in the plan DXF and
   rebuilds the model and drawing. It never edits the As-built plan unless you are on the As-built page. No image generation.
+- **Openings and heights:** Edit AI can add, convert and wall up any opening on the plan (`dxf_edit` ops `add_opening`,
+  `convert_opening`, `remove_opening` in `edit_ai_dxf.py`): window, glass slider, hinged door (hinge end and swing side),
+  solid sliding door or bare doorway; door ↔ window, hinged ↔ sliding, a block door redrawn as a loose one. A swing into
+  furniture is warned about. What the plan can't hold goes in the version's tour JSON (`set_openings` tool):
+  `"openings": [{"at": [x, y] DWG, "kind", "sill", "head", "frosted", "panel"}]` per opening (e.g. a terrace slider kept a
+  window with a 60 cm sill) and `"heights"` home-wide (ceiling, door, sill, window, slider, parapet). `build_geometry.py`
+  reads both, so `build_version.py` builds the same. Tests: `tests/test_edit_ai_openings.py`.
+- **Home edits** (26 Oct 2026, `docs/edit-ai/capability-audit.md`): walls (`add_wall` straight / curved / low / glass,
+  `remove_wall`, `move_wall`, `set_wall_thickness`, `mark_wall`: junctions kept closed), room names (`rename_room`,
+  `add_room_label`), niches (`add_niche`), double / pocket / barn / bi-fold doors, all in `edit_ai_dxf.py`; the version's
+  tour carries `"rooms"` (floor / wall paint / tiles + height / skirting / ceiling colour + height / floor level / light /
+  skylights / kind: the `set_room` tool), `"walls"` (low / glass), `"niches"`, `"notes"`, `"start"` and opening looks
+  (frame, leaf, glass, panes, style, handle, arch, fanlight). `index.html` draws them; `furnish.js` has `lamp()` (real
+  light, max 12) and lifts pieces onto a raised floor; `materials.js` adds drawn finishes (herringbone, terrazzo, brick,
+  carpet, porcelain, cement tile, grass, wallpapers...) and `picture()` for photos saved with `save_picture`
+  (`uploads/`). Other tools: `measure` (areas for quantities), `set_home` (notes, walk start), `find_model`
+  (`docs/edit-ai/model-library.json`: 209 Poly Haven CC0 models loaded from their CDN), `save_progress` (big jobs saved
+  in parts; the run stops before Vercel's 300 s, `EDIT_AI_TIME_LIMIT`). Tests: `tests/test_edit_ai_home.py`.
 - **Quality gates** (both OpenAI, `EDIT_AI_OPENAI_API_KEY`; `EDIT_AI_GATES=0` turns them off; a gate that fails lets the edit through):
   - **Prompt check** (`POST /api/edit-ai/precheck`, `precheck`): before anything is sent, **GPT-6 Luna** grades the wording 1-5
     from the text and what was circled (no picture, ~400 tokens, ~$0.0001) against what each kind of edit needs (a move needs
@@ -591,6 +609,9 @@ tap it, the view freezes, circle what to change (or pick **Whole view**), then s
     Models: `EDIT_AI_PRECHECK_MODEL`, `EDIT_AI_REVIEW_MODEL`. `GET /api/edit-ai/status` shows them under `gates`.
   - **Cost:** the chat streams its steps (`stream: true`, NDJSON `{"phase"}` lines then `{"done"}`) and ends with one line for
     the whole run: model, review score, total in $ and EGP, then check / edit / review / fix. Tests: `tests/test_edit_ai_gates.py`.
+- **Not it? Retry:** the "Your edit is done" toast has **Undo** and **Try a stronger model** ("Try again" when the strong model made it).
+  It undoes the edit, then sends the same request and marked view with `retry: true`: the server runs it on the complex
+  model (`COMPLEX_MODEL`) and tells it the last attempt was undone. The request waits in `sessionStorage` (`editai-retry`).
 - **Hot path:** every change is saved as a revision in Blob (`edit-ai-live/<version>/rev-*.json`, files content-addressed in
   `edit-ai-live/files/`; served same-origin through the `/edit-ai-live/*` rewrite). The page loads `GET /api/edit-ai/patches?version=`
   first and uses those files instead of the deployed ones, then reloads in place with the same camera. Undo writes a new revision.

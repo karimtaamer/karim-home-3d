@@ -61,7 +61,7 @@ export function furnish(scene, M, mat, version = "main") {
         cabinet.position.set(hx, 0, -hy);
         cabinet.rotation.y = closed;
         scene.add(cabinet); cabinet.add(hinge); hinge.add(leaf);
-        leaf.position.set(swing.r / 2, (M.doorHead - 0.01) / 2, 0);
+        leaf.position.set(swing.r / 2, ((swing.head ?? M.doorHead) - 0.01) / 2, 0);
         leaf.rotation.set(0, 0, 0);
         const turn = Math.atan2(Math.sin(openAngle - closed), Math.cos(openAngle - closed));
         cabinet.userData.openable = { id: dId, label: dLabel, leaves: [{ obj: hinge, axis: "y", open: turn }],
@@ -78,7 +78,7 @@ export function furnish(scene, M, mat, version = "main") {
       const [hx, hy] = s.hinge;
       const leaf = scene.children.find(o => o.isMesh && o.geometry?.type === "BoxGeometry" &&
         Math.abs(o.geometry.parameters.width - (s.r - 0.02)) < 0.001 &&
-        Math.abs(o.geometry.parameters.height - (M.doorHead - 0.01)) < 0.001 &&
+        Math.abs(o.geometry.parameters.height - ((s.head ?? M.doorHead) - 0.01)) < 0.001 &&
         Math.abs(Math.hypot(o.position.x - hx, o.position.z + hy) - s.r / 2) < 0.03);
       if (leaf) {
         const a0 = Math.atan2(s.closed[1] - hy, s.closed[0] - hx);
@@ -89,7 +89,7 @@ export function furnish(scene, M, mat, version = "main") {
         hinge.position.set(hx, 0, -hy);
         hinge.rotation.y = a0;
         hinge.add(leaf);
-        leaf.position.set(s.r / 2, (M.doorHead - 0.01) / 2, 0);
+        leaf.position.set(s.r / 2, ((s.head ?? M.doorHead) - 0.01) / 2, 0);
         leaf.rotation.set(0, 0, 0);
         c.userData.openable = {
           id: "master-bedroom-entry-door", label: "Bedroom door",
@@ -117,16 +117,50 @@ export function furnish(scene, M, mat, version = "main") {
    if (version === "kareems-changes") MOVED["21.8,5,E"] = [21.8, 5.695, 1, 1];  // Centre terrace wall sconce between windows
   // An item is built in its own frame (x across, y up, z out from the wall it backs onto, back
   // at z = 0), then placed with its back-centre on a plan point, facing N/E/S/W into the room.
+  // A room raised or sunk (Edit AI: the tour's rooms spec "floorLevel", e.g. a sleeping platform): what stands in it
+  // stands on that floor.
+  const LEVELS = Object.entries(M.rooms || {}).filter(([, v]) => v && v.floorLevel).map(([n, v]) => [n, v.floorLevel]);
+  function levelAt(x, y) {
+    if (!LEVELS.length) return 0;
+    const inside = ring => {
+      let c = false;
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const [xi, yi] = ring[i], [xj, yj] = ring[j];
+        if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c;
+      }
+      return c;
+    };
+    const f = (M.floor || []).find(f => inside(f.outer));
+    const hit = f && LEVELS.find(([n]) => n === f.room || n === f.room.replace(/ \d+$/, ""));
+    return hit ? hit[1] : 0;
+  }
+  // A real light (Edit AI), not just a lit fitting: a lamp's glow (point) or a spot's beam (beam = cone degrees,
+  // aimed at target [x, y, h]). Capped at 12: every light costs every frame. It fades in with the furniture.
+  const lamps = [];
+  function lamp(x, y, h, { color = 0xffd2a0, power = 1, beam = null, target = null } = {}) {
+    if (lamps.length >= 12) return null;
+    const L = beam ? new THREE.SpotLight(color, 0, 6, THREE.MathUtils.degToRad(beam), 0.5, 1.5) : new THREE.PointLight(color, 0, 5, 1.6);
+    L.position.set(x, h + levelAt(x, y), -y);
+    if (beam) {
+      L.target.position.set(target?.[0] ?? x, target?.[2] ?? 0, -(target?.[1] ?? y));
+      root.add(L.target);
+    }
+    L.userData.power = power;
+    root.add(L);
+    lamps.push(L);
+    return L;
+  }
+
   function item(x, y, facing, build, parent = root) {
     const g = new THREE.Group();
     build(part(g));
-    g.position.set(x, 0, -y);
+    g.position.set(x, levelAt(x, y), -y);
     g.rotation.y = typeof facing === "number" ? facing : FACING[facing];
     // For Move and Resize (move.js / move_tool.py): where this item( call sits in furnish.js and what it was given.
     g.userData.piece = { x, y, facing, lines: callLines() };
     const moved = MOVED[`${+x.toFixed(4)},${+y.toFixed(4)},${facing}`];
     if (moved) {
-      g.position.set(moved[0], 0, -moved[1]);
+      g.position.set(moved[0], levelAt(moved[0], moved[1]), -moved[1]);
       g.scale.set(moved[2], 1, moved[3]);
       g.userData.piece.moved = true;
     }
@@ -721,7 +755,11 @@ export function furnish(scene, M, mat, version = "main") {
       p.model("models/plant-vase.glb", null, -0.84, 1.77, 0.08, { height: 0.3, cross: true });
       p.model("models/plant-vase.glb", null, -0.58, 0.75, 0.1, { height: 0.4, cross: true });  // on the top, by the column
       p.model("models/mbath-bottles.glb", null, 0.62, 0.75, 0.06, { width: 0.28 });
+<<<<<<< here
       p.pebble(["kareems-changes", "karims-version"].includes(version) || version === "naghams-changes" ? 0.16265 : -0.05, 1.35, 1.1, 0.75, 0.012, mat.mirror, true);   // 1.10 wide x 0.75 tall, 0.98 to 1.73; centred between wardrobe edge and shelf column edge
+=======
+      p.pebble(version === "naghams-changes" ? 0.16265 : -0.05, 1.35, 1.1, 0.75, 0.012, mat.mirror, true);   // Nagham: centred between wardrobe edge and shelf column edge
+>>>>>>> edit-ai live 20261025T154303365-88a540
       p.cyl(-0.05, 0.25, 0.225, 0, 0.43, mat.boucle, 32);           // pouf 45 x 45, pushed in to 2.5 cm off the back panel
       p.cyl(-0.05, 0.25, 0.215, 0.43, 0.45, mat.boucle, 32, 0.225);
     });
@@ -742,6 +780,7 @@ export function furnish(scene, M, mat, version = "main") {
     // to the partition) and is 0.60 deep; the backlit mirror becomes a 0.80 x 0.75 mirrored medicine cabinet, 0.30
     // out from the battens, bottom 1.32 (0.46 over the counter), three glass shelves, all centred on the bowl.
     if (["kareems-changes", "karims-version"].includes(version)) item(0.556, 6.7276, "E", vanity(1.185, true, 0.6, medCabinet(), heaterVanity));  // centre DWG y -114.8856
+   if (version === "karims-version") item(0.556, 6.7276, "E", vanity(1.185, true, 0.6, medCabinet(), heaterVanity));
     else item(0.556, 6.7435, "E", vanity(1.153, true));  // centre DWG y -114.8697, bowl, mixer and mirror on it
     item(1.8037, 9.0201, "S", p => {  // WC bay 1.416..2.192 (local +x east)
       const h = 0.3878, d = 0.3, top = 1.12;
@@ -1868,6 +1907,7 @@ export function furnish(scene, M, mat, version = "main") {
     root.visible = t > 0.01;
     for (const m of mats) fade(m, t);
     for (const m of late) fade(m, t);
+    for (const L of lamps) L.intensity = 1.5 * L.userData.power * t;
   }
   return { root, ceilingBits, setReveal };
 }

@@ -33,6 +33,117 @@ function scanned(id, size, { tint = 0xffffff, normal = 1, rotate = 0, colour = t
   });
 }
 
+// A picture Edit AI kept from the user's references (uploads/...): one picture over the surface, or a repeating
+// sample `size` metres wide. Loaded from the live store until git has it (index.html sets EDIT_AI_URL).
+function picture(path, size = 0) {
+  const t = loader.load(globalThis.EDIT_AI_URL?.(path) || path);
+  t.colorSpace = THREE.SRGBColorSpace;
+  if (size > 0) {
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(1 / size, 1 / size);
+  }
+  return t;
+}
+
+// Drawn surfaces for finishes the scans don't cover (Edit AI's floors / walls): `size` metres per tile of texture.
+function drawn(size, draw, px = 512) {
+  const c = document.createElement("canvas");
+  c.width = c.height = px;
+  const g = c.getContext("2d");
+  let s = 12345;
+  draw(g, px, () => ((s = (s * 16807) % 2147483647) / 2147483647));
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(1 / size, 1 / size);
+  t.anisotropy = 8;
+  return t;
+}
+const speckle = (g, px, rnd, n, cols, r0, r1) => {
+  for (let i = 0; i < n; i++) {
+    g.fillStyle = cols[Math.floor(rnd() * cols.length)];
+    g.beginPath();
+    g.ellipse(rnd() * px, rnd() * px, r0 + rnd() * (r1 - r0), r0 + rnd() * (r1 - r0), rnd() * 3, 0, Math.PI * 2);
+    g.fill();
+  }
+};
+const DRAWN = {
+  herringbone: () => drawn(0.8, (g, px, rnd) => {  // oak planks 1:5 in herringbone
+    g.fillStyle = "#b8895a"; g.fillRect(0, 0, px, px);
+    const w = px / 8, l = w * 4;
+    for (let y = -l; y < px + l; y += w) for (let x = -l; x < px + l; x += 2 * w) {
+      for (const [dx, rot] of [[0, Math.PI / 4], [w * 1.414, -Math.PI / 4]]) {
+        g.save(); g.translate(x + dx + (y / w % 2) * w, y); g.rotate(rot);
+        g.fillStyle = `hsl(${28 + rnd() * 6}, ${38 + rnd() * 10}%, ${44 + rnd() * 12}%)`;
+        g.fillRect(0, 0, l, w - 2); g.restore();
+      }
+    }
+  }),
+  chevron: () => drawn(0.8, (g, px, rnd) => {
+    g.fillStyle = "#b8895a"; g.fillRect(0, 0, px, px);
+    const w = px / 8;
+    for (let y = -px; y < 2 * px; y += w) for (let x = 0; x < px; x += 2 * w) {
+      g.fillStyle = `hsl(${28 + rnd() * 6}, 40%, ${44 + rnd() * 12}%)`;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + w, y + w); g.lineTo(x + 2 * w, y); g.lineTo(x + 2 * w, y + w - 2);
+      g.lineTo(x + w, y + 2 * w - 2); g.lineTo(x, y + w - 2); g.fill();
+    }
+  }),
+  terrazzo: () => drawn(0.6, (g, px, rnd) => {
+    g.fillStyle = "#e8e2d8"; g.fillRect(0, 0, px, px);
+    speckle(g, px, rnd, 900, ["#b9b2a6", "#8d8579", "#c9a98f", "#6f6a63", "#d8cfc1"], 1, 4);
+    speckle(g, px, rnd, 140, ["#a59886", "#7d756b", "#c4a184", "#e0d6c7"], 4, 10);
+  }),
+  concrete: () => drawn(1.5, (g, px, rnd) => {
+    g.fillStyle = "#a9a59f"; g.fillRect(0, 0, px, px);
+    speckle(g, px, rnd, 4000, ["#9d9993", "#b4b0aa", "#a3a09a", "#8f8b86"], 0.5, 2.5);
+  }),
+  carpet: () => drawn(0.3, (g, px, rnd) => {
+    g.fillStyle = "#b8b0a5"; g.fillRect(0, 0, px, px);
+    speckle(g, px, rnd, 9000, ["#aea69b", "#c2bab0", "#b3ab9f", "#a59d93"], 0.6, 1.4);
+  }),
+  brick: () => drawn(1.2, (g, px, rnd) => {  // running bond, 23 x 7 cm bricks, 1 cm joints
+    g.fillStyle = "#d8cfc2"; g.fillRect(0, 0, px, px);
+    const bw = px / 5.2, bh = px / 16;
+    for (let r = 0; r < 16; r++) for (let c = -1; c < 6; c++) {
+      g.fillStyle = `hsl(${12 + rnd() * 10}, ${40 + rnd() * 15}%, ${38 + rnd() * 12}%)`;
+      g.fillRect(c * bw + (r % 2) * bw / 2 + 2, r * bh + 2, bw - 4, bh - 4);
+    }
+  }),
+  porcelain: () => drawn(1.2, (g, px, rnd) => {  // 60 x 120 cm tiles, 2 mm joints
+    g.fillStyle = "#cfcac3"; g.fillRect(0, 0, px, px);
+    speckle(g, px, rnd, 1500, ["#c9c4bd", "#d6d1ca", "#c4beb7"], 1, 3);
+    g.fillStyle = "#a9a39b"; g.fillRect(0, 0, px, 2); g.fillRect(0, px / 2, px, 2); g.fillRect(0, 0, 2, px);
+  }),
+  cementTile: () => drawn(0.2, (g, px) => {  // a patterned encaustic tile
+    g.fillStyle = "#ece6da"; g.fillRect(0, 0, px, px);
+    g.fillStyle = "#3f5a6b";
+    for (const [x, y] of [[0, 0], [px, 0], [0, px], [px, px]]) { g.beginPath(); g.arc(x, y, px * 0.32, 0, Math.PI * 2); g.fill(); }
+    g.fillStyle = "#c98f6a"; g.beginPath(); g.arc(px / 2, px / 2, px * 0.18, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = "#3f5a6b"; g.lineWidth = px * 0.03; g.strokeRect(px * 0.25, px * 0.25, px * 0.5, px * 0.5);
+  }),
+  grass: () => drawn(0.5, (g, px, rnd) => {
+    g.fillStyle = "#4f7a35"; g.fillRect(0, 0, px, px);
+    for (let i = 0; i < 6000; i++) {
+      g.strokeStyle = `hsl(${88 + rnd() * 25}, ${40 + rnd() * 20}%, ${25 + rnd() * 20}%)`;
+      const x = rnd() * px, y = rnd() * px;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + rnd() * 4 - 2, y - 4 - rnd() * 6); g.stroke();
+    }
+  }),
+  wallpaperStripe: () => drawn(0.5, (g, px) => {
+    g.fillStyle = "#e9e1d3"; g.fillRect(0, 0, px, px);
+    g.fillStyle = "#cdbfa6";
+    for (let x = 0; x < px; x += px / 8) g.fillRect(x, 0, px / 20, px);
+  }),
+  wallpaperLeaf: () => drawn(0.6, (g, px, rnd) => {
+    g.fillStyle = "#e6e0d2"; g.fillRect(0, 0, px, px);
+    for (let i = 0; i < 40; i++) {
+      g.fillStyle = `hsl(${95 + rnd() * 30}, 25%, ${45 + rnd() * 15}%)`;
+      g.save(); g.translate(rnd() * px, rnd() * px); g.rotate(rnd() * 6);
+      g.beginPath(); g.ellipse(0, 0, 9 + rnd() * 10, 3 + rnd() * 4, 0, 0, Math.PI * 2); g.fill(); g.restore();
+    }
+  }),
+};
+
 // Polished marble: warm white with soft grey veins (worktops, splashbacks, side tables).
 function marbleTexture() {
   const c = document.createElement("canvas");
@@ -201,6 +312,21 @@ export function makeMaterials(clip) {
     lampShade: std({ color: 0xe2c9a8, emissive: 0xffa95c, emissiveIntensity: 0.9, roughness: 0.9 }),
     limewashTaupe: scanned("beige_wall_001", 3, { colour: false, tint: 0xd9c6b4, normal: 1.4 }),
     grille: std({ color: 0x3a3836, roughness: 0.6 }),
+    // Drawn finishes (floors, walls) for Edit AI's room specs, and the scans in other tones
+    herringbone: std({ map: DRAWN.herringbone(), roughness: 0.55 }),
+    chevron: std({ map: DRAWN.chevron(), roughness: 0.55 }),
+    terrazzo: std({ map: DRAWN.terrazzo(), roughness: 0.35 }),
+    concrete: std({ map: DRAWN.concrete(), roughness: 0.8 }),
+    carpet: std({ map: DRAWN.carpet(), roughness: 1 }),
+    brick: std({ map: DRAWN.brick(), roughness: 0.9 }),
+    porcelain: std({ map: DRAWN.porcelain(), roughness: 0.25 }),
+    cementTile: std({ map: DRAWN.cementTile(), roughness: 0.6 }),
+    grass: std({ map: DRAWN.grass(), roughness: 1 }),
+    wallpaperStripe: std({ map: DRAWN.wallpaperStripe(), roughness: 0.9 }),
+    wallpaperLeaf: std({ map: DRAWN.wallpaperLeaf(), roughness: 0.9 }),
+    marbleFloor: std({ map: marbleTexture(), roughness: 0.15 }),
+    oakDark: scanned("laminate_floor_02", 1.7, { tint: 0x8a6a52, roughness: 0.5, rotate: Math.PI / 2 }),
+    oakGrey: scanned("laminate_floor_02", 1.7, { tint: 0xb8b2aa, roughness: 0.55, rotate: Math.PI / 2 }),
     art: [
       artTexture(11, ["#e6a58f", "#97a9b8", "#f1c7b3", "#c7826e"]),
       artTexture(29, ["#d89b8a", "#b9c4ad", "#efd2c0", "#8fa3b4"]),

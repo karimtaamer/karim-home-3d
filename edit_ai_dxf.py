@@ -41,6 +41,28 @@ listed under "clashes" (a rug may sit under things; given as --soft boxes).
         a door drawn loose (its swing ARC is the handle): swing, leaf, jambs and frame bits slide along their wall by
         `along` metres (+ = towards +x / +y; or dx, dy, projected on the wall) and, with width, the leaf (= swing
         radius) is resized, the far jamb moving; the wall faces either side are re-cut to meet the frame again.
+    {"op": "add_opening", "at": [x, y], "kind": "door", "width": 0.9, "hinge": "W", "opens": "N"}
+        a new opening in the solid wall at plan point (x, y) (on or inside the wall), centred there: kind "window",
+        "glass_slider" (full-height glass sliding door), "door" (hinged: hinge = the end of the opening it hangs from,
+        a compass word or "start" / "end"; opens = the side of the wall it swings into), "sliding_door" (a solid
+        sliding leaf) or "opening" (a bare doorway). Both wall faces are cut and given jambs.
+    {"op": "convert_opening", "at": [x, y], "to": "window", "width": 1.2, "shift": 0.1, "hinge": "E", "opens": "S"}
+        the existing opening at (x, y) (or "handle": one of its window lines, its swing ARC or its 3door INSERT) emptied
+        and refilled as `to` (a kind above, or "wall" to close it); width (default its own) and shift (along the wall)
+        resize / move it. Flip a door's hinge or swing: convert_opening to "door" with the other hinge / opens.
+    {"op": "remove_opening", "at": [x, y]}      the opening walled up (= convert_opening to "wall")
+        Each reports under "openings_changed": kind, centre, width, the gap's box and, for a door, hinge and opens.
+        More kinds: "double_door" (two leaves, 1.0-2.6 m), "pocket_door", "barn_door", "bifold_door" (0.6-2.4 m).
+    {"op": "add_wall", "a": [x, y], "b": [x, y], "thickness": 0.12, "align": "centre", "through": [x, y]}
+        a new wall along a -> b (through: a third point makes it a curve); an end at an existing wall is run onto its
+        face and that face broken between the new faces (a T-junction); a free end is capped. "walls_changed".
+    {"op": "remove_wall", "at": [x, y]}      the wall at (x, y), junction to junction, with its doors / windows
+    {"op": "move_wall", "at": [x, y], "dx": 0.3, "dy": 0}     slid across itself; the walls meeting it follow
+    {"op": "set_wall_thickness", "at": [x, y], "thickness": 0.2, "keep": "N"}   keep = the face that stays put
+    {"op": "mark_wall", "at": [x, y]}        nothing drawn: reports the wall's run (for a height / glass spec)
+    {"op": "rename_room", "name": "BEDROOM 2" | "at": [x, y], "to": "STUDY"}; {"op": "add_room_label", "at", "name"}
+    {"op": "add_niche", "at": [x, y], "width": 0.6, "depth": 0.1, "bottom": 0.9, "top": 1.5, "side": "N"}
+        a recess into the wall's face (dashed on the plan); reported under "niches" for the 3D
 Any edit that leaves one window's long lines out of line with each other (one glazing line left behind) is reported
 under "warnings".
 New entities copy colour and linetype ByLayer. No TEXT is ever added (every TEXT becomes a room label in the 3D).
@@ -49,7 +71,7 @@ import argparse, json, math, sys
 from collections import Counter
 
 from ezdxf import recover
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Point
 from shapely.ops import unary_union
 
 WINDOW_LAYER, WALL_LAYER, DOOR_LAYER = "Windows", "1wall", "3door"
@@ -504,6 +526,766 @@ def door_frame(msp, arc):
     return c, rad, u, n, t0, t1, n0, n1, s, parts, opened
 
 
+# --- Openings: add, convert and remove doors / windows / sliders / bare doorways on the plan -----------------------------
+# The plan holds where an opening is and what it is (window lines, a door swing, sliding panels); heights, glass and a
+# terrace window kept as a window live in the version's tour ("openings", "heights"), which edit_ai.py writes from the
+# "opening" each of these ops reports.
+KINDS = ("window", "glass_slider", "door", "double_door", "sliding_door", "pocket_door", "barn_door", "bifold_door", "opening")
+
+
+def _canon(u):
+    return (-u[0], -u[1]) if abs(u[0]) >= abs(u[1]) and u[0] < 0 or abs(u[1]) > abs(u[0]) and u[1] < 0 else u
+
+
+def _wall_lines(msp):
+    out = []
+    for e in msp.query(f'LINE[layer=="{WALL_LAYER}"]'):
+        s_ = segs_of(e)[0]
+        if math.dist(*s_) > 0.002:
+            out.append((e, s_))
+    return out
+
+
+def _faces(lines, p, u, reach_n=0.45, reach_t=4.0):
+    """1wall lines along u near p, grouped by their offset across u: {key: [(entity, ta, tb, nn)]} (t, n from p)."""
+    n = (-u[1], u[0])
+    T = lambda q: (q[0] - p[0]) * u[0] + (q[1] - p[1]) * u[1]
+    N = lambda q: (q[0] - p[0]) * n[0] + (q[1] - p[1]) * n[1]
+    groups, found = {}, []
+    for e, s_ in lines:
+        d = math.dist(*s_)
+        if abs((s_[1][0] - s_[0][0]) * u[0] + (s_[1][1] - s_[0][1]) * u[1]) / d < 0.999:
+            continue
+        nn = (N(s_[0]) + N(s_[1])) / 2
+        ta, tb = sorted((T(s_[0]), T(s_[1])))
+        if abs(nn) <= reach_n and tb >= -reach_t and ta <= reach_t:
+            found.append((e, ta, tb, nn))
+    # One face = lines within 12 mm of each other across u (the faces either side of a door sit a few mm apart).
+    found.sort(key=lambda x: x[3])
+    for x in found:
+        key = next((k for k in groups if abs(x[3] - groups[k][-1][3]) < 0.012), None)
+        groups.setdefault(len(groups) if key is None else key, []).append(x)
+    return groups
+
+
+def _axes(lines, p, reach=1.6):
+    out = []
+    for _, s_ in lines:
+        if LineString(s_).distance(Point(p)) > reach or math.dist(*s_) < 0.05:
+            continue
+        L = math.dist(*s_)
+        u = _canon(((s_[1][0] - s_[0][0]) / L, (s_[1][1] - s_[0][1]) / L))
+        if not any(abs(u[0] * v[0] + u[1] * v[1]) > 0.999 for v in out):
+            out.append(u)
+    return out
+
+
+def _pair(sides, lo=0.06, hi=0.4):
+    """The two face offsets (n0 < n1) a wall's thickness apart that p (n = 0) sits in, or nearest to."""
+    best = None
+    for i, a_ in enumerate(sides):
+        for b_ in sides[i + 1:]:
+            n0, n1 = sorted((a_, b_))
+            if lo <= n1 - n0 <= hi:
+                off = 0 if n0 <= 0 <= n1 else min(abs(n0), abs(n1))
+                if off <= 0.35 and (best is None or off < best[0] or off == best[0] and n1 - n0 < best[2] - best[1]):
+                    best = (off, n0, n1)
+    return best
+
+
+def gap_at(msp, p):
+    """The opening (door, window, slider or bare doorway) at or beside DWG point p: (p, u, n, t0, t1, n0, n1), t and n
+    measured from p; None if p isn't in an opening."""
+    lines = _wall_lines(msp)
+    # A window: its own lines give the opening (some walls run both faces straight through their windows).
+    wins = [e for e in msp.query(f'LINE LWPOLYLINE[layer=="{WINDOW_LAYER}"]')
+            if segs_of(e) and min(LineString(sg).distance(Point(p)) for sg in segs_of(e)) < 0.2]
+    if wins:
+        c, u, n, t0, t1, n0, n1 = frame(window_cluster(msp, wins[0]))
+        faces = [sum(x[3] for x in segs) / len(segs) for segs in _faces(lines, c, u).values()]
+        snap = lambda v: min(faces, key=lambda f: abs(f - v)) if faces and min(abs(f - v) for f in faces) < 0.05 else v
+        if t1 - t0 >= 0.3:
+            return (c, u, n, t0, t1, snap(n0), snap(n1))
+    found = []
+    for u in _axes(lines, p):
+        sides, through = {}, []
+        for segs in _faces(lines, p, u).values():
+            nn = sum(x[3] for x in segs) / len(segs)
+            if any(ta <= 0 <= tb for _, ta, tb, _ in segs):
+                through.append(nn)  # this face runs on past p (an outer face drawn across a window)
+                continue
+            lo_ = [tb for _, ta, tb, _ in segs if tb <= 0]
+            hi_ = [ta for _, ta, tb, _ in segs if ta >= 0]
+            if lo_ and hi_ and 0.3 <= min(hi_) - max(lo_) <= 4.0:
+                sides[nn] = (max(lo_), min(hi_))
+        if not sides:
+            continue
+        for pr, both in ((_pair(sorted(sides)), 0), (_pair(sorted(set(sides) | set(through))), 1)):
+            if pr:
+                off, n0, n1 = pr
+                if n0 not in sides and n1 not in sides:
+                    continue
+                spans = [sides[x] for x in (n0, n1) if x in sides]
+                t0, t1 = min(a_ for a_, _ in spans), max(b_ for _, b_ in spans)
+                found.append((both, off, t1 - t0, (p, u, (-u[1], u[0]), t0, t1, n0, n1)))
+    return min(found, key=lambda f: (f[0], f[1], f[2]))[3] if found else None
+
+
+def wall_at(msp, p):
+    """The solid wall at or beside DWG point p: (p, u, n, n0, n1) with both faces running past p; None if none."""
+    lines = _wall_lines(msp)
+    found = []
+    for u in _axes(lines, p):
+        sides = [sum(x[3] for x in segs) / len(segs) for segs in _faces(lines, p, u).values() if any(ta < 0 < tb for _, ta, tb, _ in segs)]
+        pr = _pair(sorted(set(sides)))
+        if pr:
+            found.append((pr[0], (p, u, (-u[1], u[0]), pr[1], pr[2])))
+    return min(found, key=lambda f: f[0])[1] if found else None
+
+
+def _at(e, q, t, nn, u, n):
+    return (q[0] + u[0] * t + n[0] * nn, q[1] + u[1] * t + n[1] * nn)
+
+
+def open_gap(msp, q, u, n, a, b, n0, n1):
+    """Cut [a, b] (along u from q) out of the wall faces at n0 and n1. Refuses where the wall doesn't run the whole
+    span on both faces (a corner, the wall's end) or another wall joins it inside the span."""
+    lines = _wall_lines(msp)
+    T = lambda z: (z[0] - q[0]) * u[0] + (z[1] - q[1]) * u[1]
+    N = lambda z: (z[0] - q[0]) * n[0] + (z[1] - q[1]) * n[1]
+    faces = [(e, s_) for e, s_ in lines if abs((s_[1][0] - s_[0][0]) * u[0] + (s_[1][1] - s_[0][1]) * u[1]) / math.dist(*s_) > 0.999
+             and min(abs((N(s_[0]) + N(s_[1])) / 2 - nn) for nn in (n0, n1)) < 0.012]
+    for nn in (n0, n1):
+        cover = sorted(sorted((T(s_[0]), T(s_[1]))) for e, s_ in faces if abs((N(s_[0]) + N(s_[1])) / 2 - nn) < 0.012)
+        reach = a
+        for ta, tb in cover:
+            if ta <= reach + 0.002:
+                reach = max(reach, tb)
+        if reach < b - 0.002:
+            raise ValueError(f"the wall doesn't run the whole {r(b - a)} m there (a corner or the wall's end): pick a "
+                             "point further along it, or a narrower opening")
+    for e, s_ in lines:  # a wall joining this one inside the span
+        if abs((s_[1][0] - s_[0][0]) * n[0] + (s_[1][1] - s_[0][1]) * n[1]) / math.dist(*s_) < 0.999:
+            continue
+        for z in s_:
+            if a + 0.01 < T(z) < b - 0.01 and (abs(N(z) - n0) < 0.01 or abs(N(z) - n1) < 0.01) and \
+                    math.dist(*s_) > (n1 - n0) + 0.05:
+                raise ValueError("another wall joins this one there: move the opening along the wall")
+    for e, s_ in faces:
+        ta, tb = T(s_[0]), T(s_[1])
+        lo, hi = sorted((ta, tb))
+        if hi <= a + 0.001 or lo >= b - 0.001:
+            continue
+        attrs = {k: e.dxf.get(k) for k in ("layer", "linetype", "color") if e.dxf.hasattr(k)}
+        P = lambda t: (s_[0][0] + (s_[1][0] - s_[0][0]) * (t - ta) / (tb - ta), s_[0][1] + (s_[1][1] - s_[0][1]) * (t - ta) / (tb - ta))
+        msp.delete_entity(e)
+        for x, y in ((lo, a), (b, hi)):
+            if y - x > 0.002:
+                msp.add_line(P(x), P(y), dxfattribs=attrs)
+
+
+def close_gap(msp, q, u, n, t0, t1, n0, n1):
+    """Wall again across [t0, t1]: each face's two ends at the opening joined into one line, its jambs gone."""
+    lines = _wall_lines(msp)
+    T = lambda z: (z[0] - q[0]) * u[0] + (z[1] - q[1]) * u[1]
+    N = lambda z: (z[0] - q[0]) * n[0] + (z[1] - q[1]) * n[1]
+    for nn in (n0, n1):
+        segs = [(e, s_) for e, s_ in lines if abs((s_[1][0] - s_[0][0]) * u[0] + (s_[1][1] - s_[0][1]) * u[1]) / math.dist(*s_) > 0.999
+                and abs((N(s_[0]) + N(s_[1])) / 2 - nn) < 0.012]
+        if any(min(T(z) for z in s_) <= t0 + 0.01 and max(T(z) for z in s_) >= t1 - 0.01 for _, s_ in segs):
+            continue  # this face already runs across the opening
+        lo = [(max(T(z) for z in s_), e, s_) for e, s_ in segs if abs(max(T(z) for z in s_) - t0) < 0.04]
+        hi = [(min(T(z) for z in s_), e, s_) for e, s_ in segs if abs(min(T(z) for z in s_) - t1) < 0.04]
+        pts, gone, attrs = [], [], None
+        for got in (max(lo, key=lambda x: x[0], default=None), min(hi, key=lambda x: x[0], default=None)):
+            if got:
+                _, e, s_ = got
+                pts += list(s_)
+                gone.append(e)
+                attrs = attrs or {k: e.dxf.get(k) for k in ("layer", "linetype", "color") if e.dxf.hasattr(k)}
+        far = [_at(None, q, t, nn, u, n) for t in (t0, t1)]
+        pts += far if len(gone) < 2 else []
+        a_ = min(pts, key=T)
+        b_ = max(pts, key=T)
+        for e in gone:
+            msp.delete_entity(e)
+        msp.add_line(a_, b_, dxfattribs=attrs or {"layer": WALL_LAYER})
+
+
+def clear_gap(msp, q, u, n, t0, t1, n0, n1):
+    """Delete what fills the opening: window lines, a door (swing, leaf, jambs, frame hatch, a 3door block), sliding
+    panels. Wall faces and other walls stay. Returns how many entities went."""
+    T = lambda z: (z[0] - q[0]) * u[0] + (z[1] - q[1]) * u[1]
+    N = lambda z: (z[0] - q[0]) * n[0] + (z[1] - q[1]) * n[1]
+    w, th = t1 - t0, n1 - n0
+    gone = []
+    for e in list(msp):
+        lay, t_ = e.dxf.layer, e.dxftype()
+        if t_ == "INSERT":
+            if lay == DOOR_LAYER:
+                z = (e.dxf.insert.x, e.dxf.insert.y)
+                if t0 - 0.15 <= T(z) <= t1 + 0.15 and n0 - 0.15 <= N(z) <= n1 + 0.15:
+                    gone.append(e)
+            continue
+        if lay not in (WINDOW_LAYER, WALL_LAYER, DOOR_LAYER, "_DIM") and t_ != "HATCH" or t_ in ("DIMENSION", "TEXT", "MTEXT"):
+            continue
+        b_ = ext_of(e)
+        if not b_:
+            continue
+        cs = [(b_[0], b_[1]), (b_[2], b_[1]), (b_[0], b_[3]), (b_[2], b_[3])]
+        ts, ns = [T(z) for z in cs], [N(z) for z in cs]
+        slack = 0.06 if lay == WINDOW_LAYER else w + 0.1  # a door swings out into the room
+        if not (min(ts) >= t0 - 0.05 and max(ts) <= t1 + 0.05 and min(ns) >= n0 - slack and max(ns) <= n1 + slack):
+            continue
+        if lay == WALL_LAYER and t_ == "LINE":
+            s_ = segs_of(e)[0]
+            d = math.dist(*s_) or 1
+            along = abs((s_[1][0] - s_[0][0]) * u[0] + (s_[1][1] - s_[0][1]) * u[1]) / d
+            if along > 0.999 and not (n0 - 0.02 <= N(s_[0]) <= n1 + 0.02):
+                continue  # another wall's face out in the room
+            if along < 0.001 and d > th + 0.06:
+                continue  # a wall running off this one, not a jamb
+        gone.append(e)
+    for e in gone:
+        msp.delete_entity(e)
+    return len(gone)
+
+
+def _side(word, n):
+    """+1 / -1: which side of the wall (along n) a compass word ("N", "south", ...) or "+" / "-" names."""
+    w_ = str(word or "").strip().lower()
+    vec = {"n": (0, 1), "north": (0, 1), "s": (0, -1), "south": (0, -1), "e": (1, 0), "east": (1, 0), "w": (-1, 0), "west": (-1, 0)}.get(w_)
+    if w_ in ("+", "+1", "1"):
+        return 1
+    if w_ in ("-", "-1"):
+        return -1
+    if vec is None:
+        raise ValueError(f"say the side as N, S, E or W, not {word!r}")
+    d = vec[0] * n[0] + vec[1] * n[1]
+    if abs(d) < 0.5:
+        raise ValueError(f"{word!r} runs along this wall; the wall's sides are "
+                         f"{'N / S' if abs(n[1]) > abs(n[0]) else 'E / W'}")
+    return 1 if d > 0 else -1
+
+
+def _end(word, u):
+    """-1 (the start, low t) / +1 (the end): which end of the opening a compass word or "start" / "end" names."""
+    w_ = str(word or "start").strip().lower()
+    if w_ in ("start", "-"):
+        return -1
+    if w_ in ("end", "+"):
+        return 1
+    return _side(word, u)
+
+
+def draw_opening(msp, q, u, n, a, b, n0, n1, kind, hinge=None, opens=None):
+    """Fill [a, b] of the wall (faces at n0, n1) as `kind`. Returns what was drawn (hinge, sides) in DWG metres."""
+    P = lambda t, nn: _at(None, q, t, nn, u, n)
+    out = {}
+    if kind in ("window", "glass_slider"):
+        for (t_a, n_a), (t_b, n_b) in (((a, n0), (b, n0)), ((b, n0), (b, n1)), ((b, n1), (a, n1)), ((a, n1), (a, n0)),
+                                       ((a, (n0 + n1) / 2), (b, (n0 + n1) / 2))):
+            msp.add_line(P(t_a, n_a), P(t_b, n_b), dxfattribs={"layer": WINDOW_LAYER})
+        return out
+    for t in (a, b):  # door frames: the wall's jambs
+        msp.add_line(P(t, n0), P(t, n1), dxfattribs={"layer": WALL_LAYER})
+    if kind == "door":
+        w = b - a
+        if not 0.5 <= w <= 1.3:
+            raise ValueError(f"a hinged door is 0.5 to 1.3 m wide; this opening is {r(w)} m (give a width)")
+        e_ = _end(hinge, u)
+        sg = _side(opens, n) if opens else 1
+        face = n1 if sg > 0 else n0
+        hn = face - sg * 0.02  # hinge just inside the frame, so the closed leaf crosses the opening
+        h_t, c_t = (a, b) if e_ < 0 else (b, a)
+        H, E = P(h_t, hn), P(c_t, hn)
+        O = (H[0] + n[0] * sg * w, H[1] + n[1] * sg * w)
+        aE = math.degrees(math.atan2(E[1] - H[1], E[0] - H[0])) % 360
+        aO = math.degrees(math.atan2(O[1] - H[1], O[0] - H[0])) % 360
+        start, end = (aE, aO) if (aO - aE) % 360 <= 180 else (aO, aE)
+        msp.add_arc(H, w, start, end, dxfattribs={"layer": WALL_LAYER})
+        k_ = (E[0] - H[0]) / w * 0.04, (E[1] - H[1]) / w * 0.04  # leaf 4 cm thick, towards the closed side
+        msp.add_lwpolyline([H, O, (O[0] + k_[0], O[1] + k_[1]), (H[0] + k_[0], H[1] + k_[1])], close=True,
+                           dxfattribs={"layer": "_DIM"})
+        a0 = math.atan2(E[1] - H[1], E[0] - H[0])
+        turn = math.pi / 2 if (aO - aE) % 360 <= 180 else -math.pi / 2
+        out = {"hinge": H, "opens": "+n" if sg > 0 else "-n",
+               "sweep": [H] + [(H[0] + w * math.cos(a0 + turn * k / 12), H[1] + w * math.sin(a0 + turn * k / 12)) for k in range(13)]}
+    elif kind == "double_door":
+        w = b - a
+        if not 1.0 <= w <= 2.6:
+            raise ValueError(f"double doors are 1.0 to 2.6 m wide; this opening is {r(w)} m (give a width)")
+        sg = _side(opens, n) if opens else 1
+        hn = (n1 if sg > 0 else n0) - sg * 0.02
+        out = {"hinges": [], "opens": "+n" if sg > 0 else "-n", "sweep": None}
+        for h_t, sgn_ in ((a, 1), (b, -1)):  # one leaf from each jamb, closed ends meeting in the middle
+            H, E = P(h_t, hn), P((a + b) / 2, hn)
+            r_ = w / 2
+            O = (H[0] + n[0] * sg * r_, H[1] + n[1] * sg * r_)
+            aE = math.degrees(math.atan2(E[1] - H[1], E[0] - H[0])) % 360
+            aO = math.degrees(math.atan2(O[1] - H[1], O[0] - H[0])) % 360
+            st, en = (aE, aO) if (aO - aE) % 360 <= 180 else (aO, aE)
+            msp.add_arc(H, r_, st, en, dxfattribs={"layer": WALL_LAYER})
+            k_ = (E[0] - H[0]) / r_ * 0.04, (E[1] - H[1]) / r_ * 0.04
+            msp.add_lwpolyline([H, O, (O[0] + k_[0], O[1] + k_[1]), (H[0] + k_[0], H[1] + k_[1])], close=True, dxfattribs={"layer": "_DIM"})
+            out["hinges"].append(H)
+        out["hinge"] = out["hinges"][0]
+    elif kind in ("sliding_door", "pocket_door", "barn_door", "bifold_door"):
+        w = b - a
+        if not 0.6 <= w <= 2.4:
+            raise ValueError(f"a sliding / folding door is 0.6 to 2.4 m wide; this opening is {r(w)} m (give a width)")
+        if kind == "bifold_door":  # the folded leaves drawn as a zig-zag in the opening
+            m, nm, k = (a + b) / 2, (n0 + n1) / 2, max(2, round(w / 0.45))
+            zz = [P(a + (b - a) * i / k, nm + (0.06 if i % 2 else -0.06)) for i in range(k + 1)]
+            msp.add_lwpolyline(zz, dxfattribs={"layer": DOOR_LAYER})
+            return out
+        m, nm = (a + b) / 2, (n0 + n1) / 2
+        for t_a, t_b, nn in ((a, m + 0.05, nm - 0.025), (m - 0.05, b, nm + 0.005)):
+            msp.add_lwpolyline([P(t_a, nn), P(t_b, nn), P(t_b, nn + 0.02), P(t_a, nn + 0.02)], close=True,
+                               dxfattribs={"layer": DOOR_LAYER})
+    return out
+
+
+# --- Walls: add, move, remove, thickness; room names; niches ---------------------------------------------------------
+LABEL_LAYER = "ISLAK"
+
+
+def _par(s_, u, tol=0.999):
+    d = math.dist(*s_)
+    return d > 1e-6 and abs((s_[1][0] - s_[0][0]) * u[0] + (s_[1][1] - s_[0][1]) * u[1]) / d >= tol
+
+
+def wall_run(msp, p):
+    """The wall at DWG point p from junction to junction (carried on across its own doors and windows, where both
+    faces break together and no other wall meets the break): (q, u, n, n0, n1, t0, t1), t measured from q."""
+    wa = wall_at(msp, p)
+    if not wa:
+        return None
+    q, u, n, n0, n1 = wa
+    th = n1 - n0
+    T = lambda z: (z[0] - q[0]) * u[0] + (z[1] - q[1]) * u[1]
+    N = lambda z: (z[0] - q[0]) * n[0] + (z[1] - q[1]) * n[1]
+    lines = _wall_lines(msp)
+    iv = {n0: [], n1: []}
+    for e, s_ in lines:
+        if _par(s_, u):
+            nn = (N(s_[0]) + N(s_[1])) / 2
+            for f in (n0, n1):
+                if abs(nn - f) < 0.012:
+                    iv[f].append(sorted((T(s_[0]), T(s_[1]))))
+    merged = {}
+    for f, xs in iv.items():
+        m = []
+        for a_, b_ in sorted(xs):
+            if m and a_ <= m[-1][1] + 0.003:
+                m[-1][1] = max(m[-1][1], b_)
+            else:
+                m.append([a_, b_])
+        merged[f] = m
+    seg = lambda f, t: next((x for x in merged[f] if x[0] - 0.003 <= t <= x[1] + 0.003), None)
+
+    def joined(t):  # another wall runs off this one at t (a line across it, longer than a jamb)
+        for e, s_ in lines:
+            if _par(s_, (n[0], n[1])) and math.dist(*s_) > th + 0.06:
+                if any(abs(T(z) - t) < 0.01 and min(abs(N(z) - n0), abs(N(z) - n1)) < 0.01 for z in s_):
+                    return True
+        return False
+    ext = []
+    for sgn in (1, -1):
+        a_, b_ = seg(n0, 0), seg(n1, 0)
+        if not a_ or not b_:
+            return None
+        ea, eb = (a_[1], b_[1]) if sgn > 0 else (a_[0], b_[0])
+        while True:
+            near = min(ea, eb) if sgn > 0 else max(ea, eb)
+            if abs(ea - eb) > 0.1 or joined(ea) or joined(eb):
+                break  # one face goes on (a wall joins the other) or a wall runs off here
+            if sgn > 0:
+                na = next((x for x in merged[n0] if x[0] > ea + 0.003), None)
+                nb = next((x for x in merged[n1] if x[0] > eb + 0.003), None)
+            else:
+                na = next((x for x in reversed(merged[n0]) if x[1] < ea - 0.003), None)
+                nb = next((x for x in reversed(merged[n1]) if x[1] < eb - 0.003), None)
+            if not na or not nb:
+                break
+            nxt = (na, nb)
+            sa, sb = (na[0], nb[0]) if sgn > 0 else (na[1], nb[1])
+            if abs(sa - sb) > 0.1 or abs(sa - near) > 4.0 or joined(sa) or joined(sb):
+                break
+            ea, eb = (nxt[0][1], nxt[1][1]) if sgn > 0 else (nxt[0][0], nxt[1][0])
+        ext.append(min(ea, eb) if sgn > 0 else max(ea, eb))
+    return q, u, n, n0, n1, ext[1], ext[0]
+
+
+def split_faces(msp, q, u, n, n0, n1, ts):
+    """Split the face lines at n0 / n1 at each t in ts (so a stretch of wall can move or go on its own)."""
+    T = lambda z: (z[0] - q[0]) * u[0] + (z[1] - q[1]) * u[1]
+    N = lambda z: (z[0] - q[0]) * n[0] + (z[1] - q[1]) * n[1]
+    for t in ts:
+        for e, s_ in _wall_lines(msp):
+            if not _par(s_, u) or min(abs((N(s_[0]) + N(s_[1])) / 2 - f) for f in (n0, n1)) > 0.012:
+                continue
+            ta, tb = T(s_[0]), T(s_[1])
+            if min(ta, tb) + 0.002 < t < max(ta, tb) - 0.002:
+                attrs = {k: e.dxf.get(k) for k in ("layer", "linetype", "color") if e.dxf.hasattr(k)}
+                m = (s_[0][0] + (s_[1][0] - s_[0][0]) * (t - ta) / (tb - ta), s_[0][1] + (s_[1][1] - s_[0][1]) * (t - ta) / (tb - ta))
+                msp.delete_entity(e)
+                msp.add_line(s_[0], m, dxfattribs=attrs)
+                msp.add_line(m, s_[1], dxfattribs=attrs)
+
+
+def run_pieces(msp, q, u, n, faces, t0, t1):
+    """The face lines (at the offsets in faces) lying within [t0, t1]: [(entity, seg, offset)]."""
+    T = lambda z: (z[0] - q[0]) * u[0] + (z[1] - q[1]) * u[1]
+    N = lambda z: (z[0] - q[0]) * n[0] + (z[1] - q[1]) * n[1]
+    out = []
+    for e, s_ in _wall_lines(msp):
+        if not _par(s_, u):
+            continue
+        nn = (N(s_[0]) + N(s_[1])) / 2
+        f = next((f for f in faces if abs(nn - f) < 0.012), None)
+        if f is not None and min(T(s_[0]), T(s_[1])) >= t0 - 0.003 and max(T(s_[0]), T(s_[1])) <= t1 + 0.003:
+            out.append((e, s_, f))
+    return out
+
+
+def _touching(msp, lines_geo, skip, tol=0.003):
+    """1wall LINE endpoints (not in skip) lying on any of lines_geo: [(entity, end index)]."""
+    out = []
+    for e, s_ in _wall_lines(msp):
+        if e.dxf.handle in skip:
+            continue
+        for i, z in enumerate(s_):
+            if any(LineString(g).distance(Point(z)) < tol for g in lines_geo):
+                out.append((e, i))
+    return out
+
+
+def _move_end(e, i, d):
+    z = e.dxf.start if i == 0 else e.dxf.end
+    new = (z.x + d[0], z.y + d[1], 0)
+    if i == 0:
+        e.dxf.start = new
+    else:
+        e.dxf.end = new
+
+
+def move_faces(msp, pieces, d, u, carry=()):
+    """Move wall face lines by d and keep every wall they meet joined: an end of another wall's line lying on them
+    slides by d too (a partition meeting this wall is lengthened / shortened, a T-junction's break in a through wall
+    follows, a corner stays a corner). `carry` (window / door entities in the wall) moves with it."""
+    geo = [s_ for _, s_, _ in pieces]
+    skip = {e.dxf.handle for e, _, _ in pieces}
+    for e, i in _touching(msp, geo, skip):
+        s_ = segs_of(e)[0]
+        if _par(s_, u):
+            continue  # this wall's own face carrying on past the junction
+        _move_end(e, i, d)
+    for e in list(carry) + [e for e, _, _ in pieces]:
+        e.translate(d[0], d[1], 0)
+
+
+def carried(msp, q, u, n, n0, n1, t0, t1):
+    """What sits in the wall between t0 and t1: window lines, door swings / leaves / frames, door blocks, jambs."""
+    T = lambda z: (z[0] - q[0]) * u[0] + (z[1] - q[1]) * u[1]
+    N = lambda z: (z[0] - q[0]) * n[0] + (z[1] - q[1]) * n[1]
+    out = []
+    for e in msp:
+        lay, t_ = e.dxf.layer, e.dxftype()
+        if t_ == "INSERT":
+            if lay == DOOR_LAYER:
+                z = (e.dxf.insert.x, e.dxf.insert.y)
+                if t0 - 0.05 <= T(z) <= t1 + 0.05 and n0 - 0.15 <= N(z) <= n1 + 0.15:
+                    out.append(e)
+            continue
+        if lay not in (WINDOW_LAYER, WALL_LAYER, "_DIM", DOOR_LAYER) and t_ != "HATCH":
+            continue
+        if t_ == "ARC":
+            z = (e.dxf.center.x, e.dxf.center.y)
+            if t0 - 0.05 <= T(z) <= t1 + 0.05 and n0 - 0.05 <= N(z) <= n1 + 0.05:
+                out.append(e)
+            continue
+        b_ = ext_of(e)
+        if not b_:
+            continue
+        cs = [(b_[0], b_[1]), (b_[2], b_[1]), (b_[0], b_[3]), (b_[2], b_[3])]
+        ts, ns = [T(z) for z in cs], [N(z) for z in cs]
+        slack = 0.02 if lay in (WINDOW_LAYER, WALL_LAYER) else 1.4
+        if min(ts) >= t0 - 0.02 and max(ts) <= t1 + 0.02 and min(ns) >= n0 - slack and max(ns) <= n1 + slack:
+            if lay == WALL_LAYER and t_ == "LINE" and _par(segs_of(e)[0], u):
+                continue  # a face: moved as a face
+            out.append(e)
+    return out
+
+
+def cut_face(msp, q, u, n, a, b, nn):
+    """Break the one wall face at offset nn between a and b (a partition joining it: a T-junction)."""
+    T = lambda z: (z[0] - q[0]) * u[0] + (z[1] - q[1]) * u[1]
+    N = lambda z: (z[0] - q[0]) * n[0] + (z[1] - q[1]) * n[1]
+    for e, s_ in _wall_lines(msp):
+        if not _par(s_, u) or abs((N(s_[0]) + N(s_[1])) / 2 - nn) > 0.012:
+            continue
+        ta, tb = T(s_[0]), T(s_[1])
+        lo, hi = sorted((ta, tb))
+        if hi <= a + 0.001 or lo >= b - 0.001:
+            continue
+        attrs = {k: e.dxf.get(k) for k in ("layer", "linetype", "color") if e.dxf.hasattr(k)}
+        P = lambda t: (s_[0][0] + (s_[1][0] - s_[0][0]) * (t - ta) / (tb - ta), s_[0][1] + (s_[1][1] - s_[0][1]) * (t - ta) / (tb - ta))
+        msp.delete_entity(e)
+        for x, y in ((lo, a), (b, hi)):
+            if y - x > 0.002:
+                msp.add_line(P(x), P(y), dxfattribs=attrs)
+
+
+def _snap_end(msp, end, d, t):
+    """Where a new wall's end meets an existing wall it runs into: (point on that wall's near face, its frame) or None."""
+    wa = wall_at(msp, end)
+    if not wa:
+        # a little short of the wall: look a few cm on along the new wall
+        for k in (0.05, 0.1, 0.15, 0.2):
+            wa = wall_at(msp, (end[0] + d[0] * k, end[1] + d[1] * k))
+            if wa:
+                break
+    if not wa:
+        return None
+    q, u, n, n0, n1 = wa
+    if abs(d[0] * u[0] + d[1] * u[1]) > 0.17:
+        return None  # it meets that wall at a slant: left free
+    # the near face: the one facing the new wall's body (back along -d)
+    side = -(d[0] * n[0] + d[1] * n[1])
+    nn = n1 if side > 0 else n0
+    T = (end[0] - q[0]) * u[0] + (end[1] - q[1]) * u[1]
+    return (q[0] + u[0] * T + n[0] * nn, q[1] + u[1] * T + n[1] * nn), (q, u, n, nn)
+
+
+def add_wall(msp, A, B, t, align="centre", through=None):
+    """A new wall from A to B (DWG), t thick: two face lines (a curve through `through` as short straight pieces),
+    each end run onto the wall it meets (that wall's face broken between the new faces: a T-junction) or capped."""
+    if math.dist(A, B) < 0.2:
+        raise ValueError("a wall needs to be at least 20 cm long")
+    if not 0.05 <= t <= 0.5:
+        raise ValueError("a wall is 5 to 50 cm thick")
+    pts = [A, B]
+    if through:  # a circular arc A -> through -> B as ~25 cm pieces
+        (x1, y1), (x2, y2), (x3, y3) = A, through, B
+        dd = 2 * (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2))
+        if abs(dd) < 1e-9:
+            raise ValueError("those three points are in a line: a straight wall")
+        ux = ((x1 ** 2 + y1 ** 2) * (y2 - y3) + (x2 ** 2 + y2 ** 2) * (y3 - y1) + (x3 ** 2 + y3 ** 2) * (y1 - y2)) / dd
+        uy = ((x1 ** 2 + y1 ** 2) * (x3 - x2) + (x2 ** 2 + y2 ** 2) * (x1 - x3) + (x3 ** 2 + y3 ** 2) * (x2 - x1)) / dd
+        R = math.dist((ux, uy), A)
+        a1, a2, a3 = (math.atan2(z[1] - uy, z[0] - ux) for z in (A, through, B))
+        ccw = (a2 - a1) % (2 * math.pi) < (a3 - a1) % (2 * math.pi)
+        span = (a3 - a1) % (2 * math.pi) if ccw else -((a1 - a3) % (2 * math.pi))
+        k = max(4, int(abs(span) * R / 0.25))
+        pts = [(ux + R * math.cos(a1 + span * i / k), uy + R * math.sin(a1 + span * i / k)) for i in range(k + 1)]
+    off = {"centre": (-t / 2, t / 2), "left": (0, t), "right": (-t, 0)}.get(align)
+    if off is None:
+        raise ValueError("align is centre, left or right (of the line from a to b)")
+    dirs = []
+    for i in range(len(pts) - 1):
+        L = math.dist(pts[i], pts[i + 1])
+        dirs.append(((pts[i + 1][0] - pts[i][0]) / L, (pts[i + 1][1] - pts[i][1]) / L))
+    # snap the ends onto the walls they meet
+    ends = []
+    for k_, (z, d) in enumerate(((pts[0], (-dirs[0][0], -dirs[0][1])), (pts[-1], dirs[-1]))):
+        sn = _snap_end(msp, z, d, t)
+        if sn:
+            hit, fr = sn
+            pts[0 if k_ == 0 else -1] = hit
+        ends.append(sn and sn[1])
+    def nrm(i):  # the left normal at point i (averaged at a bend)
+        ds = [dirs[j] for j in (i - 1, i) if 0 <= j < len(dirs)]
+        x, y = sum(d[0] for d in ds), sum(d[1] for d in ds)
+        L = math.hypot(x, y)
+        return (-y / L, x / L)
+    faces = []
+    for o in off:
+        faces.append([(z[0] + nrm(i)[0] * o, z[1] + nrm(i)[1] * o) for i, z in enumerate(pts)])
+    attrs = {"layer": WALL_LAYER}
+    new = []
+    for f in faces:
+        for i in range(len(f) - 1):
+            new.append(msp.add_line(f[i], f[i + 1], dxfattribs=attrs).dxf.handle)
+    for k_, fr in enumerate(ends):
+        i = 0 if k_ == 0 else -1
+        a_, b_ = faces[0][i], faces[1][i]
+        if fr:  # T-junction: break that wall's near face between the new faces
+            q, u, n, nn = fr
+            T = lambda z: (z[0] - q[0]) * u[0] + (z[1] - q[1]) * u[1]
+            lo, hi = sorted((T(a_), T(b_)))
+            cut_face(msp, q, u, n, lo, hi, nn)
+        else:
+            new.append(msp.add_line(a_, b_, dxfattribs=attrs).dxf.handle)
+    return pts, faces, new, [bool(e) for e in ends]
+
+
+def remove_wall(msp, p):
+    """The wall at p, junction to junction, with what sits in it. A through wall it was broken for is joined up again;
+    a wall left with an open end (it went on past a junction, or turned a corner into this one) is capped."""
+    run = wall_run(msp, p)
+    if not run:
+        raise ValueError("no wall there: give a point on (inside) the wall")
+    q, u, n, n0, n1, t0, t1 = run
+    split_faces(msp, q, u, n, n0, n1, (t0, t1))
+    pieces = run_pieces(msp, q, u, n, (n0, n1), t0, t1)
+    stuff = carried(msp, q, u, n, n0, n1, t0, t1)
+    ends = [z for _, s_, _ in pieces for z in s_]
+    for e in stuff:
+        msp.delete_entity(e)
+    for e, _, _ in pieces:
+        msp.delete_entity(e)
+    for e, s_ in _wall_lines(msp):  # caps / jambs across the removed wall's ends
+        if _par(s_, n) and math.dist(*s_) <= (n1 - n0) + 0.03 and all(any(math.dist(z, w) < 0.004 for w in ends) for z in s_):
+            msp.delete_entity(e)
+    touch = [(e, s_, i, e.dxf.handle) for e, s_ in _wall_lines(msp) for i, z in enumerate(s_) if any(math.dist(z, w) < 0.004 for w in ends)]
+    used = set()
+    for x in touch:  # a through wall's face broken for this one: its two pieces joined
+        for y in touch:
+            if x[3] == y[3] or {x[3], y[3]} & used:
+                continue
+            ux = ((x[1][1][0] - x[1][0][0]) / math.dist(*x[1]), (x[1][1][1] - x[1][0][1]) / math.dist(*x[1]))
+            if not _par(y[1], ux) or LineString(x[1]).distance(Point(y[1][0])) > 0.004 and \
+                    abs((y[1][0][0] - x[1][0][0]) * -ux[1] + (y[1][0][1] - x[1][0][1]) * ux[0]) > 0.004:
+                continue
+            attrs = {k: x[0].dxf.get(k) for k in ("layer", "linetype", "color") if x[0].dxf.hasattr(k)}
+            far_x, far_y = x[1][1 - x[2]], y[1][1 - y[2]]
+            msp.delete_entity(x[0]); msp.delete_entity(y[0])
+            msp.add_line(far_x, far_y, dxfattribs=attrs)
+            used |= {x[3], y[3]}
+    left = [x[1][x[2]] for x in touch if x[3] not in used]
+    capped, done = 0, set()
+    for i, za in enumerate(left):  # ends left open where the wall stood: closed across its footprint (along n)
+        for j, zb in enumerate(left):
+            if j <= i or i in done or j in done:
+                continue
+            dd = math.dist(za, zb)
+            if 0.03 <= dd <= 0.45 and abs((zb[0] - za[0]) * u[0] + (zb[1] - za[1]) * u[1]) < 0.02:
+                msp.add_line(za, zb, dxfattribs={"layer": WALL_LAYER})
+                capped += 1
+                done |= {i, j}
+    return q, u, n, n0, n1, t0, t1, len(pieces) + len(stuff), capped
+
+
+def move_wall(msp, p, shift, faces="both"):
+    """Slide the wall at p (junction to junction) by `shift` metres along its normal (+ = its n side), or only one
+    face (`faces` = the offset to move: thickness change). Walls meeting it follow; where the same straight wall
+    carries on past a junction, the moved stretch is joined to it with a short jog."""
+    run = wall_run(msp, p)
+    if not run:
+        raise ValueError("no wall there: give a point on (inside) the wall")
+    q, u, n, n0, n1, t0, t1 = run
+    which = (n0, n1) if faces == "both" else (faces,)
+    split_faces(msp, q, u, n, n0, n1, (t0, t1))
+    pieces = run_pieces(msp, q, u, n, which, t0, t1)
+    d = (n[0] * shift, n[1] * shift)
+    stay = [(e, s_) for e, s_ in _wall_lines(msp) if _par(s_, u) and e.dxf.handle not in {x[0].dxf.handle for x in pieces}]
+    old_ends = [z for _, s_, _ in pieces for z in s_]
+    jogs = [z for z in old_ends if any(any(math.dist(z, w) < 0.003 for w in s_) for _, s_ in stay)]
+    carry = carried(msp, q, u, n, n0, n1, t0, t1) if faces == "both" else []
+    if faces != "both":  # a window's lines on the moved face stretch with it
+        for e in msp.query(f'LINE[layer=="{WINDOW_LAYER}"]'):
+            s_ = segs_of(e)[0]
+            for i, z in enumerate(s_):
+                if any(LineString(g).distance(Point(z)) < 0.003 for _, g, _ in pieces):
+                    _move_end(e, i, d)
+    move_faces(msp, pieces, d, u, carry)
+    for z in jogs:
+        msp.add_line(z, (z[0] + d[0], z[1] + d[1]), dxfattribs={"layer": WALL_LAYER})
+    # every moved end should still meet a wall line; one that doesn't (slid past the column / wall it stopped on) is
+    # reported, not guessed at
+    mine = {e.dxf.handle for e, _, _ in pieces}
+    others = [g for e, g in _wall_lines(msp) if e.dxf.handle not in mine]
+    loose = sorted({(round(z[0] + d[0], 3), round(z[1] + d[1], 3)) for z in old_ends
+                    if not any(LineString(g).distance(Point(z[0] + d[0], z[1] + d[1])) < 0.004 for g in others)})
+    return q, u, n, n0, n1, t0, t1, len(pieces), len(jogs), loose
+
+
+def rename_room(msp, at=None, name=None, to=None):
+    """A room's name (ISLAK TEXT, the label the 3D names its room by): its words changed, a two-line name made one."""
+    if not to or not str(to).strip():
+        raise ValueError("say the new name")
+    txts = [e for e in msp.query("TEXT MTEXT") if e.dxf.layer == LABEL_LAYER]
+    word = lambda e: (e.plain_text() if e.dxftype() == "MTEXT" else e.dxf.text).strip().rstrip(".")
+    pos = lambda e: (e.dxf.insert.x, e.dxf.insert.y)
+    groups, seen = [], set()
+    for e in sorted(txts, key=lambda e: -pos(e)[1]):  # two-line names ("MASTER" over "BEDROOM.") are one name
+        if e.dxf.handle in seen:
+            continue
+        g = [e]
+        seen.add(e.dxf.handle)
+        for f in sorted(txts, key=lambda f: -pos(f)[1]):
+            if f.dxf.handle not in seen and abs(pos(f)[0] - pos(g[-1])[0]) < 1.0 and 0 < pos(g[-1])[1] - pos(f)[1] < 0.6:
+                g.append(f)
+                seen.add(f.dxf.handle)
+        groups.append(g)
+    key = lambda g: " ".join(word(e) for e in g).upper()
+    if name:
+        want = str(name).strip().upper().rstrip(".")
+        hit = [g for g in groups if key(g) == want or key(g) == " ".join(want.split()[:-1]) and want.split()[-1].isdigit()]
+    else:
+        hit = sorted(groups, key=lambda g: math.dist(pos(g[0]), at))[:1] if at else []
+    if not hit:
+        raise ValueError(f"no room name {name or at} on the plan; names: {sorted({key(g) for g in groups})}")
+    g = hit[0]
+    old = key(g)
+    first = g[0]
+    if first.dxftype() == "MTEXT":
+        first.text = str(to).strip().upper()
+    else:
+        first.dxf.text = str(to).strip().upper()
+    for e in g[1:]:
+        msp.delete_entity(e)
+    return old, str(to).strip().upper(), pos(first)
+
+
+def add_room_label(msp, at, name):
+    """A room name for a new room: TEXT on ISLAK in the style of the plan's other names."""
+    if not name or not str(name).strip():
+        raise ValueError("say the room's name")
+    like = next((e for e in msp.query("TEXT") if e.dxf.layer == LABEL_LAYER), None)
+    attrs = {"layer": LABEL_LAYER, "height": like.dxf.height if like else 0.2}
+    if like is not None:
+        for k in ("style", "color", "width"):
+            if like.dxf.hasattr(k):
+                attrs[k] = like.dxf.get(k)
+    t = msp.add_text(str(name).strip().upper(), dxfattribs=attrs)
+    t.dxf.insert = (at[0], at[1], 0)
+    return t.dxf.handle
+
+
+def niche_box(msp, p, width, depth, side=None):
+    """A recess into the wall at p: (box corners in DWG, the face it opens from)."""
+    wa = wall_at(msp, p)
+    if not wa:
+        raise ValueError("no wall there: give a point on the wall's face")
+    q, u, n, n0, n1 = wa
+    th = n1 - n0
+    if not 0.02 <= depth <= th - 0.02:
+        raise ValueError(f"this wall is {r(th)} m thick: a niche can go {r(max(0, th - 0.02))} m deep at most")
+    face = (n1 if _side(side, n) > 0 else n0) if side else (n0 if abs(n0) < abs(n1) else n1)
+    inward = 1 if face == n0 else -1
+    P = lambda t, nn: (q[0] + u[0] * t + n[0] * nn, q[1] + u[1] * t + n[1] * nn)
+    box_ = [P(-width / 2, face), P(width / 2, face), P(width / 2, face + inward * depth), P(-width / 2, face + inward * depth)]
+    return box_, face
+
+
+def opening_report(q, u, n, a, b, n0, n1, kind, drawn, ox, oy):  # noqa: C901
+    P = lambda t, nn: _at(None, q, t, nn, u, n)
+    pl = lambda z: [r(z[0] - ox), r(z[1] - oy)]
+    c = P((a + b) / 2, (n0 + n1) / 2)
+    rep = {"kind": kind, "centre": pl(c), "width": r(b - a), "wall_thickness": r(n1 - n0),
+           "box": [pl(P(a, n0)), pl(P(b, n1))], "along": "x" if abs(u[0]) > abs(u[1]) else "y"}
+    if drawn.get("hinges"):
+        rep["hinges"] = [pl(h) for h in drawn["hinges"]]
+    if drawn.get("hinge"):
+        rep["hinge"] = pl(drawn["hinge"])
+        sg = 1 if drawn["opens"] == "+n" else -1
+        v = (n[0] * sg, n[1] * sg)
+        rep["opens"] = "N" if v[1] > 0.5 else "S" if v[1] < -0.5 else "E" if v[0] > 0.5 else "W"
+    return rep
+
+
 def edit(a):
     doc, _ = recover.readfile(a.src)
     msp = doc.modelspace()
@@ -511,7 +1293,8 @@ def edit(a):
     W = lambda p: (float(p[0]) + ox, float(p[1]) + oy)
     before = Counter(e.dxf.layer for e in msp)
     ops = json.load(sys.stdin)
-    log, new, touched, moved = [], [], set(), []
+    log, new, touched, moved, opened, swing_hits = [], [], set(), [], [], []
+    walls_changed, renamed, niches_ = [], [], []
     details_cut = []  # detail lines deleted out of a piece that stays (a divider of a dressing table, not a piece)
 
     layers_hit = set()
@@ -534,8 +1317,8 @@ def edit(a):
             raise ValueError(f"no block {parent} for handle {h} (exploded by an earlier edit? dxf_query again for its "
                              "model-space handle)")
         if ins.dxf.layer == DOOR_LAYER:
-            raise ValueError(f"{h} is inside a door block (INSERT): it can't be moved or resized here: tell the user it "
-                             "needs the engineer")
+            raise ValueError(f"{h} is inside a door block (INSERT): it can't be edited piece by piece. To change that "
+                             "door, convert_opening it (handle: the INSERT) to \"door\" (or what the user wants): it is redrawn")
         kids = [(f"{parent}/{sh}", v.dxftype(), ext_of(v)) for sh, v in block_children(ins)]
         layer, name = ins.dxf.layer, ins.dxf.name
         got = []
@@ -806,7 +1589,7 @@ def edit(a):
             arc = get(o["handle"])
             if arc.dxftype() != "ARC":
                 raise ValueError(f"{o['handle']} is a {arc.dxftype()}; give the door's swing ARC. A door drawn as a "
-                                 "block (INSERT) can't be moved or resized here: tell the user it needs the engineer")
+                                 "block (INSERT): convert_opening it to \"door\" first (it is redrawn as a loose door), then move it")
             c, rad, u, n, t0, t1, n0, n1, s, parts, opened = door_frame(msp, arc)
             if o.get("along") is not None:
                 sh = float(o["along"])
@@ -858,6 +1641,159 @@ def edit(a):
                           "new_opening": [P(a2), P(b2)], "leaf": [r(rad), r(r2)], "walls": walls})
             log.append(f"door of {len(parts)} entities: opening {P(t0)}..{P(t1)} ({r(t1 - t0)} m) -> {P(a2)}..{P(b2)} "
                        f"({r(b2 - a2)} m), leaf {r(rad)} -> {r(r2)} m")
+        elif k in ("add_wall", "remove_wall", "move_wall", "set_wall_thickness", "mark_wall"):
+            P_ = lambda q_, u_, n_, t_, nn_: [r(q_[0] + u_[0] * t_ + n_[0] * nn_ - ox), r(q_[1] + u_[1] * t_ + n_[1] * nn_ - oy)]
+            if k == "add_wall":
+                pts_, faces_, nh_, snapped_ = add_wall(msp, W(o["a"]), W(o["b"]), float(o.get("thickness") or 0.12),
+                                                     o.get("align") or "centre", W(o["through"]) if o.get("through") else None)
+                new += nh_
+                ch_ = {"op": k, "a": [r(pts_[0][0] - ox), r(pts_[0][1] - oy)], "b": [r(pts_[-1][0] - ox), r(pts_[-1][1] - oy)],
+                       "thickness": float(o.get("thickness") or 0.12), "joined": snapped_, "curved": bool(o.get("through"))}
+                log.append(f"wall {ch_['a']} -> {ch_['b']}, {ch_['thickness']} m thick" + (", curved" if o.get("through") else "")
+                           + f"; ends {'joined to a wall' if snapped_[0] else 'free (capped)'} / {'joined to a wall' if snapped_[1] else 'free (capped)'}")
+            else:
+                at_ = W(o["at"])
+                run_ = wall_run(msp, at_)
+                if not run_:
+                    raise ValueError(f"no wall at {o['at']}: give a point on (inside) the wall")
+                q, u, n, n0, n1, t0, t1 = run_
+                mid_ = (n0 + n1) / 2
+                ch_ = {"op": k, "a": P_(q, u, n, t0, mid_), "b": P_(q, u, n, t1, mid_), "thickness": r(n1 - n0)}
+                if k == "remove_wall":
+                    *_, cnt_, cap_ = remove_wall(msp, at_)
+                    log.append(f"wall {ch_['a']} -> {ch_['b']} removed ({cnt_} entities; {cap_} open end(s) capped)")
+                elif k == "move_wall":
+                    sh_ = float(o.get("dx", 0)) * n[0] + float(o.get("dy", 0)) * n[1]
+                    if abs(sh_) < 0.002:
+                        raise ValueError("dx / dy must be across the wall (a wall slides sideways, not along itself)")
+                    *_, np_, jg_, loose_ = move_wall(msp, at_, sh_)
+                    ch_["moved"] = [r(n[0] * sh_), r(n[1] * sh_)]
+                    log.append(f"wall {ch_['a']} -> {ch_['b']} moved {ch_['moved']} ({np_} face lines; {jg_} jog(s) to the wall it carries on as)")
+                    if loose_:
+                        swing_hits.append(f"after the move, wall end(s) {[[r(x - ox), r(y - oy)] for x, y in loose_]} no longer meet "
+                                          "a wall (they slid past the column / wall they stopped on): extend the wall to the next "
+                                          "face with set_points, or move it less")
+                elif k == "set_wall_thickness":
+                    new_t = float(o["thickness"])
+                    if not 0.05 <= new_t <= 0.5:
+                        raise ValueError("a wall is 5 to 50 cm thick")
+                    dt = new_t - (n1 - n0)
+                    keep = o.get("keep")
+                    moves = [(n1, dt / 2), (n0, -dt / 2)] if not keep else ([(n0, -dt)] if _side(keep, n) > 0 else [(n1, dt)])
+                    for face_, sh_ in moves:
+                        run2 = wall_run(msp, at_)
+                        f_ = min((run2[3], run2[4]), key=lambda v: abs(v - face_)) if run2 else face_
+                        *_, loose_ = move_wall(msp, at_, sh_, faces=f_)
+                        if loose_:
+                            swing_hits.append(f"the thicker wall's end(s) {[[r(x - ox), r(y - oy)] for x, y in loose_]} no "
+                                              "longer meet a wall: check that junction")
+                    ch_["thickness"] = new_t
+                    log.append(f"wall {ch_['a']} -> {ch_['b']}: {r(n1 - n0)} -> {new_t} m thick")
+                else:
+                    log.append(f"wall {ch_['a']} -> {ch_['b']} ({ch_['thickness']} m thick) marked")
+            for key_ in ("height", "glass"):
+                if o.get(key_) is not None:
+                    ch_[key_] = o[key_]
+            walls_changed.append(ch_)
+        elif k in ("rename_room", "add_room_label"):
+            if k == "rename_room":
+                old_, new_n, at_ = rename_room(msp, W(o["at"]) if o.get("at") else None, o.get("name"), o.get("to"))
+                renamed.append({"old": old_, "new": new_n})
+                log.append(f"room {old_} is now {new_n}")
+            else:
+                h_ = add_room_label(msp, W(o["at"]), o.get("name"))
+                renamed.append({"old": None, "new": str(o["name"]).strip().upper(), "at": o["at"]})
+                log.append(f"room name {o['name']} added at {o['at']} ({h_})")
+        elif k == "add_niche":
+            w_, dp_ = float(o.get("width") or 0.6), float(o.get("depth") or 0.1)
+            box_, face_ = niche_box(msp, W(o["at"]), w_, dp_, o.get("side"))
+            lt_ = next((n_ for n_ in ("DASHED2", "DASHED", "HIDDEN") if n_ in doc.linetypes), None)
+            for i_ in range(4):  # dashed, as the plan draws its niches (and the build skips dashed lines)
+                msp.add_line(box_[i_], box_[(i_ + 1) % 4], dxfattribs={"layer": WALL_LAYER, **({"linetype": lt_} if lt_ else {})})
+            bottom_, top_ = float(o.get("bottom", 0.9)), float(o.get("top", 1.5))
+            if not 0 <= bottom_ < top_:
+                raise ValueError("a niche's top must be above its bottom")
+            niches_.append({"box": [[r(z[0] - ox), r(z[1] - oy)] for z in box_], "bottom": bottom_, "top": top_})
+            log.append(f"niche {w_} x {dp_} m deep, {bottom_}-{top_} m up, at {o['at']}")
+        elif k in ("add_opening", "convert_opening", "remove_opening"):
+            to = "wall" if k == "remove_opening" else o.get("kind" if k == "add_opening" else "to")
+            if to not in KINDS + (("wall",) if k != "add_opening" else ()):
+                raise ValueError(f"kind must be one of {', '.join(KINDS)}" + (" or wall" if k != "add_opening" else ""))
+            if k == "add_opening":
+                q_ = W(o["at"])
+                wa = wall_at(msp, q_)
+                if not wa:
+                    raise ValueError(f"no wall (two faces) at {o['at']}: give a point on the wall, e.g. from dxf_query 1wall")
+                q, u, n, n0, n1 = wa
+                w = float(o.get("width") or (0.9 if to in ("door", "opening", "sliding_door") else 1.2))
+                a_, b_ = -w / 2, w / 2
+                old = None
+            else:
+                seeds = []
+                if o.get("handle"):
+                    e = get(o["handle"])
+                    if e.dxftype() == "ARC":
+                        c_ = (e.dxf.center.x, e.dxf.center.y)
+                        seeds += [((c_[0] + z.x) / 2, (c_[1] + z.y) / 2) for z in (e.start_point, e.end_point)]
+                    elif e.dxf.layer == WINDOW_LAYER:
+                        seeds.append(frame(window_cluster(msp, e))[0])
+                    elif e.dxftype() == "INSERT":
+                        seeds.append((e.dxf.insert.x, e.dxf.insert.y))
+                    else:
+                        raise ValueError(f"{o['handle']} isn't a window line, a door swing ARC or a door INSERT: give at [x, y] instead")
+                if o.get("at"):
+                    seeds.append(W(o["at"]))
+                g = None
+                for z in seeds:
+                    g = gap_at(msp, z)
+                    for ax_ in ([] if g else _axes(_wall_lines(msp), z)):
+                        for d in (0.3, -0.3, 0.45, -0.45, 0.6, -0.6):
+                            g = gap_at(msp, (z[0] + ax_[0] * d, z[1] + ax_[1] * d))
+                            if g:
+                                break
+                        if g:
+                            break
+                    if g:
+                        break
+                if not g:
+                    raise ValueError("no door / window / doorway found there: give a point inside the opening (between its jambs)")
+                q, u, n, t0, t1, n0, n1 = g
+                old = opening_report(q, u, n, t0, t1, n0, n1, "old", {}, ox, oy)
+                cleared = clear_gap(msp, q, u, n, t0, t1, n0, n1)
+                close_gap(msp, q, u, n, t0, t1, n0, n1)
+                w = float(o.get("width") or (t1 - t0))
+                mid = (t0 + t1) / 2 + float(o.get("shift") or 0)
+                a_, b_ = mid - w / 2, mid + w / 2
+            drawn = {}
+            if to != "wall":
+                open_gap(msp, q, u, n, a_, b_, n0, n1)
+                drawn = draw_opening(msp, q, u, n, a_, b_, n0, n1, to, o.get("hinge"), o.get("opens"))
+            rep_ = opening_report(q, u, n, a_, b_, n0, n1, to, drawn, ox, oy)
+            if drawn.get("hinges"):  # double doors: each leaf's swing
+                drawn["sweep"] = None
+            if drawn.get("sweep"):  # a door must open into clear floor: furniture lines and fixture blocks in its swing
+                from shapely.geometry import Polygon as _Poly, box as _box
+                sweep_ = _Poly(drawn["sweep"]).buffer(-0.02)
+                for f_ in msp:
+                    t3 = f_.dxftype()
+                    if t3 == "INSERT" and f_.dxf.layer != DOOR_LAYER:
+                        b3 = ext_of(f_)
+                        hit_ = b3 and sweep_.intersection(_box(*b3)).area > 0.003
+                    elif f_.dxf.layer in FURNI and t3 in ("LINE", "LWPOLYLINE"):
+                        hit_ = any(sweep_.intersection(LineString(sg)).length > 0.03 for sg in segs_of(f_))
+                    else:
+                        continue
+                    if hit_:
+                        b3 = ext_of(f_)
+                        swing_hits.append(f"the door at {rep_['centre']} swings into {getattr(f_.dxf, 'name', '') or t3} "
+                                          f"{f_.dxf.handle} on {f_.dxf.layer} (x {r(b3[0] - ox)}..{r(b3[2] - ox)}, y "
+                                          f"{r(b3[1] - oy)}..{r(b3[3] - oy)}): open it the other way (opens / hinge), use a "
+                                          "sliding_door, or move that piece")
+            if old:
+                rep_["old_box"], rep_["old_width"] = old["box"], old["width"]
+            opened.append(rep_)
+            log.append(f"{k}: {to} {rep_['width']} m wide at {rep_['centre']}" + (f", hinge {rep_['hinge']}, opens {rep_['opens']}"
+                       if rep_.get("hinge") else "") + (f" (was {old['width']} m, {cleared} entities cleared)" if old else ""))
         else:
             raise ValueError(f"unknown op {k!r}")
     # No zero-length lines left behind.
@@ -865,7 +1801,7 @@ def edit(a):
             if e.dxf.handle in touched | set(new) and (e.dxf.start - e.dxf.end).magnitude < 1e-4]
     for h in zero:
         msp.delete_entity(doc.entitydb.get(h))
-    warnings, seen = [], set()
+    warnings, seen = list(swing_hits), set()
     for h in sorted(touched | set(new)):
         e = doc.entitydb.get(h)
         if e is None or not e.is_alive or e.dxf.layer != WINDOW_LAYER or h in seen or not segs_of(e):
@@ -926,6 +1862,10 @@ def edit(a):
                       **({"pieces_changed": pieces} if pieces else {}),
                       **({"clashes_checked": check, "clashes": clash} if check else {}),
                       **({"windows_moved": moved} if moved else {}),
+                      **({"openings_changed": opened} if opened else {}),
+                      **({"walls_changed": walls_changed} if walls_changed else {}),
+                      **({"rooms_renamed": renamed} if renamed else {}),
+                      **({"niches": niches_} if niches_ else {}),
                       **({"warnings": warnings + [f"KEPT {d}: it is a detail line of a piece that stays, not a piece of its own. "
                           "A part built inside another piece (a stool under a dressing table, a drawer front) has no outline "
                           "of its own, so removing that part is a 3D-only change: keep your furnish.js edit, the plan is right "

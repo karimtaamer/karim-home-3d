@@ -64,6 +64,8 @@ PRECHECK_MODEL = os.environ.get("EDIT_AI_PRECHECK_MODEL", "gpt-6-luna")
 REVIEW_MODEL = os.environ.get("EDIT_AI_REVIEW_MODEL", "gpt-6.1-sol")
 REVIEW_PASS = 7
 FIX_STEPS = 20
+MAX_STEPS_COMPLEX = 60  # the strong model's big jobs (a whole room redone); TIME_LIMIT still bounds it
+TIME_LIMIT = float(os.environ.get("EDIT_AI_TIME_LIMIT", "270" if os.environ.get("VERCEL") else "900"))  # s; Vercel stops at 300
 MAX_IMAGE = 3_000_000  # bytes of a data URL
 MAX_REFS = 4
 # USD per million tokens (input, cached input, output[, cache write]); only to tell the user what a message cost.
@@ -838,8 +840,48 @@ TOOLS = [
                                               "the edit explodes the block for you.",
      "parameters": {"type": "object", "properties": {"x": {"type": "number"}, "y": {"type": "number"}, "radius": {"type": "number"}},
                     "required": ["x", "y"]}},
-    {"name": "plan_rooms", "description": "The version's rooms: name, label position and floor extent in plan metres, plus ceiling/door/window heights.",
+    {"name": "plan_rooms", "description": "The version's rooms: name, label position and floor extent in plan metres, plus ceiling/door/window heights and every opening (kind, centre, width, its own heights).",
      "parameters": {"type": "object", "properties": {}}},
+    {"name": "set_openings", "description": "Heights, glass and kind of doors / windows / sliders, which the plan doesn't hold (it only knows "
+                                            "where they are). openings: [{at: [x, y] plan metres inside the opening (plan_rooms lists them), "
+                                            "sill? head? (m above the floor; a door or slider takes head only), frosted? (true/false), "
+                                            "kind? (window | slider | door: what it is built as, e.g. a terrace slider kept a window), "
+                                            "panel? (glass | wood: a slider's leaf), frame? leaf? handle? (materials.js name or \"#rrggbb\"; handle also "
+                                            "brass | black | chrome | nickel | none), glass? (clear | frosted | tinted | bronze | "
+                                            "reflective), panes? transoms? (bars), style? (door: flush | panelled | glazed | louvred | "
+                                            "hidden; slider: bifold | pocket | barn), arch? (true), fanlight? (m of glass over a door), "
+                                            "shape? (round window), clear?: true (back to the defaults)}]; home?: {ceiling?, door?, "
+                                            "sill?, window?, slider?, parapet?} home-wide heights in m. For this version only; the 3D is rebuilt.",
+     "parameters": {"type": "object", "properties": {"openings": {"type": "array", "items": {"type": "object"}},
+                                                     "home": {"type": "object"}}}},
+    {"name": "set_room", "description": "A room's finishes and settings, this version only: room (its name, as plan_rooms gives it); "
+                                        "floor, walls (paint above any tiles), tiles (wall tiles), ceiling: a materials.js name or a "
+                                        "colour \"#rrggbb\" (floor also wood | tile | decking); tileHeight (m, 0 = none; wet rooms "
+                                        "default to the ceiling); skirting (height in m, 0 = none, or {height, material}); "
+                                        "ceilingHeight (m, this room only); floorLevel (m: + a raised platform, - sunken; furniture in "
+                                        "it follows); light {brightness: x the default 0-4, warmth: warm | neutral | cool | \"#rrggbb\"}; "
+                                        "skylights [{at: [x, y], w, d}]; kind (wet | dry | outdoor); a key set to null goes back to "
+                                        "the default; clear: true resets the room.",
+     "parameters": {"type": "object", "properties": {"room": {"type": "string"}}, "required": ["room"]}},
+    {"name": "set_home", "description": "notes: [{at: [x, y], text}] pinned on the plan (or {at, remove: true}); start: [x, y] where "
+                                        "the walk-through starts (null = the front door).",
+     "parameters": {"type": "object", "properties": {"notes": {"type": "array", "items": {"type": "object"}},
+                                                     "start": {"type": ["array", "null"]}}}},
+    {"name": "measure", "description": "Floor area, perimeter and net wall area (doors / windows taken off) per room, or room: one "
+                                       "room, for questions and quantities (paint, tiles, flooring, skirting). Changes nothing.",
+     "parameters": {"type": "object", "properties": {"room": {"type": "string"}}}},
+    {"name": "save_picture", "description": "Keep the user's reference picture `ref` (1 = the first) as a material mat.pic<Name> "
+                                            "(name), for a photo in a frame / a print (size 0) or a repeating sample (size = m one "
+                                            "repeat covers: a tile, a fabric).",
+     "parameters": {"type": "object", "properties": {"ref": {"type": "integer"}, "name": {"type": "string"},
+                                                     "size": {"type": "number"}}, "required": ["ref", "name"]}},
+    {"name": "find_model", "description": "Search the model library (Poly Haven CC0: sofas, armchairs, tables, beds, cabinets, "
+                                          "lamps, chandeliers, vases, clocks, plants, ...) for a real 3D model of a piece instead of "
+                                          "boxes: words (e.g. \"armchair mid century\"). Gives id, size (w, h, d m) and the line to use.",
+     "parameters": {"type": "object", "properties": {"words": {"type": "string"}}, "required": ["words"]}},
+    {"name": "save_progress", "description": "Save what's done so far (checked like a final save), so a big job keeps it if "
+                                             "it runs out of time; then carry on. summary: what this part did.",
+     "parameters": {"type": "object", "properties": {"summary": {"type": "string"}}}},
     {"name": "dxf_query", "description": "Entities of the version's plan DXF inside a box (plan metres), optionally only some layers "
                                         "(1wall, Windows, 3door, 2furni, Glass, _DIM, ISLAK). Gives handles for dxf_edit. What furniture "
                                         "blocks hold is listed too, with a handle INSERT/ENTITY and inside_block: move_piece / resize_piece / "
@@ -864,6 +906,16 @@ TOOLS = [
                                        "move_door {handle (the door's swing ARC), along? (m along its wall, + = +x/+y), dx?/dy?, width? (new leaf width = swing radius, m)}: "
                                        "moves and / or widens a door drawn loose (swing, leaf, jambs) and re-cuts the wall faces so the 3D opening follows; "
                                        "ALWAYS use it for a door, never move, delete or redraw door pieces by hand. "
+                                       "add_opening {at [x,y] on a solid wall, kind: window | glass_slider | door | sliding_door | opening (bare doorway), width?, hinge? (door: the end it hangs from, N/S/E/W or start/end), opens? (door: the side it swings into, N/S/E/W), sill? head? frosted?}: cuts both wall faces, adds jambs and draws it. "
+                                       "convert_opening {at [x,y] inside the opening, or handle (a window line, a swing ARC or a 3door INSERT), to: a kind above or wall, width?, shift? (m along the wall), hinge?, opens?, sill? head? frosted?}: empties the opening and redraws it as `to`; also flips a door (to door with the other hinge / opens) and turns a block door into a loose one. "
+                                       "remove_opening {at or handle}: walls it up. Heights / glass given here are stored for the 3D like set_openings. "
+                                       "More kinds: double_door (1.0-2.6 m, two leaves), pocket_door, barn_door, bifold_door. "
+                                       "WALLS (never add_line / delete face lines by hand): add_wall {a, b (centre line), thickness? 0.12, align? centre|left|right, through? [x,y] (a curve), height? (a low wall), glass? (a glass wall)}: "
+                                       "ends at an existing wall are joined to it (T-junction), free ends capped; remove_wall {at}: junction to junction, with its doors / windows, the walls it met closed; "
+                                       "move_wall {at, dx, dy}: slides across itself, the walls meeting it follow; set_wall_thickness {at, thickness, keep? (the face that stays, N/S/E/W)}; "
+                                       "mark_wall {at, height?, glass?}: an existing wall made low / glass (a glass balustrade, a half wall). "
+                                       "ROOMS: rename_room {name or at, to}; add_room_label {at, name} (a new room needs one: its kind follows the name). "
+                                       "NICHES: add_niche {at on the wall face, width, depth, bottom, top, side?}. "
                                        "The 3D model and the 2D drawing are rebuilt from it when you finish.",
      "parameters": {"type": "object", "properties": {"ops": {"type": "array", "items": {"type": "object"}}}, "required": ["ops"]}},
     {"name": "check", "description": "Check the edits so far: JS syntax of furnish.js / materials.js and, if the plan changed, a trial rebuild of the model and drawing.",
@@ -990,8 +1042,28 @@ def tool(ws, name, a):
                 box = [round(min(xs), 3), round(min(ys), 3), round(max(xs), 3), round(max(ys), 3)]
                 inside = [l["name"] for l in labels if box[0] <= l["at"][0] <= box[2] and box[1] <= l["at"][1] <= box[3]]
                 floors.append({"rooms": inside, "box": box})
+        ops_ = []
+        for o in m.get("openings", []):
+            xs, ys = [q[0] for q in o["outer"]], [q[1] for q in o["outer"]]
+            ops_.append({"kind": o["kind"], "centre": [round(sum(xs) / len(xs), 3), round(sum(ys) / len(ys), 3)],
+                         "width": round(max(max(xs) - min(xs), max(ys) - min(ys)), 2),
+                         **{k: o[k] for k in ("sill", "head", "frosted", "panel") if k in o}})
         return json.dumps({"heights": {k: m[k] for k in ("ceiling", "doorHead", "sill", "winHead", "sliderHead")},
-                           "bounds": m["bounds"], "labels": labels, "floor_areas": floors})[:6000]
+                           "bounds": m["bounds"], "labels": labels, "floor_areas": floors, "openings": ops_})[:9000]
+    if name == "set_openings":
+        return set_openings(ws, a)
+    if name == "set_room":
+        return set_room(ws, a)
+    if name == "set_home":
+        return set_home(ws, a)
+    if name == "measure":
+        return measure(ws, a)
+    if name == "save_picture":
+        return save_picture(ws, a, getattr(ws, "refs", []))
+    if name == "find_model":
+        return find_model(a.get("words", ""))
+    if name == "save_progress":
+        return save_progress(ws, getattr(ws, "message", ""), a.get("summary", ""))
     if name == "dxf_query":
         args = [dwg_python(), str(ROOT / "edit_ai_dxf.py"), "query", str(ws.dxf()), f"--origin={ORIGIN[0]},{ORIGIN[1]}",
                 f"--bbox={a['x0']},{a['y0']},{a['x1']},{a['y1']}", "--limit", "120"]
@@ -1061,6 +1133,12 @@ def tool(ws, name, a):
                     ws.moves.append(((b0[0] + b1[0] - a0[0] - a1[0]) / 2, (b0[1] + b1[1] - a0[1] - a1[1]) / 2))
             for h_ in rep_.get("clashes_checked", []):
                 ws.clashes[h_] = [c_ for c_ in rep_.get("clashes", []) if c_["piece"] == h_]
+            asks_ = [o for o in ops_ if o.get("op") in ("add_opening", "convert_opening", "remove_opening")]
+            for o_, ch_ in zip(asks_, rep_.get("openings_changed", [])):
+                opening_spec(ws, ch_, o_)
+            plan_specs(ws, {**rep_, "walls_changed": [{**w_, **{k_: o_[k_] for k_ in ("height", "glass") if o_.get(k_) is not None}}
+                                                      for w_, o_ in zip(rep_.get("walls_changed", []),
+                                                                        [o for o in ops_ if o.get("op") in ("add_wall", "remove_wall", "move_wall", "set_wall_thickness", "mark_wall")])]})
         except ValueError:
             pass
         try:  # what hangs in a moved window (sheers, curtains) has to follow it in furnish.js
@@ -1096,13 +1174,450 @@ def tool(ws, name, a):
     return f"unknown tool {name}"
 
 
+# --- Opening specs: what the plan doesn't hold (heights, glass, the kind an opening is built as) ------------------------
+# They live in the version's tour JSON ("openings", "heights"; DWG coordinates), which build_geometry.py reads, so a
+# change stays in this version and the manual build (build_version.py) builds the same.
+HOME_HEIGHTS = {"ceiling": (2.2, 4.0), "door": (1.8, 3.0), "sill": (0.0, 2.0), "window": (0.5, 3.5), "slider": (1.8, 3.5),
+                "parapet": (0.3, 2.0)}
+
+
+def dump_tour(t):
+    """The tour JSON in its own compact style: one key per line, a list of objects one per line."""
+    out = []
+    for k, v in t.items():
+        if isinstance(v, list) and v and all(isinstance(x, dict) for x in v):
+            val = "[\n" + ",\n".join("    " + json.dumps(x, ensure_ascii=False) for x in v) + "\n  ]"
+        else:
+            val = json.dumps(v, ensure_ascii=False)
+        out.append(f"  {json.dumps(k)}: {val}")
+    return "{\n" + ",\n".join(out) + "\n}\n"
+
+
+def _tour(ws):
+    return json.loads(ws.text(ws.cfg["tour"]))
+
+
+def _dwg(pt):
+    return [round(pt[0] + ORIGIN[0], 4), round(pt[1] + ORIGIN[1], 4)]
+
+
+def _drop_specs(t, box, pad=0.05, hinges=True):
+    """Specs (and shown-as-drawn door hinges) inside a plan box [[x0, y0], [x1, y1]] go: that opening is redone."""
+    (x0, y0), (x1, y1) = box
+    x0, x1, y0, y1 = min(x0, x1), max(x0, x1), min(y0, y1), max(y0, y1)
+    inb = lambda q, m: x0 - m <= q[0] - ORIGIN[0] <= x1 + m and y0 - m <= q[1] - ORIGIN[1] <= y1 + m
+    t["openings"] = [o for o in t.get("openings", []) if not inb(o["at"], pad)]
+    if hinges and "doorsAsDrawn" in t:
+        t["doorsAsDrawn"] = [h for h in t["doorsAsDrawn"] if not inb(h, 0.25)]
+    if not t["openings"]:
+        t.pop("openings")
+
+
+def _spec_fields(o):
+    f = {}
+    for k in ("sill", "head"):
+        if o.get(k) is not None:
+            f[k] = round(float(o[k]), 3)
+    if o.get("frosted") is not None:
+        f["frosted"] = bool(o["frosted"])
+    if "sill" in f and "head" in f and f["head"] <= f["sill"] + 0.2:
+        raise ValueError(f"head {f['head']} m must be well above sill {f['sill']} m")
+    return f
+
+
+def opening_spec(ws, ch, o):
+    """After add / convert / remove_opening: the tour's spec for that opening (kind, heights, panel; a door's hinge
+    shown as drawn), any older spec in its place dropped."""
+    t = _tour(ws)
+    bx = [ch["box"][0], ch["box"][1]] + ([ch["old_box"][0], ch["old_box"][1]] if ch.get("old_box") else [])
+    _drop_specs(t, [[min(q[0] for q in bx), min(q[1] for q in bx)], [max(q[0] for q in bx), max(q[1] for q in bx)]])
+    f, k = _spec_fields(o), ch["kind"]
+    f.update(_look_fields(ws, o))
+    door_h = (t.get("heights") or {}).get("door", 2.1)
+    slide = lambda style: {"kind": "slider", "panel": "wood", "head": door_h, **({"style": style} if style else {}), **f}
+    f = {"window": {"kind": "window", **f}, "glass_slider": {"kind": "slider", "panel": "glass", **f},
+         "sliding_door": slide(None), "pocket_door": slide("pocket"), "barn_door": slide("barn"), "bifold_door": slide("bifold"),
+         "door": f, "double_door": f}.get(k, {})
+    if k != "window":
+        f.pop("sill", None)
+    if f:
+        t.setdefault("openings", []).append({"at": _dwg(ch["centre"]), **f})
+    for h in ch.get("hinges") or ([ch["hinge"]] if ch.get("hinge") else []):
+        t.setdefault("doorsAsDrawn", []).append(_dwg(h))
+    ws.write(ws.cfg["tour"], dump_tour(t).encode())
+
+
+LOOKS = {"frame": "material", "leaf": "material", "glass": ("clear", "frosted", "tinted", "bronze", "reflective"),
+         "panes": int, "transoms": int, "style": ("flush", "panelled", "glazed", "louvred", "hidden", "bifold", "pocket", "barn"),
+         "handle": "material", "arch": bool, "fanlight": float, "shape": ("rect", "round")}
+FLOOR_WORDS = ("wood", "tile", "decking")
+
+
+def material_names(ws):
+    """The materials furnish / the specs may name: materials.js's library (this message's version of it)."""
+    src = ws.text("materials.js")
+    lib = src[src.find("const M = {"):src.find("M.oakVeneer.color")] or src  # the library object, not helper options
+    return set(re.findall(r"^\s{4}([A-Za-z]\w*):", lib, re.M))
+
+
+def check_material(ws, v, what):
+    v = str(v).strip()
+    if re.fullmatch(r"#[0-9a-fA-F]{6}", v) or v in FLOOR_WORDS or v in material_names(ws) or \
+            v in ("brass", "black", "chrome", "nickel", "none"):
+        return v
+    raise ValueError(f"{what}: {v!r} isn't a material. Use a colour like \"#a3b18a\" or one of materials.js: "
+                     f"{', '.join(sorted(material_names(ws)))[:900]}")
+
+
+def _look_fields(ws, o):
+    f = {}
+    for k, kind in LOOKS.items():
+        if o.get(k) is None:
+            continue
+        v = o[k]
+        if kind == "material":
+            f[k] = check_material(ws, v, k)
+        elif isinstance(kind, tuple):
+            if v not in kind:
+                raise ValueError(f"{k} is one of {', '.join(kind)}")
+            f[k] = v
+        else:
+            f[k] = kind(v)
+    return f
+
+
+ROOM_KEYS = {"kind": ("wet", "dry", "outdoor"), "floor": "material", "walls": "material", "tiles": "material",
+             "tileHeight": (0.0, 4.0), "skirting": None, "ceiling": "material", "ceilingHeight": (2.0, 4.5),
+             "floorLevel": (-0.6, 0.8), "light": None, "skylights": None}
+
+
+def _room_names(ws):
+    s_ = ws.text(ws.cfg["model"])
+    m = json.loads(s_[s_.index("{"):s_.rindex("}") + 1])
+    return {f["room"] for f in m.get("floor", [])} | {l["text"] for l in m.get("labels", [])}
+
+
+def set_room(ws, a):
+    """The set_room tool: a room's finishes, kind, heights, level, light and skylights, in the tour's "rooms"."""
+    if ws.plan_dirty:
+        rebuild(ws)
+        ws.plan_dirty = False
+    names = _room_names(ws)
+    name = str(a.get("room") or "").strip().upper().rstrip(".")
+    if name not in {n.upper() for n in names}:
+        raise ValueError(f"no room {name!r}; rooms: {', '.join(sorted(names))}")
+    name = next(n for n in names if n.upper() == name)
+    t = _tour(ws)
+    rooms = t.setdefault("rooms", {})
+    spec = {} if a.get("clear") else dict(rooms.get(name) or {})
+    for k, rule in ROOM_KEYS.items():
+        if k not in a:
+            continue
+        v = a[k]
+        if v is None:
+            spec.pop(k, None)
+        elif rule == "material":
+            spec[k] = check_material(ws, v, k)
+        elif isinstance(rule, tuple) and isinstance(rule[0], str):
+            if v not in rule:
+                raise ValueError(f"{k} is one of {', '.join(rule)}")
+            spec[k] = v
+        elif isinstance(rule, tuple):
+            if not rule[0] <= float(v) <= rule[1]:
+                raise ValueError(f"{k} {v} is outside {rule[0]}..{rule[1]} m")
+            home_c = float((t.get("heights") or {}).get("ceiling", 2.6))
+            if k == "ceilingHeight" and float(v) > home_c + 0.001:  # walls stop at the home ceiling: a gap above them
+                raise ValueError(f"a room's ceiling can only go down from the home's ({home_c} m). For a taller room, "
+                                 f"raise the home ceiling (set_openings home ceiling) and set the other rooms' "
+                                 f"ceilingHeight back to {home_c}")
+            spec[k] = round(float(v), 3)
+        elif k == "skirting":  # a height (0 = none) or {height, material}
+            spec[k] = round(float(v), 3) if isinstance(v, (int, float)) else \
+                {"height": round(float(v.get("height", 0.08)), 3), **({"material": check_material(ws, v["material"], "skirting")} if v.get("material") else {})}
+        elif k == "light":
+            spec[k] = {kk: (vv if kk == "warmth" else round(max(0.0, min(4.0, float(vv))), 2)) for kk, vv in (v or {}).items()
+                       if kk in ("brightness", "warmth")}
+        elif k == "skylights":
+            spec[k] = [{"at": [round(float(x), 3) for x in sk["at"]], "w": round(float(sk.get("w", 0.8)), 2),
+                        "d": round(float(sk.get("d", 0.8)), 2)} for sk in (v or [])]
+    finishes = t.get("finishes") or {}
+    if spec.get("floor") in FLOOR_WORDS:  # the plain finishes stay where the 2D legend reads them
+        finishes[name] = spec.pop("floor")
+        t["finishes"] = finishes
+    if spec:
+        rooms[name] = spec
+    else:
+        rooms.pop(name, None)
+    if not rooms:
+        t.pop("rooms")
+    ws.write(ws.cfg["tour"], dump_tour(t).encode())
+    ws.plan_dirty = True
+    ws.model0 = getattr(ws, "model0", ws.read(ws.cfg["model"]))
+    return f"{name}: {spec or 'defaults'}" + (f" (floor {finishes[name]})" if name in finishes else "") + \
+        " - the 3D is rebuilt when you finish (check rebuilds it now)"
+
+
+def plan_specs(ws, rep):
+    """After a dxf_edit: the tour's specs that follow plan edits (low / glass walls, niches, renamed rooms)."""
+    t, touched = _tour(ws), False
+    for w in rep.get("walls_changed", []):
+        a, b = _dwg(w["a"]), _dwg(w["b"])
+        if w["op"] in ("remove_wall", "move_wall", "set_wall_thickness") or w.get("height") is not None or w.get("glass") is not None:
+            seg = [(a[0], a[1]), (b[0], b[1])]
+            near = lambda o: _seg_dist(seg, o["a"]) < 0.2 and _seg_dist(seg, o["b"]) < 0.2
+            before = len(t.get("walls", []))
+            t["walls"] = [o for o in t.get("walls", []) if not near(o)]
+            touched |= len(t["walls"]) != before
+        if w["op"] in ("add_wall", "mark_wall", "move_wall", "set_wall_thickness") and (w.get("height") is not None or w.get("glass")):
+            mv = w.get("moved") or [0, 0]
+            t.setdefault("walls", []).append({"a": [a[0] + mv[0], a[1] + mv[1]], "b": [b[0] + mv[0], b[1] + mv[1]],
+                                              "thickness": w["thickness"], **({"height": float(w["height"])} if w.get("height") is not None else {}),
+                                              **({"glass": True} if w.get("glass") else {})})
+            touched = True
+        if not t.get("walls"):
+            t.pop("walls", None)
+    for nc in rep.get("niches", []):
+        t.setdefault("niches", []).append({"box": [_dwg(z) for z in nc["box"]], "bottom": nc["bottom"], "top": nc["top"]})
+        touched = True
+    for rn in rep.get("rooms_renamed", []):
+        old, new = rn.get("old"), rn["new"]
+        if not old:
+            continue
+        for key in ("rooms", "finishes"):
+            for k in list((t.get(key) or {})):
+                if k.upper().rstrip(".") == old:
+                    t[key][new] = t[key].pop(k)
+                    touched = True
+        for st in t.get("stops", []):
+            if str(st.get("room", "")).upper().rstrip(".") == old:
+                st["room"] = new
+                touched = True
+        for sd in t.get("seeds", []):
+            if str(sd.get("name", "")).upper().rstrip(".") == old:
+                sd["name"] = new
+                touched = True
+    if touched:
+        ws.write(ws.cfg["tour"], dump_tour(t).encode())
+
+
+def _seg_dist(seg, pt):
+    (x1, y1), (x2, y2) = seg
+    dx, dy = x2 - x1, y2 - y1
+    L2 = dx * dx + dy * dy or 1e-9
+    k = max(0, min(1, ((pt[0] - x1) * dx + (pt[1] - y1) * dy) / L2))
+    return math.hypot(pt[0] - x1 - k * dx, pt[1] - y1 - k * dy)
+
+
+def set_home(ws, a):
+    """The set_home tool: notes pinned on the plan and where the walk-through starts."""
+    t, log = _tour(ws), []
+    for n in a.get("notes") or []:
+        if n.get("remove"):
+            before = len(t.get("notes", []))
+            t["notes"] = [x for x in t.get("notes", []) if math.dist(_dwg(n["at"]), x["at"]) > 0.4]
+            log.append(f"removed {before - len(t['notes'])} note(s) near {n['at']}")
+        else:
+            t.setdefault("notes", []).append({"at": _dwg(n["at"]), "text": str(n["text"])[:200]})
+            log.append(f"note at {n['at']}: {n['text'][:80]}")
+    if not t.get("notes"):
+        t.pop("notes", None)
+    if a.get("start") is not None:
+        if a["start"]:
+            t["start"] = _dwg(a["start"])
+        else:
+            t.pop("start", None)
+        log.append(f"walk-through starts at {a['start'] or 'the front door'}")
+    ws.write(ws.cfg["tour"], dump_tour(t).encode())
+    ws.plan_dirty = True
+    return "; ".join(log) or "nothing to change"
+
+
+def _ring_area(r_):
+    return abs(sum(r_[i - 1][0] * r_[i][1] - r_[i][0] * r_[i - 1][1] for i in range(len(r_)))) / 2
+
+
+def _ring_len(r_):
+    return sum(math.dist(r_[i - 1], r_[i]) for i in range(len(r_)))
+
+
+def measure(ws, a):
+    """The measure tool: floor area, wall length and paintable / tileable wall area per room (or the whole home),
+    with door / window areas taken off, for quantities (paint, tiles, skirting, flooring)."""
+    if ws.plan_dirty:
+        rebuild(ws)
+        ws.plan_dirty = False
+    s_ = ws.text(ws.cfg["model"])
+    m = json.loads(s_[s_.index("{"):s_.rindex("}") + 1])
+    want = str(a.get("room") or "").upper().rstrip(".")
+    rooms = {}
+    for f in m.get("floor", []):
+        r_ = rooms.setdefault(f["room"], {"kind": f["kind"], "floor_m2": 0.0, "perimeter_m": 0.0})
+        r_["floor_m2"] += _ring_area(f["outer"]) - sum(_ring_area(h) for h in f.get("holes", []))
+        r_["perimeter_m"] += _ring_len(f["outer"])
+    out, ch = [], m.get("ceiling", 2.6)
+    for name, r_ in sorted(rooms.items()):
+        if want and name.upper() != want:
+            continue
+        spec = (m.get("rooms") or {}).get(name, {})
+        h = spec.get("ceilingHeight", ch)
+        holes = 0.0
+        for o in m.get("openings", []):  # openings on this room's edge: their wall area doesn't get paint / tiles
+            if any(min(math.dist(q, z) for z in f["outer"]) < 0.4 for f in m["floor"] if f["room"] == name for q in o["outer"]):
+                xs, ys = [q[0] for q in o["outer"]], [q[1] for q in o["outer"]]
+                w = max(max(xs) - min(xs), max(ys) - min(ys))
+                top = o.get("head", m["doorHead"] if o["kind"] == "door" else m["sliderHead"] if o["kind"] == "slider" else m["winHead"])
+                holes += w * (top - (o.get("sill", m["sill"]) if o["kind"] == "window" else 0))
+        out.append({"room": name, "kind": r_["kind"], "floor_m2": round(r_["floor_m2"], 2), "perimeter_m": round(r_["perimeter_m"], 2),
+                    "ceiling_m": h, "wall_m2_net": round(max(0.0, r_["perimeter_m"] * h - holes), 2)})
+    if want and not out:
+        raise ValueError(f"no room {want!r}; rooms: {', '.join(sorted(rooms))}")
+    tot = {"floor_m2": round(sum(r_["floor_m2"] for r_ in out), 2), "wall_m2_net": round(sum(r_["wall_m2_net"] for r_ in out), 2)}
+    return json.dumps({"rooms": out, "total": tot, "notes": m.get("notes", []),
+                       "hint": "add ~10% for tile / flooring cuts; paint coverage ~10 m2 per litre per coat"})[:8000]
+
+
+def save_picture(ws, a, refs):
+    """The save_picture tool: one of the user's reference pictures kept as a texture (a photo in a frame, a print,
+    a tile or fabric sample) and a material for it in materials.js."""
+    k = int(a.get("ref", 1)) - 1
+    if not 0 <= k < len(refs):
+        raise ValueError(f"there are {len(refs)} reference pictures; ref is 1..{len(refs)}")
+    head, b64 = refs[k].split(",", 1)
+    ext = "png" if "png" in head else "webp" if "webp" in head else "jpg"
+    data = base64.b64decode(b64)
+    name = re.sub(r"[^A-Za-z0-9]", "", str(a.get("name") or "picture"))[:24] or "picture"
+    key = "pic" + name[0].upper() + name[1:]
+    path = f"uploads/{key}-{hashlib.sha1(data).hexdigest()[:8]}.{ext}"
+    ws.write(path, data)
+    size = float(a.get("size") or 0)  # > 0: a repeating sample (tile / fabric) that wide; 0: one picture fills the surface
+    src = ws.text("materials.js")
+    line = f"    {key}: std({{ map: picture(\"{path}\", {size}), roughness: 0.8 }}),\n"
+    if re.search(rf"^\s{{4}}{key}:", src, re.M):
+        src = re.sub(rf"^\s{{4}}{key}:.*\n", line, src, flags=re.M)
+    else:
+        src = src.replace("    art: [\n", line + "    art: [\n", 1)
+    ws.write("materials.js", src.encode())
+    return f"saved as mat.{key} ({path}); use it in furnish.js like any material, e.g. on a frame's picture face"
+
+
+def find_model(words):
+    """The find_model tool: library models whose name / categories / tags match the words, best first."""
+    lib = json.loads((ROOT / "docs" / "edit-ai" / "model-library.json").read_text())["models"]  # not models/: the function bundle leaves that out
+    ws_ = [w for w in re.findall(r"[a-z0-9]+", words.lower()) if len(w) > 1]
+    if not ws_:
+        raise ValueError("say what to look for, e.g. \"armchair\" or \"ceiling lamp\"")
+    hay = lambda m: " ".join([m["id"], m["name"], *m["cat"], *m["tags"]]).lower().replace("_", " ")
+    scored = sorted(((sum(w in hay(m) for w in ws_), m) for m in lib), key=lambda x: -x[0])
+    hits = [m for sc, m in scored if sc][:12]
+    if not hits:
+        return "nothing in the library matches; build it from boxes / cylinders as usual"
+    return json.dumps([{"id": m["id"], "name": m["name"], "size": m["size"], "use": f'p.model("{m["url"]}", null, 0, 0, 0, '
+                        f'{{ size: [{m["size"][0]}, {m["size"][1]}, {m["size"][2]}] }})'} for m in hits]) + \
+        ("\nIn an item(...) build: size: [w, h, d] makes it exactly that big (scale the catalogue size to the real piece "
+         "the user wants); it stands on y = 0 and its back sits at z = 0. Models may face another way: if its front "
+         "doesn't face into the room, wrap it in a group rotated by Math.PI (or +-Math.PI / 2). Give it a 2furni outline "
+         "like any piece.")
+
+
+def save_progress(ws, message, reply):
+    """The save_progress tool: what's done so far saved now (checked like a final save), so a big job survives the
+    time limit; the rest of the work carries on from it."""
+    if not ws.changed:
+        return "nothing to save yet"
+    if ws.plan_dirty:
+        rebuild(ws)
+        ws.plan_dirty = False
+    if (nudge := review(ws, message, reply or "")):
+        return "not saved, fix this first: " + nudge[:800]
+    if breaks := lock_breaks(ws, message):
+        return "not saved: it breaks " + lock_note(breaks)
+    if leak := version_leak(ws, message):
+        return "not saved: " + leak[:600]
+    res = save(ws, f"(part) {reply or message}"[:300])
+    ws.saved_parts = getattr(ws, "saved_parts", 0) + 1
+    for p in list(ws.changed):  # the saved state is the new starting point
+        ws.orig[p] = ws.read(p)
+    ws.changed.clear()
+    ws.ops.clear()
+    ws.man = latest(ws.v)
+    ws.res = resolve(ws.man)
+    return f"saved (revision {res['rev']}); keep going from here"
+
+
+def set_openings(ws, a):
+    """The set_openings tool: per-opening heights / glass / kind / panel and home-wide heights, in the tour."""
+    if ws.plan_dirty:
+        rebuild(ws)  # check `at` against the openings as they are now
+        ws.plan_dirty = False
+    s_ = ws.text(ws.cfg["model"])
+    m = json.loads(s_[s_.index("{"):s_.rindex("}") + 1])
+    t, log = _tour(ws), []
+
+    def inside(ring, x, y):
+        c = False
+        for i in range(len(ring)):
+            (x1, y1), (x2, y2) = ring[i], ring[i - 1]
+            if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / (y2 - y1) + x1:
+                c = not c
+        return c
+    for o in a.get("openings") or []:
+        x, y = map(float, o["at"])
+        hit = next((op for op in m.get("openings", []) if inside(op["outer"], x, y)), None)
+        if hit is None:  # a point on the opening's edge: the nearest opening within 15 cm
+            near = [(min(math.dist((x, y), q) for q in op["outer"]), op) for op in m.get("openings", [])]
+            hit = min(near, key=lambda z: z[0])[1] if near and min(near, key=lambda z: z[0])[0] < 0.15 else None
+        if hit is None:
+            raise ValueError(f"no door / window / slider at {o['at']}: plan_rooms lists every opening's centre")
+        xs, ys = [q[0] for q in hit["outer"]], [q[1] for q in hit["outer"]]
+        c = [sum(xs) / len(xs), sum(ys) / len(ys)]
+        box = [[min(xs), min(ys)], [max(xs), max(ys)]]
+        old = next((sp for sp in t.get("openings", []) if inside(hit["outer"], sp["at"][0] - ORIGIN[0], sp["at"][1] - ORIGIN[1])), {})
+        _drop_specs(t, box, pad=0, hinges=False)
+        if o.get("clear"):
+            log.append(f"{hit['kind']} at {[round(v, 3) for v in c]}: back to the defaults")
+            continue
+        f = {k: v for k, v in old.items() if k != "at"}
+        f.update(_spec_fields(o))
+        if o.get("kind") in ("window", "slider", "door"):
+            f["kind"] = o["kind"]
+        if o.get("panel") in ("glass", "wood"):
+            f["panel"] = o["panel"]
+        f.update(_look_fields(ws, o))
+        if "sill" in f and "head" not in f and (f.get("kind") or hit["kind"]) == "window":
+            f["head"] = hit.get("head", m.get("sliderHead") if hit["kind"] == "slider" else m.get("winHead"))
+        if f:
+            t.setdefault("openings", []).append({"at": _dwg(c), **f})
+        log.append(f"{hit['kind']} at {[round(v, 3) for v in c]} ({round(max(max(xs) - min(xs), max(ys) - min(ys)), 2)} m): {f}")
+    if a.get("home"):
+        h = dict(t.get("heights") or {})
+        for k, v in a["home"].items():
+            if k not in HOME_HEIGHTS:
+                raise ValueError(f"home heights are {', '.join(HOME_HEIGHTS)}, not {k!r}")
+            lo, hi = HOME_HEIGHTS[k]
+            if v is None:
+                h.pop(k, None)
+                continue
+            if not lo <= float(v) <= hi:
+                raise ValueError(f"{k} {v} m is outside {lo}-{hi} m")
+            h[k] = round(float(v), 3)
+        t["heights"] = h
+        if not h:
+            t.pop("heights")
+        log.append(f"home heights: {h or 'defaults'}")
+    ws.write(ws.cfg["tour"], dump_tour(t).encode())
+    ws.plan_dirty = True
+    if not hasattr(ws, "model0"):
+        ws.model0 = ws.read(ws.cfg["model"])
+    return "set (the 3D is rebuilt when you finish; check rebuilds it now):\n" + "\n".join(log)
+
+
 def lost_openings(ws):
     """A warning when the rebuilt 3D has fewer doors or windows than before this message."""
     if not hasattr(ws, "model0") or ws.cfg["model"] not in ws.changed:
         return None
     a, b = opening_counts(ws.model0), opening_counts(ws.read(ws.cfg["model"]))
     gone = {k: a[k] - b[k] for k in a if b[k] < a[k]}
-    if not gone:
+    if not gone or sum(b.values()) >= sum(a.values()):  # none lost, or one turned into another kind (door -> window)
         return None
     return ("WARNING: the rebuilt 3D lost " + ", ".join(f"{n} {k} opening(s)" for k, n in gone.items())
             + " (a door or window no longer cuts its wall). Unless the user asked to remove it, fix the plan "
@@ -1260,7 +1775,45 @@ and in the 2D drawing as on screen (x east = right, y north = up). Convert to pl
 - Windows: move or resize one only with dxf_edit's move_window op (it takes every line of the window and closes / opens the wall faces, so the 3D opening matches the 2D). To centre a window on a piece (e.g. "over the bed"), find the piece's main 2furni outline in dxf_query (the largest closed outline; its "centre" is given) and pass its handle as centre_on, never a hand-worked dx; the result says where the window now runs, so check its centre equals the piece's. Then move what hangs in that window in furnish.js (sheers, curtains, blinds: the edit result lists them) to the window's new centre and width, so the 3D matches.
 - Doors: move or widen one only with dxf_edit's move_door op (handle = its swing ARC on 1wall / 3door), which moves \
 the swing, leaf and jambs and re-cuts the wall faces so the 3D opening follows. Never delete, redraw or move door \
-pieces by hand: that removes the opening from the 3D. A door drawn as a block (INSERT) can't be changed here: say so.
+pieces by hand: that removes the opening from the 3D. A door drawn as a block (INSERT): convert_opening it to "door" \
+first (it is redrawn as a loose door), then move it.
+- Openings of any kind, with dxf_edit (never by hand): add_opening puts a new window, glass sliding door, hinged door, \
+solid sliding door or bare doorway into a solid wall; convert_opening turns an existing one into another kind (door to \
+window, window to door, hinged to sliding, a terrace slider to a window...), resizes or shifts it, or flips how a door \
+opens (hinge = the end it hangs from, opens = the side of the wall it swings into, compass words); remove_opening walls \
+one up. Mind the swing: a door must open into clear floor, not into furniture (the result warns).
+- Heights and glass: set_openings, never furnish.js boxes over an opening. Per opening: sill and head (windows), head \
+(doors, sliders), frosted glass, the kind it is built as (a window between a room and the terrace is a full-height \
+slider unless set to "window"), a wooden or glass sliding panel; and home-wide ceiling / door / sill / window / slider / \
+parapet heights. "Make the window shorter with wall under it" = set_openings sill (keep its head). "Lower the doors" = \
+home door height. All of it is for this version only. How openings look is set_openings too: frame / leaf / handle material or \
+colour, glass (frosted, tinted, bronze, reflective), panes and transoms, door style (panelled, glazed, louvred, hidden \
+flush), a slider's style (bifold, pocket, barn), arch, a glass fanlight over a door, a round window.
+- Walls: only with dxf_edit's wall ops (add_wall, remove_wall, move_wall, set_wall_thickness, mark_wall), never face \
+lines by hand: they keep junctions closed. A half / low wall or a glass wall or balustrade = height / glass on add_wall or \
+mark_wall; a curved wall = add_wall through. A wall that splits a room makes a new room: add_room_label it (its name \
+sets wet / dry: "BATH", "WC", "KITCHEN", "LAUNDRY" are wet). Mind what the result warns (furniture in the way, ends that \
+no longer meet a wall) and fix it. Removing or moving a wall is structural: say the engineer has to confirm it.
+- Rooms: rename_room / add_room_label (dxf_edit) for names. set_room for a room's floor (any materials.js name, e.g. \
+herringbone, chevron, terrazzo, concrete, carpet, porcelain, cementTile, marbleFloor, oakDark, oakGrey, grass, or \
+"#rrggbb"), wall paint ("#rrggbb", wallpaperStripe, wallpaperLeaf, brick, concrete), wall tiles and their height, \
+skirting, ceiling colour and height (this room only), a raised / sunken floor (furniture follows), the room light's \
+brightness / warmth, skylights, and its kind. Paint a whole room with set_room walls, not panels; a single feature wall \
+stays a furnish panel.
+- Niches / recesses in a wall (shower niche, TV recess): dxf_edit add_niche (it is cut into the wall in 3D, dashed on \
+the plan); then shelves or lights in it in furnish.js if asked.
+- Light that lights something: lamp(x, y, h, {{ color, power, beam, target }}) in furnish.js next to the fitting (a \
+spot: beam = cone degrees, target = [x, y, h]); a fitting alone only glows. At most 12 lamps in the home.
+- Questions ("how big is...", "how much paint / tile do I need?", "where are..."): answer from measure / plan_rooms \
+and change nothing. Notes ("mark this door fire-rated", "underfloor heating here") and where the walk-through starts: \
+set_home. A photo the user sends for a frame, a print or a tile / fabric sample: save_picture, then use the material. \
+A photo of the room: say Generate Photo Spot makes those. Things the 3D can't hold (plumbing, wiring routes): say so \
+and offer a note.
+- A real model instead of boxes ("this sofa", "a mid-century armchair", "a chandelier", "a ceiling fan"): find_model,
+then p.model(url, null, x, y, z, {{ size: [w, h, d] }}) inside the item's build, sized to the piece. Boxes stay fine for
+built-in joinery.
+- Big jobs (a whole room redone, a style across the home): plan the parts first, do them one at a time and \
+save_progress after each finished part, so a time-out keeps what is done; then tell the user what is left.
 - DXF coordinates in the tools are plan metres (the same frame as furnish.js and the camera numbers below).
 
 Work fast and cheap: find the code with furniture_near / grep around the plan point the user marked, read only the \
@@ -1689,7 +2242,8 @@ move: which piece (a circle counts) and where to (direction + distance, a landma
 colour/finish: which piece (a circle counts) and the colour or material named;
 resize: which piece, which dimension and a size or a clear direction;
 add: what, where and roughly how big; remove: which piece.
-A Whole view request must name the piece. Reply in the request's language.
+A Whole view request must name the piece. A question about the home (sizes, areas, how much paint / tile, what is
+where) is fine: score 5. Reply in the request's language.
 Answer JSON only: {"score":n,"tip":"what to add, max 15 words; empty when 5"}"""
 
 
@@ -1800,7 +2354,11 @@ def chat(req, emit=None):
     ctx = req.get("context") or {}
     image = check_image(req.get("image"), "the view")
     refs = [check_image(u, f"reference {i + 1}") for i, u in enumerate((req.get("refs") or [])[:MAX_REFS])]
-    if model:
+    if req.get("retry"):  # "Try a stronger model" on the done toast: the last edit was undone, and the strong model has a go
+        model, route = COMPLEX_MODEL, "retry"
+        message = ("Second try: your last attempt at this was undone because it wasn't what I wanted. Start from the files "
+                   "as they are now and do it properly. My request: " + message)
+    elif model:
         route = "explicit"  # an A/B pick from the client wins
     else:
         model = pick_model(message, refs)
@@ -1821,6 +2379,7 @@ def chat(req, emit=None):
         if h.get("role") in ("user", "assistant") and isinstance(h.get("text"), str):
             messages.append({"role": h["role"], "content": h["text"][:2000]})
     ws.ctx, ws.aspect = ctx, image_aspect(image)
+    ws.refs, ws.message = refs, message
     try:
         sm_ = ws.text(ws.cfg["model"])
         rings_ = [f.get("outer") or [] for f in json.loads(sm_[sm_.index("{"):sm_.rindex("}") + 1]).get("floor", [])]
@@ -1836,10 +2395,23 @@ def chat(req, emit=None):
     review_total = {"prompt_tokens": 0, "completion_tokens": 0, "cached": 0, "cache_write": 0}
     gates = gates_on() and not req.get("noReview")
     try:
+        t_start = time.time()
         while True:  # the edit, then (after a low review) one fix round on the same conversation
-            limit = FIX_STEPS if fixing else MAX_STEPS
+            limit = FIX_STEPS if fixing else (MAX_STEPS_COMPLEX if route in ("complex", "retry") else MAX_STEPS)
             for step in range(limit):
                 # look before answering: no "done" without a tool call (the fix round may answer that it's already right)
+                left_ = TIME_LIMIT - (time.time() - t_start)
+                if left_ < 12:  # the function's time limit: stop while it can still answer (saved parts stay saved)
+                    if ws.changed:
+                        trace.append({"tool": "(time)", "args": "", "out": "out of time"})
+                        ws.changed.clear()
+                    reply = ("I ran out of time before finishing" + (f"; the {ws.saved_parts} part(s) I saved are live" if getattr(ws, "saved_parts", 0)
+                             else "; nothing was changed") + ". Ask again for the rest, or try a smaller change.")
+                    break
+                if left_ < 50 and not getattr(ws, "warned_time", False):
+                    ws.warned_time = True
+                    messages.append({"role": "user", "content": "Under a minute left. If your edits are done and checked, reply now; "
+                                     "otherwise save_progress what is finished and tell the user what is left to do."})
                 res = openai(messages, first=step == 0 and not fixing, model=model)
                 cost(res.get("usage") or {}, total, model)
                 msg = res["choices"][0]["message"]
@@ -1881,8 +2453,8 @@ def chat(req, emit=None):
             else:
                 reply = "I ran out of steps before finishing; nothing was changed. Try a narrower request."
                 ws.changed.clear()
-            if fixing or not gates or not ws.changed:
-                break
+            if fixing or not gates or not ws.changed or time.time() - t_start > TIME_LIMIT - 70:
+                break  # no review when the clock is nearly out
             emit("Checking the edit")
             verdict = review_edit(ws, message, reply, where, image, trace, review_total)
             if not verdict or verdict["score"] >= REVIEW_PASS:
@@ -1927,6 +2499,7 @@ def chat(req, emit=None):
                            "final": final and final["score"], "model": REVIEW_MODEL}
     return {"reply": reply or "Done.", "changed": sorted(ws.changed), "rev": result and result["rev"], "model": model,
             "route": route, "tokens": total, "usd": usd, "costs": costs, "review": review_, "steps": len(steps),
+            "retryModel": live_model(COMPLEX_MODEL),
             "sync": result and result.get("sync"), **({"trace": trace} if req.get("debug") else {})}
 
 

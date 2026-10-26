@@ -20,7 +20,7 @@ function modelName(m) {
   if (g) return `GPT-${g[1]} ${g[2][0].toUpperCase() + g[2].slice(1)}`;
   return c ? `Claude ${c[1][0].toUpperCase() + c[1].slice(1)} ${c[2]}.${c[3]}` : (m || "");
 }
-function money(v) { return `$${v.toFixed(v < 0.01 ? 4 : v < 1 ? 3 : 2)}`; }
+function money(v) { return v > 0 && v < 0.0001 ? "<$0.0001" : `$${v.toFixed(v < 0.01 ? 4 : v < 1 ? 3 : 2)}`; }
 function usd(v) { return `Cost: ${money(v)}`; }
 // The whole run in one line: model, review score, total (+ EGP) and what each step cost.
 function costLine(res, checkUsd) {
@@ -221,10 +221,10 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     @media (max-width: 760px) { #edit-ai.working .chat, #edit-ai.working .x { display: none; } }
     @media (prefers-reduced-motion: reduce) { #edit-ai .scan * { animation: none !important; } }
     #edit-ai-toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 6; display: flex; gap: 8px; align-items: center;
-      max-width: min(340px, calc(100vw - 24px)); padding: 10px 10px 10px 16px; border-radius: 16px; background: #2b2622f2; color: #f3eee5; font: 12.5px Inter, sans-serif;
+      max-width: min(480px, calc(100vw - 24px)); padding: 10px 10px 10px 16px; border-radius: 16px; background: #2b2622f2; color: #f3eee5; font: 12.5px Inter, sans-serif;
       box-shadow: 0 6px 20px #0004; }
     #edit-ai-toast span { flex: 1; }
-    #edit-ai-toast button { font: inherit; border: 0; border-radius: 999px; padding: 6px 12px; cursor: pointer; background: #f3eee5; color: #2b2622; }
+    #edit-ai-toast button { flex: none; white-space: nowrap; font: inherit; border: 0; border-radius: 999px; padding: 6px 12px; cursor: pointer; background: #f3eee5; color: #2b2622; }
     #edit-ai-toast button.ghost { background: #ffffff1f; color: #f3eee5; }
     #edit-ai-toast.bad { background: #8a2119f2; }
   `;
@@ -650,7 +650,8 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     wait.append("Working on it: finding the piece, editing, rebuilding…");
     working(true);
     try {
-      const res = await callChat({ version: live.version, message: text, image: marked(), refs: sent, context: context(), history }, p => {
+      const body = { version: live.version, message: text, image: marked(), refs: sent, context: context(), history };
+      const res = await callChat(body, p => {
         phase(p, true);
         if (/improvements/i.test(p)) msgs.insertBefore(say("note", p), wait);
       });
@@ -663,7 +664,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
       if (!res.changed?.length) { say("note", `No change made${cost}`); return; }
       say("note", `Applying the change${cost}…`);
       phase("Loading your edit", true);
-      await apply(res, cost);
+      await apply(res, cost, body);
     } catch (e) {
       wait.remove();
       say("err", e.message);
@@ -691,7 +692,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     $(".scan .phase").textContent = PHASES[0];
     phaseTimer = setInterval(() => (++k < PHASES.length ? phase(PHASES[k], k === PHASES.length - 1) : clearInterval(phaseTimer)), 3800);
   }
-  async function apply(res, cost) {
+  async function apply(res, cost, body) {
     // Make sure the new code loads before showing it; a version that doesn't is undone on the spot.
     const fresh = await liveFiles(live.version);
     for (const p of ["furnish.js", "materials.js"]) {
@@ -702,7 +703,19 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
       }
     }
     store.setItem("editai-applied", JSON.stringify({ version: live.version, reply: res.reply, cost, sync: res.sync }));
+    keepForRetry(body, res);
     reloadHere();
+  }
+  // What "Try a stronger model" on the done toast needs after the reload: the request as sent (the marked view is the
+  // pre-edit one, which is what the retry starts from once the edit is undone). Too big for the tab's storage
+  // without the reference pictures: no retry button.
+  function keepForRetry(body, res) {
+    const again = { version: live.version, message: body.message, image: body.image, refs: body.refs, context: body.context,
+      model: res.model, retryModel: res.retryModel };
+    for (const refs of [again.refs, []]) {
+      try { store.setItem("editai-retry", JSON.stringify({ ...again, refs })); return; } catch { /* quota: try smaller */ }
+    }
+    store.removeItem("editai-retry");
   }
   function reloadHere() {
     const q = new URLSearchParams(location.search);
@@ -729,7 +742,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     document.body.appendChild(t);
     return t;
   }
-  const undoAndReload = async () => {
+  const undoLast = async () => {
     const res = await call("undo", { version: live.version });
     // An Undo the page wouldn't show is an error, not "undone": the files served after it must be the restored ones,
     // never the edit's (26 Oct: an Undo that re-saved the edited armchair and toasted "undone").
@@ -737,11 +750,44 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     const stuck = Object.entries(res.shas || {}).filter(([p, s]) =>
       s.to === s.from || (s.live ? fresh.sha[p] !== s.to : fresh.sha[p] && fresh.sha[p] !== s.to) || (s.from && fresh.sha[p] === s.from));
     if (stuck.length) throw new Error(`the server still serves the edited ${stuck.map(([p]) => p).join(", ")}, so nothing was undone`);
+  };
+  const undoAndReload = async () => {
+    await undoLast();
     history.push({ role: "user", text: "(undid the last change)" });
     store.setItem(histKey, JSON.stringify(history));
     store.setItem("editai-applied", JSON.stringify({ version: live.version, reply: "Undone.", undone: true }));
     reloadHere();
   };
+  // "Try a stronger model": undo the edit, then the strong model (the server's complex route) does the same request afresh
+  // from the same marked view. Its result reloads like any edit; no change leaves the first edit undone.
+  async function retryStrong(t, again) {
+    const line = text => { t.querySelector("span").textContent = text; };
+    const who = again.model === again.retryModel ? "The model" : "The stronger model";
+    t.querySelectorAll("button").forEach(b => { b.disabled = true; });
+    line("Undoing that edit…");
+    try { await undoLast(); } catch (e) {
+      t.querySelectorAll("button").forEach(b => { b.disabled = false; });
+      throw e;
+    }
+    store.removeItem("editai-retry");
+    history.push({ role: "user", text: "(that wasn't it: undid it and asked again)" });
+    try {
+      line(again.model === again.retryModel ? "Trying again…" : "Trying a stronger model…");
+      const res = await callChat({ version: live.version, message: again.message, image: again.image, refs: again.refs || [],
+        context: again.context, history, retry: true }, p => line(`${p}…`));
+      history.push({ role: "user", text: again.message }, { role: "assistant", text: res.reply });
+      history = history.slice(-12);
+      store.setItem(histKey, JSON.stringify(history));
+      const cost = costLine(res, null);
+      if (res.changed?.length) return await apply(res, cost, again);
+      store.setItem("editai-applied", JSON.stringify({ version: live.version, undone: true,
+        note: `Undone. ${who} made no change: ${res.reply}${cost}` }));
+    } catch (e) {
+      store.setItem("editai-applied", JSON.stringify({ version: live.version, undone: true, note: `Undone, but the retry failed: ${e.message}` }));
+    }
+    store.setItem(histKey, JSON.stringify(history));
+    reloadHere();
+  }
   let sure = null;
   undoBtn.onclick = async () => {
     if (!undoBtn.classList.contains("sure")) {
@@ -761,16 +807,18 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
       toast(`Couldn't undo: ${e.message}`, [["×", () => document.getElementById("edit-ai-toast").remove(), true]], true);
     }
   };
-  const applied = JSON.parse(store.getItem("editai-applied") || "null");
+  const applied = JSON.parse(store.getItem("editai-applied") || "null"), again = JSON.parse(store.getItem("editai-retry") || "null");
   store.removeItem("editai-applied");
   if (live.broken.length) {
     toast(`The last Edit AI change didn't load (${[...new Set(live.broken)].join(", ")}); showing the code before it.`,
       [["Undo it", undoAndReload], ["×", () => document.getElementById("edit-ai-toast").remove(), true]], true);
   } else if (applied?.version === live.version) {
-    const t = toast(applied.undone ? "Edit AI change undone." : `Your edit is done.${applied.cost || ""}`,
+    const retry = !applied.undone && again?.version === live.version && again.retryModel
+      && [again.model === again.retryModel ? "Try again" : "Try a stronger model", () => retryStrong(t, again)];
+    const t = toast(applied.undone ? applied.note || "Edit AI change undone." : `Your edit is done.${applied.cost || ""}`,
       applied.undone ? [["×", () => t.remove(), true]]
-        : [["Undo", undoAndReload], ["×", () => t.remove(), true]]);
-    if (applied.undone) setTimeout(() => t.remove(), 4000);
+        : [["Undo", undoAndReload], ...(retry ? [retry] : []), ["×", () => t.remove(), true]]);
+    if (applied.undone && !applied.note) setTimeout(() => t.remove(), 4000);
   }
   return { open, close };
 }

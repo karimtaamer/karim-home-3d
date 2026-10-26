@@ -322,6 +322,7 @@ const version = VERSIONS.find(v => v.id === params.get("v")) || VERSIONS[0];
 const vid = version.data || version.id;  // the plan version on screen
 // Edit AI's live changes to this version (edit-ai.js): its files stand in for the deployed ones until git catches up.
 const live = await liveFiles(vid);
+globalThis.EDIT_AI_URL = live.url;  // pictures Edit AI saved (uploads/...) load from the live store until git has them
 const { makeMaterials } = await liveImport(live, "materials.js");
 const { furnish } = await liveImport(live, "furnish.js");
 await new Promise((onload, onerror) => document.head.appendChild(Object.assign(document.createElement("script"), { src: live.url(version.model), onload, onerror })));
@@ -411,25 +412,96 @@ function buildFlat(M, scene) {
     return face;
   }
 
-  for (const w of M.walls) prism(w.outer, w.holes, 0, w.height, w.height < M.ceiling ? lib.render : mat.wall);
+  // Edit AI's specs (the version's tour, through model.js) name materials as a library name ("walnut"), a floor finish
+  // ("wood" / "tile" / "decking") or a colour ("#a3b18a", tinting the base material).
+  const tinted = new Map();
+  function matOf(spec, base) {
+    if (!spec) return base;
+    if (typeof spec === "string" && /^#[0-9a-f]{6}$/i.test(spec)) {
+      const key = base.uuid + spec;
+      if (!tinted.has(key)) {
+        const m = base.clone();
+        m.color = new THREE.Color(spec);
+        if (m.map) { m.map = null; m.needsUpdate = true; }  // a paint colour, not a tinted texture
+        tinted.set(key, m);
+      }
+      return tinted.get(key);
+    }
+    return lib[FINISH[spec]] || lib[spec] || base;
+  }
+  const GLASS = { clear: () => mat.glass, frosted: () => mat.frosted, tinted: () => lib.smokedGlass,
+                  bronze: () => lib.bronzeGlass, reflective: () => lib.masterBronzeReflective };
+  const glassOf = o => (GLASS[o.glass] || (() => (o.frosted ? mat.frosted : mat.glass)))();
+  // The opening's axis: p -> q along its length, `off` to the middle of the wall, its thickness.
+  function axisOf(ring) {
+    const [a, b, c] = ring;
+    const long = Math.hypot(b[0] - a[0], b[1] - a[1]) >= Math.hypot(c[0] - b[0], c[1] - b[1]);
+    const [p, q] = long ? [a, b] : [b, c];
+    const [r0, r1] = long ? [b, c] : [a, b];
+    return { p, q, L: Math.hypot(q[0] - p[0], q[1] - p[1]), ang: Math.atan2(q[1] - p[1], q[0] - p[0]),
+             off: long ? [(c[0] - b[0]) / 2, (c[1] - b[1]) / 2] : [(a[0] - b[0]) / 2, (a[1] - b[1]) / 2],
+             t: Math.hypot(r1[0] - r0[0], r1[1] - r0[1]) };
+  }
+  // Wall filling the corners of an arched (top: a half circle) or round opening between z0 and z1.
+  function curvedInfill(ring, z0, z1, round) {
+    const { p, q, L, ang, off, t } = axisOf(ring);
+    const h = z1 - z0, r = Math.min(L / 2, round ? h / 2 : L / 2);
+    const s = new THREE.Shape([new THREE.Vector2(0, 0), new THREE.Vector2(L, 0), new THREE.Vector2(L, h), new THREE.Vector2(0, h)]);
+    const hole = new THREE.Path();
+    if (round) hole.absarc(L / 2, h / 2, Math.min(L, h) / 2, 0, Math.PI * 2, false);
+    else {
+      hole.moveTo(0, 0); hole.lineTo(L, 0); hole.lineTo(L, h - r);
+      hole.absarc(L / 2, h - r, L / 2, 0, Math.PI, false); hole.lineTo(0, 0);
+    }
+    s.holes = [hole];
+    const g = new THREE.ExtrudeGeometry(s, { depth: t, bevelEnabled: false });
+    g.translate(0, 0, -t / 2);
+    const m = new THREE.Mesh(g, mat.wall);
+    m.position.set(p[0] + off[0], z0, -(p[1] + off[1]));
+    m.rotation.y = ang;
+    m.castShadow = m.receiveShadow = true;
+    scene.add(m);
+    return r;
+  }
+
+  for (const w of M.walls) {
+    if (w.glass) {  // a glass wall / balustrade: glass in a slim frame
+      prism(w.outer, w.holes, 0, w.height, mat.glass);
+      if (w.outer.length === 4) frame(w.outer, 0, w.height, Math.max(1, Math.round(axisOf(w.outer).L / 1.2)));
+    } else prism(w.outer, w.holes, 0, w.height, w.height < M.ceiling && !w.low ? lib.render : mat.wall);
+  }
+  for (const n of M.niches || []) {  // a recess: carved through, wall again below and above it
+    if (n.bottom > 0.001) prism(n.outer, [], 0, n.bottom);
+    if (n.top < M.ceiling - 0.001) prism(n.outer, [], n.top, M.ceiling);
+  }
   for (const o of M.openings) {
+    // A door or slider may carry its own head, a slider a wooden panel (Edit AI: the version's tour "openings").
+    const fm = matOf(o.frame, mat.frame);
     if (o.kind === "door") {
-      prism(o.outer, [], M.doorHead, M.ceiling);
+      const head = o.head ?? M.doorHead, fan = Math.max(0, Math.min(o.fanlight || 0, M.ceiling - head - 0.05));
+      prism(o.outer, [], head + fan, M.ceiling);
+      if (fan) {  // a glass fanlight over the door
+        prism(o.outer, [], head, head + fan, glassOf(o));
+        frame(o.outer, head, head + fan, o.panes || 1, fm);
+      }
+      if (o.arch) curvedInfill(o.outer, head - axisOf(o.outer).L / 2, head);
     } else if (o.kind === "slider") {
-      prism(o.outer, [], M.sliderHead, M.ceiling);
-      prism(o.outer, [], 0, M.sliderHead, mat.glass);
-      frame(o.outer, 0, M.sliderHead, 2);
-    } else {  // a window may carry its own sill / head / frosted glass (build_geometry.py --window)
+      const head = o.head ?? M.sliderHead;
+      prism(o.outer, [], head, M.ceiling);
+      slidingLeaves(o, head, fm);
+    } else {  // a window may carry its own sill / head / glass / frame / panes / arch (the version's tour, Edit AI)
       const sill = o.sill ?? M.sill, head = o.head ?? M.winHead;
       prism(o.outer, [], 0, sill);
       prism(o.outer, [], head, M.ceiling);
-      prism(o.outer, [], sill, head, o.frosted ? mat.frosted : mat.glass);
-      frame(o.outer, sill, head, 1);
+      prism(o.outer, [], sill, head, glassOf(o));
+      frame(o.outer, sill, head, o.panes || 1, fm, o.transoms || 0);
+      if (o.shape === "round") curvedInfill(o.outer, sill, head, true);
+      else if (o.arch) curvedInfill(o.outer, Math.max(sill, head - axisOf(o.outer).L / 2), head);
     }
   }
 
   // Slim black frames round the glazing (as in the renders), in the middle of the wall.
-  function frame(ring, z0, z1, panes) {
+  function frame(ring, z0, z1, panes, fmat = mat.frame, transoms = 0) {
     const [a, b, c] = ring;
     const long = Math.hypot(b[0] - a[0], b[1] - a[1]) >= Math.hypot(c[0] - b[0], c[1] - b[1]);
     const [p, q] = long ? [a, b] : [b, c];
@@ -438,7 +510,7 @@ function buildFlat(M, scene) {
     const at = t => [p[0] + off[0] + (q[0] - p[0]) * t, p[1] + off[1] + (q[1] - p[1]) * t];
     const bar = (t0, t1, h0, h1) => {
       const [x0, y0] = at(t0), [x1, y1] = at(t1);
-      const m = new THREE.Mesh(new THREE.BoxGeometry(Math.max(0.04, Math.hypot(x1 - x0, y1 - y0)), h1 - h0, 0.05), mat.frame);
+      const m = new THREE.Mesh(new THREE.BoxGeometry(Math.max(0.04, Math.hypot(x1 - x0, y1 - y0)), h1 - h0, 0.05), fmat);
       m.position.set((x0 + x1) / 2, (h0 + h1) / 2, -(y0 + y1) / 2);
       m.rotation.y = ang;
       scene.add(m);
@@ -446,16 +518,63 @@ function buildFlat(M, scene) {
     const e = 0.02 / L;
     bar(0, 1, z0, z0 + 0.05); bar(0, 1, z1 - 0.05, z1);
     for (let k = 0; k <= panes; k++) bar(k / panes - (k ? e : -e), k / panes - (k ? e : -e), z0, z1);
+    for (let k = 1; k <= transoms; k++) { const z = z0 + (z1 - z0) * k / (transoms + 1); bar(0, 1, z - 0.025, z + 0.025); }
+  }
+  // A slider's leaves: glass (default) or wood, side by side; or bi-fold panels, a pocket door (mostly in the wall)
+  // or a barn door hung on the wall face beside the opening.
+  function slidingLeaves(o, head, fm) {
+    const { p, q, L, ang, off, t } = axisOf(o.outer);
+    const leafMat = o.panel === "wood" || o.leaf ? matOf(o.leaf, lib.oakVeneer) : glassOf(o);
+    const at = (s, n) => [p[0] + off[0] + (q[0] - p[0]) * s / L + Math.sin(ang) * n, p[1] + off[1] + (q[1] - p[1]) * s / L - Math.cos(ang) * n];
+    const panel = (s0, s1, n, rot = 0) => {
+      const [x, y] = at((s0 + s1) / 2, n);
+      const m = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(s1 - s0), head - 0.01, 0.04), leafMat);
+      m.position.set(x, (head - 0.01) / 2, -y);
+      m.rotation.y = ang + rot;
+      m.castShadow = m.receiveShadow = leafMat !== mat.glass;
+      scene.add(m);
+    };
+    if (o.style === "bifold") {  // folded back, zig-zag, at one end
+      const k = Math.max(2, Math.round(L / 0.45)), w = L / k;
+      for (let i = 0; i < 4 && i < k; i++) panel(i * 0.12, i * 0.12 + w * 0.3, (i % 2 ? 1 : -1) * 0.05, (i % 2 ? 1 : -1) * 1.2);
+    } else if (o.style === "pocket") panel(0, L * 0.25, 0);  // the rest of the leaf is in the wall
+    else if (o.style === "barn") {
+      panel(-0.05, L * 0.5 + 0.05, t / 2 + 0.04);  // open, half across, on the wall face
+      const [x0, y0] = at(-L * 0.4, t / 2 + 0.06), [x1, y1] = at(L * 1.05, t / 2 + 0.06);
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(Math.hypot(x1 - x0, y1 - y0), 0.04, 0.02), lib.blackSteel);
+      rail.position.set((x0 + x1) / 2, head + 0.06, -(y0 + y1) / 2);
+      rail.rotation.y = ang;
+      scene.add(rail);
+    } else if (leafMat === mat.glass || leafMat === mat.frosted || o.glass) {
+      prism(o.outer, [], 0, head, leafMat);
+      frame(o.outer, 0, head, o.panes || 2, fm, o.transoms || 0);
+    } else {
+      panel(0, L * 0.55, -0.025);
+      panel(L * 0.45, L, 0.025);
+    }
   }
 
   // Room linings from the DWG skins: stone to the ceiling in bathrooms, oak skirting elsewhere.
+  // A room's spec (Edit AI, the tour's "rooms") may set its tiles' height and material, a paint above them, the
+  // skirting's height / material (0 = none), its own ceiling height and its floor level.
+  const roomSpec = name => (M.rooms || {})[name] || (M.rooms || {})[String(name).replace(/ \d+$/, "")] || {};
   for (const s of M.skins || []) {
-    const stone = STONE_WALLS.test(s.room);
-    const g = new THREE.ExtrudeGeometry(shape(s.outer, s.holes), { depth: stone ? M.ceiling - 0.002 : SKIRTING, bevelEnabled: false });
-    g.rotateX(-Math.PI / 2);
-    const m = new THREE.Mesh(g, stone ? lib.stoneWall : lib.oakVeneer);
-    m.receiveShadow = true;
-    scene.add(m);
+    const rs = roomSpec(s.room), ch = rs.ceilingHeight ?? M.ceiling;
+    const lining = (z0, z1, material) => {
+      if (z1 - z0 < 0.002) return;
+      const g = new THREE.ExtrudeGeometry(shape(s.outer, s.holes), { depth: z1 - z0, bevelEnabled: false });
+      g.rotateX(-Math.PI / 2);
+      const m = new THREE.Mesh(g, material);
+      m.position.y = z0;
+      m.receiveShadow = true;
+      scene.add(m);
+    };
+    const tileH = Math.min(ch - 0.002, rs.tileHeight ?? (STONE_WALLS.test(s.room) || rs.kind === "wet" && rs.tiles ? ch - 0.002 : 0));
+    const skH = tileH > 0 ? 0 : (typeof rs.skirting === "number" ? rs.skirting : rs.skirting?.height ?? SKIRTING);
+    const lo = Math.min(rs.floorLevel ?? 0, 0);  // a sunken floor: lining down to it
+    lining(lo, tileH, matOf(rs.tiles, lib.stoneWall));
+    lining(lo, Math.max(lo, skH), matOf(rs.skirting?.material, lib.oakVeneer));
+    if (rs.walls) lining(Math.max(tileH, skH), ch - 0.002, matOf(rs.walls, lib.limewash));
   }
 
   // Rooms: a paper floor (the drawing) under a finished floor that fades in, plus the room's
@@ -475,26 +594,58 @@ function buildFlat(M, scene) {
     const paper = flatMesh(f.outer, f.holes, mat.paper, 0);
     paper.receiveShadow = true;
     scene.add(paper);
-    const fm = lib[FINISH[finishes[f.room] || DEFAULT_FINISH[f.kind]] || FINISH.wood].clone();
+    const rs = roomSpec(f.room), lvl = rs.floorLevel ?? 0, ch = rs.ceilingHeight ?? M.ceiling;
+    const fm = matOf(rs.floor || finishes[f.room], lib[FINISH[DEFAULT_FINISH[f.kind]]] || lib[FINISH.wood]).clone();
     fm.clippingPlanes = null;
     fm.transparent = true;
     fm.opacity = 0;
-    const floorMesh = flatMesh(f.outer, f.holes, fm, 0.002);
+    const floorMesh = flatMesh(f.outer, f.holes, fm, 0.002 + lvl);
     floorMesh.receiveShadow = true;
     scene.add(floorMesh);
     r.floors.push(floorMesh);
+    if (lvl > 0.005) {  // a raised floor: a platform block under it
+      const g = new THREE.ExtrudeGeometry(shape(f.outer, f.holes), { depth: lvl, bevelEnabled: false });
+      g.rotateX(-Math.PI / 2);
+      const blk = new THREE.Mesh(g, fm);
+      blk.receiveShadow = true;
+      scene.add(blk);
+      r.floors.push(blk);
+    }
     if (f.kind !== "outdoor") {
-      const c = flatMesh(f.outer, f.holes, mat.ceiling, M.ceiling);
+      // Skylights: holes in this room's ceiling, glazed a little above it.
+      const sky = (rs.skylights || []).map(k => {
+        const [x, y] = k.at, w = (k.w || 0.8) / 2, d = (k.d || 0.8) / 2;
+        return [[x - w, y - d], [x + w, y - d], [x + w, y + d], [x - w, y + d]];
+      });
+      const c = flatMesh(f.outer, [...f.holes, ...sky.map(h => [...h].reverse())], rs.ceiling ? matOf(rs.ceiling, mat.ceiling) : mat.ceiling, ch);
       scene.add(c);
       r.ceilings.push(c);
+      for (const h of sky) {
+        const lid = flatMesh(h, [], mat.glass, ch + 0.3);
+        scene.add(lid);
+        r.ceilings.push(lid);
+        for (let i = 0; i < 4; i++) {  // the shaft up to it
+          const [a, b] = [h[i], h[(i + 1) % 4]];
+          const side = new THREE.Mesh(new THREE.BoxGeometry(Math.hypot(b[0] - a[0], b[1] - a[1]), 0.3, 0.02), mat.ceiling.clone());
+          side.material.side = THREE.DoubleSide;
+          side.position.set((a[0] + b[0]) / 2, ch + 0.15, -(a[1] + b[1]) / 2);
+          side.rotation.y = Math.atan2(b[1] - a[1], b[0] - a[0]);
+          scene.add(side);
+          r.ceilings.push(side);
+        }
+      }
     }
   }
   for (const r of Object.values(rooms)) {
     const [cx, cy] = ringCentroid(r.rings.reduce((a, b) => (ringArea(b) > ringArea(a) ? b : a)));
     r.centre.set(cx, 0, -cy);
     if (r.kind !== "outdoor") {
-      r.light = new THREE.PointLight(0xffc68a, 0, 7, 1.4);
-      r.light.position.set(cx, M.ceiling - 0.35, -cy);
+      // A room's light: warmth ("warm" / "neutral" / "cool" or a colour) and brightness (x the default) from its spec.
+      const ls = roomSpec(r.name).light || {};
+      const col = { warm: 0xffc68a, neutral: 0xfff0dc, cool: 0xe6efff }[ls.warmth] ?? (ls.warmth ? new THREE.Color(ls.warmth) : 0xffc68a);
+      r.light = new THREE.PointLight(col, 0, 7, 1.4);
+      r.light.userData.brightness = Math.max(0, Math.min(4, ls.brightness ?? 1));
+      r.light.position.set(cx, (roomSpec(r.name).ceilingHeight ?? M.ceiling) - 0.35, -cy);
       scene.add(r.light);
     }
   }
@@ -517,10 +668,36 @@ function buildFlat(M, scene) {
     // The leaf itself, standing open where the drawing swings it (the front door is shown shut).
     const front = M.tour?.start && Math.hypot(hx - M.tour.start[0], hy - M.tour.start[1]) < 2.2;
     const [ex, ey] = front ? s.closed : arc[arc.length - 1];
-    const leaf = new THREE.Mesh(new THREE.BoxGeometry(s.r - 0.02, M.doorHead - 0.01, 0.04), lib.oakVeneer);
-    leaf.position.set((hx + ex) / 2, (M.doorHead - 0.01) / 2, -(hy + ey) / 2);
+    const dh = s.head ?? M.doorHead;
+    // The leaf's look (Edit AI): material / colour, style (flush, panelled, glazed, louvred, hidden = the wall's
+    // colour) and a lever handle (a metal's name, or "none").
+    const leafMat = s.style === "hidden" ? mat.wall : matOf(s.leaf, lib.oakVeneer);
+    const leaf = new THREE.Mesh(new THREE.BoxGeometry(s.r - 0.02, dh - 0.01, 0.04), s.style === "glazed" ? glassOf(s) : leafMat);
+    leaf.position.set((hx + ex) / 2, (dh - 0.01) / 2, -(hy + ey) / 2);
+    const trim = (w, h, x, y, z, m) => {
+      const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, z), m);
+      b.position.set(x, y, 0);
+      leaf.add(b);
+    };
+    const lw = s.r - 0.02, lh = dh - 0.01;
+    if (s.style === "glazed") {  // a frame round the glass
+      for (const [w, h, x, y] of [[lw, 0.08, 0, lh / 2 - 0.04], [lw, 0.12, 0, -lh / 2 + 0.06], [0.08, lh, -lw / 2 + 0.04, 0], [0.08, lh, lw / 2 - 0.04, 0]])
+        trim(w, h, x, y, 0.045, leafMat);
+    } else if (s.style === "panelled") {
+      for (const y of [lh * 0.2, -lh * 0.22]) trim(lw * 0.68, lh * 0.36, 0, y, 0.055, leafMat);
+    } else if (s.style === "louvred") {
+      for (let k = 0; k < Math.floor(lh / 0.08); k++) trim(lw * 0.86, 0.02, 0, -lh / 2 + 0.06 + k * 0.08, 0.06, leafMat);
+    }
+    if (s.handle && s.handle !== "none") {  // levers both sides, near the closing edge
+      const hm = matOf({ brass: "brass", black: "blackSteel", chrome: "chrome", nickel: "brushedNickel" }[s.handle] || s.handle, lib.brushedNickel);
+      for (const z of [-1, 1]) {
+        const lever = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.02, 0.02), hm);
+        lever.position.set(lw / 2 - 0.12, 1.0 - lh / 2, z * 0.045);
+        leaf.add(lever);
+      }
+    }
     leaf.rotation.y = Math.atan2(ey - hy, ex - hx);
-    leaf.castShadow = leaf.receiveShadow = true;
+    leaf.castShadow = leaf.receiveShadow = s.style !== "glazed";
     scene.add(leaf);
     leaves.push(leaf);
   }
@@ -551,7 +728,7 @@ function buildFlat(M, scene) {
     }
     r.lineMat.opacity = 1 - t;
     r.lineMat.visible = t < 0.999;
-    if (r.light) r.light.intensity = 2 * t;
+    if (r.light) r.light.intensity = 2 * t * (r.light.userData.brightness ?? 1);
   }
 
   const furniture = furnish(scene, M, lib, vid);
@@ -651,6 +828,16 @@ for (const v of viewpoints) {
   el.textContent = v.caption;
   const obj = new CSS2DObject(el);
   obj.position.copy(r.centre).setY(0.05);
+  scene.add(obj);
+  planLabels.push(el);
+}
+
+for (const n of window.MODEL.notes || []) {  // Edit AI's pinned notes ("fire-rated door", "underfloor heating here")
+  const el = document.createElement("div");
+  el.className = "plan-label plan-note";
+  el.textContent = "📌 " + n.text;
+  const obj = new CSS2DObject(el);
+  obj.position.set(n.at[0], 0.06, -n.at[1]);
   scene.add(obj);
   planLabels.push(el);
 }

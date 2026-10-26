@@ -133,6 +133,24 @@ class Gates(unittest.TestCase):
         self.assertIsNone(res["review"])
         self.assertEqual(res["changed"], ["furnish.js"])
 
+    # --- "No, try again" on the done toast ---
+    def test_retry_runs_on_the_strong_model(self):
+        self.scores = [{"score": 9, "problems": [], "summary": "Right."}]
+        models, first_ask = [], []
+        editor = self.fake_editor
+
+        def spy(messages, first=False, model=None):
+            models.append(model)
+            first_ask.append(messages[-1]["content"][0]["text"] if isinstance(messages[-1]["content"], list) else None)
+            return editor(messages, first, model)
+        edit_ai.openai = spy
+        res, _ = self.chat(retry=True)
+        self.assertEqual((res["route"], res["model"]), ("retry", edit_ai.live_model(edit_ai.COMPLEX_MODEL)))
+        self.assertEqual(set(models), {edit_ai.live_model(edit_ai.COMPLEX_MODEL)}, "the retry never runs on the pick it was sent with")
+        self.assertIn("Second try", first_ask[0])
+        self.assertIn("make the sofa 2", first_ask[0])
+        self.assertEqual(res["retryModel"], edit_ai.live_model(edit_ai.COMPLEX_MODEL))
+
 
 class Stream(unittest.TestCase):
     def test_phases_then_result_as_ndjson(self):

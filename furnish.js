@@ -1501,14 +1501,22 @@ export function furnish(scene, M, mat, version = "main") {
     // keeps the two tall niches centred in -1.60 to -0.71 (south wall face to splay start): 0.07 / 0.34 / 0.07 / 0.34 / 0.07.
     const tall = KC ? [[-1.53, -1.19], [-1.12, -0.78]] : [[-1.59, -1.25], [-1.11, -0.77]];
     const low = KC ? [-0.285, 1.495, 0.33, 0.69, 0.1] : [-0.4, 1.38, 0.33, 0.69, 0.1];
+    // Main (26 Oct): the HW-B450F sub (34.3 high) can't stand in the 32.4 clear inside the 18 mm oak lining, so the
+    // niche floor drops 3 cm to 0.30 (35.4 clear); styling on the floor follows it by fl.
+    const SB = version === "kareems-changes";
+    if (SB) low[2] = 0.30;
+    const fl = low[2] - 0.33;
     const tcx = (low[0] + low[1]) / 2;
     const n0 = (tall[0][0] + tall[0][1]) / 2 + 1.42, n1 = (tall[1][0] + tall[1][1]) / 2 + 0.94, nl = tcx - 0.49;  // styling follows its niche
     const tvX0 = tcx - TW / 2, tvX1 = tcx + TW / 2;
     const tvY0 = KC ? 0.83 : 0.92, tvY1 = tvY0 + TH;
     // Opening slightly larger than the TV so the set sits in a flat plaster pocket (render).
     const open = KC ? [tvX0 - 0.025, tvX1 + 0.025, tvY0 - 0.025, tvY1 + 0.025, 0.02] : null;
+    // Main: Samsung HW-B450F bar (85.88 x 5.9 x 7.5) centred under the TV in a plaster slot 7.5 deep, midway between
+    // the niche top (0.69) and the TV opening (0.805), 1.5 cm clear each end and 0.8 cm above and below the bar.
+    const bar = [tcx - 0.4294, tcx + 0.4294, 0.7180, 0.7770], slot = SB ? [bar[0] - 0.015, bar[1] + 0.015, bar[2] - 0.008, bar[3] + 0.008, 0.01] : null;
     slab(-1.72, edge, D0, tall.map(([x0, x1]) => [x0, x1, 0.42, 2.2, 0.13]));
-    slab(edge, 1.72, D1, open ? [low, open] : [low]);
+    slab(edge, 1.72, D1, [low, ...(open ? [open] : []), ...(slot ? [slot] : [])]);
     // A splayed return instead of a square step between the run and the TV box: 0.08 m out over 0.2 m.
     const splay = 0.2, L = Math.hypot(splay, D1 - D0), a = Math.atan2(D1 - D0, splay);
     const wedge = new THREE.Shape([new THREE.Vector2(edge - splay, -D0), new THREE.Vector2(edge, -D0), new THREE.Vector2(edge, -D1)]);
@@ -1532,8 +1540,20 @@ export function furnish(scene, M, mat, version = "main") {
     p.cyl(-1.42 + n0, 0.15 + dz0, 0.045, 1.765, 1.97, mat.linenSage, 16, 0.065); p.cyl(-0.94 + n1, 0.15 + dz0, 0.035, 1.765, 1.99, mat.linenSlate, 16, 0.06);
     for (const [x, y] of [[-1.47 + n0, 1.325], [-0.99 + n1, 0.885], [-1.0 + n1, 1.325]]) for (let k = 0; k < 4; k++) p.box(x + k * 0.03, x + k * 0.03 + 0.025, y, y + 0.2 - (k % 2) * 0.03, 0.06 + dz0, 0.24 + dz0, k % 2 ? mat.linenBlush : mat.walnut);
     p.cyl(-1.42 + n0, 0.15 + dz0, 0.05, 0.445, 0.6, mat.planter, 16);
-    p.box(0.95 + nl, 1.15 + nl, 0.345, 0.4, 0.08 + dz1, 0.26 + dz1, mat.whiteLacquer);
-    p.cyl(0.2 + nl, 0.15 + dz1, 0.05, 0.345, 0.52, mat.clearGlass, 16);
+    p.box(0.95 + nl, 1.15 + nl, 0.345 + fl, 0.4 + fl, 0.08 + dz1, 0.26 + dz1, mat.whiteLacquer);
+    p.cyl(0.2 + nl, 0.15 + dz1, 0.05, 0.345 + fl, 0.52 + fl, mat.clearGlass, 16);
+    if (SB) {
+      p.label("soundbar", q => {
+        q.box(slot[0], slot[1], slot[2], slot[3], 0, D1 - 0.075, mat.limewash);  // back of the slot
+        q.box(...bar, D1 - 0.075, D1, mat.blackSteel, 0.01);
+      });
+      // Sub 18.4 x 34.3 x 29.5 at the niche's left end, clear of the corner curve, on the oak floor. It is deeper than
+      // the box (29.22), so it stands through a cut-out in the 1 cm oak back and sits 3 mm proud of the face.
+      p.label("subwoofer", q => {
+        const x0 = low[0] + 0.105;
+        q.box(x0, x0 + 0.184, low[2] + 0.018, low[2] + 0.018 + 0.343, 0, 0.295, mat.blackSteel, 0.008);
+      });
+    }
     // TV centred over the niche; on Kareem's it sits in the opening so the face reads flat with the plaster.
     const z0 = KC ? D1 - TD : D1, z1 = KC ? D1 : D1 + TD;
     p.box(tvX0, tvX1, tvY0, tvY1, z0, z1, mat.blackSteel);

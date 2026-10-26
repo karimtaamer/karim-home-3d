@@ -20,7 +20,8 @@ The version's tour JSON may also carry (Edit AI writes them; DWG coordinates):
     "walls": [{"a": [x, y], "b": [x, y], "thickness": 0.12, "height": 1.1, "glass": true}]
         that stretch of wall built low (height) and / or as glass instead of a full-height solid wall
     "niches": [{"box": [[x, y], ...4], "bottom": 0.9, "top": 1.5}]   a recess carved into the wall, solid below / above
-    "notes": [{"at": [x, y], "text": "..."}]   pinned notes; "start": [x, y] where the walk-through starts
+    "notes": [{"at": [x, y], "text": "..."}]   pinned notes; "start": [x, y] where the walk-through starts;
+    "parapet": {"glass": true}   every terrace parapet built as a glass balustrade (its height: heights.parapet)
 """
 import heapq
 import json
@@ -373,6 +374,12 @@ def main():
             # room (the gap closing also fills small rooms, so crossing gap alone isn't enough).
             across = [e for e in ends if LineString([c, e]).intersection(gaps).length >= 0.4 * r
                       and (Point(e).distance(walls) < 0.2 or any(math.dist(e, f) < 0.03 for f in leaf_ends.get(c, ())))]
+            if not across and leaf_ends.get(c):  # double doors wider than the bridging: their own gap, at their width
+                zone = Point(c).buffer(2 * r + 0.5)
+                wide = walls.intersection(zone).buffer(r + 0.1, join_style=2).buffer(-(r + 0.1), join_style=2)
+                wide = wide.difference(walls).difference(windows.buffer(0.01, join_style=2))
+                across = [e for e in ends if LineString([c, e]).intersection(wide).length >= 0.4 * r
+                          and any(math.dist(e, f) < 0.03 for f in leaf_ends[c])]
             # A door drawn over a wall the drawing kept continuous: closed leaf lies inside the wall.
             buried = [e for e in ends if LineString([c, e]).intersection(wall_band).length >= 0.8 * r]
             if not across and not buried and not from_block:
@@ -674,7 +681,8 @@ def main():
         "ceiling": ceiling, "doorHead": door_head, "sill": sill_h, "winHead": win_head, "sliderHead": slider_head,
         "bounds": [B.bounds[2] - ox, B.bounds[3] - oy],
         "walls": [{"outer": ring(p), "holes": holes(p), "height": ceiling} for p in as_polys(full) if p.area > 0.002]
-                 + [{"outer": ring(p), "holes": holes(p), "height": parapet_h} for p in as_polys(parapet) if p.area > 0.002]
+                 + [{"outer": ring(p), "holes": holes(p), "height": parapet_h, **({"glass": True} if (tour.get("parapet") or {}).get("glass") else {})}
+                    for p in as_polys(parapet) if p.area > 0.002]
                  + [{"outer": ring(p), "holes": holes(p), "height": min(h_, ceiling), **({"glass": True} if gl_ else {})}
                     for part_, h_, gl_ in special for p in as_polys(part_) if p.area > 0.002],
         "niches": [{"outer": ring(p), "bottom": b_, "top": t_} for p, b_, t_ in niches],

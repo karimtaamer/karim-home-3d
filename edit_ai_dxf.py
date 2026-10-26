@@ -12,6 +12,8 @@ works on the new entity; the report's "handles_remapped" gives virtual -> new ha
 
 Edit ops (a JSON list), handles as `query` gives them:
     {"op": "move", "handles": [...], "dx": 0.1, "dy": 0}          translate entities (blocks move by their insert)
+    {"op": "rotate", "handles": [...], "angle": 90, "centre": [x, y], "dx": 0, "dy": 0}   turned together, then moved
+    {"op": "scale", "handles": [...], "base": [x, y], "sx": 1.1, "sy": 1, "dx": 0, "dy": 0}  stretched from base, then moved
     {"op": "copy", "handles": [...], "dx": 0.1, "dy": 0}          copies, translated; reports the new handles
     {"op": "delete", "handles": [...]}
     {"op": "add_line", "layer": "1wall", "a": [x, y], "b": [x, y]}
@@ -30,7 +32,7 @@ Edit ops (a JSON list), handles as `query` gives them:
     {"op": "resize_piece", "handle": "1692", "x_size": 1.8, "y_size": null, "anchor": "N"}
         the same piece scaled to a new extent along plan x and / or y (metres; null keeps it); anchor names the sides
         that stay put ("N" keeps the north edge - a headboard on the north wall; "SW" a corner); default the centre.
-    {"op": "resize_piece", "handle": "16B8", "grow": {"W": 0.2, "E": 0.2, "S": 0.2}}
+    {"op": "resize_piece", "handle": "16B8", "grow": {"W": 0.2, "E": 0.2, "S": 0.2}}   (+ "allow_overlap": true: no stop at neighbours)
         or grow / shrink given sides by metres (negative shrinks; missing sides stay put): no arithmetic needed.
 After any edit, each piece moved, resized or added is checked against the walls and the other outlines: overlaps are
 listed under "clashes" (a rug may sit under things; given as --soft boxes).
@@ -1367,6 +1369,33 @@ def edit(a):
             for h in o["handles"]:
                 get(h).translate(float(o["dx"]), float(o["dy"]), 0)
             log.append(f"moved {len(o['handles'])} by ({o['dx']}, {o['dy']})")
+        elif k == "rotate":  # several entities turned together about centre (plan metres), then moved
+            cx, cy = W(o["centre"])
+            dx, dy, ang = float(o.get("dx", 0)), float(o.get("dy", 0)), float(o["angle"])
+            for h in o["handles"]:
+                e = get(h)
+                touched.add(e.dxf.handle)
+                e.translate(-cx, -cy, 0)
+                e.rotate_z(math.radians(ang))
+                e.translate(cx + dx, cy + dy, 0)
+            log.append(f"turned {len(o['handles'])} by {r(ang)} degrees about ({r(cx - ox)}, {r(cy - oy)}), moved by ({dx}, {dy})")
+        elif k == "scale":  # several entities stretched together: x' = base + (x - base)·sx + dx (plan metres), likewise y
+            from ezdxf.math import Matrix44
+            bx, by = W(o["base"])
+            sx, sy, dx, dy = float(o["sx"]), float(o["sy"]), float(o.get("dx", 0)), float(o.get("dy", 0))
+            m = Matrix44.chain(Matrix44.translate(-bx, -by, 0), Matrix44.scale(sx, sy, 1), Matrix44.translate(bx + dx, by + dy, 0))
+            for h in o["handles"]:
+                e = get(h)
+                touched.add(e.dxf.handle)
+                try:
+                    e.transform(m)
+                except Exception:  # a circle / arc can't stretch one way only: its centre moves, its radius takes the smaller
+                    if e.dxftype() not in ("CIRCLE", "ARC"):
+                        raise ValueError(f"{e.dxftype()} {e.dxf.handle} can't be stretched that way (turned in its block?)")
+                    c = e.dxf.center
+                    e.dxf.center = (bx + (c.x - bx) * sx + dx, by + (c.y - by) * sy + dy, c.z)
+                    e.dxf.radius *= min(sx, sy)
+            log.append(f"stretched {len(o['handles'])} by ({r(sx)}, {r(sy)}) from ({r(bx - ox)}, {r(by - oy)}), moved by ({dx}, {dy})")
         elif k == "copy":
             for h in o["handles"]:
                 c = get(h).copy()
@@ -1525,8 +1554,8 @@ def edit(a):
             # Growing: keep it inside the room it has (walls, the pieces beside it). Too big for the span ->
             # it fills the span exactly; it fits but was pushed out of it (wrong anchor) -> slide it back in.
             fits = []
-            try:
-                spans = room_around(msp, doc, o["handle"], soft)
+            try:  # allow_overlap (Move and Resize: the user dragged it there): no stopping at walls / neighbours
+                spans = ([None, None], [None, None]) if o.get("allow_overlap") else room_around(msp, doc, o["handle"], soft)
             except Exception:
                 spans = ([None, None], [None, None])
             for ai, (lo, hi) in enumerate(spans):

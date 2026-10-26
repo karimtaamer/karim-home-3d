@@ -755,11 +755,7 @@ export function furnish(scene, M, mat, version = "main") {
       p.model("models/plant-vase.glb", null, -0.84, 1.77, 0.08, { height: 0.3, cross: true });
       p.model("models/plant-vase.glb", null, -0.58, 0.75, 0.1, { height: 0.4, cross: true });  // on the top, by the column
       p.model("models/mbath-bottles.glb", null, 0.62, 0.75, 0.06, { width: 0.28 });
-<<<<<<< here
       p.pebble(["kareems-changes", "karims-version"].includes(version) || version === "naghams-changes" ? 0.16265 : -0.05, 1.35, 1.1, 0.75, 0.012, mat.mirror, true);   // 1.10 wide x 0.75 tall, 0.98 to 1.73; centred between wardrobe edge and shelf column edge
-=======
-      p.pebble(version === "naghams-changes" ? 0.16265 : -0.05, 1.35, 1.1, 0.75, 0.012, mat.mirror, true);   // Nagham: centred between wardrobe edge and shelf column edge
->>>>>>> edit-ai live 20261025T154303365-88a540
       p.cyl(-0.05, 0.25, 0.225, 0, 0.43, mat.boucle, 32);           // pouf 45 x 45, pushed in to 2.5 cm off the back panel
       p.cyl(-0.05, 0.25, 0.215, 0.43, 0.45, mat.boucle, 32, 0.225);
     });

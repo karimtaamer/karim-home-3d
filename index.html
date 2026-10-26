@@ -150,6 +150,10 @@
   .move-chips button.del { background: #b3261e; color: #fff; }
   .move-overlay polygon.was { fill: none; stroke: #2b2622; stroke-width: 1.5; stroke-dasharray: 5 4; opacity: 0.7; }
   .move-label.draft { background: #ff8a3d; color: #fff; }
+  /* Smart guides while dragging (move.js): pink, like Figma's, to stand clear of the plan's red walls and the orange outline. */
+  .move-overlay .guide { fill: none; stroke: #ff2e9a; stroke-width: 1.25; }
+  .move-overlay rect.guide { fill: #ff2e9a; stroke: none; }
+  .move-overlay text.guide { fill: #fff; stroke: none; font: 600 11px Inter, sans-serif; text-anchor: middle; }
   #move-accept { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 7; display: flex; gap: 8px; align-items: center;
     max-width: min(520px, calc(100vw - 24px)); padding: 8px 8px 8px 16px; border-radius: 16px; background: #2b2622f2; color: #f3eee5;
     font: 500 12.5px Inter, sans-serif; box-shadow: 0 6px 20px #0004; }
@@ -193,6 +197,23 @@
   #loader { position: fixed; inset: 0; z-index: 5; background: #f3eee5; display: grid; place-items: center; }
   #loader div { font-family: "Cormorant Garamond", serif; font-size: 42px; letter-spacing: .18em; }
   #loader span { display: inline-block; opacity: 0; }
+  /* After an edit's reload (reloadHere): the old frame over the new scene, then a ring opens from the edit onto it. */
+  #handoff { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; --x: 50%; --y: 50%; --r: -60px; }
+  #handoff.plan { z-index: 3; }
+  #handoff.leaving { z-index: 8; }
+  #handoff img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill;
+    -webkit-mask-image: radial-gradient(circle at var(--x) var(--y), transparent var(--r), #000 calc(var(--r) + 48px));
+    mask-image: radial-gradient(circle at var(--x) var(--y), transparent var(--r), #000 calc(var(--r) + 48px)); }
+  #handoff .ring { position: absolute; left: var(--x); top: var(--y); width: max(0px, calc(2 * var(--r) + 48px)); aspect-ratio: 1;
+    transform: translate(-50%, -50%); border-radius: 50%; border: 2px solid #e7b866; opacity: 0;
+    box-shadow: 0 0 28px 6px #e7b86680, 0 0 18px 2px #e7b86666 inset; }
+  #handoff .pill { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); display: flex; align-items: center; gap: 9px;
+    padding: 9px 16px; border-radius: 999px; background: #2b2622e6; color: #f3eee5; font: 500 12.5px Inter, sans-serif;
+    box-shadow: 0 6px 20px #0004; white-space: nowrap; transition: opacity .3s; }
+  #handoff .pill::before { content: ""; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #f3eee533; border-top-color: #e7b866;
+    animation: handoff-spin 1s linear infinite; }
+  #handoff.open .pill { opacity: 0; }
+  @keyframes handoff-spin { to { transform: rotate(1turn); } }
   #bar .break, #stick, :is(#bar, #actions) #photogen[hidden] { display: none; }
   #actions { display: contents; }
   /* Phones and tablets (a touch screen, or any narrow window): a joystick to walk with bottom-right, and the measuring
@@ -287,6 +308,23 @@
 <div id="caption" class="ui"><div class="name"></div><div class="meta"></div></div>
 <div id="actions" class="ui"><div id="help" class="ui"></div></div>
 <div id="stick" class="ui" role="application" aria-label="Walk: drag the knob the way to go"><div class="knob"></div></div>
+<script>
+// After an edit the page reloads where it was (reloadHere below): the frame from before stays up, with no splash, until
+// the new scene is ready, and reveal() opens it onto the new one.
+try {
+  const h = JSON.parse(sessionStorage.getItem("handoff") || "null");
+  sessionStorage.removeItem("handoff");
+  if (h?.img) {
+    window.HANDOFF = h;
+    document.getElementById("loader").style.display = "none";
+    const el = Object.assign(document.createElement("div"), { id: "handoff", className: h.show === "drawing" ? "plan" : "" });
+    el.innerHTML = '<img alt=""><div class="ring"></div><div class="pill"></div>';
+    el.querySelector("img").src = h.img;
+    el.querySelector(".pill").textContent = h.label;
+    document.body.append(el);
+  }
+} catch { /* no storage: the plain reload */ }
+</script>
 <script type="module">
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -305,6 +343,11 @@ import { createMove } from "./move.js";
 import { createRenders } from "./renders.js";
 import { createPhotoGen } from "./photogen.js";
 import { createInteract } from "./interact.js";
+
+// Models and textures still loading (GLTF pieces, pictures): reveal() waits for them before showing an edit.
+const loads = { busy: false };
+THREE.DefaultLoadingManager.onStart = () => (loads.busy = true);
+THREE.DefaultLoadingManager.onLoad = () => (loads.busy = false);
 
 // --- Plan versions: the main plan and alternatives to it, each built from its own DWG ----------------
 // (build_geometry.py --out / --tour, build_drawing.py --out). ?v=<id> picks one; the main plan is the default.
@@ -1246,8 +1289,10 @@ moveBtn.onclick = moveBtn2D.onclick = toggleMove;
 document.getElementById("drawing").addEventListener("measure-on", () => move.setActive(false));
 if (move.resume) move.setActive(true);
 if (params.has("debug")) window.__move = move;  // the Move suite's hook
-// After a move the page reloads where it was (the same as Edit AI's), with Move still on.
-function reloadHere() {
+// After a move or an Edit AI change the page reloads where it was, with Move still on. The frame from before goes with it
+// (sessionStorage "handoff", picked up by the inline script above the module) with the top view's zoom and the 2D's,
+// so the reload shows no splash and reveal() opens the old frame onto the new one from `focus` (screen px).
+function reloadHere({ focus, label = "Loading your change" } = {}) {
   const q = new URLSearchParams(location.search);
   for (const k of ["cam", "view", "room", "show"]) q.delete(k);
   if (mode === "walk") {
@@ -1255,6 +1300,24 @@ function reloadHere() {
     q.set("cam", [p.x, -p.z, p.y, p.x + d.x, -(p.z + d.z), p.y + d.y, camera.fov].map(v => +v.toFixed(3)).join(","));
   } else q.set("view", mode);
   if (showing !== "model") q.set("show", showing);
+  const src = showing === "drawing" ? document.querySelector("#drawing canvas") : showing === "model" ? canvas : null;
+  if (src && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const h = { label, show: showing, focus: focus && [focus[0] / innerWidth, focus[1] / innerHeight] };
+    if (mode === "top") h.pose = { pos: camera.position.toArray(), target: orbitTop.target.toArray(), up: camera.up.toArray(), fov: camera.fov };
+    if (showing === "drawing") h.plan = drawing.view;
+    for (const side of [1920, 1280]) {  // the tab's storage is small (Edit AI's retry sits there too): smaller if it won't fit
+      const k = Math.min(1, side / Math.max(src.width, src.height));
+      const c = Object.assign(document.createElement("canvas"), { width: Math.round(src.width * k), height: Math.round(src.height * k) });
+      c.getContext("2d").drawImage(src, 0, 0, c.width, c.height);
+      try { sessionStorage.setItem("handoff", JSON.stringify({ ...h, img: c.toDataURL("image/jpeg", 0.85) })); break; } catch { /* quota */ }
+    }
+    // Here, the same pill the new page opens with; Edit AI's panel fades off the view it froze.
+    const el = Object.assign(document.createElement("div"), { id: "handoff", className: "leaving" });
+    el.innerHTML = `<div class="pill"></div>`;
+    el.firstChild.textContent = label;
+    document.body.append(el);
+    document.getElementById("edit-ai")?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 250, fill: "forwards" });
+  }
   location.search = q;
 }
 const switcher = document.getElementById("switcher");
@@ -1339,8 +1402,9 @@ if (cam?.length >= 6) {
 } else if (params.get("view") === "top") {
   setMode("top");
   look.cut = PLAN_CUT; look.finish = 1; applyLook();
-  setPose(topPose());
-  orbitTop.target.copy(centre); orbitTop.enabled = true;
+  const p = globalThis.HANDOFF?.pose;  // back from an edit: the same zoom and angle as before it
+  setPose(p ? { pos: new THREE.Vector3(...p.pos), target: new THREE.Vector3(...p.target), fov: p.fov, up: new THREE.Vector3(...p.up) } : topPose());
+  orbitTop.target.copy(p ? new THREE.Vector3(...p.target) : centre); orbitTop.enabled = true;
 } else {  // default: Walk inside; legacy ?view=dollhouse maps here too
   const first = viewpoints.find(v => v.room === "RECEPTION") || viewpoints[0];
   setMode("walk");
@@ -1363,7 +1427,7 @@ import("./spots.js").then(m => m.photoSpots({
 if (!params.has("clean")) createEditAI({
   THREE, camera, scene, live, showing: () => showing, mode: () => mode, furniture: flat.furniture.root, materials: flat.lib,
   cutPlane: flat.cutPlane, room: () => flat.roomAt(camera.position.x, -camera.position.z)?.name, drawingFrame: () => drawing.frame(),
-  freeMouse: () => walker.isLocked && walker.unlock(),
+  freeMouse: () => walker.isLocked && walker.unlock(), reload: reloadHere,
 });
 
 // Desktops and tablets: Make an Edit (edit-ai.js's dock, with its Undo) then Generate a render at the end of the bar.
@@ -1413,6 +1477,28 @@ gsap.timeline()
   .to(loader, { opacity: 0, duration: 0.5, delay: 0.15, onComplete: () => loader.remove() });
 if (params.has("view") || startRoom || cam) loader.remove();
 if (["drawing", "renders"].includes(params.get("show"))) showScreen(params.get("show"));
+if (globalThis.HANDOFF?.plan) drawing.view = globalThis.HANDOFF.plan;  // back from an edit: the 2D where it was
+
+// --- After an edit's reload: the old frame, held since the first paint, opens onto the new scene ------------------------
+// Once the pieces and pictures have loaded (4 s at most), a gold ring grows from the edit (where it was circled, else the
+// middle) and the new scene shows through it.
+async function reveal() {
+  const h = document.getElementById("handoff"), seam = globalThis.HANDOFF;
+  if (!h || !seam) return;
+  if (showing === "drawing") await loadDrawing(live.url(version.drawing)).catch(() => null);
+  for (const t0 = performance.now(); loads.busy && performance.now() - t0 < 4000;) await new Promise(r => setTimeout(r, 100));
+  for (let i = 0; i < 3; i++) await new Promise(r => requestAnimationFrame(r));  // the new scene drawn at least once
+  const [fx, fy] = seam.focus || [0.5, 0.5], x = fx * innerWidth, y = fy * innerHeight;
+  const far = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y)) + 60;
+  h.style.setProperty("--x", `${x}px`);
+  h.style.setProperty("--y", `${y}px`);
+  h.classList.add("open");
+  gsap.timeline({ onComplete: () => h.remove() })
+    .to(h.querySelector(".ring"), { opacity: 1, duration: 0.25, ease: "power1.out" }, 0)
+    .to(h, { "--r": `${far}px`, duration: 1.4, ease: "power2.inOut" }, 0.1)
+    .to(h.querySelector(".ring"), { opacity: 0, duration: 0.5, ease: "power1.in" }, 1);
+}
+reveal();
 
 addEventListener("resize", () => {
   camera.aspect = aspect();

@@ -620,6 +620,11 @@ tap it, the view freezes, circle what to change (or pick **Whole view**), then s
 - **Hot path:** every change is saved as a revision in Blob (`edit-ai-live/<version>/rev-*.json`, files content-addressed in
   `edit-ai-live/files/`; served same-origin through the `/edit-ai-live/*` rewrite). The page loads `GET /api/edit-ai/patches?version=`
   first and uses those files instead of the deployed ones, then reloads in place with the same camera. Undo writes a new revision.
+- **Reload without the splash (27 Oct 2026):** an edit, an undo or a Move and Resize Accept reloads through `reloadHere()`
+  in `index.html`, which keeps the frame on screen (sessionStorage `handoff`: a JPEG of the 3D or 2D canvas, plus the top
+  view's camera and the 2D's pan / zoom). The new page shows that frame with a "Loading your edit" pill instead of the
+  K&N Home splash, waits for the models and pictures (4 s at most), then a gold ring grows from where the edit was
+  circled (else the middle) and the new scene shows through it. Reduced-motion: the plain reload.
   Once git catches up the override is "synced"; if the deployed file moved on, the edit's search/replace ops are replayed on it,
   Once git catches up the override is "synced". If the deployed file moved on (a push), the live file is three-way merged
   onto it (against the file the edit started from, `base_url`), then the recorded search/replace ops are tried; only if both
@@ -638,7 +643,7 @@ tap it, the view freezes, circle what to change (or pick **Whole view**), then s
   (python with ezdxf for DXF edits). Without the key the button still shows and explains that Edit AI isn't switched on.
 - **Run locally:** `python3 edit_ai.py [port]` serves the site with both APIs (reads `.env`).
 - **Limits:** the rate limit is per server instance; on Vercel only furniture/finishes/tour edits (no DXF, since `.vercelignore`
-  drops `dwg/` and the build scripts); concurrent edits are last-write-wins; the 2D zoom isn't kept across the reload.
+  drops `dwg/` and the build scripts); concurrent edits are last-write-wins.
 
 ## 9. Move and Resize (2D and 3D, like AutoCAD)
 
@@ -650,7 +655,10 @@ rebuilds, so the 2D and the 3D always agree.
 - **Pieces:** tap to pick (on the drawing, what stands on the floor wins over what hangs above it; **Tab** cycles through
   everything under the tap). Drag to move; **X** / **Y** lock the drag to that axis (again: free), **Shift**-drag goes
   straight along whichever axis it mostly runs; arrows nudge 1 cm (Shift 10 cm). Edge / corner dots resize, the round
-  dot turns (R = 90°). **Delete** / Backspace (or the red Delete chip) deletes it: a version-guarded `REMOVED` line in
+  dot turns (R = 90°). **Smart guides** (like Figma's): while dragging, the piece snaps within 6 px to a nearby piece's
+  centre line (pink line, × on each centre) or to the middle of its gap along x or y, between two pieces, a piece and
+  a wall, or two walls (pink gap lines with the equal sizes); a drilled-in part does the same with the parts beside it
+  and its piece's box; hold Ctrl / ⌘ to drag without snapping. **Delete** / Backspace (or the red Delete chip) deletes it: a version-guarded `REMOVED` line in
   the furniture file and its outline, block or lines on the plan.
 - **Groups:** **Shift-click** adds a piece to the selection or takes it out; the group moves, nudges and deletes
   together and saves as one revision (`op: "batch"`), so one Undo takes it all back. Resize and turn stay one at a time.

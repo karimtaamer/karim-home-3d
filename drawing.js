@@ -50,7 +50,7 @@ export function createDrawing(root, url) {
   let start = null, cursor = null, snap = null, ortho = false, shift = false, space = false, measuring = false;
   let lock = null, pulse = -Infinity;  // the live line's axis ("h" / "v") and when it locked
   let sel = -1, hover = -1, hits = [], delBtn = null;  // the selected / hovered measurement; labels and × as drawn
-  let queued = false;
+  let queued = false, hold = null;  // hold: a view to open on (the view setter, before the drawing loads)
   helpText();
 
   const toScreen = ([x, y]) => [view.tx + x * view.s, view.ty - y * view.s];
@@ -77,6 +77,7 @@ export function createDrawing(root, url) {
       paths.fills.push([col, p]);
     }
     fit();
+    if (hold) { Object.assign(view, hold); hold = null; redraw(); }
   }
 
   function fit() {
@@ -538,6 +539,9 @@ export function createDrawing(root, url) {
     },
     hide() { shown = false; root.hidden = true; shift = space = false; },
     frame: () => ({ toWorld, toScreen }),  // screen px <-> plan metres, for Edit AI's highlight and the Move tool
+    // The pan and zoom, kept over an edit's reload (index.html reloadHere); set before the drawing loads, it wins over fit().
+    get view() { return { ...view }; },
+    set view(v) { if (data) { Object.assign(view, v); redraw(); } else hold = v; },
     get measuring() { return measuring; },
     setMeasuring: on => on !== measuring && setMeasuring(on),
   };

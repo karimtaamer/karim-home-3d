@@ -83,7 +83,7 @@ export async function liveImport(live, name) {
 }
 
 // --- The button, the freeze, the highlight and the chat --------------------------------------------------------------
-export function createEditAI({ THREE, camera, scene, live, showing, mode, room, furniture, materials, cutPlane, drawingFrame, freeMouse }) {
+export function createEditAI({ THREE, camera, scene, live, showing, mode, room, furniture, materials, cutPlane, drawingFrame, freeMouse, reload }) {
   if (!live.api) return null;  // no backend: no button
   const style = document.createElement("style");
   style.textContent = `
@@ -709,7 +709,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     }
     store.setItem("editai-applied", JSON.stringify({ version: live.version, reply: res.reply, cost, sync: res.sync }));
     keepForRetry(body, res);
-    reloadHere();
+    reloadHere("Loading your edit", true);
   }
   // What "Try a stronger model" on the done toast needs after the reload: the request as sent (the marked view is the
   // pre-edit one, which is what the retry starts from once the edit is undone). Too big for the tab's storage
@@ -722,13 +722,18 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     }
     store.removeItem("editai-retry");
   }
-  function reloadHere() {
+  // The page's own reloadHere (index.html) when there is one: it carries the view over and reveals the change from where
+  // it was circled (`circled`: the edit just sent; an undo or a retry opens from the middle).
+  function reloadHere(label, circled) {
+    leaving = true;  // keep the scan up until the page goes
+    const pts = circled && !whole ? strokes.flat() : [];
+    const focus = pts.length ? [0, 1].map(k => (Math.min(...pts.map(p => p[k])) + Math.max(...pts.map(p => p[k]))) / 2) : null;
+    if (reload) return reload({ focus, label });
     const q = new URLSearchParams(location.search);
     for (const k of ["cam", "view", "room", "show"]) q.delete(k);
     if (mode() === "walk") q.set("cam", camQuery().join(","));
     else q.set("view", mode());
     if (showing() !== "model") q.set("show", showing());
-    leaving = true;  // keep the scan up until the page goes
     location.search = q;
   }
 
@@ -761,7 +766,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     history.push({ role: "user", text: "(undid the last change)" });
     store.setItem(histKey, JSON.stringify(history));
     store.setItem("editai-applied", JSON.stringify({ version: live.version, reply: "Undone.", undone: true }));
-    reloadHere();
+    reloadHere("Undoing");
   };
   // "Try a stronger model": undo the edit, then the strong model (the server's complex route) does the same request afresh
   // from the same marked view. Its result reloads like any edit; no change leaves the first edit undone.
@@ -791,7 +796,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
       store.setItem("editai-applied", JSON.stringify({ version: live.version, undone: true, note: `Undone, but the retry failed: ${e.message}` }));
     }
     store.setItem(histKey, JSON.stringify(history));
-    reloadHere();
+    reloadHere("Loading your edit");
   }
   let sure = null;
   undoBtn.onclick = async () => {

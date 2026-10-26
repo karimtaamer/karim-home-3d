@@ -240,6 +240,39 @@ def deployed(path):
     return p.read_bytes() if p.exists() else b""
 
 
+_fresh = {}  # path -> (time, bytes): git main's copy, a few seconds old at most
+
+
+def fresh(path):
+    """What an edit starts from when the version has no live override: git main as it is now on Vercel, not the
+    deployed bundle. Every edit commits to main and Vercel builds about one deploy a minute, so the bundle can be
+    several commits behind; on 27 Oct 2026 an edit read a stale bundle and committed back a change an Undo had
+    already taken out (grey bedroom walls, 1cb6d52 -> 089d570). The bundle stays the page's reference (patches)."""
+    if not (ON_VERCEL and os.environ.get("EDIT_AI_GITHUB_TOKEN")) or os.environ.get("EDIT_AI_FRESH_FROM_GIT") == "0":
+        return deployed(path)
+    hit = _fresh.get(path)
+    if hit and time.time() - hit[0] < 15:
+        return hit[1]
+    repo = os.environ.get("EDIT_AI_GITHUB_REPO", "karimtaamer/karim-home-3d")
+    branch = os.environ.get("EDIT_AI_GITHUB_BRANCH", "main")
+    req = urllib.request.Request(f"https://api.github.com/repos/{repo}/contents/{urllib.parse.quote(path)}?ref={branch}",
+                                 headers={"Authorization": f"Bearer {os.environ['EDIT_AI_GITHUB_TOKEN']}",
+                                          "Accept": "application/vnd.github.raw"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            data = r.read()
+    except urllib.error.HTTPError as e:
+        if e.code != 404:
+            print(f"[edit-ai] fresh {path}: {e}; using the deployed copy", flush=True)
+            return deployed(path)
+        data = b""
+    except Exception as e:
+        print(f"[edit-ai] fresh {path}: {e}; using the deployed copy", flush=True)
+        return deployed(path)
+    _fresh[path] = (time.time(), data)
+    return data
+
+
 def merge3(base, live, dep):
     """Line-based three-way merge: the Edit AI change (base -> live) laid onto a newer deployed file (base -> dep).
     None when both sides touched the same lines differently (a real conflict)."""
@@ -370,7 +403,7 @@ class Workspace:
         if path not in self.files:
             p = own(self.v, path)
             st = self.res.get(p)
-            self.files[path] = live_content(p, st) if st else deployed(p)
+            self.files[path] = live_content(p, st) if st else fresh(p)  # git main, not a bundle that may lag
         return self.files[path]
 
     def text(self, path):
@@ -1821,14 +1854,22 @@ stays a furnish panel.
 the plan); then shelves or lights in it in furnish.js if asked.
 - Light that lights something: lamp(x, y, h, {{ color, power, beam, target }}) in furnish.js next to the fitting (a \
 spot: beam = cone degrees, target = [x, y, h]); a fitting alone only glows. At most 12 lamps in the home.
+- Reply in the user's language and dialect: most users are Egyptian, so an Egyptian Arabic request gets a short
+Egyptian Arabic reply (مافيش، عشان، دلوقتي، كده; never Levantine or Gulf words like "ما في" or "هلق"), a formal Arabic
+request a formal one; sizes in cm and areas in m2. Say only what the plan shows: two rooms are one space only when
+no wall stands between them.
 - Questions ("how big is...", "how much paint / tile do I need?", "where are..."): answer from measure / plan_rooms \
 and change nothing. Notes ("mark this door fire-rated", "underfloor heating here") and where the walk-through starts: \
 set_home. A photo the user sends for a frame, a print or a tile / fabric sample: save_picture, then use the material. \
 A photo of the room: say Generate Photo Spot makes those. Things the 3D can't hold (plumbing, wiring routes): say so \
 and offer a note.
+- Before adding a piece, look at what is already at that spot (furniture_near): a new chandelier over the table
+replaces the pendants hanging there, a new sofa replaces the old one, a new rug the old rug. Remove or move what it
+replaces in the same edit, never leave two things in one place, and say what you took out.
 - A real model instead of boxes ("this sofa", "a mid-century armchair", "a chandelier", "a ceiling fan"): find_model,
-then p.model(url, null, x, y, z, {{ size: [w, h, d] }}) inside the item's build, sized to the piece. Boxes stay fine for
-built-in joinery.
+then p.model(url, null, x, y, z, {{ size: [w, h, d] }}) inside the item's build, sized to the piece. Use find_model first
+for any free-standing product or fitting (chandelier, pendant, lamp, sofa, armchair, chair, table, bath, plant); boxes
+stay for built-in joinery, or when nothing in the library fits.
 - Big jobs (a whole room redone, a style across the home): plan the parts first, do them one at a time and \
 save_progress after each finished part, so a time-out keeps what is done; then tell the user what is left.
 - DXF coordinates in the tools are plan metres (the same frame as furnish.js and the camera numbers below).
@@ -2195,7 +2236,16 @@ _COMPLEX_RES = [re.compile(p, re.I) for p in (
     r"\bbetween\b.+\band\b",
     r"\b(replace[sd]?\b[^.]{0,40}?\bwith|turn\b[^.]{0,40}?\binto|convert)\b",
     r"\b(and then|then also|also)\b",
+    r"\b(hang|hung|mount|fit|fix (a|an|some))\b", r"\b(chandelier|pendant|lamp|light fitting|spotlight|sconce)s?\b",
 )]
+# Egyptian / standard Arabic (no \b: "والحيطة" = and + the + wall is one word). Adding, building, hanging, swapping or
+# turning one thing into another, light fittings, and the plan's walls / windows / doors with a verb that changes them.
+_AR_COMPLEX = re.compile(r"ضيف|اضيف|أضيف|اضف|أضف|زود|ركب|ركّب|علق|علّق|حط |حطلي|حطّ|اعمل|إعمل|اعملي|ابني|جديد|"
+                         r"بدل|استبدل|حول|حوّل|اقلب|نجف|اباليك|أباليك|ابليك|سبوت|لمبة|اضاءة|إضاءة|ينطوي|قابل للطي|بيتفتح|يتفتح|"
+                         r"وكمان|وبعدين|كمان")
+_AR_PLAN = re.compile(r"حيط|حائط|جدار|شباك|شبابيك|نافذ|باب|ابواب|أبواب|عمود|فاصل|فتح")
+_AR_PLAN_VERB = re.compile(r"شيل|اشيل|انقل|حرك|حرّك|وسع|وسّع|ضيق|ضيّق|كبر|كبّر|صغر|صغّر|اقفل|قفل|افتح|اهد|هد |اكسر|اقسم|قسم|"
+                           r"طول|طوّل|قصر|قصّر|زق|ارفع|نزل|نزّل|امسح")
 # Plan edits: a wall / window / door / opening that moves, goes, appears or changes size (not just its colour).
 _PLAN_RE = re.compile(r"\b(wall|window|door|doorway|opening|column|partition)s?\b", re.I)
 _PLAN_VERB_RE = re.compile(r"\b(move|shift|remove|delete|demolish|knock|widen|narrow|extend|shorten|enlarge|split|cut|close|open up|push|pull)", re.I)
@@ -2209,7 +2259,9 @@ def is_complex_edit(message, refs=()):
     m = message or ""
     if refs:
         return True
-    if any(r.search(m) for r in _COMPLEX_RES):
+    if any(r.search(m) for r in _COMPLEX_RES) or _AR_COMPLEX.search(m):
+        return True
+    if _AR_PLAN.search(m) and _AR_PLAN_VERB.search(m) and not re.search(r"لون|دهان|اده|ادهن|بوية|خشب", m):
         return True
     if _PLAN_RE.search(m) and _PLAN_VERB_RE.search(m) and not re.search(r"\b(colou?r|paint|finish)\b", m, re.I):
         return True
@@ -2265,6 +2317,9 @@ where it goes); if the words name a piece the circle doesn't cover, score 2 and 
 name the piece: if only one of that kind is in view, naming the kind is enough ("this window"), don't ask which; if
 several are, the words must pick one (left / right, nearest, by the sofa...), else score 2 and ask which.
 Without the view: naming the kind is enough.
+A room or a home-wide thing named in words (kitchen, laundry, living room, terrace, the parapets, all the doors...) is
+named even when it isn't in view: this home has one of each, never ask "which". A wall "between" two named rooms is
+named too. Egyptian Arabic (e.g. "شيل الحيطة اللي بين المطبخ والغسيل", "حط نجفة فوق السفرة") is as clear as English.
 A room named in words (kitchen, laundry, living room, terrace...) is named even when it isn't in view: this home has one of each, never ask "which". A wall "between" two named rooms is named too.
 A question about the home (sizes, areas, how much paint / tile, what is where) is fine: score 5.
 Reply in the request's language.
@@ -2494,6 +2549,8 @@ def chat(req, emit=None):
             if not verdict or verdict["score"] >= REVIEW_PASS:
                 break
             fixing, nudged, edit_usd = True, 0, dollars(total, model)
+            if model != live_model(COMPLEX_MODEL):  # the cheap model's miss: the strong one fixes it (priced as such)
+                model = live_model(COMPLEX_MODEL)
             emit("We found improvements, please wait a moment")
             messages.append({"role": "user", "content": fix_note(verdict)})
         if fixing and ws.changed:  # the fixed edit's score, for the record
@@ -3926,6 +3983,8 @@ def github_commit(contents, msg):
         return "nothing to commit: git already has these files"
     commit = gh("POST", "/git/commits", {"message": msg, "tree": new_tree, "parents": [head]})["sha"]
     gh("PATCH", f"/git/refs/heads/{branch}", {"sha": commit})
+    for path, data in contents.items():  # what main now holds, for the next edit's fresh() reads
+        _fresh[path] = (time.time(), data)
     return f"committed {commit[:7]}"
 
 

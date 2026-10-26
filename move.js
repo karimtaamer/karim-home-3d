@@ -7,15 +7,19 @@
 // reloads on the same view, like an Edit AI change, and Edit AI's Undo takes it back.
 // In 3D a tap picks the whole piece; a double-tap on it goes one level in, to the named part under the pointer (the
 // coffee bar's espresso machine, a TV-wall niche), like a group in Figma. The chips under it climb back out.
+// While a piece is dragged, Figma-style smart guides show (and snap to) its centre on a nearby piece's centre line, or
+// in the middle of the gap it sits in: between two pieces, a piece and a wall, or two walls (the middle of the room).
 import * as THREE from "three";
 
 const API = "api/edit-ai";
 const DRAG_PX = 4, HANDLE_PX = 12, HANDLE_TOUCH_PX = 22, HEAD = 1.5, DOUBLE_MS = 400, DOUBLE_PX = 10, ROT_PX = 30;
+const SNAP_PX = 6, ALIGN_NEAR = 4, GAP_FAR = 8, CENTRED = 0.0026;  // smart guides: screen px, m, m, m
 const SIDES = { N: [0, 1], S: [0, -1], E: [1, 0], W: [-1, 0], NE: [1, 1], NW: [-1, 1], SE: [1, -1], SW: [-1, -1] };
 const NAME = "Move and Resize";
 const store = sessionStorage;
 const r4 = v => Math.round(v * 10000) / 10000;
 const cm = v => `${Math.round(Math.abs(v) * 100)} cm`;
+const cm1 = v => `${(Math.abs(v) * 100).toFixed(1)} cm`;
 const same = (a, b, tol = 0.003) => a.every((v, i) => Math.abs(v - b[i]) < tol);
 
 export function createMove({ camera, renderer, scene, root, cutPlane, live, version, showing, mode, drawingFrame, drawingRoot,
@@ -435,6 +439,145 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     for (const [k, [x, y]] of Object.entries(at)) out[k] = toScreen(x, y, h);
     return out;
   }
+  // --- Smart guides (like Figma's) -------------------------------------------------------------------------------------
+  // While the selection is dragged, its centre snaps (within SNAP_PX on screen; Ctrl / ⌘ held: no snapping) onto the
+  // centre line of a piece in sight of it, or into the middle of the gap it sits in along x or y: between two pieces, a
+  // piece and a wall, or two walls (the middle of the room). A part drilled into lines up with the parts beside it, and
+  // its gaps run to its piece's box. Pink lines show it: one through the centres with a × on each, or the two equal gaps
+  // with their sizes.
+  // What the dragged selection lines up with, gathered once at the start of the drag: align (any height), block (the
+  // ones at its height, which close a gap), frame (a part's piece box) and walls (wall, door and window outlines).
+  function guideRefs() {
+    const me = new Set([sel.o, ...group.map(m => m.o)]), z = heightNow(), outer = outerOf(sel.o), M = globalThis.MODEL || {};
+    const boxes = [], R = { align: [], block: [], frame: null, walls: [] };
+    if (outer) {
+      outer.traverse(c => c !== outer && !me.has(c) && pickable(c) && outerOf(c) === outer && visible(c) && boxes.push(planBox(c)));
+      R.frame = planBox(outer).box;
+    } else {
+      for (const c of root.children) if (!me.has(c) && isPiece(c) && visible(c)) boxes.push(planBox(c));
+      for (const w of M.walls || []) R.walls.push(w.outer, ...(w.holes || []));
+      for (const o of M.openings || []) R.walls.push(o.outer);
+    }
+    for (const pb of boxes) {
+      const b = pb.box;
+      if ((b[2] - b[0]) * (b[3] - b[1]) >= 40) continue;
+      R.align.push(b);
+      if (pb.low < z[1] && pb.high > z[0]) R.block.push(b);
+    }
+    return R;
+  }
+  // The plan box a draft takes up once turned (the outline's own box when it isn't).
+  function footprint(box, rot) {
+    if (!rot) return box;
+    const ps = spin([[box[0], box[1]], [box[2], box[1]], [box[2], box[3]], [box[0], box[3]]], [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2], rot);
+    const xs = ps.map(q => q[0]), ys = ps.map(q => q[1]);
+    return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+  }
+  const mid = (b, ax) => (b[ax] + b[ax + 2]) / 2;
+  const cross = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  // No wall, door or window outline between plan points p and q.
+  function seen(p, q, walls) {
+    for (const ring of walls) for (let i = 0; i < ring.length; i++) {
+      const u = ring[i], v = ring[(i + 1) % ring.length];
+      if (cross(u, v, p) * cross(u, v, q) < 0 && cross(p, q, u) * cross(p, q, v) < 0) return false;
+    }
+    return true;
+  }
+  // How far the nearest wall face is from c along axis ax (0: x, 1: y) in direction s (±1), anywhere across the band
+  // q0..q1. An edge running through c (a piece set into a wall) doesn't count.
+  function wallSweep(walls, c, ax, s, q0, q1) {
+    const p = 1 - ax;
+    let best = Infinity;
+    for (const ring of walls) for (let i = 0; i < ring.length; i++) {
+      const u = ring[i], v = ring[(i + 1) % ring.length], a0 = Math.max(q0, Math.min(u[p], v[p])), a1 = Math.min(q1, Math.max(u[p], v[p]));
+      if (a0 > a1) continue;
+      const at = q => u[ax] + (q - u[p]) / (v[p] - u[p]) * (v[ax] - u[ax]);
+      const ds = (u[p] === v[p] ? [u[ax], v[ax]] : [at(a0), at(a1)]).map(t => (t - c) * s);  // the ends of its part in the band
+      if (Math.min(...ds) > 0) best = Math.min(best, ...ds);
+    }
+    return best;
+  }
+  // The nearest thing each side of box b along axis ax: [low side, high side], each {at: its face} or null. A piece
+  // counts when it overlaps b across the axis and sits wholly on that side; a wall, door or window when any of its
+  // outline lies across b's width (2 cm in from each side, so a piece set a little into a wall still counts).
+  function sides(b, ax, R) {
+    const p = 1 - ax, c = mid(b, ax), lo = b[p], hi = b[p + 2];
+    return [-1, 1].map(s => {
+      let at = null;
+      const take = f => { if (at === null || (f - at) * s < 0) at = f; };
+      for (const r of R.block) {
+        if (r[p] >= hi - 1e-3 || r[p + 2] <= lo + 1e-3) continue;
+        const f = s < 0 ? r[ax + 2] : r[ax];
+        if (s < 0 ? f <= b[ax] + 1e-3 : f >= b[ax + 2] - 1e-3) take(f);
+      }
+      if (R.frame) take(s < 0 ? R.frame[ax] : R.frame[ax + 2]);
+      if (R.walls.length) {
+        const e = Math.min(0.02, (hi - lo) / 4), d = wallSweep(R.walls, c, ax, s, lo + e, hi - e);
+        if (d < Infinity) take(c + s * d);
+      }
+      return at !== null && Math.abs(at - c) <= GAP_FAR ? { at } : null;
+    });
+  }
+  // The pieces whose centre line along ax is within tol of b's: near it and in sight of it (not through a wall).
+  function aligners(b, ax, R, tol) {
+    const c = [mid(b, 0), mid(b, 1)];
+    return R.align.filter(r => Math.abs(mid(r, ax) - c[ax]) <= tol
+      && Math.max(r[0] - b[2], b[0] - r[2], r[1] - b[3], b[1] - r[3]) <= ALIGN_NEAR && seen(c, [mid(r, 0), mid(r, 1)], R.walls));
+  }
+  // The shift along ax (smallest first) that centres b on a piece's centre line or in its gap, if one is within tol.
+  function snapAxis(b, ax, R, tol) {
+    const ds = aligners(b, ax, R, tol).map(r => mid(r, ax) - mid(b, ax)), [lo, hi] = sides(b, ax, R);
+    if (lo && hi) ds.push(((hi.at - b[ax + 2]) - (b[ax] - lo.at)) / 2);
+    const ok = ds.filter(d => Math.abs(d) <= tol).sort((u, v) => Math.abs(u) - Math.abs(v));
+    return ok.length ? ok[0] : 0;
+  }
+  // Plan metres per screen pixel at box b's centre (0 when it's off screen).
+  function perPx(b) {
+    const c = [mid(b, 0), mid(b, 1)], h = hNow(), o = toScreen(c[0], c[1], h), x = toScreen(c[0] + 1, c[1], h), y = toScreen(c[0], c[1] + 1, h);
+    return o && x && y ? 1 / Math.max(Math.hypot(x[0] - o[0], x[1] - o[1]), Math.hypot(y[0] - o[0], y[1] - o[1]), 1e-6) : 0;
+  }
+  // The drag's box nb, snapped on each axis it's free to move along (both judged from where the pointer put it).
+  function snapped(nb, lock, R) {
+    const tol = SNAP_PX * perPx(nb), f = footprint(nb, turn());
+    if (!tol) return nb;
+    const [dx, dy] = [0, 1].map(ax => (lock && lock !== "xy"[ax] ? 0 : snapAxis(f, ax, R, tol)));
+    return [nb[0] + dx, nb[1] + dy, nb[2] + dx, nb[3] + dy];
+  }
+  // The guides box b meets (centred within CENTRED): plan lines {type: "align", a, b, marks} / {type: "gap", a, b, text}.
+  function guidesFor(b, R) {
+    const out = [];
+    for (const ax of [0, 1]) {
+      const p = 1 - ax, c = mid(b, ax), pt = (u, v) => (ax ? [v, u] : [u, v]);  // (along ax, across it) as plan x, y
+      const rs = aligners(b, ax, R, CENTRED);
+      if (rs.length) out.push({ type: "align", a: pt(c, Math.min(b[p], ...rs.map(r => r[p]))), b: pt(c, Math.max(b[p + 2], ...rs.map(r => r[p + 2]))),
+        marks: [b, ...rs].map(r => pt(c, mid(r, p))) });
+      const [lo, hi] = sides(b, ax, R);
+      if (!lo || !hi) continue;
+      const L = b[ax] - lo.at, H = hi.at - b[ax + 2], m = mid(b, p);
+      if (L >= 0.005 && Math.abs(L - H) <= CENTRED)
+        out.push({ type: "gap", a: pt(lo.at, m), b: pt(b[ax], m), text: cm1(L) }, { type: "gap", a: pt(b[ax + 2], m), b: pt(hi.at, m), text: cm1(H) });
+    }
+    return out;
+  }
+  function guideSvg(gs) {
+    const h = hNow(), sc = q => toScreen(q[0], q[1], h);
+    let s = "";
+    for (const g of gs) {
+      const a = sc(g.a), b = sc(g.b);
+      if (!a || !b) continue;
+      s += `<line class="guide" x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}"/>`;
+      if (g.type === "align") {
+        for (const v of g.marks.map(sc)) if (v) s += `<path class="guide" d="M${v[0] - 3.5} ${v[1] - 3.5}l7 7m0 -7l-7 7"/>`;
+        continue;
+      }
+      // a tick across each end, and the size in a pill at the middle
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, n = [-(b[1] - a[1]) / L * 4, (b[0] - a[0]) / L * 4], m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], w = g.text.length * 6.4 + 10;
+      s += `<path class="guide" d="M${a[0] - n[0]} ${a[1] - n[1]}L${a[0] + n[0]} ${a[1] + n[1]}M${b[0] - n[0]} ${b[1] - n[1]}L${b[0] + n[0]} ${b[1] + n[1]}"/>`
+        + `<rect class="guide" x="${m[0] - w / 2}" y="${m[1] - 9}" width="${w}" height="18" rx="4"/><text class="guide" x="${m[0]}" y="${m[1] + 4}">${g.text}</text>`;
+    }
+    return s;
+  }
+
   function render() {
     const now = showing() + mode();
     if (where && now !== where && sel && !busy) { discard(); select(null); }
@@ -457,6 +600,7 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     const zh = !busy && !group.length && zHandles(b);  // heights: one piece at a time
     if (zh) s += `<line class="z" x1="${zh.base[0]}" y1="${zh.base[1]}" x2="${zh.lift[0]}" y2="${zh.lift[1]}"/>`
       + `<rect class="z" x="${zh.size[0] - 5.5}" y="${zh.size[1] - 5.5}" width="11" height="11"/><circle class="z" cx="${zh.lift[0]}" cy="${zh.lift[1]}" r="7"/>`;
+    if (drag?.guides) s += guideSvg(drag.guides);
     svg.innerHTML = s;
     label.hidden = false;
     label.style.left = `${(c[0][0] + c[2][0]) / 2}px`;
@@ -746,7 +890,8 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     freeMouse?.();
     const at = toPlan(...p, hNow());
     if (!at && !g.zh) return;
-    drag = { ...g, id: e.pointerId, from: p, at, base: [...shown()], rot: turn(), z: [...heightNow()], z0: draft?.z || null, moved: false };
+    drag = { ...g, id: e.pointerId, from: p, at, base: [...shown()], rot: turn(), z: [...heightNow()], z0: draft?.z || null, moved: false,
+      refs: g.type === "move" ? guideRefs() : null, guides: null };
   }, true);
   addEventListener("pointermove", e => {
     if (!drag || e.pointerId !== drag.id) return;
@@ -771,7 +916,9 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
       const lock = axis || (e.shiftKey ? (Math.abs(d[0]) >= Math.abs(d[1]) ? "x" : "y") : null);
       if (lock === "x") d[1] = 0;
       if (lock === "y") d[0] = 0;
-      setDraft([b[0] + d[0], b[1] + d[1], b[2] + d[0], b[3] + d[1]]);
+      const nb = [b[0] + d[0], b[1] + d[1], b[2] + d[0], b[3] + d[1]];
+      setDraft(e.ctrlKey || e.metaKey ? nb : snapped(nb, lock, drag.refs));
+      drag.guides = guidesFor(footprint(shown(), turn()), drag.refs);
     }
     else {
       const [sx, sy] = SIDES[drag.side], nb = [...b], MIN = 0.03;
@@ -987,6 +1134,12 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     },
     // A draft as a drag or the keys would make it: the plan box, the turn, the height span [low, high].
     debugDraft(box, rot = 0, z = null) { if (sel) setDraft(box, rot, z); return !!draft; },
+    // Smart guides for the selection dragged to box: where the snap puts it and the guides shown there.
+    debugGuides(box, lock = null) {
+      if (!sel) return null;
+      const R = guideRefs(), s = snapped(box, lock, R), f = footprint(s, turn());
+      return { snapped: s.map(r4), guides: guidesFor(f, R), sides: [0, 1].map(ax => sides(f, ax, R).map(q => q && r4(q.at))), perPx: perPx(s) };
+    },
     async ready() {
       if (furnishText === null) { setActive(true); setActive(false); }
       for (let i = 0; i < 100 && !furnishText; i++) await new Promise(r => setTimeout(r, 100));
@@ -997,7 +1150,7 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
         plan: pel && { type: pel.type, kind: pel.kind || null, at: pel.at, box: pel.box || null, run: pel.run, draft: pdraft, text: planText() },
         active, busy, selected: sel && nameOf(sel.o), path: sel ? sel.path.map(nameOf) : [], box: sel && sel.box.map(r4),
         draft: draft && draft.box, rot: turn(), z: draft?.z || null, low: sel && r4(sel.low), high: sel && r4(sel.high), zh: sel && zHandles(shown()), text: sel && draftText(), bar: !bar.hidden, chips: [...chips.querySelectorAll("button")].map(b => b.textContent),
-        request: draft && sel ? request() : null, result: lastResult, axis, del: !!draft?.del, group: group.map(m => nameOf(m.o)), hidden: !!sel && !sel.o.visible,
+        request: draft && sel ? request() : null, result: lastResult, axis, guides: drag?.guides || null, del: !!draft?.del, group: group.map(m => nameOf(m.o)), hidden: !!sel && !sel.o.visible,
       };
     },
     // The live box of an object at (x, y) [part], as the scene has it now (to check a preview or a reload).

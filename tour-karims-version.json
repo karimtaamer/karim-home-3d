@@ -29,5 +29,7 @@
   "openings": [
     {"at": [211.7522, -117.4482], "sill": 0.6, "head": 2.4, "kind": "window"}
   ],
-  "rooms": {}
+  "rooms": {},
+  "parapet": {"glass": true},
+  "heights": {"parapet": 1.1}
 }

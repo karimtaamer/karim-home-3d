@@ -1020,7 +1020,7 @@ def tool(ws, name, a):
         ws.write(ws.cfg["dxf"], ws.dxf().read_bytes())
         ws.plan_dirty = True
         try:
-            rep_ = json.loads(out)
+            rep_ = json.JSONDecoder().raw_decode(out.lstrip())[0]  # stderr may trail the JSON
             same_ = lambda a_, b_: a_ and b_ and all(abs(u_ - w_) < 0.001 for u_, w_ in zip(a_, b_))
             real_ = [pc for pc in rep_.get("pieces_changed", []) if not same_(pc["old"], pc["new"])]
             noop_ = "pieces_changed" in rep_ and not real_ and not any(
@@ -1052,7 +1052,7 @@ def tool(ws, name, a):
         except ValueError:
             pass
         try:  # what hangs in a moved window (sheers, curtains) has to follow it in furnish.js
-            for w in json.loads(out).get("windows_moved", []):
+            for w in json.JSONDecoder().raw_decode(out.lstrip())[0].get("windows_moved", []):
                 if "old_centre" not in w:
                     continue  # a door
                 (x, y), half = w["old_centre"], w["old_width"] / 2 + 0.3

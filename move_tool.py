@@ -453,8 +453,8 @@ def plan_op(ws, ops):
     out = E.tool(ws, "dxf_edit", {"ops": ops})
     if out.startswith("nothing changed") or out.startswith("As-built"):
         raise ValueError(f"the plan wouldn't take it: {out[:300]}")
-    try:
-        return json.loads(out.split("\nfurnish.js items within")[0])
+    try:  # the JSON comes first; notes and any stderr (a warning on Vercel) follow it
+        return json.JSONDecoder().raw_decode(out.lstrip())[0]
     except ValueError:
         raise ValueError(f"the plan edit gave an answer I can't read: {out[:300]}")
 

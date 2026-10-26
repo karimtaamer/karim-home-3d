@@ -1,0 +1,6 @@
+{
+  "_comment": "Photo spots of Kareem's Changes (an exact copy of Nagham's Changes, itself a copy of the Shifted Bedroom version): spots.json without its master bedroom and bathroom renders (drawn for the old layout). No renders of the new layout yet. The laundry, guest WC, kitchen and entrance renders are kept, though v12 shifts some of their joinery slightly.",
+  "extends": "spots.json",
+  "replaces": ["MASTER BEDROOM", "TOILET 1"],
+  "spots": []
+}

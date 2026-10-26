@@ -16,8 +16,8 @@ ROOT = Path(__file__).resolve().parent
 SITE = "https://karim-home-3d.vercel.app"
 STORE = next(r["destination"].split("/edit-ai-live/")[0] for r in json.loads((ROOT / "vercel.json").read_text())["rewrites"]
              if r["source"].startswith("/edit-ai-live"))
-# Main and "Karim's version" both load kareems-changes (2026-10-25); Bigger / Shifted Bedroom are retired.
-VERSIONS = ["kareems-changes", "naghams-changes", "as-built"]
+# Main loads kareems-changes (2026-10-25), "Karim's version" its own karims-version (26 Oct); Bigger / Shifted Bedroom are retired.
+VERSIONS = ["kareems-changes", "karims-version", "naghams-changes", "as-built"]
 
 
 def fetch(url):

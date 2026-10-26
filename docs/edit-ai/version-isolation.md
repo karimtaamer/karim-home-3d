@@ -10,6 +10,11 @@ Karim, 26 Oct 2026: *"From now on, any change in any version is only for that ve
 * **A colour / finish:** add a NEW material to `materials.js` and pick it with the ternary above. Never change an
   existing material (`walnut`, `linenSlate`, ...) in place: other versions use it.
 
+**Main and Karim's version are separate plans** (26 Oct 2026): Main is `kareems-changes`, Karim's version is
+`karims-version` (`?v=kareems-changes` on the page). Code both of them share reads
+`["kareems-changes", "karims-version"].includes(version)` (or `KC` / `GKC` / ... built from it); a change for one
+of them names that one alone, e.g. `version === "karims-version" ? newValue : oldValue`.
+
 Only when the user says so ("in all versions", "everywhere", "both versions") may a change reach every version.
 
 ## How it is enforced (`edit_ai.py`)

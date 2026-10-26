@@ -66,6 +66,8 @@ WORDS.push(...WORDS.filter(w => w[3] === "naghams-changes" && w[2] !== "vanity")
   // (with its medicine cabinet), re-centred on the wall
   [19.342, 2.103, "sofa", "kareems-changes"], [20.7945, 2.45, "side table", "kareems-changes"],
   [0.556, 6.7276, "vanity", "kareems-changes"]);
+// Karim's version (karims-version, 26 Oct 2026) starts as a copy of Main's kareems-changes: the same words.
+WORDS.push(...WORDS.filter(w => w[3] === "kareems-changes").map(([x, y, word]) => [x, y, word, "karims-version"]));
 
 // The word for a furniture group (a direct child of furnish's root) in this plan version, or null.
 export function wordFor(group, version) {

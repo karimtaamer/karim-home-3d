@@ -39,11 +39,15 @@ export function furnish(scene, M, mat, version = "main") {
   const root = new THREE.Group();
   const ceilingBits = new THREE.Group();  // shown only with the ceiling (downlights, grilles)
   scene.add(root, ceilingBits);
+  // Karim's version (karims-version) split from Main (kareems-changes) on 26 Oct 2026 as a copy of it: it runs every
+  // ["kareems-changes", "karims-version"].includes(version) branch, but not Main's 26 Oct laundry/WC partition (version === "kareems-changes" alone).
   // Make plan doors interactive without changing their openings: each entry finds its swing by the hinge (plan m).
   // Guest WC: hinged on the west jamb (Karim 25 Oct, opens toward the shower, not the vanity; was the east jamb 13.965).
+  // Main, Karim 26 Oct (Karim's version keeps the old numbers): the laundry/WC partition is 0.202 west (laundry 1.06 clear, WC bath zone 0.95, entrance 1.00 to the
+  // vanity); the WC door's west jamb follows the bath edge 0.154 west (leaf 0.84, 83 cm clear), the laundry door the wall.
   // Passage door = the laundry door, opening inwards into the laundry (doorsAsDrawn).
   // Corridor -> dining (batch 25 Oct): the new door on the guest WC's south-east corner, opening into the dining area.
-  if (version === "kareems-changes") for (const [dId, dLabel, dx0, dy0, dTol] of [["guest-wc-door", "Guest toilet door", 13.275, 6.893, 0.05], ["passage-door", "Passage door", 12.0976, 6.7958, 0.25], ["dining-door", "Dining door", 14.755, 6.743, 0.05]]) {
+  if (["kareems-changes", "karims-version"].includes(version)) for (const [dId, dLabel, dx0, dy0, dTol] of [["guest-wc-door", "Guest toilet door", version === "kareems-changes" ? 13.115 : 13.275, 6.893, 0.05], ["passage-door", "Passage door", version === "kareems-changes" ? 11.845 : 12.0976, 6.7958, 0.25], ["dining-door", "Dining door", 14.755, 6.743, 0.05]]) {
     const swing = (M.swings || []).find(s => Math.hypot(s.hinge[0] - dx0, s.hinge[1] - dy0) < dTol);
     if (swing) {
       const [hx, hy] = swing.hinge;
@@ -68,7 +72,7 @@ export function furnish(scene, M, mat, version = "main") {
   if (version === "as-built") return { root, ceilingBits, setReveal() {} };  // the empty flat as it stands today
 
   // Make the existing master-bedroom entry leaf interactive without altering its opening.
-  if (version === "kareems-changes") {
+  if (["kareems-changes", "karims-version"].includes(version)) {
     const s = (M.swings || []).find(s => Math.hypot(s.hinge[0] - 5.5724, s.hinge[1] - 5.6626) < 0.15);
     if (s) {
       const [hx, hy] = s.hinge;
@@ -402,7 +406,7 @@ export function furnish(scene, M, mat, version = "main") {
   });
   // Kareem's (Karim t288): the TV wall's face is on the column's (plan x 6.1379, 2 cm west), coplanar with it, so the
   // limewash panel and the console move back onto it.
-  const LKC = version === "kareems-changes";
+  const LKC = ["kareems-changes", "karims-version"].includes(version);
   item(LKC ? 6.1379 : 6.15, 2.25, "W", p => p.box(-1.75, 1.75, 0, M.ceiling, 0, 0.012, mat.limewashTaupe));
   item(LKC ? 6.1396 : 6.16, 2.25, "W", p => {  // DWG TV unit on the east wall: floating walnut console, 3 drawers, light top
     p.box(-0.87, 0.87, 0.45, 0.72, 0, 0.4, mat.walnut);
@@ -418,7 +422,7 @@ export function furnish(scene, M, mat, version = "main") {
     p.cyl(0.62, 0.2, 0.06, 0.75, 0.93, mat.planter, 16, 0.045);  // vases on the console
     p.cyl(-0.62, 0.2, 0.05, 0.75, 0.88, mat.planter, 16, 0.04);
   });
-  if (version !== "kareems-changes") plant(5.12, 0.84, 1.8, 0.24);  // tall olive by the end of the chaise (removed on Kareem's via Edit AI)
+  if (!["kareems-changes", "karims-version"].includes(version)) plant(5.12, 0.84, 1.8, 0.24);  // tall olive by the end of the chaise (removed on Kareem's via Edit AI)
   plant(5.9, 1.08, 1.35, 0.2);   // beside the TV console
   art(3.62, 0.548, "N", 0.9, 1.25, 1.62, 0);  // large abstracts on both side walls, picture lights above
   art(4.35, 4.443, "S", 0.75, 1.0, 1.48, 1);
@@ -649,12 +653,12 @@ export function furnish(scene, M, mat, version = "main") {
     item(5.015, 7.35, "E", towelRail);                // on the bedroom wall, opposite the WC
     item(6.245, 8.62, "W", showerWall);
     item(5.25, 9.02, "S", rainHead);                  // the shower opening stays open to the ceiling, as rendered
-  } else if (version === "shifted-bedroom" || version === "naghams-changes" || version === "kareems-changes") {  // Nagham's Changes: a copy of it for now
+  } else if (version === "shifted-bedroom" || version === "naghams-changes" || ["kareems-changes", "karims-version"].includes(version)) {  // Nagham's Changes: a copy of it for now
     // Shifted Bedroom (master-v12.dwg): the bathroom moves to the west end, the bed's headboard goes on
     // its partition, the wardrobe runs along the kitchen wall and a desk sits on the south wall.
     // Nagham's Changes: the bathroom partition (the headboard wall) sits 14 cm further east, so the bed and
     // bedside tables do too (bed foot 1.40 from the wardrobe).
-    const NC = version === "naghams-changes" || version === "kareems-changes", hb = NC ? 2.299 : 2.159;
+    const NC = version === "naghams-changes" || ["kareems-changes", "karims-version"].includes(version), hb = NC ? 2.299 : 2.159;
     item(hb, 7.511, "E", bed(2.101, 1.991, 2.101));  // DWG bed outline 2.10 wide x 1.99 long, headboard inside it
     for (const y of [6.231, 8.79]) {  // DWG bedside tables 0.47 x 0.52 deep
       item(hb, y, "E", nightstand(0.466, 0.516));
@@ -664,7 +668,7 @@ export function furnish(scene, M, mat, version = "main") {
     for (const x of [2.95, 5.37]) item(x, 9.02, "S", p => {  // curtains either side of the 2.18 m window
       const m = mesh(curtainGeometry(0.55, 2.45), mat.curtain, p.g); m.position.set(0, 1.27, 0.12);
     });
-    if (version === "kareems-changes") {
+    if (["kareems-changes", "karims-version"].includes(version)) {
       // Three-gang switch moved to the circled wall spot.
       item(4.516, 5.585, "W", p => {
         p.box(-0.043, 0.043, 1.265, 1.351, 0, 0.008, mat.whiteLacquer);
@@ -674,9 +678,9 @@ export function furnish(scene, M, mat, version = "main") {
       });
     }
     // Kareem's Changes: white lacquer sliding doors with recessed hidden pulls (other versions keep smoked glass).
-    item(6.367, 7.336, "W", wardrobe(3.36, 1.04, version === "kareems-changes", version === "kareems-changes"));  // DWG wardrobe on the kitchen wall
-    item(1.564, 4.55, "N", wardrobe(1.895, 0.45, version === "kareems-changes"));  // DWG wardrobe on the south wall, 20 cm shorter for the dresser: four ~43 cm sliding doors
-    item(0.556, 5.561, "E", wardrobe(0.872, 1.04, version === "kareems-changes"));  // DWG cupboard by the bathroom door (0.87 long, its end overlaps the south wardrobe front as drawn)
+    item(6.367, 7.336, "W", wardrobe(3.36, 1.04, ["kareems-changes", "karims-version"].includes(version), ["kareems-changes", "karims-version"].includes(version)));  // DWG wardrobe on the kitchen wall
+    item(1.564, 4.55, "N", wardrobe(1.895, 0.45, ["kareems-changes", "karims-version"].includes(version)));  // DWG wardrobe on the south wall, 20 cm shorter for the dresser: four ~43 cm sliding doors
+    item(0.556, 5.561, "E", wardrobe(0.872, 1.04, ["kareems-changes", "karims-version"].includes(version)));  // DWG cupboard by the bathroom door (0.87 long, its end overlaps the south wardrobe front as drawn)
     // DWG dresser 2.00 x 0.45 x 0.75, east end on the lobby wall. Facing it (local -x = east = your left): three
     // drawers under a lit open shelf column, knee space with one shallow drawer and a pouf, fluted cabinet with a
     // glass-topped jewellery tray. Walnut body, pale oak top; backlit pebble mirror over the knee space.
@@ -715,11 +719,11 @@ export function furnish(scene, M, mat, version = "main") {
       p.model("models/plant-vase.glb", null, -0.84, 1.77, 0.08, { height: 0.3, cross: true });
       p.model("models/plant-vase.glb", null, -0.58, 0.75, 0.1, { height: 0.4, cross: true });  // on the top, by the column
       p.model("models/mbath-bottles.glb", null, 0.62, 0.75, 0.06, { width: 0.28 });
-      p.pebble(version === "kareems-changes" || version === "naghams-changes" ? 0.16265 : -0.05, 1.35, 1.1, 0.75, 0.012, mat.mirror, true);   // 1.10 wide x 0.75 tall, 0.98 to 1.73; centred between wardrobe edge and shelf column edge
+      p.pebble(["kareems-changes", "karims-version"].includes(version) || version === "naghams-changes" ? 0.16265 : -0.05, 1.35, 1.1, 0.75, 0.012, mat.mirror, true);   // 1.10 wide x 0.75 tall, 0.98 to 1.73; centred between wardrobe edge and shelf column edge
       p.cyl(-0.05, 0.25, 0.225, 0, 0.43, mat.boucle, 32);           // pouf 45 x 45, pushed in to 2.5 cm off the back panel
       p.cyl(-0.05, 0.25, 0.215, 0.43, 0.45, mat.boucle, 32, 0.225);
     });
-    ac(version === "kareems-changes" ? 3.35435 : 3.332, 4.475, "N");  // aligned with mirror between wardrobe and shelf column
+    ac(["kareems-changes", "karims-version"].includes(version) ? 3.35435 : 3.332, 4.475, "N");  // aligned with mirror between wardrobe and shelf column
     if (NC) {
     const champagne = mat.brass.clone(); champagne.color.setRGB(0.78, 0.67, 0.51); champagne.roughness = 0.5;  // brushed champagne bronze
     champagne.clippingPlanes = mat.brass.clippingPlanes;
@@ -735,7 +739,7 @@ export function furnish(scene, M, mat, version = "main") {
     // Kareem's Changes: the bathroom door sits 0.16 further east, so the vanity runs the whole wall (1.185, south wall
     // to the partition) and is 0.60 deep; the backlit mirror becomes a 0.80 x 0.75 mirrored medicine cabinet, 0.30
     // out from the battens, bottom 1.32 (0.46 over the counter), three glass shelves, all centred on the bowl.
-    if (version === "kareems-changes") item(0.556, 6.7276, "E", vanity(1.185, true, 0.6, medCabinet(), heaterVanity));  // centre DWG y -114.8856
+    if (["kareems-changes", "karims-version"].includes(version)) item(0.556, 6.7276, "E", vanity(1.185, true, 0.6, medCabinet(), heaterVanity));  // centre DWG y -114.8856
     else item(0.556, 6.7435, "E", vanity(1.153, true));  // centre DWG y -114.8697, bowl, mixer and mirror on it
     item(1.8037, 9.0201, "S", p => {  // WC bay 1.416..2.192 (local +x east)
       const h = 0.3878, d = 0.3, top = 1.12;
@@ -755,7 +759,7 @@ export function furnish(scene, M, mat, version = "main") {
     // champagne-bronze towel hooks at 1.30 on the 0.61 of plain wall between it and the open door leaf.
     item(2.192, 7.6632, "W", towelRail);
     // Kareem's (Nagham call, 25 Oct): hooks raised 15 cm, to 1.45.
-    const hk = version === "kareems-changes" ? 0.15 : 0;
+    const hk = ["kareems-changes", "karims-version"].includes(version) ? 0.15 : 0;
     for (const y of [-114.33, -114.48, -114.63]) item(2.192, y + 121.6132, "W", p => {
       p.cyl(0, 0.014, 0.018, 1.296 + hk, 1.304 + hk, champagne, 32).rotation.x = Math.PI / 2;  // rosette on the lining
       p.cyl(0, 0.045, 0.006, 1.27 + hk, 1.33 + hk, champagne, 16).rotation.x = Math.PI / 2;    // arm, 6 cm out
@@ -892,7 +896,7 @@ export function furnish(scene, M, mat, version = "main") {
     });
   }
   // The wardrobe, dressing table and shoe display stay on the west and south walls in Main and v9.
-  if (version !== "shifted-bedroom" && version !== "naghams-changes" && version !== "kareems-changes") {
+  if (version !== "shifted-bedroom" && version !== "naghams-changes" && !["kareems-changes", "karims-version"].includes(version)) {
     item(0.56, 6.75, "E", wardrobe(4.32));
     item(2.36, 4.55, "N", p => {  // dressing table with the backlit oval mirror
       p.box(-0.53, 0.53, 0.72, 0.76, 0, 0.5, mat.walnut);
@@ -945,8 +949,8 @@ export function furnish(scene, M, mat, version = "main") {
   // Karim t327 (25 Oct, swapped): the fittings go on the NORTH wall (the WC's wall, plan y 9.1862, flush, no build-out)
   // and the 12 cm niche build-out on the SOUTH (door-end) wall. The glass now starts at the north wall and keeps its
   // 1.209 length, so the 0.967 opening is at the south end, to the build-out face (DWG 2furni 1847 / 1848 / 26BE).
-  const GKC = version === "kareems-changes";
-  const bath = item(12.324, 8.05, "E", p => {  // wood-look plank wall, stone-clad bath, framed screen at the WC end
+  const GKC = ["kareems-changes", "karims-version"].includes(version);
+  const bath = item(version === "kareems-changes" ? 12.122 : 12.324, 8.05, "E", p => {  // wood-look plank wall, stone-clad bath, framed screen at the WC end
     p.box(GKC ? -1.167 : -1.08, GKC ? 1.12 : 1.08, 0, M.ceiling, 0, 0.02, mat.woodTile);
     p.box(GKC ? -1.167 : -0.85, GKC ? 1.12 : 0.85, 0, 0.55, 0.02, 0.75, mat.stoneWall);  // Kareem's: south wall to the north wall's stone lining
     p.box(-0.78, 0.78, 0.52, 0.56, 0.08, 0.7, mat.ceramic);
@@ -976,8 +980,8 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(x - 0.012, x + 0.012, 1.84, 1.9, z + 0.02, z + 0.05, mat.blackSteel);
     }
   });
-  bath.scale.z = 0.9 / 0.812;  // modelled 0.81 m deep; the DWG bath is 0.90
-  if (GKC) item(12.725, 9.1716, "S", p => {  // Karim t327: all the shower fittings on the north (WC) wall's tile face, centred between plank wall and glass
+  bath.scale.z = (version === "kareems-changes" ? 0.95 : 0.9) / 0.812;  // modelled 0.81 m deep; the DWG bath is 0.90 (Main's 0.95 since 26 Oct)
+  if (GKC) item(version === "kareems-changes" ? 12.546 : 12.725, 9.1716, "S", p => {  // Karim t327: all the shower fittings on the north (WC) wall's tile face, centred between plank wall and glass
     // Local +x is east (toward the glass), z south out of the wall. Brass, as before.
     // Concealed thermostatic mixer: only its square trim plate and two knobs, at 1.05 (0.5 over the deck)
     p.box(-0.09, 0.09, 0.96, 1.14, 0, 0.008, mat.brass, 0.004);
@@ -1021,7 +1025,7 @@ export function furnish(scene, M, mat, version = "main") {
     p.cyl(0.55, 0.3, 0.05, 0.85, 1.05, mat.planter, 16, 0.04);  // styling: vase, bottles
     for (const [x, h] of [[-0.45, 0.16], [-0.52, 0.12], [-0.6, 0.18]]) p.cyl(x, 0.3, 0.025, 0.85, 0.85 + h, mat.ceramic, 12);
   });
-  item(13.642, 9.18, "S", p => {  // wall-hung WC (DWG), centred 42.5 cm from the bath ledge and the vanity front; brass bidet mixer left, roll holder right
+  item(13.642, 9.18, "S", p => {  // wall-hung WC (DWG), 42.5 cm from the vanity front (and from the bath ledge, except in Main: 57.7 since 26 Oct); brass bidet mixer left, roll holder right
     p.model("models/wc-wallhung.glb", mat.ceramic, 0, 0.1, 0.02);
     bidetMixer(p, -0.3, 0.55, 0, mat.brass);
     p.box(0.22, 0.36, 0.6, 0.72, 0, 0.1, mat.brass, 0.03);
@@ -1030,9 +1034,9 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-0.12, 0.12, 0.68, 0.84, 0, 0.015, mat.walnut, 0.005);
     p.box(-0.06, 0.06, 0.74, 0.78, 0.015, 0.025, mat.brass, 0.005);
   });
-  if (GKC) sized(item(version === "kareems-changes" ? 12.737 : 12.767, version === "kareems-changes" ? 6.8906 : 6.8906, "N", p => {  // Karim t327: a 12 cm stone build-out on the south (door-end) wall, two wood-lined niches
-    // DWG 2furni: build-out x 202.722-203.622 (plank wall to the bath end), face y -114.6026 (plan 7.0106); niches
-    // dashed 0.25 x 0.105, x 202.862-203.112 / 203.232-203.482. Nothing cut into the wall (no --cut):
+  if (GKC) sized(item(version === "kareems-changes" ? 12.559 : ["kareems-changes", "karims-version"].includes(version) ? 12.737 : 12.767, ["kareems-changes", "karims-version"].includes(version) ? 6.8906 : 6.8906, "N", p => {  // Karim t327: a 12 cm stone build-out on the south (door-end) wall, two wood-lined niches
+    // DWG 2furni 26BE: build-out x 202.520-203.408 (plank wall to 1.3 cm past the glass; Main since 26 Oct, Karim's version 202.722-203.562),
+    // face y -114.6026 (plan 7.0106); niches dashed 2667 / 2668, centred on it. Nothing cut into the wall (no --cut):
     // 12 cm leaves 1.5 cm of build-out behind each niche; lined in walnut all round (back too), 9.3 cm clear inside.
     // It stands on the deck (0.55); local +x is west, z north out of the wall.
     const H = M.ceiling, D = 0.12, R = 0.105, niches = [[-0.31, -0.06], [0.06, 0.31]], y0 = 0.9, y1 = 2.1;
@@ -1048,7 +1052,7 @@ export function furnish(scene, M, mat, version = "main") {
       for (let k = 1; k < 6; k++) p.box(l + t, r - t, y0 + k * 0.2, y0 + k * 0.2 + 0.015, inner, D - 0.005, mat.walnut);  // shelves
       p.box(l + t + 0.008, r - t - 0.008, hi - t - 0.01, hi - t, inner + 0.01, D - 0.01, mat.ledStrip);  // soft LED under the top
     }
-  }), version === "kareems-changes" ? 0.9333 : 1, 1);
+  }), version === "kareems-changes" ? 0.9867 : ["kareems-changes", "karims-version"].includes(version) ? 0.9333 : 1, 1);
   else item(12.767, 9.18, "S", p => {  // stone build-out at the bath end with two recessed walnut-lined niches
     const H = M.ceiling, D = 0.28, niches = [[-0.18, 0.02], [0.1, 0.3]], y0 = 0.9, y1 = 2.1;
     const face = new THREE.Shape([new THREE.Vector2(-0.42, 0), new THREE.Vector2(0.42, 0), new THREE.Vector2(0.42, H), new THREE.Vector2(-0.42, H)]);
@@ -1105,12 +1109,12 @@ export function furnish(scene, M, mat, version = "main") {
   // Nagham's Changes closes the upper corners: the west uppers (oak, LED, white to the ceiling) run on 0.25 to the
   // north uppers' front (y 8.74) and start at the pantry front (y 6.2604); the north uppers run on 0.26 past x 9.6
   // to the east run's upper front (x 9.86). The stone splash wraps both corners to the adjoining run's splash.
-  const KNC = version === "naghams-changes" || version === "kareems-changes", UD = 0.35;
+  const KNC = version === "naghams-changes" || ["kareems-changes", "karims-version"].includes(version), UD = 0.35;
   run(K.x0, (6.27 + K.y1 - K.front) / 2, "E", K.y1 - K.front - 6.27, { hob: 7.376 - (6.27 + K.y1 - K.front) / 2, hobW: 0.924,
     ...(KNC && { up: [6.27 - 6.2604, K.front - UD], splash: [0, K.front - 0.015] }) });
   run((K.x0 + 9.6) / 2, K.y1, "S", 9.6 - K.x0, { sink: 8.193 - (K.x0 + 9.6) / 2, sinkW: 0.877, window: [7.45 - (K.x0 + 9.6) / 2, 8.75 - (K.x0 + 9.6) / 2],
     ...(KNC && { up: [0, K.x1 - UD - 9.6], splash: [0, K.x1 - 0.015 - 9.6] }) });
-  if (version === "naghams-changes" || version === "kareems-changes") {
+  if (version === "naghams-changes" || ["kareems-changes", "karims-version"].includes(version)) {
     // Nagham's Changes: the whole south run (DWG x 196.8797 west wall face to 198.9716) becomes floor-to-ceiling
     // joinery, 0.60 deep off the DWG wall face (y 5.6604): a 1.192 pantry from the west wall, then a 0.90
     // appliance tower (microwave over oven) at the east end. The hob run ends against the pantry's front.
@@ -1169,7 +1173,7 @@ export function furnish(scene, M, mat, version = "main") {
       const j = (XW + XT) / 2 - XJ;                   // the joint, in local x
       p.box(j, w, 0.1, H, D - f, D, fin); // blind panel
       p.box(j - 0.002, j + 0.002, 0.1, H, D, D + 0.003, shadowGap);
-      if (version !== "kareems-changes") {
+      if (!["kareems-changes", "karims-version"].includes(version)) {
         doors(p, -w, j, 0.1, 2.25, 1);
         doors(p, -w, j, 2.25, H, 1);
         return;
@@ -1223,7 +1227,7 @@ export function furnish(scene, M, mat, version = "main") {
   // run's front (y 8.49) just a 0.05 m filler shows, closed by the column's side panel.
   run(K.x1, (8.438 + K.y1) / 2, "W", K.y1 - 8.438);
   item(K.x1, 8.1265, "W", dishwasher);
-  if (version === "kareems-changes") item(9.93, 8.80, "W", p => {
+  if (["kareems-changes", "karims-version"].includes(version)) item(9.93, 8.80, "W", p => {
     // Countertop dispenser: nominal 31.5 W x 42.5 D x 54 H cm; sits on the 92 cm counter.
     const b = 0.92;
     p.box(-0.1575, 0.1575, b, b + 0.54, 0, 0.34, mat.whiteLacquer);
@@ -1255,12 +1259,14 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(x - 0.2, x + 0.2, 0.12, 0.42, 0.6, 0.78, mat.applianceWhite, 0.02);
     }
   });
-  const cw = 0.299;  // counter between the joinery and the machines (half-width): x 10.937 to 11.535
+  // counter between the joinery and the machines (half-width): x 10.937 to 11.535; Main (26 Oct, the WC
+  // partition 0.202 west) x 10.937 to 11.375, still clear round the 0.36 water heater inside its upper
+  const cw = version === "kareems-changes" ? 0.219 : 0.299;
   item(10.937 + cw, 9.18, "S", p => {
     p.box(-cw, cw, 0.1, 0.88, 0, 0.6, mat.oakVeneer);
     for (const y of [0.36, 0.62]) p.box(-cw + 0.01, cw - 0.01, y - 0.002, y + 0.002, 0.6, 0.603, mat.walnut);
     p.box(-cw, cw, 0.88, 0.92, 0, 0.62, mat.marbleTop);
-    if (version !== "kareems-changes") {
+    if (!["kareems-changes", "karims-version"].includes(version)) {
       p.box(-cw, cw, 1.6, 2.5, 0, 0.35, mat.oakVeneer);
       p.box(-cw, cw, 1.58, 1.6, 0.05, 0.3, mat.ledStrip);
       return;
@@ -1293,12 +1299,12 @@ export function furnish(scene, M, mat, version = "main") {
     c.userData.openable = { id: "laundry-heater", label: "Water heater cupboard", leaves: [{ obj: door, axis: "y", open: -88 * Math.PI / 180 }],  // stops short of the tall joinery's face
       anchor: new THREE.Vector3(0, 2.0, D + 0.06), reach: 1.8, duration: 0.6 };
   });
-  item(11.835, 9.18, "S", p => {  // DWG stacked washer and dryer 0.60 x 0.60 (x 11.535 to 12.135)
-    if (version === "kareems-changes") {
+  item(version === "kareems-changes" ? 11.675 : 11.835, 9.18, "S", p => {  // DWG stacked washer and dryer 0.60 x 0.60 (x 11.535 to 12.135; Main's 11.375 to 11.975 since 26 Oct)
+    if (["kareems-changes", "karims-version"].includes(version)) {
       // Batch 25 Oct (Karim t305, reference photo): the washer is built in. A taller oak base (0.76, a pull-out laundry
       // basket shelf over a plinth drawer) lifts the 0.84 machine so its top meets the upper's underside at 1.60, no
-      // gap; oak side panels frame it (left one standing on the counter top's end, right one filling the 6 cm to the
-      // east wall, plan x 12.197). The window behind it is gone from the DXF, so the wall is solid.
+      // gap; oak side panels frame it (left one standing on the counter top's end, right one filling the 2 cm to the
+      // east wall, plan x 11.995 in Main since 26 Oct; 6 cm to 12.197 elsewhere). The window behind it is gone from the DXF, so the wall is solid.
       const y0 = 0.76;
       p.box(-0.3, 0.3, 0, 0.1, 0.04, 0.58, mat.darkTop);                                  // recessed plinth
       p.box(-0.3, 0.3, 0.1, 0.4, 0, 0.6, mat.oakVeneer);                                  // drawer box, front flush
@@ -1309,7 +1315,7 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(-0.3, 0.3, 0.42, y0 - 0.02, 0, 0.01, honeyOak);                               // back of the basket bay
       p.box(-0.24, 0.24, 0.43, 0.7, 0.08, 0.56, mat.applianceWhite, 0.02);                // laundry basket
       p.box(-0.318, -0.3, 0.92, 1.6, 0, 0.6, mat.oakVeneer);                              // left frame panel, on the counter top
-      p.box(0.3, 0.362, 0, M.ceiling - 0.1, 0, 0.6, mat.oakVeneer);                       // right frame / filler to the wall
+      p.box(0.3, version === "kareems-changes" ? 0.32 : 0.362, 0, M.ceiling - 0.1, 0, 0.6, mat.oakVeneer);  // right frame / filler to the wall
       p.box(-0.3, 0.3, y0, y0 + 0.84, 0.02, 0.6, mat.applianceWhite, 0.02);
       const ring = mesh(new THREE.TorusGeometry(0.17, 0.025, 10, 40), mat.chrome, p.g);
       ring.position.set(0, y0 + 0.4, 0.615);
@@ -1414,7 +1420,7 @@ export function furnish(scene, M, mat, version = "main") {
   const dustyPink = mat.linenBlush.clone();
   dustyPink.color.setRGB(0.74, 0.5, 0.45);
   dustyPink.clippingPlanes = mat.linenBlush.clippingPlanes;
-  sized(item(version === "kareems-changes" ? 8.607 : 8.512, version === "kareems-changes" ? 5.525 : 5.55, "S", p => {
+  sized(item(["kareems-changes", "karims-version"].includes(version) ? 8.607 : 8.512, ["kareems-changes", "karims-version"].includes(version) ? 5.525 : 5.55, "S", p => {
     const w = 0.78, h = 1.55, yc = 0.5 + h / 2;  // bottom 5 cm above the bench
     // Pebble outline grown (dz > 0) or shrunk by about dz all round: narrower top leaning left, fuller lower right
     const outline = dz => new THREE.CatmullRomCurve3([[-0.5, 0.95], [0.1, 1], [0.6, 0.85], [0.92, 0.35], [1, -0.3], [0.9, -0.86],
@@ -1433,7 +1439,7 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(0.08, 0.42, 0.45, 0.462, 0.02, 0.41, dustyPink, 0.004);   // throw over the seat
     p.box(0.08, 0.42, 0.07, 0.462, 0.41, 0.422, dustyPink, 0.004);  // hanging down the front
     for (let x = 0.095; x < 0.42; x += 0.02) p.box(x - 0.003, x + 0.003, 0.02, 0.07, 0.414, 0.418, dustyPink);  // fringe
-  }), version === "kareems-changes" ? 1.1167 : 1, 1);
+  }), ["kareems-changes", "karims-version"].includes(version) ? 1.1167 : 1, 1);
   item(9.365, 5.55, "S", p => {  // DWG shelf 0.40 x 0.18, rounded front corners, top at 1.02; books, reed diffuser
     const s = new THREE.Shape(), r = 0.08;
     s.moveTo(-0.2, 0); s.lineTo(0.2, 0); s.lineTo(0.2, 0.18 - r); s.absarc(0.2 - r, 0.18 - r, r, 0, Math.PI / 2, false);
@@ -1468,7 +1474,7 @@ export function furnish(scene, M, mat, version = "main") {
   named(item(17.25, 3.67, "E", p => {  // per render 10: a plaster TV box standing proud of a built-out run
     // holding two tall rounded oak-lined niches (south), and a lit rounded oak recess under the TV.
     // North end (local x 1.72) meets the reception column at plan y 5.3914 — keep that edge flat/flush.
-    const KC = version === "kareems-changes";
+    const KC = ["kareems-changes", "karims-version"].includes(version);
     // Kareem's: the TV box face is flush with the reception column's face as the DXF and survey draw it (plan x
     // 17.542, DWG 207.9471), one continuous surface; the run (tall niches) 0.08 behind it at 17.462.
     const H = M.ceiling, edge = KC ? -0.51 : -0.46, D0 = KC ? 0.2122 : 0.28, D1 = KC ? 0.2922 : 0.36;  // run depth, TV box depth
@@ -1538,7 +1544,7 @@ export function furnish(scene, M, mat, version = "main") {
   // Kareem's Changes: sofa, prints and split AC centred on the south wall's visible face, x 17.462 (TV-wall run,
   // 0.08 behind the column-flush TV box) to 21.222 (east wall), so x 19.342; side table and plant each mid-way in
   // the 0.855 m left either side (1.4525 from the centre).
-  const KC = version === "kareems-changes", SC = 19.342, SO = 1.4525;
+  const KC = ["kareems-changes", "karims-version"].includes(version), SC = 19.342, SO = 1.4525;
   item(KC ? SC : 18.86, 2.103, "N", p => sofa(p, 2.05, 1.02, mat.boucle, [mat.linenSlate, mat.linenBlush, mat.linenSlate]));  // DWG, clear of the pier
   item(21.027, 4.165, "W", p => sofa(p, 2.0, 0.92, mat.boucle, [mat.linenSlate, mat.linenBlush]));  // centred on the DWG sofa, back on its back line, clear of the curtains
   item(19.1, 5.95, "S", p => {  // DWG armchair, as rendered: open walnut lounge frame, slate cushions, blush pillow
@@ -1577,7 +1583,7 @@ export function furnish(scene, M, mat, version = "main") {
     });
     item(21.22, (y0 + y1) / 2, "W", p => { const m = mesh(curtainGeometry(y1 - y0, 2.45), mat.sheer, p.g); m.position.set(0, 1.25, 0.06); });
   }
-  const NCAC = version === "naghams-changes" || version === "kareems-changes";  // Nagham's Changes: wall-mounted splits, no ducted AC
+  const NCAC = version === "naghams-changes" || ["kareems-changes", "karims-version"].includes(version);  // Nagham's Changes: wall-mounted splits, no ducted AC
   if (NCAC) {
     // Slim ceiling-fixed double track over each slider (sheer and curtain runs), as long as the curtain stacks.
     for (const [y0, y1] of [[3.135, 5.195], [6.34, 8.08]]) item(21.222, (y0 + y1) / 2, "W", p =>
@@ -1622,7 +1628,7 @@ export function furnish(scene, M, mat, version = "main") {
     // so left/right plaster reads ~equal on the elevated bit. Karim t331: the splay is a soft S-curve at the TV wall's slope, not a 36° chamfer: the
     // step drops to 0.18 (mass front x 15.152, panel face x 14.972) over a 0.45 run, 21.8° chord and 25° at its
     // steepest, tangent to the mass and the panel. Panel 1.56 wide (was 1.46); sideboard 0.40 deep, 0.22 proud of the mass.
-    const BK = version === "kareems-changes";
+    const BK = ["kareems-changes", "karims-version"].includes(version);
     const H = M.ceiling, F = BK ? 0.362 : 0.462, P = BK ? 0.182 : 0.062;  // mass front (x 15.25), wall panel face (x 14.85)
     const B = BK ? P + 0.4 : F, dz = B - 0.462;  // sideboard front; its styling keeps its distance from the front
     const S = -1.213, C = -1.013, N = 1.477;  // y 6.79, corner, 9.48
@@ -1668,18 +1674,18 @@ export function furnish(scene, M, mat, version = "main") {
     p.cyl(0.15, 0.3 + dz, 0.07, 0.83, 1.02, mat.planter, 16, 0.05); p.cyl(1.3, 0.28 + dz, 0.06, 0.83, 1.0, mat.stoneTable, 16, 0.045);
     p.cyl(1.05, 0.3 + dz, 0.045, 0.83, 0.88, mat.blackSteel, 16);
   }), "buffet wall");
-  plant(version === "kareems-changes" ? 15.16 : 15.04, 8.15, 0.5, 0.06, 0.83);
+  plant(["kareems-changes", "karims-version"].includes(version) ? 15.16 : 15.04, 8.15, 0.5, 0.06, 0.83);
   // 2.25 hp split on the buffet wall panel (x 14.852; Kareem's 14.972), centred on the pebble mirror (y 8.79; Kareem's
   // 8.697, the centre of the wider panel): 1.05 W x 0.30 H x 0.23 D, top 2.42, its underside 0.12 over the mirror top
   // (2.00) and 0.18 under the ceiling.
-  if (version === "kareems-changes") ac(14.972, 8.697, "E", 2.42, 1.05, 0.3, 0.23, true);
+  if (["kareems-changes", "karims-version"].includes(version)) ac(14.972, 8.697, "E", 2.42, 1.05, 0.3, 0.23, true);
   else if (NCAC) ac(14.852, 8.79, "E", 2.42, 1.05, 0.3, 0.23, true);
   item(20.474, 9.5, "S", p => {  // coffee corner (DWG, 0.60 deep), column to wall: walnut base, white top, lit shelves
     // Two bays: left = one swinging door over a single shelf (water dispenser sits on the top above it);
     // right = drawer stack top to bottom. Opens with a tap / E in Walk.
     const c = new THREE.Group(), q = part(c), leaves = []; p.g.add(c);
     const F = 0.58, mid = 0.0;  // front face; split at centre
-    q.box(-0.75, 0.75, 0.1, 0.88, 0, version === "kareems-changes" ? 0.015 : F - 0.02, mat.walnut);  // carcass (Kareem's: back only, interior visible when opened)
+    q.box(-0.75, 0.75, 0.1, 0.88, 0, ["kareems-changes", "karims-version"].includes(version) ? 0.015 : F - 0.02, mat.walnut);  // carcass (Kareem's: back only, interior visible when opened)
     q.box(-0.75, 0.75, 0.1, 0.12, 0, F, mat.walnut);  // plinth shelf
     q.box(-0.02, 0.02, 0.12, 0.88, 0, F - 0.02, mat.walnut);  // centre divider
     // Left bay: one shelf at mid-height, open behind the door.
@@ -1722,7 +1728,7 @@ export function furnish(scene, M, mat, version = "main") {
     });
   });
   item(16.95, 9.5, "S", p => p.box(-1.0, 1.0, 2.5, 2.52, 0.02, 0.22, mat.ledStrip));
-  if (version === "kareems-changes") item(18.55, 9.502, "S", p => {
+  if (["kareems-changes", "karims-version"].includes(version)) item(18.55, 9.502, "S", p => {
     const c = new THREE.Group(), q = part(c), leaves = []; p.g.add(c);
     // Shallow wall-mounted box: clear monitor cavity and bottom-hinged worktop.
     q.box(-0.42, 0.42, 0.75, 1.425, 0, 0.025, mat.limewash);
@@ -1738,7 +1744,7 @@ export function furnish(scene, M, mat, version = "main") {
     leaves.push({ obj: d, axis: "x", open: Math.PI / 2 });
     c.userData.openable = { id: "dining-window-fold-desk", label: "Fold-down monitor desk", leaves, anchor: new THREE.Vector3(0, 1.08, 0.3), reach: 1.8, duration: 0.7 };
   });
-  if (version === "kareems-changes") item(32.33, 6.912, "S", p => {
+  if (["kareems-changes", "karims-version"].includes(version)) item(32.33, 6.912, "S", p => {
     const w = 0.42, h = 0.62, back = 0.015, front = 0.23;
     const c = new THREE.Group(), q = part(c), leaves = []; p.g.add(c);
     q.box(-w, w, 1.05, 1.05 + h, back, front - 0.035, mat.limewash);

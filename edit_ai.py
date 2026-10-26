@@ -68,8 +68,9 @@ ORIGIN = (190.4049651574427, -121.6132067325871)  # DWG -> plan, the same for ev
 # Each plan version: its DXF, the files built from it and the build flags. They live in build_flags.json, the one
 # file the manual build (build_version.py, README) also reads, so a plan rebuild here can't drift from it (25 Oct:
 # Edit AI 0a5a7de rebuilt Main without the reception column --cut and re-inflated the column to 17.862).
-# Since 2026-10-25 the page's Main (and "Karim's version") load the kareems-changes plan; Bigger / Shifted Bedroom
-# are retired. A request for "main" (or with no version) is an edit to that plan.
+# Since 2026-10-25 the page's Main loads the kareems-changes plan; "Karim's version" (?v=kareems-changes on the page)
+# loads its own karims-version plan since 26 Oct 2026. Bigger / Shifted Bedroom are retired. A request for "main"
+# (or with no version) is an edit to Main's plan.
 ALIASES = {"main": "kareems-changes"}
 VERSIONS = {k: c for k, c in json.loads((Path(__file__).resolve().parent / "build_flags.json").read_text()).items()
             if not k.startswith("_")}
@@ -558,7 +559,7 @@ def for_version(text, version):
                lambda m: lit(version in re.findall(r"[\"']([^\"']*)[\"']", m[1])), t)
     t = re.sub(r"version(===|!==|==|!=)([\"'])([^\"']*)\2", lambda m: lit((m[3] == version) == ("=" == m[1][0])), t)
     t = re.sub(r"([\"'])([^\"']*)\1(===|!==|==|!=)version", lambda m: lit((m[2] == version) == ("=" == m[3][0])), t)
-    for _ in range(50):  # fold: !lit, (lit), lit && lit, lit || lit, lit ? a : b
+    for _ in range(2000):  # fold: !lit, (lit), lit && lit, lit || lit, lit ? a : b (one ternary a pass; stops when done)
         t0 = t
         t = re.sub(r"!(true|false)\b", lambda m: lit(m[1] == "false"), t)
         t = re.sub(r"\((true|false)\)", r"\1", t)

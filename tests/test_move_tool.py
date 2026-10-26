@@ -62,11 +62,12 @@ class Gating(unittest.TestCase):
         n, c = call_at(SRC, 'item(17.25, 3.67, "E"')
         t, old = MT.set_param(SRC, c, {"src": "tall", "at": [0], "x": [0, 1]}, -1.53, -1.15, V)
         self.assertEqual(old, (-1.53, -1.19))
-        self.assertIn("const tall = KC ? [[-1.53, -1.15], [-1.12, -0.78]] : [[-1.59, -1.25], [-1.11, -0.77]];", t)
+        # KC also runs for Karim's version (its own plan since 26 Oct 2026), so a Main move gates its own value
+        self.assertIn('const tall = version === "kareems-changes" ? [[-1.53, -1.15], [-1.12, -0.78]] : KC ? [[-1.53, -1.19], [-1.12, -0.78]] :', t)
         self.assertEqual(self.leak(t), [])
         n, c = call_at(SRC, 'item(14.79, 8.0, "E"')
         t, old = MT.set_param(SRC, c, {"src": "niche", "x": [0, 1]}, -1.0, -0.6, V)
-        self.assertIn("const niche = BK ? [-1, -0.6, 0.42, 2.2, 0.13] :", t)
+        self.assertIn('const niche = version === "kareems-changes" ? [-1, -0.6, 0.42, 2.2, 0.13] : BK ?', t)
         self.assertEqual(self.leak(t), [])
 
     def test_part_line_gated(self):

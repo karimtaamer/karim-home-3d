@@ -32,10 +32,10 @@ in-viewer **Generate a render** button that turns a Walk view into a photoreal r
 | `publish_renders.sh` | Uploads renders, reference copies and the material board to Blob | Yes |
 | `build_geometry.py`, `build_drawing.py` | DXF → `model.js` / `drawing.json` | Yes |
 | `dwgtool.py` | Inspect a DWG/DXF and render cropped, marked-up PNGs (see `DWG_EDITING.md` §1) | Yes |
-| `dwg/kareems-changes.dxf` (Main), `dwg/naghams-changes.dxf`, `dwg/as-built.dxf` | The plan drawing for each version: the only build sources (§3). `dwg/main.dxf` is the retired pre-25-Oct Main | Yes, see `DWG_EDITING.md` |
+| `dwg/kareems-changes.dxf` (Main), `dwg/karims-version.dxf` (Karim's version), `dwg/naghams-changes.dxf`, `dwg/as-built.dxf` | The plan drawing for each version: the only build sources (§3). `dwg/main.dxf` is the retired pre-25-Oct Main | Yes, see `DWG_EDITING.md` |
 | `suite_merge.py` | One plan everywhere except the master suite, taken from another; `--check` compares the versions (§3) | Yes |
 | `check_furnish.py` | Runs `furnish.js` in node and compares its key pieces (kitchen appliances, laundry, entrance, coffee corner, guest WC counter, v12 bed/nightstands/cupboard) with the version's DXF; flags > 2 cm (§3) | Yes |
-| `*-kareems-changes.*`, `*-naghams-changes.*`, `*-as-built.*` | The plan versions (see §4): Main loads `*-kareems-changes.*`; `dwg/as-built.dxf` is the survey of the empty flat | Same rules as the main files |
+| `*-kareems-changes.*`, `*-karims-version.*`, `*-naghams-changes.*`, `*-as-built.*` | The plan versions (see §4): Main loads `*-kareems-changes.*`, Karim's version `*-karims-version.*`; `dwg/as-built.dxf` is the survey of the empty flat | Same rules as the main files |
 | `models/*.glb` | Fixtures made from the renders with Meshy (image-to-3D) | Replace only |
 | `textures/` | Poly Haven PBR scans (CC0, see `CREDITS.txt`) | Add only |
 | `renders/` | Designer renders and approved AI renders (**git-ignored**, served from Blob live) | Add files |
@@ -60,7 +60,7 @@ python3 photogen.py 8765         # another port
 
 | Param | Effect |
 |---|---|
-| `?v=naghams-changes` | Load a plan version: `as-built`, `kareems-changes` (Karim's version, the same plan as Main), `naghams-changes` (default: Main) |
+| `?v=naghams-changes` | Load a plan version: `as-built`, `kareems-changes` (Karim's version, its own `karims-version` plan since 26 Oct), `naghams-changes` (default: Main) |
 | (none) | Start in Walk inside the reception |
 | `?view=top` | Start in the Top view (`?view=dollhouse`, from before Dollhouse was removed, starts as with no param) |
 | `?room=master` | Start in Walk at the first room whose caption starts with this |
@@ -104,7 +104,8 @@ that kitchen run.
    node). It exits non-zero when a key piece of furniture is more than 2 cm off the DXF: move the piece in
    `furnish.js` (or fix the drawing), don't loosen the check.
    ```sh
-   ~/.dwg-tools/bin/python check_furnish.py dwg/kareems-changes.dxf --version kareems-changes   # Main / Karim's version
+   ~/.dwg-tools/bin/python check_furnish.py dwg/kareems-changes.dxf --version kareems-changes   # Main
+   ~/.dwg-tools/bin/python check_furnish.py dwg/karims-version.dxf --version karims-version     # Karim's version
    ~/.dwg-tools/bin/python check_furnish.py dwg/naghams-changes.dxf --version naghams-changes
    ```
 5. Commit the DXF and the rebuilt files together, and push.
@@ -201,9 +202,11 @@ bath end wall, which used to push 37 cm of wall into the doorway.
 
 **Version menu (2026-10-25, confirmed by Karim):** Main · As-built · ┄ · Karim's version · Nagham's version. In
 `index.html`, `VERSIONS` entries carry `data`: the plan version whose files, Edit AI live edits and `furnish.js` branch
-they load. **Main** (the default) and **Karim's version** (`?v=kareems-changes`) both load the `kareems-changes` plan:
-an alias, not a copy, so an edit on either shows on both, and Edit AI treats `main` as `kareems-changes`
-(`ALIASES` in `edit_ai.py`). `sep` draws the divider. Bigger Master Bedroom and Shifted Bedroom are retired; their
+they load. **Main** (the default) loads the `kareems-changes` plan, and Edit AI treats `main` as `kareems-changes`
+(`ALIASES` in `edit_ai.py`). **Karim's version** (`?v=kareems-changes`) was an alias to it until 26 Oct 2026; it now
+loads its own `karims-version` plan, a copy of Main from just before Main's laundry/WC change (partition 20.2 cm
+west, 26 Oct), so an edit on one no longer shows on the other. In `furnish.js` and `check_furnish.py` the code both
+share names both (`["kareems-changes", "karims-version"].includes(version)`); a change for one names that one alone. `sep` draws the divider. Bigger Master Bedroom and Shifted Bedroom are retired; their
 files were deleted (in git history before 2026-10-25), and old `?v=` links open Main. `model.js`, `drawing.json`
 and `dwg/main.dxf` are the retired pre-25-Oct Main layout. Nothing on the page loads them, but `tour.json` and
 `spots.json` are still the base files the versions extend.
@@ -212,7 +215,7 @@ and `dwg/main.dxf` are the retired pre-25-Oct Main layout. Nothing on the page l
 |---|---|---|---|
 | Main | *(none)* / `main` | `dwg/kareems-changes.dxf` | the Kareem's Changes files below |
 | As-built | `as-built` | `dwg/as-built.dxf` (the surveyor's `as-built-original.dwg`, Sep 2026) | `model-as-built.js`, `drawing-as-built.json`, `tour-as-built.json`, `spots-as-built.json` (empty) |
-| Karim's version | `kareems-changes` | `dwg/kareems-changes.dxf` (a copy of `dwg/naghams-changes.dxf`, 2026-10-25, edited since) | `model-kareems-changes.js`, `drawing-kareems-changes.json`, `tour-kareems-changes.json`, `spots-kareems-changes.json` |
+| Karim's version | `kareems-changes` | `dwg/karims-version.dxf` (a copy of Main's `dwg/kareems-changes.dxf`, 2026-10-26, before Main's laundry/WC change) | `model-karims-version.js`, `drawing-karims-version.json`, `tour-karims-version.json`, `spots-karims-version.json` |
 | Nagham's version | `naghams-changes` | `dwg/naghams-changes.dxf` (a copy of the retired Shifted Bedroom drawing, 2026-10-24) | `model-naghams-changes.js`, `drawing-naghams-changes.json`, `tour-naghams-changes.json`, `spots-naghams-changes.json` |
 
 The notes below on Bigger / Shifted Bedroom are history: they explain where Nagham's and Karim's plans came from.
@@ -276,11 +279,12 @@ Kareem's Changes, Nagham call (2026-10-25):
   the face end). Main / Karim's build carves that block off with `--cut 207.9471,-116.2418,208.2871,-115.8818`, so
   the 3D column face is 17.542 too. The other versions (Nagham's, As-built, old Main) still show the inflated column
   in Walk; a general fix in `pair_walls` (skip overlapping collinear pieces) also changed small corners elsewhere,
-  so it was not made. Build Main / Karim's with (flags in `build_flags.json`, the same file Edit AI's rebuild
+  so it was not made. Build Main / Karim's with (flags in `build_flags.json`, the same for both; the same file Edit AI's rebuild
   reads, so the two can't drift; it runs `check_locks.py` after):
 
   ```sh
-  ~/.dwg-tools/bin/python build_version.py kareems-changes
+  ~/.dwg-tools/bin/python build_version.py kareems-changes   # Main
+  ~/.dwg-tools/bin/python build_version.py karims-version    # Karim's version
   ```
 - **Guest WC:** the door is hinged on the east jamb (DWG x 204.366) and opens inwards against the vanity
   (`doorsAsDrawn`). The 0.26 build-out on the south wall (`1wall` lines and its niche block) is gone. The glass is

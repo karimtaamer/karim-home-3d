@@ -7,7 +7,9 @@ Rules for changing the floor plan itself. Read this before any edit to a plan DX
 - **Edit the DXF in `dwg/`, not a DWG.** One file per version: `dwg/main.dxf`, `dwg/bigger-bedroom.dxf`,
   `dwg/shifted-bedroom.dxf`, `dwg/naghams-changes.dxf`. Outside the master suite all of them are identical (v12): change a shared room in one,
   copy it to the others with `suite_merge.py`, and run `suite_merge.py --check dwg/*.dxf` (README §3). A suite
-  change goes in that version's file only. Git is the backup: don't leave `.before-*` copies in `dwg/`.
+  change goes in that version's file only.
+  Since 26 Oct 2026 Main (`dwg/kareems-changes.dxf`) and Karim's version (`dwg/karims-version.dxf`) are separate
+  files: Main's laundry / guest WC partition is 20.2 cm west of Karim's version's. Edit only the one asked for. Git is the backup: don't leave `.before-*` copies in `dwg/`.
 - **A new DWG from the designer:** convert it (below), diff it against the matching `dwg/` file, and bring the
   changes into `dwg/`. Don't build from `~/Downloads`.
 - **Python:** `~/.dwg-tools/bin/python` with ezdxf. Open files with `ezdxf.recover.readfile` (libredwg output has

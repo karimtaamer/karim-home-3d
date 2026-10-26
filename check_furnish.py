@@ -22,8 +22,9 @@ from ezdxf import recover, bbox as ebbox
 ROOT = Path(__file__).resolve().parent
 ORIGIN = (190.4049651574427, -121.6132067325871)  # model*.js "origin": plan = DWG - origin
 TOL = 0.02
-# Main on the page loads kareems-changes (2026-10-25); 'main' here is the retired pre-25-Oct layout (model.js, dwg/main.dxf).
-MODELS = {'main': 'model.js', 'naghams-changes': 'model-naghams-changes.js', 'kareems-changes': 'model-kareems-changes.js'}
+# Main on the page loads kareems-changes (2026-10-25), Karim's version karims-version (26 Oct); 'main' here is the retired pre-25-Oct layout (model.js, dwg/main.dxf).
+MODELS = {'main': 'model.js', 'naghams-changes': 'model-naghams-changes.js', 'kareems-changes': 'model-kareems-changes.js',
+          'karims-version': 'model-karims-version.js'}
 
 # name, versions (None = all), DWG source, axes to check, 3D materials, margin (m, or (x, y)) round the outline.
 # Source: ('block', name) or ('outline', seed x, seed y, width cm, depth cm) for a closed 2furni polyline (plan m).
@@ -34,7 +35,8 @@ ITEMS = [
     ('kitchen hood', None, ('block', 'yrtds'), 'y', {'chrome'}, 0.05),
     ('kitchen sink', None, ('block', 'wrewwer'), 'x', {'blackSteel'}, 0.05),
     ('laundry joinery', None, ('outline', 10.63, 7.92, 61.9, 206.9), 'xy', {'oakVeneer'}, 0.0),
-    ('laundry washer/dryer', None, ('outline', 11.835, 8.888, 60.0, 60.0), 'x', {'applianceWhite'}, 0.05),  # 2 cm off the wall
+    ('laundry washer/dryer', {'main', 'shifted-bedroom', 'naghams-changes', 'karims-version'}, ('outline', 11.835, 8.888, 60.0, 60.0), 'x', {'applianceWhite'}, 0.05),  # 2 cm off the wall
+    ('laundry washer/dryer', {'kareems-changes'}, ('outline', 11.675, 8.888, 60.0, 60.0), 'x', {'applianceWhite'}, 0.05),  # Main, 26 Oct: partition 0.202 west
     ('entrance bench', None, ('outline', 8.512, 5.35, 120.0, 40.0), 'xy', {'boucle'}, 0.05),
     ('entrance console', None, ('outline', 10.584, 3.81, 153.0, 42.0), 'xy', {'oakVeneer', 'whiteLacquer*'}, 0.05),  # L: column piece + console
     ('coffee counter', None, ('outline', 20.474, 9.2, 150.0, 60.1), 'xy', {'marbleTop'}, 0.05),
@@ -43,21 +45,21 @@ ITEMS = [
     ('living sofa return', None, ('outline', 4.389, 1.093, 82.6, 102.6), 'x', {'greige'}, 0.0),
     ('living end table', None, ('outline', 3.459, 4.329, 104.3, 22.7), 'xy', {'walnut'}, 0.0),
     ('living coffee table', None, ('outline', 4.645, 2.529, 71.9, 123.4), 'xy', {'stoneTable'}, 0.0),
-    ('master bed', {'shifted-bedroom', 'naghams-changes', 'kareems-changes'}, ('outline', 3.155, 7.511, 199.1, 210.1), 'xy',
+    ('master bed', {'shifted-bedroom', 'naghams-changes', 'kareems-changes', 'karims-version'}, ('outline', 3.155, 7.511, 199.1, 210.1), 'xy',
      {'boucle', 'oakVeneer', 'sheet', 'linenSage', 'linenBlush'}, 0.0),
-    ('nightstand north', {'shifted-bedroom', 'naghams-changes', 'kareems-changes'}, ('outline', 2.418, 8.79, 51.6, 46.5), 'xy', {'walnut'}, 0.0),
-    ('nightstand south', {'shifted-bedroom', 'naghams-changes', 'kareems-changes'}, ('outline', 2.418, 6.231, 51.6, 46.6), 'xy', {'walnut'}, 0.0),
-    ('bathroom-door cupboard', {'shifted-bedroom', 'naghams-changes', 'kareems-changes'}, ('outline', 0.863, 5.561, 61.8, 87.2), 'xy',
+    ('nightstand north', {'shifted-bedroom', 'naghams-changes', 'kareems-changes', 'karims-version'}, ('outline', 2.418, 8.79, 51.6, 46.5), 'xy', {'walnut'}, 0.0),
+    ('nightstand south', {'shifted-bedroom', 'naghams-changes', 'kareems-changes', 'karims-version'}, ('outline', 2.418, 6.231, 51.6, 46.6), 'xy', {'walnut'}, 0.0),
+    ('bathroom-door cupboard', {'shifted-bedroom', 'naghams-changes', 'kareems-changes', 'karims-version'}, ('outline', 0.863, 5.561, 61.8, 87.2), 'xy',
      {'whiteLacquer', 'bronzeGlass', 'walnut'}, 0.0),
-    ('south wardrobe', {'shifted-bedroom', 'naghams-changes', 'kareems-changes'}, ('outline', 1.564, 4.857, 189.9, 61.8), 'xy',
+    ('south wardrobe', {'shifted-bedroom', 'naghams-changes', 'kareems-changes', 'karims-version'}, ('outline', 1.564, 4.857, 189.9, 61.8), 'xy',
      {'whiteLacquer', 'bronzeGlass'}, 0.0),
-    ('appliance tower', {'naghams-changes', 'kareems-changes'}, ('outline', 8.1166, 5.9604, 90.0, 60.0), 'xy', {'whiteLacquer'}, 0.0),
-    ('pantry', {'naghams-changes', 'kareems-changes'}, ('outline', 7.0707, 5.9604, 119.2, 60.0), 'xy', {'whiteLacquer'}, 0.0),
-    ('master dresser', {'shifted-bedroom', 'naghams-changes', 'kareems-changes'}, ('outline', 3.517, 4.775, 200.0, 45.0), 'xy', {'walnut'}, 0.0),
+    ('appliance tower', {'naghams-changes', 'kareems-changes', 'karims-version'}, ('outline', 8.1166, 5.9604, 90.0, 60.0), 'xy', {'whiteLacquer'}, 0.0),
+    ('pantry', {'naghams-changes', 'kareems-changes', 'karims-version'}, ('outline', 7.0707, 5.9604, 119.2, 60.0), 'xy', {'whiteLacquer'}, 0.0),
+    ('master dresser', {'shifted-bedroom', 'naghams-changes', 'kareems-changes', 'karims-version'}, ('outline', 3.517, 4.775, 200.0, 45.0), 'xy', {'walnut'}, 0.0),
     # Kareem's en-suite: vanity wall to partition (its batten panel runs its length; the body is a GLB), and the
     # medicine cabinet over it (dashed outline, 0.30 out from the 2 cm battens)
-    ('master vanity', {'kareems-changes'}, ('outline', 0.856, 6.7276, 60.0, 118.5), 'y', {'oakSlats'}, 0.0),
-    ('medicine cabinet', {'kareems-changes'}, ('outline', 0.726, 6.7276, 30.0, 80.0), 'xy', {'oakVeneer', 'mirror'}, 0.0),
+    ('master vanity', {'kareems-changes', 'karims-version'}, ('outline', 0.856, 6.7276, 60.0, 118.5), 'y', {'oakSlats'}, 0.0),
+    ('medicine cabinet', {'kareems-changes', 'karims-version'}, ('outline', 0.726, 6.7276, 30.0, 80.0), 'xy', {'oakVeneer', 'mirror'}, 0.0),
 ]
 
 # A stand-in for three.js: real transforms and box sizes, everything else a do-nothing proxy.

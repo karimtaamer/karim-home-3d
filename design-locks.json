@@ -27,6 +27,31 @@
       ]
     },
     {
+      "id": "kv-column-face",
+      "version": "karims-version",
+      "what": "Reception column face in Karim's version (its own plan since 26 Oct 2026, a copy of Main) at plan x 17.542 (DWG 207.9471), as the DXF and survey draw it, not the inflated 17.862.",
+      "model": "model-karims-version.js",
+      "face_x": 17.542,
+      "y_range": [
+        5.3914,
+        5.7114
+      ],
+      "tol": 0.003,
+      "decided_by": "Karim",
+      "date": "2026-10-26",
+      "ref": "kc-column-face; karims-version split from Main 26 Oct 2026",
+      "names": [
+        "reception column",
+        "tv column",
+        "column face",
+        "column by the tv",
+        "عمود الريسبشن",
+        "عمود الصالة",
+        "عمود التلفزيون",
+        "عمود التليفزيون"
+      ]
+    },
+    {
       "id": "kc-tv-wall-flush",
       "version": "kareems-changes",
       "what": "Reception TV library (TV box) face flush with the column face: item x + TV box depth = 17.542.",

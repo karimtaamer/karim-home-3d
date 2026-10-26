@@ -303,14 +303,15 @@ import { createInteract } from "./interact.js";
 // --- Plan versions: the main plan and alternatives to it, each built from its own DWG ----------------
 // (build_geometry.py --out / --tour, build_drawing.py --out). ?v=<id> picks one; the main plan is the default.
 // `data`: the plan version whose files, Edit AI live edits and furnish.js branch an entry loads (default: its id).
-// Main is Karim's layout (2026-10-25): it loads the kareems-changes plan, and "Karim's version" is a labelled alias
-// to the same plan, so an edit on either shows on both. `sep`: a divider above the entry in the menu.
-const KAREEM = { data: "kareems-changes", model: "model-kareems-changes.js", drawing: "drawing-kareems-changes.json",
-  spots: "spots-kareems-changes.json" };
+// Main is Karim's layout (2026-10-25): it loads the kareems-changes plan. "Karim's version" was an alias to it until
+// 26 Oct 2026; it now loads its own karims-version plan (a copy of Main from before Main's laundry/WC change), so an
+// edit on one no longer shows on the other. `sep`: a divider above the entry in the menu.
 const VERSIONS = [
-  { id: "main", name: "Main", ...KAREEM },
+  { id: "main", name: "Main", data: "kareems-changes", model: "model-kareems-changes.js", drawing: "drawing-kareems-changes.json",
+    spots: "spots-kareems-changes.json" },
   { id: "as-built", name: "As-built", model: "model-as-built.js", drawing: "drawing-as-built.json", spots: "spots-as-built.json" },
-  { id: "kareems-changes", name: "Karim's version", ...KAREEM, sep: true },
+  { id: "kareems-changes", name: "Karim's version", data: "karims-version", model: "model-karims-version.js",
+    drawing: "drawing-karims-version.json", spots: "spots-karims-version.json", sep: true },
   { id: "naghams-changes", name: "Nagham's version", model: "model-naghams-changes.js", drawing: "drawing-naghams-changes.json",
     spots: "spots-naghams-changes.json" },
 ];

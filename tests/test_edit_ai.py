@@ -116,7 +116,9 @@ class VersionIsolation(unittest.TestCase):
         self.assertIn("Check the version", edit_ai.version_leak(self.ws(f), "make the armchair black"))
 
     def test_const_alias_branch_passes(self):
-        f0 = furnish(CHAIR)
+        # KC names Main and Karim's version since 26 Oct 2026; scope it to Main alone to test the alias itself
+        f0 = furnish(CHAIR).replace('const KC = ["kareems-changes", "karims-version"].includes(version)',
+                                    'const KC = version === "kareems-changes"')
         line = next(l for l in f0.splitlines() if "item(KC ? SC : 18.86" in l)
         f1 = f0.replace(line, line.replace("KC ? SC : 18.86", "KC ? SC + 0.1 : 18.86"))
         self.assertEqual(edit_ai.other_versions_changed(f0, f1, V), [])

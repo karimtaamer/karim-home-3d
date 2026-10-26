@@ -113,7 +113,7 @@ export function furnish(scene, M, mat, version = "main") {
   // Move and Resize (move_tool.py) for pieces a loop or shared code places, which have no line of their own to change:
   // "x,y,facing" as the code places them -> [x, y, across, out] where they go instead, one version-guarded line each.
   const MOVED = {};
-  if (version === "kareems-changes") MOVED["21.47,5,E"] = [21.525, 5.695, 1, 1];  // Move and Resize: wall sconce
+  if (version === "kareems-changes") MOVED["21.47,5,E"] = [21.51, 5.775, 1, 1];  // Move and Resize: wall sconce
    if (version === "kareems-changes") MOVED["21.8,5,E"] = [21.8, 5.695, 1, 1];  // Centre terrace wall sconce between windows
   // An item is built in its own frame (x across, y up, z out from the wall it backs onto, back
   // at z = 0), then placed with its back-centre on a plan point, facing N/E/S/W into the room.

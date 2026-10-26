@@ -1414,7 +1414,7 @@ export function furnish(scene, M, mat, version = "main") {
   const dustyPink = mat.linenBlush.clone();
   dustyPink.color.setRGB(0.74, 0.5, 0.45);
   dustyPink.clippingPlanes = mat.linenBlush.clippingPlanes;
-  sized(item(version === "kareems-changes" ? 8.442 : 8.512, version === "kareems-changes" ? 5.55 : 5.55, "S", p => {
+  sized(item(version === "kareems-changes" ? 8.607 : 8.512, version === "kareems-changes" ? 5.525 : 5.55, "S", p => {
     const w = 0.78, h = 1.55, yc = 0.5 + h / 2;  // bottom 5 cm above the bench
     // Pebble outline grown (dz > 0) or shrunk by about dz all round: narrower top leaning left, fuller lower right
     const outline = dz => new THREE.CatmullRomCurve3([[-0.5, 0.95], [0.1, 1], [0.6, 0.85], [0.92, 0.35], [1, -0.3], [0.9, -0.86],

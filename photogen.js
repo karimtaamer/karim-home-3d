@@ -5,7 +5,8 @@
 // along as style references. Make an edit (red marks circled on the picture, a note for each, stacked: markedit.js;
 // with up to four inspiration pictures to copy a look from: inspiration.js) re-runs it once on the attempt shown,
 // all the notes together; approve to save it as a photo spot. The inspiration pictures can be picked while framing
-// too (with a note on what to take from them), so the first attempt uses them; they stay for the edits. Each
+// too, on one of three cards that each draw what it does (USES: the whole look, just the pieces the note names, or
+// only its colours; the card goes as inspo_for), so the first attempt uses them; they stay for the edits. Each
 // attempt shows what it cost (photogen.py's estimate from OpenAI's usage, in EGP).
 // The endpoints are photogen.py's: the local server, or api/photospot.py on Vercel; with neither (a plain
 // static server) the button stays hidden. If PHOTOSPOT_PASSWORD is set there, the page asks for it once.
@@ -29,6 +30,43 @@ const COMPASS = ["north", "north-east", "east", "south-east", "south", "south-we
 // Framing: steps back of STEP m up to BACK m, CLEAR m short of any wall or tall piece behind; then the frame's
 // vertical lens in steps of LENS degrees, from FOV_MIN to FOV_MAX (about 50 to 112 degrees across at 3:2).
 const STEP = 0.4, BACK = 3, CLEAR = 0.3, LENS = 6, FOV_MIN = 34, FOV_MAX = 90;
+// What a first attempt takes from the inspiration pictures (photogen.py's inspo_for), each card with its note's
+// label and example; need: the note must name something.
+const USES = [
+  { id: "look", title: "The whole look", text: "Its walls, floor and finishes go onto your room.", label: "Anything to add (optional)",
+    hint: "e.g. same look as this picture" },
+  { id: "pieces", title: "Just some pieces", text: "Only what you name changes. The rest stays the designer's.", label: "Which pieces?",
+    hint: "e.g. the sofa and the armchair", need: true },
+  { id: "colours", title: "Only its colours", text: "Your materials and furniture stay, in its colours.", label: "Which colours (optional)",
+    hint: "e.g. the sage green and the brass" },
+];
+// A card's drawing: the client's picture (sofa left, slatted wall, dark floor, lamp), then your room as it comes
+// out (its own layout: sideboard left, sofa right). Untouched surfaces keep the designer's look (limewash, honey
+// oak, cream sofa); a dashed ring marks the piece taken; colours go through three palette dots instead of an arrow.
+const DESIGNER = { wall: "#e9e1d4", floor: "#c9a27a", plank: "#b38b62", sofa: "#ddd2c1", side: "#b98d62" };
+const PICTURE = { wall: "#c98f6a", floor: "#5e4130", plank: "#4a3324", sofa: "#4f6b4a", side: "#5e4130", slats: "#a8704f", lamp: "#c9a24a" };
+const OUT = {
+  look: { ...PICTURE },
+  pieces: { ...DESIGNER, sofa: PICTURE.sofa, ring: true },
+  colours: { ...DESIGNER, wall: "#d7a888", sofa: PICTURE.sofa, side: "#b0824f" },
+};
+function room(x, c, mine) {
+  const sofa = mine ? 24 : 4, slats = c.slats ? Array.from({ length: 13 }, (_, k) => `<path d="M${x + 2 + k * 3.6} 4v29" stroke="${c.slats}"/>`).join("") : "";
+  return `<g><rect x="${x}" y="4" width="48" height="44" rx="3" fill="${c.wall}"/>${slats}
+    <path d="M${x} 33h48v12a3 3 0 0 1-3 3h-42a3 3 0 0 1-3-3z" fill="${c.floor}"/>
+    <path d="M${x + 4} 38h40M${x + 2} 43h44" stroke="${c.plank}" stroke-width=".8"/>
+    ${mine ? `<rect x="${x + 4}" y="22" width="13" height="11" rx="1" fill="${c.side}"/>`
+      : `<path d="M${x + 38} 33v-16" stroke="${c.lamp}" stroke-width="1.2"/><path d="M${x + 34} 18l2.5-6h3l2.5 6z" fill="${c.lamp}"/>`}
+    <rect x="${x + sofa}" y="21" width="20" height="7" rx="2" fill="${c.sofa}"/><rect x="${x + sofa - 1}" y="26" width="22" height="7" rx="2" fill="${c.sofa}"/>
+    <rect x="${x + sofa - 1}" y="26" width="22" height="7" rx="2" fill="#0000" stroke="#2b26221f" stroke-width=".6"/>
+    ${c.ring ? `<rect x="${x + sofa - 3}" y="18" width="26" height="18" rx="4" fill="none" stroke="#c4892a" stroke-width="1.1" stroke-dasharray="2.5 1.8"/>` : ""}</g>`;
+}
+function useArt(id) {
+  const mid = id === "colours"
+    ? [PICTURE.wall, PICTURE.sofa, PICTURE.lamp].map((f, k) => `<circle cx="56" cy="${16 + k * 10}" r="3.6" fill="${f}"/>`).join("")
+    : `<path d="M51 26h8m-3-3.5 3.5 3.5-3.5 3.5" fill="none" stroke="#6d645b" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>`;
+  return `<svg viewBox="0 0 112 52" aria-hidden="true">${room(0, { ...PICTURE, ring: id === "pieces" }, false)}${mid}${room(64, OUT[id], true)}</svg>`;
+}
 
 export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, spotsFile, version, furniture, solids, roomAt, captionOf, isWalking, freeMouse, spotNames, onSaved }) {
   const button = document.getElementById("photogen");
@@ -74,7 +112,22 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     #photogen-box .inspire { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid #2b26221f; }
     #photogen-box .inspire > span { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: #6d645b; }
     #photogen-box .inspire label[hidden] { display: none; }
-    #photogen-box .pics { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    #photogen-box .pics { display: flex; flex-direction: column; gap: 8px; }
+    /* The three uses, as cards that draw what each does: the client's picture → your room. */
+    #photogen-box .uses { display: flex; flex-direction: column; gap: 6px; border: 0; margin: 0; padding: 0; }
+    #photogen-box .uses legend { padding: 0 0 4px; font-size: 11px; color: #8a8076; }
+    #photogen-box label.use { display: grid; grid-template-columns: 112px 1fr; align-items: center; gap: 10px; padding: 7px 9px; border-radius: 12px;
+      cursor: pointer; background: #fffaf3; box-shadow: 0 0 0 1px #2b262226 inset; text-transform: none; letter-spacing: 0; color: #2b2622; }
+    #photogen-box label.use:has(input:checked) { box-shadow: 0 0 0 2px #2b2622 inset; }
+    #photogen-box label.use:has(input:focus-visible) { outline: 2px solid #d9a54a; outline-offset: 2px; }
+    #photogen-box label.use input { position: absolute; opacity: 0; pointer-events: none; }
+    #photogen-box label.use svg { display: block; width: 112px; height: 52px; }
+    #photogen-box label.use b { display: block; font: 600 12.5px Inter, sans-serif; }
+    #photogen-box label.use small { display: block; margin-top: 2px; font-size: 11px; line-height: 1.35; color: #6d645b; }
+    #photogen-box .pics .attach { display: flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 12px; border-radius: 12px; background: #fffaf380; box-shadow: none; outline: 1.5px dashed #2b262259; outline-offset: -1.5px; text-align: left; }
+    #photogen-box .pics .attach svg { flex: none; width: 26px; height: 26px; }
+    #photogen-box .pics .attach small { display: block; margin-top: 1px; font: 400 11px Inter, sans-serif; letter-spacing: 0; color: #6d645b; }
     #photogen-box .cost { margin: 0; font-size: 12.5px; color: #2b2622; }
     #photogen-box .cost:empty { display: none; }
     #photogen-box ol.gen { margin: 0; padding-left: 18px; font-size: 12px; color: #4a423b; }
@@ -111,10 +164,17 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
       <h2 class="frame">Frame the shot</h2>
       <p class="frame meta">Your view as the photo will frame it. Press + to take in more of the room.</p>
       <div class="frame zoom"><button class="out-less" aria-label="Zoom in">−</button><span class="lens"></span><button class="out-more" aria-label="Zoom out">+</button></div>
-      <div class="frame inspire"><span>Inspiration pictures (optional)</span>
-        <div class="pics"><div class="inspo"></div><button type="button" class="attach">+ Picture</button></div>
-        <p class="hint">Add up to ${MAX_INSPO} (+, paste or drop). They guide the look and materials only: the camera and layout come from the clay view.</p>
-        <label hidden>What to take from them<textarea class="note" rows="2" maxlength="800" placeholder="e.g. the green of the kitchen fronts, the brass handles"></textarea></label>
+      <div class="frame inspire"><span>Inspiration picture (optional)</span>
+        <p class="hint">Got a photo you like? Add it and pick what to take from it. The camera and layout always stay as your 3D view has them.</p>
+        <fieldset class="uses"><legend>Your picture → your room</legend>
+          ${USES.map((u, i) => `<label class="use"><input type="radio" name="pg-use" value="${u.id}"${i ? "" : " checked"}>${useArt(u.id)}
+            <span><b>${u.title}</b><small>${u.text}</small></span></label>`).join("")}
+        </fieldset>
+        <div class="pics"><div class="inspo"></div><button type="button" class="attach">
+          <svg viewBox="0 0 26 26" aria-hidden="true"><rect x="2" y="4" width="22" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="9" cy="10" r="2.2" fill="currentColor"/><path d="M3 20l6.5-6 4.5 4 3.5-3 5.5 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          <span>Add a picture<small>Click, paste or drop · up to ${MAX_INSPO}</small></span></button></div>
+        <label hidden><span class="note-label"></span><textarea class="note" rows="2" maxlength="800"></textarea></label>
       </div>
       <div class="frame actions"><button class="approve go">Generate</button><button class="cancel">Cancel</button></div>
       <h2 class="gen">New photo spot</h2>
@@ -143,8 +203,12 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
   // for Make an edit, cleared by Discard, Approve & save or a new spot. Its row moves into whichever panel shows.
   const pics = $(".pics"), note = $(".note");
   const inspo = inspirationPicker({ form: $("aside"), button: $(".pics .attach"), area: $("aside"), thumbs: $(".pics .inspo"),
-    onChange: l => ($(".inspire label").hidden = !l.length), onError: m => (err.textContent = m) });
-  const forget = () => { inspo.clear(); note.value = ""; };
+    onChange: l => ($(".inspire label:not(.use)").hidden = !l.length), onError: m => (err.textContent = m) });
+  const use = () => USES.find(u => u.id === $(".uses input:checked").value);
+  const relabel = () => { $(".note-label").textContent = use().label; note.placeholder = use().hint; };
+  $(".uses").onchange = relabel;
+  relabel();
+  const forget = () => { inspo.clear(); note.value = ""; $(".uses input").checked = true; relabel(); };
   // Typing here must not walk, measure or step through renders (they all listen on window).
   for (const t of ["keydown", "keyup"]) box.addEventListener(t, e => e.stopPropagation());
 
@@ -472,7 +536,7 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     const paid = (job?.attempts || []).filter(x => x.usd != null), total = paid.reduce((t, x) => t + x.usd, 0);
     costLine.textContent = !a ? "" : [
       `Attempt ${job.at + 1}`,
-      a.inspo ? `${a.inspo} inspiration picture${a.inspo > 1 ? "s" : ""}` : "",
+      a.inspo ? `${a.inspo} inspiration picture${a.inspo > 1 ? "s" : ""}${a.use ? ` (${a.use.toLowerCase()})` : ""}` : "",
       a.usd != null ? egp(a.usd) : "Cost not reported",
       job.attempts.length > 1 && paid.length ? `all attempts EGP ${(total * USD_EGP).toFixed(2)}` : "",
     ].filter(Boolean).join(" · ");
@@ -495,8 +559,9 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     return out;
   }
 
-  async function run(edit, refs = [], said = "") {
-    // A fresh attempt from the view (with any inspiration pictures, and said: what to take from them), or (with the
+  async function run(edit, refs = [], said = "", why = null) {
+    // A fresh attempt from the view (with any inspiration pictures, why: the card picked for them, and said: the
+    // note on what to take from them), or (with the
     // marked edits, { edits, marked }, and any inspiration pictures) a revision of the attempt shown, all its notes in
     // one call. photogen.py says back the notes as one comment (each with where its mark was), which joins the
     // attempt's comments.
@@ -506,9 +571,10 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     const tick = setInterval(() => (status.textContent = `${edit ? "Revising" : "Generating"} · ${Math.round((performance.now() - t0) / 1000)} s · usually 1–2 min`), 500);
     try {
       const out = await call("generate", { spots: spotsFile, view: job.clay, plan: job.plan, ctx: job.ctx, cam: job.cam,
-        comments: base?.comments || (said ? [said] : []), edits: edit?.edits, marked: edit?.marked, previous: base?.draft, refs });
+        comments: base?.comments || (said ? [said] : []), edits: edit?.edits, marked: edit?.marked, previous: base?.draft, refs,
+        inspo_for: why?.id });
       const comments = [...(base?.comments || []), ...(out.comment ? [out.comment] : [])];
-      job.attempts.push({ ...out, comments, edits: edit?.edits, inspo: refs.length });
+      job.attempts.push({ ...out, comments, edits: edit?.edits, inspo: refs.length, use: why?.title });
       marks.clear();
       drawThumbs();
       show(job.attempts.length - 1);
@@ -544,6 +610,11 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     reframe();
   };
   $(".go").onclick = () => {
+    if (inspo.list().length && use().need && !note.value.trim()) {
+      err.textContent = "Say which pieces to take from the picture, e.g. the sofa.";
+      note.focus();
+      return;
+    }
     // Filed under the room the shot is of; where you stand only goes into the meta line and the rooms in shot.
     const p = pose(), v = view(p), here = roomAt(v.x, v.y), r = viewedRoom(p, here);
     const caption = captionOf(r.name);
@@ -571,13 +642,13 @@ export function createPhotoGen({ THREE, camera, scene, composer, renderer, M, sp
     drawThumbs();
     show(-2);
     const refs = inspo.list();
-    run(null, refs, refs.length ? note.value.trim() : "");
+    run(null, refs, refs.length ? note.value.trim() : "", refs.length ? use() : null);
   };
   // Make an edit: the cue on the picture, then marks to draw on it, each with its note in the panel (the attempts
   // strip hides meanwhile: the marks belong to the attempt shown). Regenerate re-runs it once with every note.
   function editing(on) {
     editor.hidden = !on;
-    on ? $(".edit .marks").after(pics) : $(".inspire > span").after(pics);
+    on ? $(".edit .marks").after(pics) : $(".uses").after(pics);
     box.classList.toggle("marking", on);
     on ? marks.open() : marks.close();
     sync();

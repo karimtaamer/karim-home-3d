@@ -21,7 +21,9 @@ can't flip sides; all the notes in one call), with up to MAX_INSPO inspiration p
 data URLs), sent last and used only for the look the notes ask for, never their camera or layout. A first attempt
 can carry them too (picked while framing the shot), with an optional note (comments: [note]) on what to take from
 them: read by NAME_MODEL (inspo_pick), a note for the picture's whole look (or none) lets it override the board,
-renders and brief, and one naming pieces ("the sofas like this") takes only those, the rest staying the designer's. An older page's
+renders and brief, and one naming pieces ("the sofas like this") takes only those, the rest staying the designer's. The
+page's card for the picture (inspo_for: "look", "pieces" or "colours") settles that instead of the guess; "colours" keeps
+the designer's materials and designs and takes only the picture's palette. An older page's
 plain comments (comments, the last one new) still work. Each generate and edit returns its estimated cost (usd,
 from OpenAI's usage), which the page shows in EGP.
 Approving copies the image into renders/ and adds the spot to spots.json, like a designer render (or to
@@ -361,7 +363,8 @@ def prompt(ctx, refs, comments, revising, has_board, inspo=0, edits=(), marked=F
     image model holds closest to the first one, so that is the model screenshot for a first attempt and the last
     attempt for a revision: the angle and every object stay, and only their surfaces change. A revision's new
     notes are edits (edits_of) when the page marked them, else the last of comments; the rest are earlier ones.
-    pick: what a first attempt's INSPIRATION is for (inspo_pick): [] its whole look, ["sofas"] only those, None unknown."""
+    pick: what a first attempt's INSPIRATION is for (inspo_pick): [] its whole look, ["sofas"] only those, "colours" its
+    palette only, None unknown."""
     v, r, seen = ctx["view"], ctx["room"], ctx.get("seen", [])
     allrooms, rooms = brief([r["name"]] + [s["name"] for s in seen])
     n = iter(range(1, 99))
@@ -370,12 +373,15 @@ def prompt(ctx, refs, comments, revising, has_board, inspo=0, edits=(), marked=F
     # A first attempt's INSPIRATION is the client's pick: its whole look beats the board, the renders and the brief
     # (Karim's guest-bathroom shot came back limewash and oak floor while his picture had the oak-plank wall and stone),
     # or, when the note names pieces ("the sofas like this"), only those take it and the rest stays the designer's.
-    mode = "" if not inspo or revising else "unsure" if pick is None else "part" if pick else "whole"
+    mode = ("" if not inspo or revising else "unsure" if pick is None else "colours" if pick == "colours"
+            else "part" if pick else "whole")
     named = " and ".join(", ".join(pick).rsplit(", ", 1)) if mode == "part" else ""
     look = {"whole": "the client's INSPIRATION images, which override the designer's finishes, the BOARD and the "
                      "renders wherever they differ",
             "part": f"the designer's finishes, except the {named}, which take their design and finish from the "
                     "client's INSPIRATION images",
+            "colours": "the designer's materials and designs, recoloured in the colour palette of the client's "
+                       "INSPIRATION images",
             "unsure": "the designer's finishes, with what the client's note names taken from the INSPIRATION images (all "
                       "of them, when the note asks for the picture's whole look)"}.get(mode, "the designer's finishes")
     lines = [
@@ -408,6 +414,7 @@ def prompt(ctx, refs, comments, revising, has_board, inspo=0, edits=(), marked=F
         "with its outline, size and place, and nothing is added. Resurface them only with the finishes from the "
         + ("INSPIRATION, then the brief, the BOARD and the references" if mode == "whole" else
            f"brief, the BOARD and the references (the {named} from the INSPIRATION)" if mode == "part" else
+           "brief, the BOARD and the references, in the INSPIRATION's colours" if mode == "colours" else
            "brief, the BOARD and the references")
         + "; do not add, remove, move or reshape anything. Grey is not a colour "
         "to keep: every surface gets its real finish. Its faint blue-grey see-through panes are glass (windows, "
@@ -428,6 +435,8 @@ def prompt(ctx, refs, comments, revising, has_board, inspo=0, edits=(), marked=F
                      "only: a swatch is not an object to add (the door swatches do not mean this view has a door)."
                      + {"whole": " Where an INSPIRATION image shows a different finish, the INSPIRATION wins.",
                         "part": f" Only the {named} take the INSPIRATION's finish instead.",
+                        "colours": " Keep each swatch's material, grain and texture, but shift its colour toward the "
+                                   "INSPIRATION's palette.",
                         "unsure": " What the client's note asks for from the INSPIRATION takes its finish instead."}.get(mode, ""))
     lines += [ref_line(next(n), s, w, r["name"], [x["name"] for x in seen]) for s, w in refs]
     lines += inspo_lines(n, inspo, "the PREVIOUS image" if revising else "the VIEW", "edit" if revising else "photo", mode, named)
@@ -467,6 +476,11 @@ def prompt(ctx, refs, comments, revising, has_board, inspo=0, edits=(), marked=F
                   "has them. Everything else keeps the designer's finishes from the BOARD, the renders and the brief, "
                   "and nothing else is taken from the INSPIRATION. The camera, layout and every object stay as the VIEW "
                   "has them."]
+    elif mode == "colours":
+        lines += ["", "The client attached the INSPIRATION images for their colours only"
+                  + (f": {comments[-1].rstrip('. ')}" if comments else "") + ". Recolour the designer's finishes "
+                  "toward the INSPIRATION's palette, keeping every material, texture and furniture design from the BOARD, "
+                  "the renders and the brief. The camera, layout and every object stay as the VIEW has them."]
     elif mode == "unsure":
         lines += ["", f"The client attached the INSPIRATION images with this note: {comments[-1].rstrip('. ')}. If it "
                   "names particular pieces or surfaces, give only those the INSPIRATION's design and finish, and "
@@ -576,11 +590,18 @@ def inventory_lines(ctx, revising=False):
 def inspo_lines(n, count, base, to="edit", mode="", named=""):
     """The INSPIRATION images' lines (numbered on from n), for pictures the client attached to an edit (or a photo).
     mode (prompt): a first attempt's picture is for its whole look ("whole", over the board, the renders and the
-    brief) or only the named pieces ("part"); "" or "unsure": what the request refers to."""
+    brief), only the named pieces ("part") or only its colours ("colours"); "" or "unsure": what the request refers to."""
     if mode == "part":
         return [f"{next(n)}. INSPIRATION - a picture the client attached to this photo for the {named} only. Give the "
                 f"{named} in {base} this picture's design, material, colour and finish, at {base}'s size and place. "
                 "Take nothing else from it: every other surface and piece keeps the designer's finishes. Never its "
+                f"camera, framing, layout, room, walls, doors, windows or any object {base} does not have."
+                for _ in range(count)]
+    if mode == "colours":
+        return [f"{next(n)}. INSPIRATION - a picture the client attached to this photo for its colours only. Take its "
+                f"colour palette (its main tones and its accents) onto the surfaces and pieces {base} already has, "
+                "each keeping the designer's material, texture and design: a wall stays plaster, an oak floor stays "
+                "oak, a sofa keeps its shape and fabric. Take no material, pattern or design from it. Never its "
                 f"camera, framing, layout, room, walls, doors, windows or any object {base} does not have."
                 for _ in range(count)]
     if mode == "whole":
@@ -790,7 +811,7 @@ def request(ctx, view, vmime, vext, plan, comments, prev, name, inspo=(), edits=
 
 def generate(req):
     """{view, plan: data URLs, ctx, comments: [..], previous: draft id?, edits: [{i, note, box}]?, marked: data URL?,
-    refs: [data URL]?} -> {draft, src, usd, usage, comment}. A revision's new notes are edits (Make an edit's marks,
+    refs: [data URL]?, inspo_for: "look" | "pieces" | "colours"?} -> {draft, src, usd, usage, comment}. A revision's new notes are edits (Make an edit's marks,
     all in this one call; comments are then the earlier ones), or an older page's last comment; comment says them
     back as one line for the attempt's history. marked goes only with a revision; refs (inspiration pictures) with
     either, and a first attempt's comments are at most one note on what to take from them (said back as comment)."""
@@ -814,7 +835,10 @@ def generate(req):
         save(f"renders/drafts/{draft}-{fname}", data, mime)
     if marked:
         save(f"renders/drafts/{draft}-marked.{INSPO_MIME[marked[1]]}", *marked)
-    pick = inspo_pick(comments[-1] if comments else "") if inspo and not prev else []
+    # The page's card says what a first attempt's pictures are for; pieces are still read from the note (none: unsure).
+    use, note = req.get("inspo_for"), comments[-1] if comments else ""
+    pick = ([] if use == "look" else "colours" if use == "colours" else (inspo_pick(note) or None) if use == "pieces"
+            else inspo_pick(note)) if inspo and not prev else []
     text, images, refs, mats = request(ctx, view, vmime, vext, plan, comments, prev, req.get("spots", "spots.json"), inspo, edits, marked, pick)
     comment = said(edits) if edits else comments[-1] if comments else None
     print(f"[photogen] {draft}: {ctx['room']['caption']}, {len(images)} images{' (revision)' if prev else ''}", flush=True)

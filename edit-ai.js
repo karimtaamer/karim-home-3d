@@ -1,8 +1,11 @@
 // Edit AI: change the flat from the viewer, in words. A floating button, Make an Edit (3D and 2D, not Renders), freezes the view;
 // you circle what to change (or pick Whole view), say what you want and may attach reference pictures. edit_ai.py
-// (api/edit-ai.py on Vercel) has a Claude model (Haiku 5.5 easy / Sonnet 5.5 complex) edit furnish.js / materials.js / the version's DXF, rebuilds the
+// (api/edit-ai.py on Vercel) has a GPT model (Luna easy / Sol complex) edit furnish.js / materials.js / the version's DXF, rebuilds the
 // model and drawing from the DXF, and stores the result as live overrides of the deployed files; the page then
 // reloads on the same view with them (liveFiles / liveImport below load them), while git catches up behind.
+// Around the edit: Luna grades the wording before it is sent (precheck: a tip, and Send anyway, when it scores 3 or
+// less), and Sol reviews the finished edit before it is saved (one fix round when it scores low); the chat streams
+// those steps, and the cost line adds up the whole run.
 
 import { egp } from "./inspiration.js";  // USD → EGP, shared with the photo edits
 
@@ -11,12 +14,24 @@ const MAX_SIDE = 1280, REF_SIDE = 1024, MAX_REFS = 4;
 const INK = "#e5322d";
 const store = sessionStorage;
 
-// "claude-haiku-5-5" -> "Claude Haiku 5.5"; anything else (an OpenAI stand-in) as it is.
+// "claude-haiku-5-5" -> "Claude Haiku 5.5", "gpt-6.1-sol" -> "GPT-6.1 Sol"; anything else as it is.
 function modelName(m) {
-  const c = /^claude-([a-z]+)-(\d+)-(\d+)/.exec(m || "");
+  const c = /^claude-([a-z]+)-(\d+)-(\d+)/.exec(m || ""), g = /^gpt-([\d.]+)-([a-z]+)$/.exec(m || "");
+  if (g) return `GPT-${g[1]} ${g[2][0].toUpperCase() + g[2].slice(1)}`;
   return c ? `Claude ${c[1][0].toUpperCase() + c[1].slice(1)} ${c[2]}.${c[3]}` : (m || "");
 }
-function usd(v) { return `Cost: $${v.toFixed(v < 0.01 ? 4 : v < 1 ? 3 : 2)}`; }
+function money(v) { return `$${v.toFixed(v < 0.01 ? 4 : v < 1 ? 3 : 2)}`; }
+function usd(v) { return `Cost: ${money(v)}`; }
+// The whole run in one line: model, review score, total (+ EGP) and what each step cost.
+function costLine(res, checkUsd) {
+  const c = res.costs;
+  if (!c || c.total == null) return res.usd != null ? ` · ${modelName(res.model)} · ${usd(res.usd)} (${egp(res.usd).replace("Cost: ", "")})` : "";
+  const total = c.total + (checkUsd || 0), r = res.review;
+  const score = !r ? "" : r.improved ? ` · Review ${r.score}/10 → ${r.final ?? "?"}/10 after fixes` : ` · Review ${r.score}/10`;
+  const parts = [checkUsd != null && `check ${money(checkUsd)}`, c.edit != null && `edit ${money(c.edit)}`,
+    c.review != null && `review ${money(c.review)}`, c.fix != null && `fix ${money(c.fix)}`].filter(Boolean);
+  return ` · ${modelName(res.model)}${score} · Total ${money(total)} (${egp(total).replace("Cost: ", "")}) · ${parts.join(" · ")}`;
+}
 
 
 // --- Live overrides: the files Edit AI changed for this version, loaded instead of the deployed ones -----------------
@@ -110,6 +125,8 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     #edit-ai .m.me { background: #2b2622; color: #f3eee5; align-self: flex-end; }
     #edit-ai .m.err { background: #fbe4e1; color: #8a2119; align-self: stretch; }
     #edit-ai .m.note { background: none; color: #6d645b; font-size: 11.5px; padding: 0 2px; }
+    #edit-ai .m.tip { background: #fbf1dc; color: #6b4a12; align-self: stretch; }
+    #edit-ai .m.tip div { display: flex; gap: 6px; margin-top: 8px; }
     #edit-ai .m img { display: block; max-width: min(100%, 120px); max-height: 84px; width: auto; height: auto; object-fit: cover; border-radius: 8px; margin-top: 6px; }
     #edit-ai .m.ref { padding: 3px; background: #2b262214; max-width: 28%; }
     #edit-ai .m.ref img { margin: 0; max-width: 100%; max-height: 80px; }
@@ -557,11 +574,73 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     if (!r.ok) throw new Error(j.error || r.statusText);
     return j;
   }
-  async function send() {
+  // The edit, streamed: each {"phase"} line moves the scan (an improvement round also says so in the chat), then
+  // {"done": result}. A platform that buffers the body just brings every line at the end; a plain JSON reply also works.
+  async function callChat(body, onPhase) {
+    const r = await fetch(`${API}/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...body, stream: true }) });
+    if (!r.headers.get("content-type")?.includes("ndjson")) {
+      const j = await r.json().catch(() => ({ error: `${r.status} ${r.statusText}` }));
+      if (!r.ok) throw new Error(j.error || r.statusText);
+      return j;
+    }
+    const reader = r.body.getReader(), dec = new TextDecoder();
+    let buf = "", out = null;
+    for (;;) {
+      const { done, value } = await reader.read();
+      buf += dec.decode(value || new Uint8Array(), { stream: !done });
+      for (let i; (i = buf.indexOf("\n")) >= 0;) {
+        const line = buf.slice(0, i).trim();
+        buf = buf.slice(i + 1);
+        if (!line) continue;
+        const m = JSON.parse(line);
+        if (m.error) throw new Error(m.error);
+        if (m.phase) onPhase(m.phase);
+        if (m.done) out = m.done;
+      }
+      if (done) break;
+    }
+    if (!out) throw new Error("The connection dropped before the edit finished. Reload to see whether it was saved.");
+    return out;
+  }
+  // Luna's 1-5 grade of the wording before any edit model runs; null when the check is off or fails (it never blocks).
+  async function precheck(text, nRefs) {
+    try {
+      const j = await call("precheck", { message: text, refs: nRefs, context: context() });
+      return j.skipped ? null : j;
+    } catch { return null; }
+  }
+  // A weak grade: the tip, and the choice. Send again unchanged (or Send anyway) goes ahead without a second check.
+  function advise(ck) {
+    const m = say("tip", `This may not get the result you want (${ck.score}/5).${ck.tip ? " " + ck.tip : ""}`);
+    const row = document.createElement("div");
+    const go = Object.assign(document.createElement("button"), { type: "button", className: "go", textContent: "Send anyway" });
+    const fix = Object.assign(document.createElement("button"), { type: "button", textContent: "Edit prompt" });
+    go.onclick = () => { m.remove(); send(true); };
+    fix.onclick = () => { m.remove(); focusArea(); };
+    row.append(go, fix);
+    m.appendChild(row);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+  let checked = null;  // { text, usd } of the last check: a re-send of the same words doesn't pay for it twice
+  async function send(force) {
     const text = area.value.trim(), sent = refs;
     if (busy || !text) return;
     busy = true;
     $(".send").disabled = $(".shut").disabled = true;  // close waits for the edit: it may still be saving
+    if (!force && checked?.text !== text) {
+      const note = say("note", "");
+      note.classList.add("busy");
+      note.append("Checking your request…");
+      const ck = await precheck(text, sent.length);
+      note.remove();
+      checked = { text, usd: ck?.usd ?? null };
+      if (ck && ck.score <= 3) {
+        busy = false;
+        $(".send").disabled = $(".shut").disabled = false;
+        return advise(ck);
+      }
+    }
+    const checkUsd = checked?.text === text ? checked.usd : null;
     // The composer empties as soon as it is sent; the prompt lives on in the chat above (and comes back on an error).
     area.value = ""; area.style.height = ""; refs = []; showRefs();
     say("me", text);
@@ -571,13 +650,16 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     wait.append("Working on it: finding the piece, editing, rebuilding…");
     working(true);
     try {
-      const res = await call("chat", { version: live.version, message: text, image: marked(), refs: sent, context: context(), history });
+      const res = await callChat({ version: live.version, message: text, image: marked(), refs: sent, context: context(), history }, p => {
+        phase(p, true);
+        if (/improvements/i.test(p)) msgs.insertBefore(say("note", p), wait);
+      });
       wait.remove();
       history.push({ role: "user", text }, { role: "assistant", text: res.reply });
       history = history.slice(-12);
       store.setItem(histKey, JSON.stringify(history));
       say("bot", res.reply);
-      const cost = res.usd != null ? ` · ${modelName(res.model)} · ${usd(res.usd)} (${egp(res.usd).replace("Cost: ", "")})` : "";
+      const cost = costLine(res, checkUsd);
       if (!res.changed?.length) { say("note", `No change made${cost}`); return; }
       say("note", `Applying the change${cost}…`);
       phase("Loading your edit", true);

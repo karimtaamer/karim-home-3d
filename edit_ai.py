@@ -4,12 +4,15 @@
     python3 edit_ai.py [port]     # serves this folder on http://127.0.0.1:8000 with Edit AI and Generate Photo Spot
 
 The page (edit-ai.js) freezes the 3D or 2D view, the user circles what to change (or picks Whole view), says what
-they want and may attach reference pictures. POST /api/edit-ai/chat sends that here; an OpenAI chat model with
-vision works through tools (routed per message: easy -> Claude Haiku 5.5, complex -> Claude Sonnet 5.5 on the Anthropic
-Messages API, key EDIT_AI_ANTHROPIC_API_KEY or ANTHROPIC_API_KEY; without that key the same routes fall back to OpenAI
-gpt-6-luna / gpt-6.1-sol with EDIT_AI_OPENAI_API_KEY, kept apart from Generate Photo Spot's OPENAI_API_KEY): it greps and reads furnish.js / materials.js / the docs, edits them by exact
+they want and may attach reference pictures. POST /api/edit-ai/precheck first grades the wording (gpt-6-luna, a few
+hundred tokens); POST /api/edit-ai/chat then sends it here; an OpenAI chat model with vision works through tools
+(routed per message: easy -> gpt-6-luna, complex -> gpt-6.1-sol, key EDIT_AI_OPENAI_API_KEY, kept apart from Generate
+Photo Spot's OPENAI_API_KEY; a Claude id in EDIT_AI_EASY_MODEL / EDIT_AI_COMPLEX_MODEL runs on the Anthropic Messages
+API with ANTHROPIC_API_KEY instead): it greps and reads furnish.js / materials.js / the docs, edits them by exact
 search/replace, queries and edits the version's DXF (edit_ai_dxf.py), and the model and drawing are rebuilt from the
-DXF (build_geometry.py, build_drawing.py) whenever the plan changed, so the 3D and the 2D stay one.
+DXF (build_geometry.py, build_drawing.py) whenever the plan changed, so the 3D and the 2D stay one. Before saving,
+gpt-6.1-sol reviews the finished edit against the request (review_edit); a low score sends its notes back to the
+editor for one fix round. chat(stream=True) reports those steps as NDJSON lines while it runs.
 
 Hot path: the result is live at once. Every changed file is stored by content under edit-ai-live/files/, and a
 revision (edit-ai-live/<version>/rev-*.json) lists the files that override the deployed ones for that version. The
@@ -37,22 +40,30 @@ ROOT = Path(__file__).resolve().parent
 LIVE = "edit-ai-live"  # the store's prefix, and the folder here
 BLOB = bool(photogen_blob.token())
 ON_VERCEL = bool(os.environ.get("VERCEL"))
-MODEL = os.environ.get("EDIT_AI_MODEL", "claude-haiku-5-5")
+MODEL = os.environ.get("EDIT_AI_MODEL", "gpt-6-luna")
 RATE = int(os.environ.get("EDIT_AI_RATE", "20"))
 OPENAI_URL = os.environ.get("EDIT_AI_OPENAI_URL", "https://api.openai.com/v1/chat/completions")  # a test double can stand in
 RESPONSES_URL = os.environ.get("EDIT_AI_OPENAI_RESPONSES_URL", "https://api.openai.com/v1/responses")
 ANTHROPIC_URL = os.environ.get("EDIT_AI_ANTHROPIC_URL", "https://api.anthropic.com/v1/messages")
 # Models that only take function tools on /v1/responses (EDIT_AI_API=responses forces it for any model).
 RESPONSES_MODELS = ("gpt-6.1", "gpt-6-astra")
-# Auto-routing (pick_model): easy edits stay on the cheap model, complex ones go to the strong one.
-# Claude (Anthropic API ids, platform.claude.com/docs/en/models/overview, Oct 2026): Haiku 5.5 takes Luna's role,
-# Sonnet 5.5 takes Sol's. Without an Anthropic key the same route goes to its OpenAI stand-in (OPENAI_FALLBACK).
-EASY_MODEL = os.environ.get("EDIT_AI_EASY_MODEL", "claude-haiku-5-5")
-COMPLEX_MODEL = os.environ.get("EDIT_AI_COMPLEX_MODEL", "claude-sonnet-5-5")
+# Auto-routing (pick_model): easy edits stay on the cheap model, complex ones go to the strong one. GPT by choice
+# (26 Oct 2026); Claude ids still work here (Haiku 5.5 in Luna's role, Sonnet 5.5 in Sol's) and fall back to their
+# OpenAI stand-in (OPENAI_FALLBACK) without an Anthropic key.
+EASY_MODEL = os.environ.get("EDIT_AI_EASY_MODEL", "gpt-6-luna")
+COMPLEX_MODEL = os.environ.get("EDIT_AI_COMPLEX_MODEL", "gpt-6.1-sol")
 OPENAI_FALLBACK = {"easy": "gpt-6-luna", "complex": "gpt-6.1-sol"}
 # Extra models a request may pick with "model" (comma-separated, e.g. for an A/B run); MODEL and both routes always allowed.
 ALLOWED_MODELS = {m.strip() for m in os.environ.get("EDIT_AI_MODELS", "").split(",") if m.strip()} | {MODEL, EASY_MODEL, COMPLEX_MODEL, *OPENAI_FALLBACK.values()}
 MAX_STEPS = 36  # tool rounds per message (was 20; hard openable/plan builds were dying early)
+# Quality gates around an edit, both on OpenAI (EDIT_AI_OPENAI_API_KEY); EDIT_AI_GATES=0 turns them off, and a gate
+# that fails lets the edit through as before. Precheck: Luna grades the wording before any edit model runs. Review:
+# Sol scores the finished edit 0-10 before it is saved; under REVIEW_PASS the editor gets its notes for one fix round
+# of up to FIX_STEPS, then Sol scores the fixed edit once more for the record (no second fix round).
+PRECHECK_MODEL = os.environ.get("EDIT_AI_PRECHECK_MODEL", "gpt-6-luna")
+REVIEW_MODEL = os.environ.get("EDIT_AI_REVIEW_MODEL", "gpt-6.1-sol")
+REVIEW_PASS = 7
+FIX_STEPS = 20
 MAX_IMAGE = 3_000_000  # bytes of a data URL
 MAX_REFS = 4
 # USD per million tokens (input, cached input, output[, cache write]); only to tell the user what a message cost.
@@ -1642,7 +1653,139 @@ def pick_model(message, refs=()):
     return COMPLEX_MODEL if is_complex_edit(message, refs) else EASY_MODEL
 
 
-def chat(req):
+# --- Quality gates: the prompt check before an edit, the review after it ------------------------------------------------
+def gates_on():
+    return os.environ.get("EDIT_AI_GATES", "1") != "0" and bool(api_key())
+
+
+def ask_json(model, system, content, max_out=300):
+    """One tool-free OpenAI turn that answers with a JSON object; returns (object, chat-style usage)."""
+    messages = [{"role": "system", "content": system}, {"role": "user", "content": content}]
+    res = None
+    if not uses_responses(model):
+        try:
+            res = post(OPENAI_URL, {"model": model, "messages": messages, "response_format": {"type": "json_object"},
+                                    "max_completion_tokens": max_out,
+                                    **({"reasoning_effort": "none"} if model.startswith(("gpt-5", "gpt-6")) else {"temperature": 0})})
+        except RuntimeError as e:
+            if "/v1/responses" not in str(e) and "reasoning_effort" not in str(e):
+                raise
+            _RESPONSES_ONLY.add(model)
+    if res is None:
+        res = responses(messages, [], False, model)
+    text = res["choices"][0]["message"].get("content") or ""
+    m = re.search(r"\{.*\}", text, re.S)
+    out = json.loads(m[0] if m else text)
+    if not isinstance(out, dict):
+        raise ValueError(f"expected a JSON object, got {text[:80]!r}")
+    return out, res.get("usage") or {}
+
+
+# Luna, text only (no picture: a few hundred tokens). What a good request needs, by kind of edit.
+PRECHECK_SYSTEM = """You grade a request to an AI that edits a 3D model / 2D plan of a flat, before it runs.
+Score 1-5 how likely the request is to get what the user means first time: 5 clear, 4 small guess, 3 a real guess,
+2 key detail missing, 1 can't be done as asked. What each kind needs:
+move: which piece (a circle counts) and where to (direction + distance, a landmark, or a 2nd mark);
+colour/finish: which piece (a circle counts) and the colour or material named;
+resize: which piece, which dimension and a size or a clear direction;
+add: what, where and roughly how big; remove: which piece.
+A Whole view request must name the piece. Reply in the request's language.
+Answer JSON only: {"score":n,"tip":"what to add, max 15 words; empty when 5"}"""
+
+
+def precheck(req):
+    """POST /api/edit-ai/precheck: Luna's 1-5 grade of the wording and one tip. Never blocks: {"skipped"} on any trouble."""
+    message = (req.get("message") or "").strip()[:1000]
+    if not message or not gates_on():
+        return {"skipped": True}
+    c = req.get("context") or {}
+    ms = marks_of(c)
+    if c.get("wholeView"):
+        marked = "Whole view (nothing circled)"
+    elif ms:
+        marked = f"{len(ms)} separate marks: 1 = the piece, 2+ = where it goes"
+    elif c.get("hits") or c.get("highlightBox"):
+        h = (c.get("hits") or [{}])[0]
+        marked = "1 circle on " + ("a furniture piece" if h.get("furniture") else "architecture" if h else "the plan") \
+                 + (f" ({h['material']})" if h.get("material") else "")
+    else:
+        marked = "nothing circled"
+    content = (f"View: {'2D plan' if c.get('showing') == 'drawing' else '3D'}. Marked: {marked}. "
+               f"Reference pictures: {int(req.get('refs') or 0)}.\nRequest: {message}")
+    total = {}
+    try:
+        out, usage = ask_json(PRECHECK_MODEL, PRECHECK_SYSTEM, content, max_out=80)
+        cost(usage, total, PRECHECK_MODEL)
+        score = max(1, min(5, int(out.get("score"))))
+    except Exception as e:
+        print(f"[edit-ai] precheck skipped: {type(e).__name__}: {e}", flush=True)
+        return {"skipped": True}
+    return {"score": score, "tip": str(out.get("tip") or "")[:200], "model": PRECHECK_MODEL,
+            "usd": round(total["usd"], 6) if "usd" in total else None, "tokens": total}  # ~$0.0001: 4 places would lose it
+
+
+REVIEW_SYSTEM = """You are the end-to-end tester of Edit AI, which edits a 3D model of a flat (furnish.js, materials.js,
+the plan DXF) from a user's request. Image 1 is the view before the edit, with what the user circled in red (unless they
+chose Whole view). You get the request, where the user pointed, the diff of what changed and the editor's reply.
+Score 0-10 how well the change does exactly what was asked:
+right piece (the circled / named one), right direction and amount, right colour or material, a sensible size and place,
+nothing unrelated changed, and the reply truthfully describes the diff.
+10 exactly right; 7 right with nitpicks; 4 partly right or a visible mistake; 0 wrong piece or nothing asked for done.
+Judge the result, not code style; don't guess at what the diff doesn't show.
+Answer JSON only: {"score":n,"problems":["a fix for the editor, max 25 words"],"summary":"max 20 words"}"""
+
+
+def edit_diff(ws, trace, limit=12000):
+    """What changed, for the reviewer: a unified diff of the hand-edited files, the plan edits as their tool calls
+    (the DXF and the model / drawing built from it aren't readable as a diff)."""
+    built = {ws.cfg.get(k) for k in ("dxf", "model", "drawing")}
+    out = []
+    for p in sorted(ws.changed):
+        if p in built:
+            out.append(f"({p}: changed through the plan edits below)" if p == ws.cfg.get("dxf") else f"({p}: rebuilt from the plan)")
+            continue
+        a = ws.orig[p].decode(errors="replace").splitlines() if p in ws.orig else []
+        out += difflib.unified_diff(a, ws.text(p).splitlines(), f"a/{p}", f"b/{p}", n=2, lineterm="")
+    plan = [f"{t['tool']} {t['args']}" for t in trace if t["tool"].startswith("dxf_") and t["tool"] not in ("dxf_query", "dxf_find")]
+    if plan:
+        out += ["Plan edits:"] + plan[-10:]
+    text = "\n".join(out)
+    return text if len(text) <= limit else text[:limit] + "\n... (diff cut)"
+
+
+def review_edit(ws, message, reply, where, image, trace, total):
+    """Sol's verdict on the edit as it stands: {"score", "problems", "summary"}, or None when the review couldn't run."""
+    content = [{"type": "text", "text": f"Request: {message}\n\nWhere the user pointed:\n{where}\n\n"
+                                        f"Diff:\n{edit_diff(ws, trace)}\n\nEditor's reply: {reply[:1500]}"},
+               {"type": "image_url", "image_url": {"url": image, "detail": "low"}}]
+    try:
+        out, usage = ask_json(REVIEW_MODEL, REVIEW_SYSTEM, content, max_out=400)
+        cost(usage, total, REVIEW_MODEL)
+        v = {"score": max(0, min(10, int(out.get("score")))), "summary": str(out.get("summary") or "")[:300],
+             "problems": [str(x)[:300] for x in (out.get("problems") or []) if x][:6]}
+    except Exception as e:
+        print(f"[edit-ai] review skipped: {type(e).__name__}: {e}", flush=True)
+        trace.append({"tool": "(sol review, skipped)", "args": "", "out": str(e)[:700]})
+        return None
+    trace.append({"tool": "(sol review)", "args": "", "out": json.dumps(v)[:700]})
+    return v
+
+
+def fix_note(v):
+    return (f"An independent reviewer checked your edit against the request and scored it {v['score']}/10 "
+            f"({v['summary']}). What to fix:\n" + "\n".join(f"- {p}" for p in v["problems"] or ["(no detail given)"]) +
+            "\nFix these in the same edit and keep what is already right. If a point is wrong (the edit already does what "
+            "the user asked), leave that part as it is. Check, then reply to the user about the final change compared "
+            "with how it was before their request (don't mention the review).")
+
+
+def usd_sum(*vals):
+    return None if any(v is None for v in vals) else round(sum(vals), 4)
+
+
+def chat(req, emit=None):
+    """One edit. `emit(text)`, when given, hears the steps worth showing while it runs (the review, a fix round)."""
+    emit = emit or (lambda text: None)
     v = plan_version(req.get("version"))
     if v not in VERSIONS:
         raise ValueError(f"unknown version {v!r}")
@@ -1683,55 +1826,73 @@ def chat(req):
         rings_ = [f.get("outer") or [] for f in json.loads(sm_[sm_.index("{"):sm_.rindex("}") + 1]).get("floor", [])]
     except Exception:
         rings_ = []
-    content = [{"type": "text", "text": f"{context_text(ctx, ws.aspect, rings_)}\n\nRequest: {message}"},
+    where = context_text(ctx, ws.aspect, rings_)
+    content = [{"type": "text", "text": f"{where}\n\nRequest: {message}"},
                {"type": "image_url", "image_url": {"url": image, "detail": "high"}}]
     content += [{"type": "image_url", "image_url": {"url": u, "detail": "low"}} for u in refs]
     messages.append({"role": "user", "content": content})
     total, reply, steps, trace = {"prompt_tokens": 0, "completion_tokens": 0, "cached": 0, "cache_write": 0}, "", [], []
-    nudged = 0
+    nudged, fixing, verdict, final, edit_usd = 0, False, None, None, None
+    review_total = {"prompt_tokens": 0, "completion_tokens": 0, "cached": 0, "cache_write": 0}
+    gates = gates_on() and not req.get("noReview")
     try:
-        for step in range(MAX_STEPS):
-            res = openai(messages, first=step == 0, model=model)  # look before answering: no "done" without a tool call
-            cost(res.get("usage") or {}, total, model)
-            msg = res["choices"][0]["message"]
-            messages.append({k: msg[k] for k in ("role", "content", "tool_calls") if msg.get(k) is not None})
-            if not msg.get("tool_calls"):
-                reply = msg.get("content") or ""
-                nudge = None if nudged >= 3 or step >= MAX_STEPS - 3 else review(ws, message, reply)
-                if nudge:  # up to two second looks before saving: 2D and 3D out of step, a lost opening, a give-up with edits left
-                    nudged += 1
-                    trace.append({"tool": "(review)", "args": "", "out": nudge[:700]})
-                    messages.append({"role": "user", "content": nudge})
-                    continue
-                if ws.changed and (nudged >= 3 or step >= MAX_STEPS - 3):  # out of second looks: never save 2D and 3D apart
-                    last_ = review(ws, message, reply)
-                    if last_ and last_.startswith("Check 2D vs 3D") and not ws.dxf_furni and not ws.pieces \
-                            and "furnish.js" in ws.orig and three_d_only(ws, ws.orig["furnish.js"].decode(), ws.text("furnish.js")):
-                        # Only 3D-only pieces changed (AC, curtain / AC box, bulkhead, high fitting, nothing on the plan):
-                        # nothing to keep in step with the 2D, so save the 3D edit instead of throwing it away.
-                        trace.append({"tool": "(review, final: 3D-only, kept)", "args": "", "out": last_[:700]})
-                    elif last_ and last_.startswith("Check 2D vs 3D"):
-                        trace.append({"tool": "(review, final)", "args": "", "out": last_[:700]})
-                        ws.changed.clear()
-                        reply = ("I couldn't finish this with the 2D plan and the 3D model matching, so I left both as they "
-                                 "were. Try a smaller or more specific change.")
+        while True:  # the edit, then (after a low review) one fix round on the same conversation
+            limit = FIX_STEPS if fixing else MAX_STEPS
+            for step in range(limit):
+                # look before answering: no "done" without a tool call (the fix round may answer that it's already right)
+                res = openai(messages, first=step == 0 and not fixing, model=model)
+                cost(res.get("usage") or {}, total, model)
+                msg = res["choices"][0]["message"]
+                messages.append({k: msg[k] for k in ("role", "content", "tool_calls") if msg.get(k) is not None})
+                if not msg.get("tool_calls"):
+                    reply = msg.get("content") or ""
+                    nudge = None if nudged >= 3 or step >= limit - 3 else review(ws, message, reply)
+                    if nudge:  # up to two second looks before saving: 2D and 3D out of step, a lost opening, a give-up with edits left
+                        nudged += 1
+                        trace.append({"tool": "(review)", "args": "", "out": nudge[:700]})
+                        messages.append({"role": "user", "content": nudge})
+                        continue
+                    if ws.changed and (nudged >= 3 or step >= limit - 3):  # out of second looks: never save 2D and 3D apart
+                        last_ = review(ws, message, reply)
+                        if last_ and last_.startswith("Check 2D vs 3D") and not ws.dxf_furni and not ws.pieces \
+                                and "furnish.js" in ws.orig and three_d_only(ws, ws.orig["furnish.js"].decode(), ws.text("furnish.js")):
+                            # Only 3D-only pieces changed (AC, curtain / AC box, bulkhead, high fitting, nothing on the plan):
+                            # nothing to keep in step with the 2D, so save the 3D edit instead of throwing it away.
+                            trace.append({"tool": "(review, final: 3D-only, kept)", "args": "", "out": last_[:700]})
+                        elif last_ and last_.startswith("Check 2D vs 3D"):
+                            trace.append({"tool": "(review, final)", "args": "", "out": last_[:700]})
+                            ws.changed.clear()
+                            reply = ("I couldn't finish this with the 2D plan and the 3D model matching, so I left both as they "
+                                     "were. Try a smaller or more specific change.")
+                    break
+                for call in msg["tool_calls"]:
+                    name = call["function"]["name"]
+                    try:
+                        out = tool(ws, name, json.loads(call["function"]["arguments"] or "{}"))
+                    except Exception as e:
+                        out = f"error: {type(e).__name__}: {e}"
+                    steps.append(name)
+                    trace.append({"tool": name, "args": call["function"]["arguments"][:600], "out": str(out)[:700]})
+                    messages.append({"role": "tool", "tool_call_id": call["id"], "content": str(out)})
+                if step == limit - 3 and ws.changed:  # don't lose a finished edit to the step limit
+                    messages.append({"role": "user", "content": "Only 2 steps left. If your edits are done and the last check "
+                                     "passed, reply to the user now (no more tool calls); otherwise call discard and tell the user "
+                                     "nothing was changed and what couldn't be finished."})
+            else:
+                reply = "I ran out of steps before finishing; nothing was changed. Try a narrower request."
+                ws.changed.clear()
+            if fixing or not gates or not ws.changed:
                 break
-            for call in msg["tool_calls"]:
-                name = call["function"]["name"]
-                try:
-                    out = tool(ws, name, json.loads(call["function"]["arguments"] or "{}"))
-                except Exception as e:
-                    out = f"error: {type(e).__name__}: {e}"
-                steps.append(name)
-                trace.append({"tool": name, "args": call["function"]["arguments"][:600], "out": str(out)[:700]})
-                messages.append({"role": "tool", "tool_call_id": call["id"], "content": str(out)})
-            if step == MAX_STEPS - 3 and ws.changed:  # don't lose a finished edit to the step limit
-                messages.append({"role": "user", "content": "Only 2 steps left. If your edits are done and the last check "
-                                 "passed, reply to the user now (no more tool calls); otherwise call discard and tell the user "
-                                 "nothing was changed and what couldn't be finished."})
-        else:
-            reply = "I ran out of steps before finishing; nothing was changed. Try a narrower request."
-            ws.changed.clear()
+            emit("Checking the edit")
+            verdict = review_edit(ws, message, reply, where, image, trace, review_total)
+            if not verdict or verdict["score"] >= REVIEW_PASS:
+                break
+            fixing, nudged, edit_usd = True, 0, dollars(total, model)
+            emit("We found improvements, please wait a moment")
+            messages.append({"role": "user", "content": fix_note(verdict)})
+        if fixing and ws.changed:  # the fixed edit's score, for the record
+            emit("Checking the fix")
+            final = review_edit(ws, message, reply, where, image, trace, review_total)
         if not ws.changed and reply and re.search(r"\b(I('ve| have)?|have been) (changed|made|moved|added|removed|replaced|updated|set)\b", reply):
             reply = "Nothing was changed yet: " + reply  # the model claimed an edit it never made
         if ws.changed:  # last gate: a settled design lock (design-locks.json) the request didn't name stays as it is
@@ -1748,15 +1909,25 @@ def chat(req):
                 ws.discard()
                 reply = (f"Nothing was changed: the edit would also have changed other plan versions, and a change in "
                          f"\"{v}\" is only for \"{v}\". Ask again, or say \"in all versions\" if you want it everywhere.")
+        if ws.changed:
+            emit("Saving your edit")
         result = save(ws, reply or message) if ws.changed else None
     finally:
         shutil.rmtree(ws.tmp, ignore_errors=True)
-    usd = dollars(total, model)
+    edit_all = dollars(total, model)
+    fix_ = usd_sum(edit_all, -edit_usd) if fixing and edit_usd is not None else None
+    costs = {"edit": edit_usd if fixing else edit_all, "fix": fix_,
+             "review": dollars(review_total, REVIEW_MODEL) if verdict else None}
+    costs["total"] = usd = usd_sum(costs["edit"], *(c for c in (fix_, costs["review"]) if c is not None))  # the page adds the precheck
+    fixed = final["score"] if final else "?"
+    scores = (f"{verdict['score']} -> {fixed}" if fixing else str(verdict["score"])) if verdict else "-"
     print(f"[edit-ai] {v} ({model}, {route}): {len(steps)} tool calls, {total['prompt_tokens']} in ({total['cached']} cached) / "
-          f"{total['completion_tokens']} out tokens, ${usd}; changed {sorted(ws.changed) or 'nothing'}", flush=True)
+          f"{total['completion_tokens']} out tokens, review {scores}, {costs}; changed {sorted(ws.changed) or 'nothing'}", flush=True)
+    review_ = verdict and {"score": verdict["score"], "summary": verdict["summary"], "improved": fixing,
+                           "final": final and final["score"], "model": REVIEW_MODEL}
     return {"reply": reply or "Done.", "changed": sorted(ws.changed), "rev": result and result["rev"], "model": model,
-            "route": route, "tokens": total, "usd": usd, "steps": len(steps), "sync": result and result.get("sync"),
-            **({"trace": trace} if req.get("debug") else {})}
+            "route": route, "tokens": total, "usd": usd, "costs": costs, "review": review_, "steps": len(steps),
+            "sync": result and result.get("sync"), **({"trace": trace} if req.get("debug") else {})}
 
 
 COMPASS = {"north": re.compile(r"\bnorth(wards?)?\b|شمال", re.I), "south": re.compile(r"\bsouth(wards?)?\b|جنوب", re.I),
@@ -3169,6 +3340,26 @@ def limited(ip, rate=None):
 
 
 class Handler(photogen.Handler):
+    def stream(self, run):
+        """NDJSON while an edit runs: {"phase": text} lines, then {"done": result} or {"error": message[, "code"]}.
+        Where the platform buffers the body the lines all arrive at the end, and the page reads them the same way."""
+        self.send_response(200)
+        self.send_header("Content-Type", "application/x-ndjson")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("X-Accel-Buffering", "no")
+        self.end_headers()
+
+        def line(obj):
+            self.wfile.write((json.dumps(obj) + "\n").encode())
+            self.wfile.flush()
+        try:
+            line({"done": run(lambda text: line({"phase": text}))})
+        except PermissionError as e:
+            line({"error": str(e), "code": "no-key"})
+        except Exception as e:
+            print(f"[edit-ai] chat: {type(e).__name__}: {e}", flush=True)
+            line({"error": str(e)})
+
     def edit_action(self):
         url = urllib.parse.urlsplit(self.path)
         q = urllib.parse.parse_qs(url.query)
@@ -3185,7 +3376,8 @@ class Handler(photogen.Handler):
         try:
             if act == "status":
                 return self.reply(200, {"ready": ready(), "model": live_model(MODEL), "api": "anthropic" if is_claude(live_model(MODEL)) else "responses" if uses_responses(live_model(MODEL)) else "chat",
-                                        "models": sorted(ALLOWED_MODELS), "planEdits": plan_edits(), "gitSync": git_sync_status()})
+                                        "models": sorted(ALLOWED_MODELS), "planEdits": plan_edits(), "gitSync": git_sync_status(),
+                                        "gates": {"precheck": PRECHECK_MODEL, "review": REVIEW_MODEL, "pass": REVIEW_PASS} if gates_on() else None})
             if act == "patches":
                 return self.reply(200, patches(q.get("version", ["main"])[0]))
         except Exception as e:
@@ -3197,7 +3389,8 @@ class Handler(photogen.Handler):
         act, _ = self.edit_action()
         if not act:
             return super().do_POST()
-        routes = {"chat": chat, "undo": undo, "reset": reset, "transform": lambda r: __import__("move_tool").transform(r)}
+        routes = {"chat": chat, "precheck": precheck, "undo": undo, "reset": reset,
+                  "transform": lambda r: __import__("move_tool").transform(r)}
         if act not in routes:
             return self.reply(404, {"error": "not found"})
         ip = (self.headers.get("X-Forwarded-For") or self.client_address[0]).split(",")[0].strip()
@@ -3205,11 +3398,16 @@ class Handler(photogen.Handler):
             return self.reply(429, {"error": f"That's {RATE} edits this hour from here; try again later."})
         if act == "transform" and limited("move:" + ip, 120):
             return self.reply(429, {"error": "That's a lot of moves this hour from here; try again later."})
+        if act == "precheck" and limited("check:" + ip, 120):
+            return self.reply(200, {"skipped": True})  # the check only advises: past its limit, edits go straight on
         try:
             n = int(self.headers.get("Content-Length") or 0)
             if n > 16_000_000:
                 return self.reply(413, {"error": "too much to send at once; fewer or smaller pictures"})
-            self.reply(200, routes[act](json.loads(self.rfile.read(n))))
+            req = json.loads(self.rfile.read(n))
+            if act == "chat" and req.get("stream"):
+                return self.stream(lambda emit: chat(req, emit))
+            self.reply(200, routes[act](req))
         except PermissionError as e:
             self.reply(503, {"error": str(e), "code": "no-key"})
         except Exception as e:
@@ -3220,5 +3418,6 @@ class Handler(photogen.Handler):
 if __name__ == "__main__":
     port = next((int(a) for a in sys.argv[1:] if a.isdigit()), 8000)
     print(f"Serving http://127.0.0.1:{port}  ·  Edit AI: {live_model(EASY_MODEL)} / {live_model(COMPLEX_MODEL)}"
+          f"{f', check {PRECHECK_MODEL}, review {REVIEW_MODEL}' if gates_on() else ''}"
           f"{'' if ready() else '  (no ANTHROPIC_API_KEY or EDIT_AI_OPENAI_API_KEY: editing is off)'}", flush=True)
     ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()

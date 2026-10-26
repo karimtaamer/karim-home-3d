@@ -20,7 +20,8 @@ picture, plus marked, the attempt with the marks drawn in, sent as image 2 MARKE
 can't flip sides; all the notes in one call), with up to MAX_INSPO inspiration pictures the client attached (refs:
 data URLs), sent last and used only for the look the notes ask for, never their camera or layout. A first attempt
 can carry them too (picked while framing the shot), with an optional note (comments: [note]) on what to take from
-them. An older page's
+them: read by NAME_MODEL (inspo_pick), a note for the picture's whole look (or none) lets it override the board,
+renders and brief, and one naming pieces ("the sofas like this") takes only those, the rest staying the designer's. An older page's
 plain comments (comments, the last one new) still work. Each generate and edit returns its estimated cost (usd,
 from OpenAI's usage), which the page shows in EGP.
 Approving copies the image into renders/ and adds the spot to spots.json, like a designer render (or to
@@ -354,28 +355,40 @@ def board():
     return out
 
 
-def prompt(ctx, refs, comments, revising, has_board, inspo=0, edits=(), marked=False):
+def prompt(ctx, refs, comments, revising, has_board, inspo=0, edits=(), marked=False, pick=()):
     """The images go in this order: PREVIOUS (revisions only), MARKED (a revision with marks), VIEW, PLAN, BOARD,
     then whole renders, each (spot, None) for colour and light or (spot, [where, ..]) for its furniture too. The
     image model holds closest to the first one, so that is the model screenshot for a first attempt and the last
     attempt for a revision: the angle and every object stay, and only their surfaces change. A revision's new
-    notes are edits (edits_of) when the page marked them, else the last of comments; the rest are earlier ones."""
+    notes are edits (edits_of) when the page marked them, else the last of comments; the rest are earlier ones.
+    pick: what a first attempt's INSPIRATION is for (inspo_pick): [] its whole look, ["sofas"] only those, None unknown."""
     v, r, seen = ctx["view"], ctx["room"], ctx.get("seen", [])
     allrooms, rooms = brief([r["name"]] + [s["name"] for s in seen])
     n = iter(range(1, 99))
     first = "PREVIOUS" if revising else "VIEW"
     furn = any(w is not None for _, w in refs)
+    # A first attempt's INSPIRATION is the client's pick: its whole look beats the board, the renders and the brief
+    # (Karim's guest-bathroom shot came back limewash and oak floor while his picture had the oak-plank wall and stone),
+    # or, when the note names pieces ("the sofas like this"), only those take it and the rest stays the designer's.
+    mode = "" if not inspo or revising else "unsure" if pick is None else "part" if pick else "whole"
+    named = " and ".join(", ".join(pick).rsplit(", ", 1)) if mode == "part" else ""
+    look = {"whole": "the client's INSPIRATION images, which override the designer's finishes, the BOARD and the "
+                     "renders wherever they differ",
+            "part": f"the designer's finishes, except the {named}, which take their design and finish from the "
+                    "client's INSPIRATION images",
+            "unsure": "the designer's finishes, with what the client's note names taken from the INSPIRATION images (all "
+                      "of them, when the note asks for the picture's whole look)"}.get(mode, "the designer's finishes")
     lines = [
         f"Edit image 1 ({first}) into a photorealistic interior photograph, as if it were one more render in "
         "the interior designer's set for this apartment. This is a re-surfacing job, not a new design: keep "
         "exactly the same camera, angle, lens, framing and composition, and keep every wall, opening, door, "
         "window, piece of furniture, light and object in the same place, with the same shape and size. "
         + ("Do not add, remove or move anything, and do not borrow the layout of any other image or any object "
-           "that is not in the VIEW. Change only the materials, colours, textures and light so they match the "
-           "designer's finishes, and give each piece of furniture its real design from the FURNITURE images. "
+           "that is not in the VIEW. Change only the materials, colours, textures and light so they match "
+           f"{look}, and give each piece of furniture its real design from the FURNITURE images. "
            if furn else
            "Do not add, remove, move or redesign anything, and do not borrow the layout or objects of any other "
-           "image. Change only the materials, colours, textures and light so they match the designer's finishes. ")
+           f"image. Change only the materials, colours, textures and light so they match {look}. ")
         + "No text, no labels, no people.",
         "",
         LOCK.format(img="the VIEW"),
@@ -393,7 +406,10 @@ def prompt(ctx, refs, comments, revising, has_board, inspo=0, edits=(), marked=F
         f"{next(n)}. VIEW - an untextured clay render of the 3D model from the exact camera spot, drawn from the "
         "architect's DWG. Its grey shapes are the exact architecture, furniture and objects: every one stays, "
         "with its outline, size and place, and nothing is added. Resurface them only with the finishes from the "
-        "brief, the BOARD and the references; do not add, remove, move or reshape anything. Grey is not a colour "
+        + ("INSPIRATION, then the brief, the BOARD and the references" if mode == "whole" else
+           f"brief, the BOARD and the references (the {named} from the INSPIRATION)" if mode == "part" else
+           "brief, the BOARD and the references")
+        + "; do not add, remove, move or reshape anything. Grey is not a colour "
         "to keep: every surface gets its real finish. Its faint blue-grey see-through panes are glass (windows, "
         "glass doors, screens and shelves); the bright white strips and shades are lights.",
         f"{next(n)}. PLAN - the room from above, from the DWG: walls black, glazing blue, door openings brown, "
@@ -402,18 +418,23 @@ def prompt(ctx, refs, comments, revising, has_board, inspo=0, edits=(), marked=F
     ]
     if has_board:
         lines.append(f"{next(n)}. BOARD - the designer's materials, cropped from their renders, each labelled with "
-                     "what it is for. Give each surface in the VIEW the matching swatch: walls the limewash "
-                     "plaster, the ceiling its warm off-white, the floor the honey oak, any door leaves and frames "
+                     "what it is for. Give each surface in the VIEW the matching swatch: "
+                     + ("the floor the pale beige stone tiles, " if wet(r["name"]) else
+                        "walls the limewash plaster, the floor the honey oak, ")
+                     + "the ceiling its warm off-white, any door leaves and frames "
                      "the VIEW shows the flush honey oak, the headboard the cream boucle, bedding, rugs and cushions "
                      "their fabrics, bathroom walls the oak slats and stone, corridor walls and trim the corridor "
                      "finishes. Copy their colour, grain, weave, texture and sheen closely. The board is materials "
-                     "only: a swatch is not an object to add (the door swatches do not mean this view has a door).")
+                     "only: a swatch is not an object to add (the door swatches do not mean this view has a door)."
+                     + {"whole": " Where an INSPIRATION image shows a different finish, the INSPIRATION wins.",
+                        "part": f" Only the {named} take the INSPIRATION's finish instead.",
+                        "unsure": " What the client's note asks for from the INSPIRATION takes its finish instead."}.get(mode, ""))
     lines += [ref_line(next(n), s, w, r["name"], [x["name"] for x in seen]) for s, w in refs]
-    lines += inspo_lines(n, inspo, "the PREVIOUS image" if revising else "the VIEW", "edit" if revising else "photo")
+    lines += inspo_lines(n, inspo, "the PREVIOUS image" if revising else "the VIEW", "edit" if revising else "photo", mode, named)
     if furn:
         lines += ["", "Use the EXACT furniture shown in the FURNITURE reference images (same design, shape, fabric, "
                   "colour, wood and details) for the pieces standing where the VIEW's grey shapes are; do not substitute "
-                  "other designs. Do not copy those images' layout or camera: positions and sizes come from the VIEW, "
+                  "other designs" + (f" (except the {named}, which follow the INSPIRATION)" if named else "") + ". Do not copy those images' layout or camera: positions and sizes come from the VIEW, "
                   "and a piece that is not in the VIEW stays out, even when a FURNITURE image lists it for this room."]
     lines += inventory_lines(ctx, revising)
     lines += [
@@ -440,11 +461,27 @@ def prompt(ctx, refs, comments, revising, has_board, inspo=0, edits=(), marked=F
                   + (" (the INSPIRATION images show the look they mean)" if inspo else "") + ": " + now]
         if earlier:
             lines.append("Earlier comments, already fixed - keep them fixed: " + " | ".join(earlier))
+    elif mode == "part":
+        lines += ["", f"The client attached the INSPIRATION images for the {named} only: {comments[-1].rstrip('. ')}. "
+                  f"Give the {named} the INSPIRATION's design, material, colour and finish, at the size and place the VIEW "
+                  "has them. Everything else keeps the designer's finishes from the BOARD, the renders and the brief, "
+                  "and nothing else is taken from the INSPIRATION. The camera, layout and every object stay as the VIEW "
+                  "has them."]
+    elif mode == "unsure":
+        lines += ["", f"The client attached the INSPIRATION images with this note: {comments[-1].rstrip('. ')}. If it "
+                  "names particular pieces or surfaces, give only those the INSPIRATION's design and finish, and "
+                  "everything else the designer's finishes from the BOARD, the renders and the brief. If it asks for the "
+                  "picture's whole look or elements, its finishes win everywhere over the BOARD, the renders and the "
+                  "finishes list, on the surfaces and pieces the VIEW already has. Never add an object, opening or "
+                  "layout the VIEW lacks. The camera, layout and every object stay as the VIEW has them."]
     elif inspo:
-        lines += ["", "The client attached the INSPIRATION images to guide the look. Take from them "
-                  + (f"what the client asks: {comments[-1]}" if comments else
+        lines += ["", "The client attached the INSPIRATION images to set the look, and they win over the BOARD, the "
+                  "renders and the finishes list above. Take from them "
+                  + (f"what the client asks: {comments[-1].rstrip('. ')}" if comments else
                      "their materials, colours, finishes and mood, where they suit the surfaces the VIEW shows")
-                  + ". Nothing else changes: the camera, layout and every object stay as the VIEW has them."]
+                  + ". Their \"elements\" or \"look\" means their finishes and the design and finish of each piece the "
+                  "VIEW already has, put on that same surface or piece in the VIEW; never an object, opening or layout the "
+                  "VIEW lacks. The camera, layout and every object stay as the VIEW has them."]
     return "\n".join(lines)
 
 
@@ -536,12 +573,59 @@ def inventory_lines(ctx, revising=False):
             *[f"- {x}" for x in inv]]
 
 
-def inspo_lines(n, count, base, to="edit"):
-    """The INSPIRATION images' lines (numbered on from n), for pictures the client attached to an edit (or a photo)."""
+def inspo_lines(n, count, base, to="edit", mode="", named=""):
+    """The INSPIRATION images' lines (numbered on from n), for pictures the client attached to an edit (or a photo).
+    mode (prompt): a first attempt's picture is for its whole look ("whole", over the board, the renders and the
+    brief) or only the named pieces ("part"); "" or "unsure": what the request refers to."""
+    if mode == "part":
+        return [f"{next(n)}. INSPIRATION - a picture the client attached to this photo for the {named} only. Give the "
+                f"{named} in {base} this picture's design, material, colour and finish, at {base}'s size and place. "
+                "Take nothing else from it: every other surface and piece keeps the designer's finishes. Never its "
+                f"camera, framing, layout, room, walls, doors, windows or any object {base} does not have."
+                for _ in range(count)]
+    if mode == "whole":
+        return [f"{next(n)}. INSPIRATION - a picture the client attached to this photo: their chosen look. Copy its "
+                f"finishes onto the matching surfaces and pieces {base} already has: wall cladding (a wood feature wall "
+                f"goes on {base}'s matching wall), floor and wall tiles, the bath or counter surround, glass-screen "
+                "frames, the colour and finish of taps, shower and fittings, niche linings, towels and textiles. These "
+                "override the BOARD, the renders and the finishes list. Never its camera, framing, layout, room, walls, "
+                f"doors, windows or any object {base} does not have." for _ in range(count)]
     return [f"{next(n)}. INSPIRATION - a picture the client attached to this {to}, from somewhere else. Copy from it only "
             f"what the client's request refers to: the materials, colours, finishes, mood or the design of a piece. "
             f"Never its camera, framing, layout, room, walls, doors, windows or objects: those all stay as {base} has "
             f"them, and nothing of it is added that the request does not ask for." for _ in range(count)]
+
+
+def inspo_pick(note):
+    """What a first attempt's note takes from the client's INSPIRATION picture(s), read by the cheap text model
+    (NAME_MODEL): [] for its whole look (no note, or "the same elements as this pic"), else the pieces and surfaces
+    it names (["sofas"]), which take the picture's design while the rest keeps the designer's finishes. None when
+    it can't tell (a dry run, an error): the prompt then gives the image model both rules."""
+    if not note.strip():
+        return []
+    if DRY:
+        return None
+    body = json.dumps({"model": NAME_MODEL, "max_tokens": 80, "response_format": {"type": "json_object"},
+                       "messages": [{"role": "user", "content": (
+                           "A client attached a reference picture to a request for an interior render of their "
+                           "apartment, with the note below. Does the note ask for the picture's whole look (its "
+                           "elements, materials, finishes, style in general), or only for particular pieces or "
+                           "surfaces (e.g. the sofas, the floor, the taps)? Reply with JSON only: {\"whole\": true} or "
+                           "{\"whole\": false, \"items\": [\"sofas\"]}, the items in the note's own words, lowercase.\n\n"
+                           "Note: " + note[:MAX_NOTE])}]}).encode()
+    req = urllib.request.Request("https://api.openai.com/v1/chat/completions", data=body, method="POST",
+                                 headers={"Authorization": f"Bearer {api_key()}", "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as res:
+            out = json.loads(json.load(res)["choices"][0]["message"]["content"])
+    except Exception as e:  # the photo still goes, with both rules in the prompt
+        print(f"[photogen] inspiration note unread ({type(e).__name__}): {e}", flush=True)
+        return None
+    if out.get("whole"):
+        return []
+    items = [re.sub(r"^(the|my|our) ", "", " ".join(re.sub(r"[^\w '-]", "", str(x).lower()).split()))[:40]
+             for x in out.get("items") or []]  # the prompt says "the sofas"
+    return [x for x in items if x][:6] or None
 
 
 def inspiration(req):
@@ -678,7 +762,7 @@ def data_url(s):
     return base64.b64decode(body), mime, "jpg" if mime == "image/jpeg" else "png"
 
 
-def request(ctx, view, vmime, vext, plan, comments, prev, name, inspo=(), edits=(), marked=None):
+def request(ctx, view, vmime, vext, plan, comments, prev, name, inspo=(), edits=(), marked=None, pick=()):
     """The edit to send: (prompt, [(filename, bytes, mime)], [(spot, None or [where, ..])] for the renders, board).
     marked: (bytes, mime) of the PREVIOUS image with the client's marks, sent next to it."""
     room, seen = ctx["room"]["name"], [s["name"] for s in ctx.get("seen", [])]
@@ -701,7 +785,7 @@ def request(ctx, view, vmime, vext, plan, comments, prev, name, inspo=(), edits=
             images.append((p.name, p.read_bytes(), "image/jpeg" if p.suffix.lower() in (".jpg", ".jpeg") else "image/png"))
             used.append((s, w))
     images += list(inspo)  # last, after the renders: the prompt numbers them so
-    return prompt(ctx, used, comments, bool(prev), bool(mats), len(inspo), edits, bool(prev and marked)), images, used, mats
+    return prompt(ctx, used, comments, bool(prev), bool(mats), len(inspo), edits, bool(prev and marked), pick), images, used, mats
 
 
 def generate(req):
@@ -730,7 +814,8 @@ def generate(req):
         save(f"renders/drafts/{draft}-{fname}", data, mime)
     if marked:
         save(f"renders/drafts/{draft}-marked.{INSPO_MIME[marked[1]]}", *marked)
-    text, images, refs, mats = request(ctx, view, vmime, vext, plan, comments, prev, req.get("spots", "spots.json"), inspo, edits, marked)
+    pick = inspo_pick(comments[-1] if comments else "") if inspo and not prev else []
+    text, images, refs, mats = request(ctx, view, vmime, vext, plan, comments, prev, req.get("spots", "spots.json"), inspo, edits, marked, pick)
     comment = said(edits) if edits else comments[-1] if comments else None
     print(f"[photogen] {draft}: {ctx['room']['caption']}, {len(images)} images{' (revision)' if prev else ''}", flush=True)
     out, usage = (view, None) if DRY else edit(images, text)
@@ -740,7 +825,7 @@ def generate(req):
                                                     "references": [s["photo"] for s, _ in refs],
                                                     "furniture": [s["photo"] for s, w in refs if w is not None],
                                                     "board": mats and mats.name, "inspiration": [f for f, _, _ in inspo],
-                                                    "prompt": text, "usage": usage, "usd": cost(usage)}, indent=1).encode(), "application/json")
+                                                    "inspiration_for": pick, "prompt": text, "usage": usage, "usd": cost(usage)}, indent=1).encode(), "application/json")
     return {"draft": draft, "src": f"renders/drafts/{draft}.png", "usd": cost(usage), "usage": summary(usage), "comment": comment}
 
 

@@ -477,7 +477,7 @@ export function furnish(scene, M, mat, version = "main") {
   const medCabinet = (w = 0.8, y0 = 1.32, y1 = 2.07, shelves = 3, open = 0) => vanityPart => {
     const c = new THREE.Group(), p = part(c), leaves = [];
     vanityPart.g.add(c);
-    const h = w / 2, b = 0.02, f = 0.285, t = 0.018;  // back on the battens, carcass front edge, board
+    const h = w / 2, b = 0.02, f = version === "karims-version" ? 0.185 : 0.285, t = 0.018;  // back on the battens, carcass front edge, board
     p.box(-h - 0.02, h + 0.02, y0 - 0.02, y1 + 0.02, b, b + 0.006, mat.ledStrip, 0.02);  // halo
     p.box(-h, h, y0, y1, b, b + 0.012, honeyOak);                                          // back, 25.3 cm to the front edge
     for (const s of [-1, 1]) p.box(s < 0 ? -h : h - t, s < 0 ? -h + t : h, y0, y1, b, f, mat.oakVeneer);  // sides
@@ -742,6 +742,7 @@ export function furnish(scene, M, mat, version = "main") {
     // to the partition) and is 0.60 deep; the backlit mirror becomes a 0.80 x 0.75 mirrored medicine cabinet, 0.30
     // out from the battens, bottom 1.32 (0.46 over the counter), three glass shelves, all centred on the bowl.
     if (["kareems-changes", "karims-version"].includes(version)) item(0.556, 6.7276, "E", vanity(1.185, true, 0.6, medCabinet(), heaterVanity));  // centre DWG y -114.8856
+   if (version === "karims-version") item(0.556, 6.7276, "E", vanity(1.185, true, 0.6, medCabinet(), heaterVanity));
     else item(0.556, 6.7435, "E", vanity(1.153, true));  // centre DWG y -114.8697, bowl, mixer and mirror on it
     item(1.8037, 9.0201, "S", p => {  // WC bay 1.416..2.192 (local +x east)
       const h = 0.3878, d = 0.3, top = 1.12;

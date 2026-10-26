@@ -1,5 +1,6 @@
 // Move and Resize: the button beside Measure. Tap a piece (in Walk, Top or the 2D drawing) to pick it, drag it to
-// move it, or pull an edge / corner handle to resize it. Nothing is saved while you adjust: the piece previews in
+// move it, pull an edge / corner handle to resize it, or swing the round handle above it to turn it (15° steps, Shift
+// for 1°; R turns it 90° clockwise, Shift+R anticlockwise). Nothing is saved while you adjust: the piece previews in
 // place with its size and how far it moved, and Accept saves it (Cancel, Esc or a tap elsewhere throws the draft
 // away). Accept sends one change to move_tool.py (POST api/edit-ai/transform, no AI model), which makes it in
 // furnish.js and, when the piece is drawn on the plan, in the DXF, so the 3D and the 2D always agree; then the page
@@ -9,7 +10,7 @@
 import * as THREE from "three";
 
 const API = "api/edit-ai";
-const DRAG_PX = 4, HANDLE_PX = 12, HANDLE_TOUCH_PX = 22, HEAD = 1.5, DOUBLE_MS = 400, DOUBLE_PX = 10;
+const DRAG_PX = 4, HANDLE_PX = 12, HANDLE_TOUCH_PX = 22, HEAD = 1.5, DOUBLE_MS = 400, DOUBLE_PX = 10, ROT_PX = 30;
 const SIDES = { N: [0, 1], S: [0, -1], E: [1, 0], W: [-1, 0], NE: [1, 1], NW: [-1, 1], SE: [1, -1], SW: [-1, -1] };
 const NAME = "Move and Resize";
 const store = sessionStorage;
@@ -34,7 +35,8 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
   bar.querySelector(".cancel").onclick = () => discard();
   const ray = new THREE.Raycaster();
   // sel: the picked object, its plan box, the pose it had (the draft previews over it) and the drill-in path
-  // (outermost piece first). draft: the plan box it should get, until Accept or Cancel.
+  // (outermost piece first). draft: the plan box it should get and how far it's turned (degrees, + = anticlockwise
+  // on the plan, about the box's centre), until Accept or Cancel.
   let active = false, sel = null, drag = null, draft = null, busy = false, where = null, furnishText = null, lastDown = null;
 
   // --- What a piece is: its plan box, height, the code that placed it -------------------------------------------------
@@ -181,7 +183,7 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
 
   function select(o) {
     if (draft) discard(true);
-    sel = o && { o, ...planBox(o), path: pathTo(o), pos0: o.position.clone(), scale0: o.scale.clone() };
+    sel = o && { o, ...planBox(o), path: pathTo(o), pos0: o.position.clone(), scale0: o.scale.clone(), rot0: o.rotation.y };
     if (sel) sel.h = Math.min(sel.high, Math.max(sel.low, 0.9));
     showChips();
     onChange?.();
@@ -207,12 +209,32 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
 
   // --- The draft: a preview in place, saved only on Accept -----------------------------------------------------------
   const shown = () => draft?.box || sel.box;
+  const turn = () => draft?.rot || 0;
+  // Only a whole piece turns (a part sits in its piece's frame).
+  const turnable = () => sel && isPiece(sel.o) && !(draft && !same(sizeOf(draft.box), sizeOf(sel.box)));
+  const sizeOf = b => [b[2] - b[0], b[3] - b[1]];
+  // Plan points p turned by deg about c.
+  function spin(ps, c, deg) {
+    const t = deg * Math.PI / 180, co = Math.cos(t), si = Math.sin(t);
+    return ps.map(([x, y]) => [c[0] + (x - c[0]) * co - (y - c[1]) * si, c[1] + (x - c[0]) * si + (y - c[1]) * co]);
+  }
   // Put the selection where box says: scaled in its own frame (height untouched), then shifted so its plan box lines up.
-  function preview(box) {
+  // Turned: swung round the centre of its plan box, then moved as far as the box moved.
+  function preview(box, rot = 0) {
     const o = sel.o;
     o.position.copy(sel.pos0);
     o.scale.copy(sel.scale0);
+    o.rotation.y = sel.rot0;
     if (!box) return;
+    if (rot) {
+      const b = sel.box, c = [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
+      const w = o.parent.localToWorld(o.position.clone());
+      const [[x, y]] = spin([[w.x, -w.z]], c, rot);
+      w.set(x + (box[0] + box[2] - b[0] - b[2]) / 2, w.y, -(y + (box[1] + box[3] - b[1] - b[3]) / 2));
+      o.position.copy(o.parent.worldToLocal(w));
+      o.rotation.y = sel.rot0 + rot * Math.PI / 180;
+      return;
+    }
     const b = sel.box, k = [(box[2] - box[0]) / Math.max(1e-6, b[2] - b[0]), (box[3] - box[1]) / Math.max(1e-6, b[3] - b[1])];
     if (Math.abs(k[0] - 1) > 1e-4 || Math.abs(k[1] - 1) > 1e-4) {
       o.updateMatrixWorld(true);
@@ -232,6 +254,11 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     const b = sel.box, n = shown(), w = n[2] - n[0], d = n[3] - n[1];
     const size = `${Math.round(w * 100)} × ${Math.round(d * 100)} cm`;
     if (!draft) return `${nameOf(sel.o)} · ${size}`;
+    if (draft.rot) {
+      const c = [(n[0] + n[2] - b[0] - b[2]) / 2, (n[1] + n[3] - b[1] - b[3]) / 2], r = Math.round(draft.rot * 10) / 10;
+      const moved = Math.abs(c[0]) >= 0.005 || Math.abs(c[1]) >= 0.005;
+      return `${nameOf(sel.o)} · turned ${Math.abs(r)}° ${r > 0 ? "↺" : "↻"}${moved ? " · moved " + dirText(c) : ""}`;
+    }
     const resized = !same([w, d], [b[2] - b[0], b[3] - b[1]]);
     const c = [(n[0] + n[2] - b[0] - b[2]) / 2, (n[1] + n[3] - b[1] - b[3]) / 2];
     const bits = [];
@@ -250,9 +277,11 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     const g = { N: n[3] - b[3], S: b[1] - n[1], E: n[2] - b[2], W: b[0] - n[0] };
     return Object.entries(g).filter(([, v]) => Math.abs(v) >= 0.005).map(([k, v]) => `${v > 0 ? "+" : "−"}${cm(v)} ${k}`).join(", ");
   }
-  function setDraft(box) {
-    draft = same(box, sel.box, 0.0025) ? null : { box: box.map(r4) };
-    preview(draft?.box);
+  function setDraft(box, rot = turn()) {
+    rot = ((rot % 360) + 540) % 360 - 180;  // -180..180
+    if (Math.abs(rot) < 0.05) rot = 0;
+    draft = same(box, sel.box, 0.0025) && !rot ? null : { box: box.map(r4), rot: Math.round(rot * 100) / 100 };
+    preview(draft?.box, draft?.rot);
     bar.hidden = !draft;
     if (draft) bar.querySelector(".what").textContent = draftText();
     onChange?.();
@@ -267,8 +296,17 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
   }
 
   // --- Overlay ----------------------------------------------------------------------------------------------------
-  function corners(b, h) {
-    return [[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]]].map(([x, y]) => toScreen(x, y, h));
+  function corners(b, h, rot = 0) {
+    const ps = [[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]]];
+    return (rot ? spin(ps, [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2], rot) : ps).map(([x, y]) => toScreen(x, y, h));
+  }
+  // The turn handle: ROT_PX beyond the middle of the (turned) north side, on screen. [handle, side middle] or null.
+  function rotHandle(b, h) {
+    const c = [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2], [m] = spin([[c[0], b[3]]], c, turn());
+    const sc = toScreen(c[0], c[1], h), sm = toScreen(m[0], m[1], h);
+    if (!sc || !sm) return null;
+    const d = Math.hypot(sm[0] - sc[0], sm[1] - sc[1]) || 1;
+    return [[sm[0] + (sm[0] - sc[0]) / d * ROT_PX, sm[1] + (sm[1] - sc[1]) / d * ROT_PX], sm];
   }
   function handles(b, h) {
     const mx = (b[0] + b[2]) / 2, my = (b[1] + b[3]) / 2, out = {};
@@ -281,13 +319,15 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     if (where && now !== where && sel && !busy) { discard(); select(null); }
     where = now;
     if (!active || !sel || (showing() !== "model" && !is2D())) { svg.innerHTML = ""; label.hidden = true; chips.hidden = true; return; }
-    const b = shown(), c = corners(b, sel.h);
+    const b = shown(), c = corners(b, sel.h, turn());
     if (c.some(p => !p)) { svg.innerHTML = ""; label.hidden = true; return; }
     const pts = c.map(p => p.join(",")).join(" ");
     let s = "";
     if (draft) s += `<polygon class="was" points="${corners(sel.box, sel.h).map(p => p?.join(",")).join(" ")}"/>`;
     s += `<polygon class="halo" points="${pts}"/><polygon points="${pts}"/>`;
-    if (!busy) for (const [k, p] of Object.entries(handles(b, sel.h))) s += `<circle class="${k.length > 1 ? "corner" : ""}" cx="${p[0]}" cy="${p[1]}" r="${k.length > 1 ? 5 : 6.5}"/>`;
+    if (!busy && !turn()) for (const [k, p] of Object.entries(handles(b, sel.h))) s += `<circle class="${k.length > 1 ? "corner" : ""}" cx="${p[0]}" cy="${p[1]}" r="${k.length > 1 ? 5 : 6.5}"/>`;
+    const rh = !busy && turnable() && rotHandle(b, sel.h);
+    if (rh) s += `<line class="rot" x1="${rh[1][0]}" y1="${rh[1][1]}" x2="${rh[0][0]}" y2="${rh[0][1]}"/><circle class="rot" cx="${rh[0][0]}" cy="${rh[0][1]}" r="7"/>`;
     svg.innerHTML = s;
     label.hidden = false;
     label.style.left = `${(c[0][0] + c[2][0]) / 2}px`;
@@ -310,7 +350,9 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
   }
   // The handle (N, SE, ...) or the body of the selection under p, or null.
   function grabAt(p, touch) {
-    const b = shown(), c = corners(b, sel.h);
+    const b = shown(), c = corners(b, sel.h, turn());
+    const rh = turnable() && rotHandle(b, sel.h);
+    if (rh && Math.hypot(rh[0][0] - p[0], rh[0][1] - p[1]) < (touch ? HANDLE_TOUCH_PX : HANDLE_PX) + 2) return { type: "turn" };
     // A small piece on screen: the handles reach less far, so its middle still drags it.
     const side = c.some(q => !q) ? 0 : Math.min(...c.map((q, i) => Math.hypot(q[0] - c[(i + 1) % 4][0], q[1] - c[(i + 1) % 4][1])));
     const hs = handles(b, sel.h), r = Math.max(5, Math.min(touch ? HANDLE_TOUCH_PX : HANDLE_PX, side * 0.3));
@@ -322,7 +364,8 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     // A thin piece (a curtain, a panel): its middle is within reach of the side handles, so the middle drags it.
     const ctr = toScreen((b[0] + b[2]) / 2, (b[1] + b[3]) / 2, sel.h);
     if (grab && ctr && (ctr[0] - p[0]) ** 2 + (ctr[1] - p[1]) ** 2 < best) grab = null;
-    if (grab) return { type: "edge", side: grab };
+    if (grab && !turn()) return { type: "edge", side: grab };
+    grab = null;
     if (!c.some(q => !q) && inPoly(p, c)) return { type: "move" };
     if (!is2D() && pick3D(...p).includes(sel.o)) return { type: "move" };
     return null;
@@ -365,7 +408,7 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     freeMouse?.();
     const at = toPlan(...p, sel.h);
     if (!at) return;
-    drag = { ...g, id: e.pointerId, from: p, at, base: [...shown()], moved: false };
+    drag = { ...g, id: e.pointerId, from: p, at, base: [...shown()], rot: turn(), moved: false };
   }, true);
   addEventListener("pointermove", e => {
     if (!drag || e.pointerId !== drag.id) return;
@@ -376,7 +419,11 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     if (!q) return;
     const d = [Math.round((q[0] - drag.at[0]) * 200) / 200, Math.round((q[1] - drag.at[1]) * 200) / 200];  // 5 mm steps
     const b = drag.base;
-    if (drag.type === "move") setDraft([b[0] + d[0], b[1] + d[1], b[2] + d[0], b[3] + d[1]]);
+    if (drag.type === "turn") {  // the angle the pointer swept round the centre, in 15° steps (Shift: 1°)
+      const c = [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2], a = v => Math.atan2(v[1] - c[1], v[0] - c[0]) * 180 / Math.PI;
+      const step = e.shiftKey ? 1 : 15;
+      setDraft(b, Math.round((drag.rot + a(q) - a(drag.at)) / step) * step);
+    } else if (drag.type === "move") setDraft([b[0] + d[0], b[1] + d[1], b[2] + d[0], b[3] + d[1]]);
     else {
       const [sx, sy] = SIDES[drag.side], nb = [...b], MIN = 0.03;
       if (sx > 0) nb[2] = Math.max(b[0] + MIN, b[2] + d[0]);
@@ -393,17 +440,22 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     e.stopImmediatePropagation();
     const g = drag;
     drag = null;
-    if (e.type === "pointercancel" && g.moved) setDraft(g.base);
+    if (e.type === "pointercancel" && g.moved) setDraft(g.base, g.rot);
   };
   addEventListener("pointerup", up, true);
   addEventListener("pointercancel", up, true);
   function cancelDrag() {
-    if (drag && sel) setDraft(drag.base);
+    if (drag && sel) setDraft(drag.base, drag.rot);
     drag = null;
   }
   addEventListener("keydown", e => {
     if (!active || busy || /input|textarea/i.test(e.target?.tagName || "")) return;
     if (e.key === "Enter" && draft && !drag) { e.preventDefault(); accept(); return; }
+    if ((e.key === "r" || e.key === "R") && !e.metaKey && !e.ctrlKey && !drag && turnable()) {  // 90° clockwise; Shift: anticlockwise
+      e.preventDefault();
+      setDraft([...shown()], turn() + (e.shiftKey ? 90 : -90));
+      return;
+    }
     if (e.key !== "Escape") return;
     if (drag) cancelDrag();
     else if (draft) discard();
@@ -425,11 +477,11 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     const resized = !same([n[2] - n[0], n[3] - n[1]], [b[2] - b[0], b[3] - b[1]]);
     preview(null);  // describe the piece where it is, not where the preview put it
     const piece = describe(sel.o);
-    preview(n);
+    preview(n, draft.rot);
     piece.box = b.map(r4);
     const body = { version, rev: live.rev, op: resized ? "resize" : "move", piece };
     if (resized) body.box = n.map(r4);
-    else Object.assign(body, { dx: r4((n[0] + n[2] - b[0] - b[2]) / 2), dy: r4((n[1] + n[3] - b[1] - b[3]) / 2) });
+    else Object.assign(body, { dx: r4((n[0] + n[2] - b[0] - b[2]) / 2), dy: r4((n[1] + n[3] - b[1] - b[3]) / 2) }, draft.rot ? { rotate: draft.rot } : {});
     return body;
   }
   async function accept() {
@@ -530,7 +582,7 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     state() {
       return {
         active, busy, selected: sel && nameOf(sel.o), path: sel ? sel.path.map(nameOf) : [], box: sel && sel.box.map(r4),
-        draft: draft && draft.box, text: sel && draftText(), bar: !bar.hidden, chips: [...chips.querySelectorAll("button")].map(b => b.textContent),
+        draft: draft && draft.box, rot: turn(), text: sel && draftText(), bar: !bar.hidden, chips: [...chips.querySelectorAll("button")].map(b => b.textContent),
         request: draft && sel ? request() : null, result: lastResult,
       };
     },

@@ -3,6 +3,7 @@
 own on Vercel). edit_ai.py calls it; coordinates in and out are plan metres in model.js's frame (plan = DWG - origin).
 
     edit_ai_dxf.py query IN.dxf --origin ox,oy --bbox x0,y0,x1,y1 [--layers 1wall,2furni]   -> JSON list of entities
+        (--blocks: also each furniture INSERT there, whole, with its full extent as "bbox")
     edit_ai_dxf.py edit  IN.dxf OUT.dxf --origin ox,oy  < ops.json                          -> JSON report
 
 `query` also lists what furniture blocks hold (not door blocks): handle "INSERT/ENTITY", "inside_block": its name,
@@ -33,6 +34,9 @@ Edit ops (a JSON list), handles as `query` gives them:
         or grow / shrink given sides by metres (negative shrinks; missing sides stay put): no arithmetic needed.
 After any edit, each piece moved, resized or added is checked against the walls and the other outlines: overlaps are
 listed under "clashes" (a rug may sit under things; given as --soft boxes).
+    {"op": "rotate_piece", "handle": "1692", "angle": 90, "centre": [x, y], "dx": 0, "dy": 0}
+        the same piece (or a whole furniture block, by its INSERT handle) turned by angle degrees (+ = anticlockwise)
+        about centre (plan metres; default its own centre), then moved by dx, dy.
     {"op": "move_door", "handle": "16FA", "along": 0.2, "width": 0.8}
         a door drawn loose (its swing ARC is the handle): swing, leaf, jambs and frame bits slide along their wall by
         `along` metres (+ = towards +x / +y; or dx, dy, projected on the wall) and, with width, the leaf (= swing
@@ -149,6 +153,16 @@ def query(a):
                 d["bbox"] = [min(q[0] for q in ps), min(q[1] for q in ps), max(q[0] for q in ps), max(q[1] for q in ps)]
                 d["n_points"] = len(ps)
             out.append(d)
+    if a.blocks:  # furniture drawn as one block (the WC symbol): the whole INSERT with its full extent, so it moves as one
+        out = [d for d in out if d["type"] != "INSERT"]  # listed again below, whole
+        for e in doc.modelspace().query("INSERT"):  # content on layer 0 takes the insert's layer (the CHAIR1 armchair)
+            lays = {e.dxf.layer if c.dxf.get("layer", "0") == "0" else c.dxf.layer for c in doc.blocks[e.dxf.name]}
+            if e.dxf.layer == DOOR_LAYER or not lays & set(FURNI):
+                continue
+            x = ext_of(e)
+            if x and not (x[2] - ox < b[0] or x[0] - ox > b[2] or x[3] - oy < b[1] or x[1] - oy > b[3]):
+                out.append({"handle": e.dxf.handle, "type": "INSERT", "layer": e.dxf.layer, "block": e.dxf.name,
+                            "rotation": r(e.dxf.get("rotation", 0)), "bbox": [r(x[0] - ox), r(x[1] - oy), r(x[2] - ox), r(x[3] - oy)]})
     # Piece outlines first (they're what an edit is usually about), tiny bits last, so a cut-off list keeps them.
     size = lambda d: (lambda p: (max(q[0] for q in p) - min(q[0] for q in p)) * (max(q[1] for q in p) - min(q[1] for q in p)))(
         d.get("points") or [d["bbox"][:2], d["bbox"][2:]] if ("points" in d or "bbox" in d) else [[0, 0], [0, 0]])
@@ -695,6 +709,20 @@ def edit(a):
             b = ext_of(ents[0])
             log.append(f"piece {o['handle']} ({len(ents)} entities: {[e.dxf.handle for e in ents]}) moved by ({dx}, {dy}); "
                        f"outline now x {r(b[0] - ox)}..{r(b[2] - ox)}, y {r(b[1] - oy)}..{r(b[3] - oy)}" + note)
+        elif k == "rotate_piece":
+            e0 = get(o["handle"])
+            ents = [e0] if e0.dxftype() == "INSERT" else piece_members(msp, e0)[0]
+            b = ext_of(e0)
+            cx, cy = W(o["centre"]) if o.get("centre") else ((b[0] + b[2]) / 2, (b[1] + b[3]) / 2)
+            dx, dy, ang = float(o.get("dx", 0)), float(o.get("dy", 0)), float(o["angle"])
+            for e in ents:
+                touched.add(e.dxf.handle)
+                e.translate(-cx, -cy, 0)
+                e.rotate_z(math.radians(ang))
+                e.translate(cx + dx, cy + dy, 0)
+            b = ext_of(e0)
+            log.append(f"piece {o['handle']} ({len(ents)} entities) turned {r(ang)} degrees about ({r(cx - ox)}, {r(cy - oy)}) "
+                       f"and moved by ({dx}, {dy}); now x {r(b[0] - ox)}..{r(b[2] - ox)}, y {r(b[1] - oy)}..{r(b[3] - oy)}")
         elif k == "resize_piece":
             ents, b = piece_members(msp, get(o["handle"]))
             w, h = b[2] - b[0], b[3] - b[1]
@@ -911,6 +939,7 @@ if __name__ == "__main__":
     sub = p.add_subparsers(dest="cmd", required=True)
     q = sub.add_parser("query"); q.add_argument("src"); q.add_argument("--origin", required=True)
     q.add_argument("--bbox", required=True); q.add_argument("--layers"); q.add_argument("--limit", default="150")
+    q.add_argument("--blocks", action="store_true")
     e = sub.add_parser("edit"); e.add_argument("src"); e.add_argument("out"); e.add_argument("--origin", required=True)
     e.add_argument("--soft", default="")
     a = p.parse_args()

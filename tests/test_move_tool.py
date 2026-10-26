@@ -79,6 +79,21 @@ class Gating(unittest.TestCase):
         t2 = MT.set_part(t, c2, "espresso machine", [0.1, 0], [1, 1], V, shared)
         self.assertEqual(t2.count("// Move and Resize: where this part sits"), 1)
 
+    def test_turn_is_gated(self):
+        self.assertEqual([MT.turned("S", 90), MT.turned("S", -90), MT.turned("W", 180), MT.turned("S", 45)], ["E", "W", "E", 0.7854])
+        n, c = call_at(SRC, 'item(19.1, 5.95, "S"')
+        t = MT.set_facing(SRC, c, "E", V, MT.scopes(SRC, V)(n))
+        self.assertIn('item(19.1, 5.95, version === "kareems-changes" ? "E" : "S", p => {', t)
+        self.assertEqual(self.leak(t), [])
+        c2 = next(x for x in MT.calls_on_line(t, n) if x["kind"] == "item")
+        self.assertEqual(MT.facing_of(c2["args"][2], V), "E")
+        self.assertEqual(MT.facing_of(c2["args"][2], "karims-version"), "S")
+        self.assertEqual(MT.set_facing(t, c2, "S", V, True), SRC)  # turned back: the gate goes
+        # a gated facing still finds its call
+        n, c = call_at(SRC, 'item(KC ? SC : 18.86, 2.103, "N"')
+        t = MT.set_facing(SRC, c, "E", V, MT.scopes(SRC, V)(n))
+        self.assertEqual(MT.find_call(t, {"x": 19.342, "y": 2.103, "facing": "E", "lines": [n]}, V)["how"], "expr")
+
     def test_fold_chained_ternary_and_unsized(self):
         self.assertEqual(E.for_version('x=version==="a"?1:K?2:3;', "b"), E.for_version("x=K?2:3;", "b"))
         self.assertEqual(E.for_version('f(sized(g(1),version==="a"?2:1,1));', "b"), "f(g(1));")

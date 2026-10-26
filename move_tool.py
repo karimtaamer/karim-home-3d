@@ -13,7 +13,8 @@ One version's change stays in that version (docs/edit-ai/version-isolation.md): 
 also run becomes `version === "<v>" ? new : old`; a piece a loop or shared code places gets a version-guarded line in
 furnish.js's MOVED table; and before saving, other_versions_changed() must find every other version unchanged.
 
-Request: {version, rev, op: "move" | "resize", piece: {...}, dx, dy (move) | box (resize: the new plan box)}
+Request: {version, rev, op: "move" | "resize", piece: {...}, dx, dy, rotate (move; rotate: degrees, + = anticlockwise
+on the plan, about the centre of its plan box) | box (resize: the new plan box)}
 piece (from move.js, read off the 3D scene): kind "item" | "part"; x, y, facing of its item( call; anchor: where the
 item stands now; lines: furnish.js line numbers on the call stack when item() ran; twins: pieces placed with the same
 x, y, facing; scale [across, out] (sized()); box [x0, y0, x1, y1] its plan box now; low / high (m) its lowest /
@@ -22,9 +23,10 @@ highest point; label; for a part: part (its p.label text), pos [x, z] and pscale
 
 What stays 3D-only (docs/edit-ai/when-2d-needed.md): pieces whose lowest point is above head height, lights, AC units,
 wall-hung things and anything with no 2furni outline under it. A floor piece drawn on the plan only inside one outline
-round several pieces (the dining set) moves in 3D only, and only while it stays inside that outline.
+round several pieces (the dining set) moves in 3D only, and only while it stays inside that outline. A piece drawn as
+one furniture block (the WC symbol) moves with its whole INSERT; a resize changes only the 3D (the symbol keeps its size).
 """
-import json, re
+import json, math, re
 
 import edit_ai as E
 
@@ -35,6 +37,7 @@ F = {"S": (0, -1), "N": (0, 1), "E": (1, 0), "W": (-1, 0)}   # local z (out from
 CALL = re.compile(r"\b(sized\(\s*)?\b(item|rug|plant|art|ac|sconce|pendant)\(")
 NUM = re.compile(r"^-?\d+(?:\.\d+)?$")
 SIDES = ("N", "S", "E", "W")
+FACE = {"S": 0.0, "E": math.pi / 2, "N": math.pi, "W": -math.pi / 2}  # furnish.js's FACING: the item's rotation.y
 CANT = f"so it can't be changed with {NAME}. Make an Edit can do it."
 
 
@@ -161,6 +164,55 @@ def set_arg(a, new, v, shared):
     return lead + f'version === "{v}" ? {fmt(new)} : {a.strip()}'
 
 
+def facing_of(a, v):
+    """The facing an arg gives version v: "S" / an angle (rotation.y), plain or this version's gate; else None."""
+    a = a.strip()
+    m = re.match(r'^version\s*===\s*"([\w-]+)"\s*\?\s*("[NSEW]"|-?\d+(?:\.\d+)?)\s*:(.+)$', a, re.S)
+    if m:
+        if m[1] != v:
+            return facing_of(m[3], v)  # another version's gate: what the rest gives this one
+        a = m[2]
+    if re.fullmatch(r'"[NSEW]"', a):
+        return a.strip('"')
+    return float(a) if NUM.match(a) else None
+
+
+def same_facing(a, b):
+    if a is None or b is None:
+        return False
+    return near(FACE.get(a, a) if isinstance(a, str) else a, FACE.get(b, b) if isinstance(b, str) else float(b), 1e-4)
+
+
+def facing_at(call):
+    """Index of the facing arg of a placing call, or None (a plant or pendant is round: nothing to turn)."""
+    if call["kind"] not in ("item", "art", "ac", "sconce"):
+        return None
+    return 1 if call["args"][0].strip().startswith("...(") else 2
+
+
+def turned(facing, deg):
+    """The facing after turning it deg degrees anticlockwise on the plan: N/E/S/W when square, else rotation.y."""
+    a = (FACE[facing] if isinstance(facing, str) else float(facing)) + math.radians(deg)
+    a = math.atan2(math.sin(a), math.cos(a))
+    k = round(a / (math.pi / 2))
+    if abs(a - k * math.pi / 2) < 1e-4:
+        return "SENW"[k % 4]
+    return round(a, 4)
+
+
+def set_facing(text, call, f, v, shared):
+    i = facing_at(call)
+    a = call["args"]
+    lead = re.match(r"\s*", a[i]).group(0)
+    new = f'"{f}"' if isinstance(f, str) else fmt(f)
+    m = re.match(r'^\s*version\s*===\s*"' + re.escape(v) + r'"\s*\?\s*(?:"[NSEW]"|-?\d+(?:\.\d+)?)\s*:\s*(.+?)\s*$', a[i], re.S)
+    rest = m[1] if m else a[i].strip()
+    if (m or shared) and rest != new:
+        new = f'version === "{v}" ? {new} : {rest}'
+    args = a[:i] + [lead + new] + a[i + 1:]
+    return text[:call["open"] + 1] + ",".join(args) + text[call["close"]:]
+
+
 def find_call(text, piece, v):
     """The furnish.js call that placed the piece: {line, call, how} (how: literal / rug / expr / spread / table)."""
     x, y = float(piece["x"]), float(piece["y"])
@@ -184,8 +236,7 @@ def find_call(text, piece, v):
             a = cs[0]["args"]
             if a[0].strip().startswith("...(") and len(a) >= 2:
                 return {"line": n, "call": cs[0], "how": "spread"}
-            if len(a) >= 3 and cs[0]["kind"] not in ("plant", "pendant") and re.fullmatch(r'\s*"[NSEW]"\s*', a[2]) \
-                    and a[2].strip().strip('"') == piece.get("facing"):
+            if len(a) >= 3 and cs[0]["kind"] not in ("plant", "pendant") and same_facing(facing_of(a[2], v), piece.get("facing")):
                 return {"line": n, "call": cs[0], "how": "expr"}
     # 3. built in a loop or by shared code: no line of its own, so this version's MOVED table entry
     if int(piece.get("twins") or 1) > 1:
@@ -216,10 +267,14 @@ def scopes(text, v):
 # --- The plan outline under a piece ---------------------------------------------------------------------------------
 def outlines_near(ws, box, pad=0.3):
     code, q = E.run([E.dwg_python(), str(E.ROOT / "edit_ai_dxf.py"), "query", str(ws.dxf()), f"--origin={E.ORIGIN[0]},{E.ORIGIN[1]}",
-                     f"--bbox={box[0] - pad},{box[1] - pad},{box[2] + pad},{box[3] + pad}", "--layers=2furni,2 furni", "--limit", "400"],
-                    timeout=90)
+                     f"--bbox={box[0] - pad},{box[1] - pad},{box[2] + pad},{box[3] + pad}", "--layers=2furni,2 furni", "--limit", "400",
+                     "--blocks"], timeout=90)
     out = []
     for d in json.loads(q).get("entities", []):
+        if d["type"] == "INSERT":  # a piece drawn as one block: the whole block
+            if d.get("bbox"):
+                out.append({"handle": d["handle"], "box": tuple(d["bbox"]), "block": True})
+            continue
         ps = d.get("points") or ([d["bbox"][:2], d["bbox"][2:]] if d.get("bbox") else [])
         if d["type"] == "LWPOLYLINE" and (len(ps) >= 4 or d.get("n_points", 0) >= 4):
             xs, ys = [p[0] for p in ps], [p[1] for p in ps]
@@ -238,21 +293,27 @@ def inter(a, b):
 
 
 def outline_of(ws, piece):
-    """("own", handle, box) of the 2furni outline drawn for this piece; ("shared", handle, box) when it is drawn only
-    inside one outline round several pieces; None for a 3D-only one."""
+    """("own", handle, box) of the 2furni outline drawn for this piece; ("block", handle, box) when it is drawn as one
+    furniture block; ("shared", handle, box) when it is drawn only inside one outline round several pieces; None for a
+    3D-only one."""
     box, low = [float(v) for v in piece["box"]], float(piece.get("low", 0))
     if low >= HEAD_HEIGHT or piece.get("light"):
         return None
-    best, best_iou, cover = None, 0.0, None
+    best, best_iou, blk, blk_iou, cover = None, 0.0, None, 0.0, None
     for o in outlines_near(ws, box):
         i = inter(box, o["box"])
         iou = i / (area(box) + area(o["box"]) - i) if i else 0.0
-        if iou > best_iou:
+        if o.get("block"):
+            if iou > blk_iou:
+                blk, blk_iou = o, iou
+        elif iou > best_iou:
             best, best_iou = o, iou
-        if area(box) and i / area(box) >= 0.8 and (cover is None or area(o["box"]) < area(cover["box"])):
+        if not o.get("block") and area(box) and i / area(box) >= 0.8 and (cover is None or area(o["box"]) < area(cover["box"])):
             cover = o
     if best and best_iou >= 0.45:
         return "own", best["handle"], best["box"]
+    if blk and blk_iou >= 0.45:  # no outline of its own: the block it's drawn as
+        return "block", blk["handle"], blk["box"]
     if cover and low < 0.3:
         return "shared", cover["handle"], cover["box"]
     return None
@@ -507,6 +568,7 @@ def transform(req):
     box = [float(t) for t in piece["box"]]
     outline = None if piece.get("noPlan") or param else outline_of(ws, piece)  # a niche is cut into a wall: not on the plan
     own = outline and outline[0] == "own"
+    block = outline and outline[0] == "block"
     x, y = float(piece["x"]), float(piece["y"])
     A = [float(t) for t in piece.get("anchor") or [x, y]]  # where the item stands now (a MOVED piece isn't at x, y)
     si = [float(t) for t in piece.get("scale") or [1, 1]]
@@ -521,11 +583,23 @@ def transform(req):
         A[io_] += so_ * si[1] * float(fr["pos"][1])
         si = [si[0] * float(fr["scale"][0]), si[1] * float(fr["scale"][1])]
 
+    rot = (float(req.get("rotate") or 0) + 180) % 360 - 180 if op == "move" else 0.0
+    rot = 0.0 if abs(rot) < 0.05 else rot
+    if rot:
+        if is_part:
+            raise ValueError(f"The {label} is part of a piece; turn the whole piece instead.")
+        if found["how"] in ("rug", "table") or facing_at(call) is None or facing_of(call["args"][facing_at(call)], v) is None:
+            raise ValueError(f"The {label} is placed by code that has no facing of its own to turn, " + CANT)
     if op == "move":
         dx, dy = float(req.get("dx") or 0), float(req.get("dy") or 0)
-        if abs(dx) < 0.001 and abs(dy) < 0.001:
+        if abs(dx) < 0.001 and abs(dy) < 0.001 and not rot:
             raise ValueError("That didn't move it.")
         nbox = [box[0] + dx, box[1] + dy, box[2] + dx, box[3] + dy]
+        if rot:  # turned about the centre of its plan box: the box it then takes
+            c, t = ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2), math.radians(rot)
+            hw, hd = (box[2] - box[0]) / 2, (box[3] - box[1]) / 2
+            ew, ed = abs(hw * math.cos(t)) + abs(hd * math.sin(t)), abs(hw * math.sin(t)) + abs(hd * math.cos(t))
+            nbox = [c[0] + dx - ew, c[1] + dy - ed, c[0] + dx + ew, c[1] + dy + ed]
     else:
         nbox = [float(t) for t in req["box"]]
         if nbox[2] - nbox[0] < min(0.03, box[2] - box[0]) - 1e-4 or nbox[3] - nbox[1] < min(0.02, box[3] - box[1]) - 1e-4:
@@ -539,6 +613,15 @@ def transform(req):
             raise ValueError("On the plan this piece is drawn inside one outline with the pieces next to it, so it can only "
                              "be adjusted within that outline. Make an Edit can redraw the plan.")
         notes.append("on the plan it's drawn as part of a group outline, so only the 3D changed")
+    elif (block or own) and rot:  # turned: the plan piece turns about the same point and moves the same metres
+        rep = plan_op(ws, [{"op": "rotate_piece", "handle": outline[1], "angle": round(rot, 3),
+                            "centre": [r4((box[0] + box[2]) / 2), r4((box[1] + box[3]) / 2)], "dx": r4(dx), "dy": r4(dy)}])
+        notes += [f"it now runs into {c.get('with')}" for c in rep.get("clashes", []) if not c.get("free")][:2]
+    elif block:  # drawn as one block (the WC symbol): a move takes the whole block with it; it can't be resized on the plan
+        if op == "move":
+            plan_op(ws, [{"op": "move", "handles": [outline[1]], "dx": r4(dx), "dy": r4(dy)}])
+        else:
+            notes.append("on the plan it's a drawn symbol, which keeps its size, so only the 3D changed size")
     elif own:  # the plan moves first; the 3D follows what the plan really did
         ob = outline[2]
         if op == "move":
@@ -595,6 +678,10 @@ def transform(req):
         text = set_rug(text, call, [a[0] + nbox[0] - box[0], a[1] + nbox[1] - box[1], a[2] + nbox[2] - box[2], a[3] + nbox[3] - box[3]], v, sh)
     else:
         a_new, s_new = [A[0] + dx, A[1] + dy], list(si)
+        if rot:  # its back-centre swings round the centre of its plan box
+            c, t = ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2), math.radians(rot)
+            u, w = A[0] - c[0], A[1] - c[1]
+            a_new = [c[0] + u * math.cos(t) - w * math.sin(t) + dx, c[1] + u * math.sin(t) + w * math.cos(t) + dy]
         if resized:  # plan = A + sign·S·u: the anchor moves and the scale changes
             (ia, sa), (io, so) = axes(facing)
 
@@ -612,11 +699,16 @@ def transform(req):
             if abs(a_new[0] - A[0]) > 1e-4 or abs(a_new[1] - A[1]) > 1e-4:
                 text = set_xy(text, call, a_new[0], a_new[1], v, sh)
                 call = next(c for c in calls_on_line(text, found["line"]) if c["kind"] == call["kind"])
+            if rot:
+                text = set_facing(text, call, turned(facing_of(call["args"][facing_at(call)], v), rot), v, sh)
+                call = next(c for c in calls_on_line(text, found["line"]) if c["kind"] == call["kind"])
             if resized:
                 text = set_size(text, call, s_new[0], s_new[1], v, sh)
     w0, d0 = box[2] - box[0], box[3] - box[1]
     w1, d1 = nbox[2] - nbox[0], nbox[3] - nbox[1]
     summary = (f"{NAME}: {label} to {w1 * 100:.0f} × {d1 * 100:.0f} cm on plan (was {w0 * 100:.0f} × {d0 * 100:.0f})" if resized
+               else f"{NAME}: {label} turned {abs(rot):g}° {'anticlockwise' if rot > 0 else 'clockwise'}"
+               + (f" and moved {describe(dx, dy)}" if abs(dx) >= 0.005 or abs(dy) >= 0.005 else "") if rot
                else f"{NAME}: {label} {describe(dx, dy)}")
     if not outline:
         notes.append("it isn't drawn on the 2D plan (3D-only), so only the 3D changed")
@@ -636,5 +728,5 @@ def transform(req):
                      + "), so that lock is now suspended; Undo puts it back")
     man = E.save(ws, summary + (" (" + "; ".join(notes) + ")" if notes else ""))
     return {"rev": man["rev"], "changed": sorted(ws.changed), "summary": summary, "notes": notes, "op": op,
-            "plan": bool(own), "outline": own and outline[1], "moved": [r4(dx), r4(dy)], "box": [r4(t) for t in nbox],
+            "plan": bool(own or (block and op == "move")), "outline": (own or block) and outline[1], "moved": [r4(dx), r4(dy)], "rotated": rot, "box": [r4(t) for t in nbox],
             "how": found["how"], "sync": man.get("sync")}

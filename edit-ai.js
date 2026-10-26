@@ -603,9 +603,10 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     return out;
   }
   // Luna's 1-5 grade of the wording before any edit model runs; null when the check is off or fails (it never blocks).
+  // It also gets the view with the red marks (low detail), so "this window" is judged against what is actually there.
   async function precheck(text, nRefs) {
     try {
-      const j = await call("precheck", { message: text, refs: nRefs, context: context() });
+      const j = await call("precheck", { message: text, refs: nRefs, context: context(), image: marked() });
       return j.skipped ? null : j;
     } catch { return null; }
   }

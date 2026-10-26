@@ -2234,7 +2234,8 @@ def ask_json(model, system, content, max_out=300):
     return out, res.get("usage") or {}
 
 
-# Luna, text only (no picture: a few hundred tokens). What a good request needs, by kind of edit.
+# Luna, with the view and its red marks at low detail (what the circle covers, how many pieces of a kind are in view).
+# What a good request needs, by kind of edit.
 PRECHECK_SYSTEM = """You grade a request to an AI that edits a 3D model / 2D plan of a flat, before it runs.
 Score 1-5 how likely the request is to get what the user means first time: 5 clear, 4 small guess, 3 a real guess,
 2 key detail missing, 1 can't be done as asked. What each kind needs:
@@ -2242,8 +2243,13 @@ move: which piece (a circle counts) and where to (direction + distance, a landma
 colour/finish: which piece (a circle counts) and the colour or material named;
 resize: which piece, which dimension and a size or a clear direction;
 add: what, where and roughly how big; remove: which piece.
-A Whole view request must name the piece. A question about the home (sizes, areas, how much paint / tile, what is
-where) is fine: score 5. Reply in the request's language.
+When the view is attached, judge against it. Circled (red): the circle is the piece (2+ marks: 1 = the piece, 2+ =
+where it goes); if the words name a piece the circle doesn't cover, score 2 and say so. Whole view (no circle) must
+name the piece: if only one of that kind is in view, naming the kind is enough ("this window"), don't ask which; if
+several are, the words must pick one (left / right, nearest, by the sofa...), else score 2 and ask which.
+Without the view: naming the kind is enough.
+A question about the home (sizes, areas, how much paint / tile, what is where) is fine: score 5.
+Reply in the request's language.
 Answer JSON only: {"score":n,"tip":"what to add, max 15 words; empty when 5"}"""
 
 
@@ -2266,6 +2272,16 @@ def precheck(req):
         marked = "nothing circled"
     content = (f"View: {'2D plan' if c.get('showing') == 'drawing' else '3D'}. Marked: {marked}. "
                f"Reference pictures: {int(req.get('refs') or 0)}.\nRequest: {message}")
+    image = req.get("image")
+    try:
+        image = check_image(image, "view") if image else None
+    except ValueError:
+        image = None  # a bad picture just means the text-only check
+    if image:
+        inked = not marked.startswith(("Whole", "nothing"))
+        content = [{"type": "text", "text": content + ("\nThe view is attached, with the red marks." if inked
+                                                       else "\nThe view is attached.")},
+                   {"type": "image_url", "image_url": {"url": image, "detail": "low"}}]
     total = {}
     try:
         out, usage = ask_json(PRECHECK_MODEL, PRECHECK_SYSTEM, content, max_out=80)

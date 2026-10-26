@@ -115,6 +115,7 @@ export function furnish(scene, M, mat, version = "main") {
 
   // Move and Resize deletes: "x,y,facing" keys, one version-guarded line each.
   const REMOVED = new Set();
+  if (version === "karims-version") REMOVED.add("20.7945,2.45,S");  // reception corner side table: the flip desk stands there (Karim, 27 Oct)
   // Move and Resize (move_tool.py) for pieces a loop or shared code places, which have no line of their own to change:
   // "x,y,facing" as the code places them -> [x, y, across, out(, up, lift)] where they go instead (up: height scale,
   // lift: metres raised), one version-guarded line each.
@@ -1617,8 +1618,11 @@ export function furnish(scene, M, mat, version = "main") {
   // the 0.855 m left either side (1.4525 from the centre). Main (Karim t355): 19.338, mid-way between the DWG's
   // run front (17.4545) and east wall (21.2222), where its AC, sofa and side table now sit too.
   const KC = ["kareems-changes", "karims-version"].includes(version), SC = version === "kareems-changes" ? 19.338 : 19.342, SO = 1.4525;
-  item(KC ? SC : 18.86, 2.103, "N", p => sofa(p, 2.05, 1.02, mat.boucle, [mat.linenSlate, mat.linenBlush, mat.linenSlate]));  // DWG, clear of the pier
-  item(21.027, 4.165, "W", p => sofa(p, 2.0, 0.92, mat.boucle, [mat.linenSlate, mat.linenBlush]));  // centred on the DWG sofa, back on its back line, clear of the curtains
+  // Karim's version: both sofas slid along their walls for the flip desk in the east corner (Karim, 27 Oct). South
+  // sofa 0.177 west (x 18.14-20.19, 1 cm clear of the plant pot at SC - SO); east sofa 0.36 north (y 3.525-5.525,
+  // 1.455 from the south wall). Prints, AC, plant, rug and coffee table stay put.
+  item(version === "karims-version" ? 19.165 : KC ? SC : 18.86, 2.103, "N", p => sofa(p, 2.05, 1.02, mat.boucle, [mat.linenSlate, mat.linenBlush, mat.linenSlate]));  // DWG, clear of the pier
+  item(21.027, version === "karims-version" ? 4.525 : 4.165, "W", p => sofa(p, 2.0, 0.92, mat.boucle, [mat.linenSlate, mat.linenBlush]));  // centred on the DWG sofa, back on its back line, clear of the curtains
   item(version === "karims-version" ? 18.99 : 19.1, version === "karims-version" ? 6 : 5.95, "S", p => {  // DWG armchair, as rendered: open walnut lounge frame, slate cushions, blush pillow
     const cw = mat.walnut, cf = mat.linenSlate;  // frame, upholstery (the black in e9f8dba undone, 26 Oct)
     for (const s of [-1, 1]) {
@@ -1639,6 +1643,63 @@ export function furnish(scene, M, mat, version = "main") {
   });
   // DWG side table (Kareem's: in the east corner, 0.10 clear of the curtain stack at y 2.76)
   item(...(KC ? [SC + SO, 2.45] : [20.341, 2.687]), "S", p => { p.cyl(0, 0, 0.205, 0.52, 0.56, mat.marbleTop, 32); p.cyl(0, 0, 0.11, 0, 0.52, mat.walnut, 24); });
+  if (version === "karims-version") {
+    // Layout study (Karim, 27 Oct): Karim's flip desk in the reception's east corner, where the side table stood, back
+    // on the south (art) wall, x 20.205-21.205 (1.5 cm off the sofa arm, 1.7 cm off the east wall), front y 2.68, 8 cm
+    // short of the curtain stack. Same desk as Main's coffee corner: 1.00 L x 0.60 D x 0.84 H on 5 cm casters, leg
+    // clear 0.68, monitor on the lid underside, top of screen 1.36 AFF with the lid up. Built open; "Flip desk lid" closes it.
+    named(item(20.705, 2.08, "N", p => {
+      const desk = p.g, r = p;
+      for (const x of [-0.46, 0.46]) for (const z of [0.04, 0.56]) {
+        r.cyl(x, z, 0.022, 0.005, 0.045, mat.blackSteel, 16);  // caster wheel
+        r.box(x - 0.02, x + 0.02, 0.045, 0.05, z - 0.02, z + 0.02, mat.blackSteel);  // caster plate
+        r.box(x - 0.02, x + 0.02, 0.05, 0.84, z - 0.02, z + 0.02, mat.walnut);  // leg
+      }
+      r.box(-0.48, 0.48, 0.68, 0.70, 0.02, 0.58, mat.oakVeneer);  // well floor, underside 0.68
+      for (const x of [-0.5, 0.48]) r.box(x, x + 0.02, 0.68, 0.82, 0.02, 0.58, mat.walnut);  // side aprons
+      for (const z of [0, 0.58]) r.box(-0.5, 0.5, 0.68, 0.82, z, z + 0.02, mat.walnut);  // back / front aprons
+      r.box(-0.5, 0.5, 0.82, 0.84, 0.55, 0.6, mat.walnut);  // fixed front leaf
+      r.cyl(0, 0, 0.006, 0.84 - 0.45, 0.84 + 0.45, mat.chrome, 8).rotation.z = Math.PI / 2;  // rear piano hinge
+      const lid = new THREE.Group(), l = part(lid); lid.position.set(0, 0.84, 0); lid.rotation.x = -Math.PI / 2; desk.add(lid);
+      l.box(-0.5, 0.5, -0.02, 0, 0, 0.55, mat.walnut);
+      l.box(-0.06, 0.06, -0.045, -0.02, 0.278, 0.398, mat.blackSteel);  // VESA 100 plate
+      // Curved 1500R panel, 81 cm wide, 36.5 cm along the lid, face down (toward the user once the lid is up).
+      const band = (r0, r1, w, z0, h, m) => {
+        const cy = -0.075 - 1.5, a = Math.asin(w / 2 / r1), s = new THREE.Shape();
+        s.moveTo(r1 * Math.cos(Math.PI / 2 - a), cy + r1 * Math.sin(Math.PI / 2 - a));
+        s.absarc(0, cy, r1, Math.PI / 2 - a, Math.PI / 2 + a, false);
+        s.absarc(0, cy, r0, Math.PI / 2 + a, Math.PI / 2 - a, true);
+        mesh(new THREE.ExtrudeGeometry(s, { depth: h, bevelEnabled: false, curveSegments: 24 }), m, lid).position.z = z0;
+      };
+      band(1.502, 1.53, 0.81, 0.155, 0.365, mat.blackSteel);
+      band(1.5, 1.502, 0.79, 0.165, 0.345, mat.screen);
+      for (const x of [-0.46, 0.46]) l.cyl(x, 0.155, 0.007, -0.201, 0.061, mat.blackSteel, 8).rotation.x = Math.atan2(0.25, 0.08);  // gas struts
+      desk.userData.openable = { id: "reception-flip-desk-lid", label: "Flip desk lid", leaves: [{ obj: lid, axis: "x", open: Math.PI / 2 }],
+        anchor: new THREE.Vector3(0, 0.9, 0.7), reach: 1.8, duration: 0.8 };
+    }), "flip desk with a monitor in its lid");
+    // Gaming chair on the user side, facing the desk: 0.70 x 0.70 five-star base, seat 0.45, high back to 1.34 with a
+    // headrest; seat front 0.10 off the desk front (y 2.78), back of the base at y 3.48, 4.5 cm short of the east sofa.
+    named(item(20.655, 3.48, "S", p => {
+      for (let k = 0; k < 5; k++) {
+        const a = k * 2 * Math.PI / 5, x = Math.sin(a) * 0.31, z = 0.35 + Math.cos(a) * 0.31;
+        const leg = p.box(-0.02, 0.02, 0.05, 0.08, -0.155, 0.155, mat.chairBlack, 0.01);  // base spoke
+        leg.position.set(x / 2, 0.065, (z + 0.35) / 2); leg.rotation.y = a;
+        p.cyl(x, z, 0.025, 0, 0.05, mat.blackSteel, 12);  // caster
+      }
+      p.cyl(0, 0.35, 0.03, 0.06, 0.1, mat.chairBlack, 16);  // hub
+      p.cyl(0, 0.35, 0.022, 0.1, 0.33, mat.chrome, 12);  // gas lift
+      p.box(-0.1, 0.1, 0.32, 0.35, 0.25, 0.45, mat.chairBlack);  // tilt mechanism
+      p.box(-0.27, 0.27, 0.35, 0.45, 0.14, 0.64, mat.chairBlackFabric, 0.04);  // seat, top 0.45
+      p.box(-0.26, 0.26, 0.47, 1.22, 0.06, 0.16, mat.chairBlackFabric, 0.05).rotation.x = -0.12;  // high back
+      p.box(-0.15, 0.15, 1.12, 1.34, 0.01, 0.12, mat.chairBlackFabric, 0.05).rotation.x = -0.12;  // headrest
+      for (const s of [-1, 1]) p.box(s * 0.26 - 0.025, s * 0.26 + 0.025, 0.55, 1.15, 0.05, 0.19, mat.chairBlack, 0.02).rotation.x = -0.12;  // side bolsters
+      p.box(-0.14, 0.14, 0.6, 0.72, 0.16, 0.22, mat.chairBlack, 0.04);  // lumbar pillow
+      for (const s of [-1, 1]) {
+        p.box(s * 0.3 - 0.015, s * 0.3 + 0.015, 0.4, 0.64, 0.33, 0.37, mat.chairBlack);  // armrest post
+        p.box(s * 0.3 - 0.04, s * 0.3 + 0.04, 0.64, 0.67, 0.2, 0.5, mat.chairBlack, 0.012);  // armrest pad
+      }
+    }), "gaming desk chair");
+  }
   if (KC) plant(SC - SO, 2.45, 1.6, 0.24);  // clear of the TV-wall run (x 17.462)
   else plant(17.6, 2.33, 1.6, 0.24);
   // Two 1.05 x 1.30 m framed prints as in render 11, 0.30 m apart and centred over the sofa, on the south

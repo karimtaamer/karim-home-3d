@@ -1546,8 +1546,9 @@ export function furnish(scene, M, mat, version = "main") {
   }), "TV library wall");
   // Kareem's Changes: sofa, prints and split AC centred on the south wall's visible face, x 17.462 (TV-wall run,
   // 0.08 behind the column-flush TV box) to 21.222 (east wall), so x 19.342; side table and plant each mid-way in
-  // the 0.855 m left either side (1.4525 from the centre).
-  const KC = ["kareems-changes", "karims-version"].includes(version), SC = 19.342, SO = 1.4525;
+  // the 0.855 m left either side (1.4525 from the centre). Main (Karim t355): 19.338, mid-way between the DWG's
+  // run front (17.4545) and east wall (21.2222), where its AC, sofa and side table now sit too.
+  const KC = ["kareems-changes", "karims-version"].includes(version), SC = version === "kareems-changes" ? 19.338 : 19.342, SO = 1.4525;
   item(KC ? SC : 18.86, 2.103, "N", p => sofa(p, 2.05, 1.02, mat.boucle, [mat.linenSlate, mat.linenBlush, mat.linenSlate]));  // DWG, clear of the pier
   item(21.027, 4.165, "W", p => sofa(p, 2.0, 0.92, mat.boucle, [mat.linenSlate, mat.linenBlush]));  // centred on the DWG sofa, back on its back line, clear of the curtains
   item(version === "karims-version" ? 18.33 : 19.1, version === "karims-version" ? 4.59 : 5.95, "S", p => {  // DWG armchair, as rendered: open walnut lounge frame, slate cushions, blush pillow

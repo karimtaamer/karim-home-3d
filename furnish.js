@@ -1025,7 +1025,7 @@ export function furnish(scene, M, mat, version = "main") {
     p.cyl(0.55, 0.3, 0.05, 0.85, 1.05, mat.planter, 16, 0.04);  // styling: vase, bottles
     for (const [x, h] of [[-0.45, 0.16], [-0.52, 0.12], [-0.6, 0.18]]) p.cyl(x, 0.3, 0.025, 0.85, 0.85 + h, mat.ceramic, 12);
   });
-  item(version === "kareems-changes" ? 13.572 : 13.642, version === "kareems-changes" ? 9.18 : 9.18, "S", p => {  // wall-hung WC (DWG), 42.5 cm from the vanity front (and from the bath ledge, except in Main: 57.7 since 26 Oct); brass bidet mixer left, roll holder right
+  item(13.642, 9.18, "S", p => {  // wall-hung WC (DWG), 42.5 cm from the vanity front (and from the bath ledge, except in Main: 57.7 since 26 Oct); brass bidet mixer left, roll holder right
     p.model("models/wc-wallhung.glb", mat.ceramic, 0, 0.1, 0.02);
     bidetMixer(p, -0.3, 0.55, 0, mat.brass);
     p.box(0.22, 0.36, 0.6, 0.72, 0, 0.1, mat.brass, 0.03);

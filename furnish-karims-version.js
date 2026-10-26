@@ -1863,14 +1863,6 @@ export function furnish(scene, M, mat, version = "main") {
     [mat.linenSlate, mat.cushionMustard, mat.linenSage].forEach((c, k) => { const m = p.box(-0.7 + k * 0.7 - 0.22, -0.7 + k * 0.7 + 0.22, 0.55, 0.95, 0.18, 0.32, c, 0.08); m.rotation.x = -0.15; });
   });
   item(23.4, 3.4, "S", p => p.cyl(0, 0, 0.45, 0, 0.38, mat.stoneTable, 40));
-  // Chandelier over the actual dining table: drop and shade are centred on its tabletop.
-  item(18.4, 7.6, "S", p => {
-    p.cyl(0, 0, 0.018, 2.28, 2.5, mat.brass, 20);
-    p.cyl(0, 0.01, 0.025, 2.23, 2.29, mat.brass, 20);
-    p.cyl(0, 0.01, 0.27, 1.52, 1.60, mat.brass, 32);
-    p.cyl(0, 0.01, 0.22, 1.48, 1.52, mat.ledStrip, 32);
-  });
-  lamp(18.4, 7.59, 1.48, { color: 0xffd2a0, power: 2.2, beam: 58, target: [18.4, 7.6, 0.76] });
   item(T.x1, 7.1, "W", p => sofa(p, 2.1, 0.9, mat.boucle, [mat.linenSage, mat.linenBlush, mat.linenSlate]));
   for (const y of [6.3, 7.9]) item(22.1, y, "E", p => {
     p.box(-0.4, 0.4, 0.05, 0.6, 0, 0.8, mat.walnut, 0.02);

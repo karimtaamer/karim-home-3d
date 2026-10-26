@@ -1547,7 +1547,7 @@ export function furnish(scene, M, mat, version = "main") {
   const KC = ["kareems-changes", "karims-version"].includes(version), SC = 19.342, SO = 1.4525;
   item(KC ? SC : 18.86, 2.103, "N", p => sofa(p, 2.05, 1.02, mat.boucle, [mat.linenSlate, mat.linenBlush, mat.linenSlate]));  // DWG, clear of the pier
   item(21.027, 4.165, "W", p => sofa(p, 2.0, 0.92, mat.boucle, [mat.linenSlate, mat.linenBlush]));  // centred on the DWG sofa, back on its back line, clear of the curtains
-  item(19.1, 5.95, "S", p => {  // DWG armchair, as rendered: open walnut lounge frame, slate cushions, blush pillow
+  item(version === "karims-version" ? 18.33 : 19.1, version === "karims-version" ? 4.59 : 5.95, "S", p => {  // DWG armchair, as rendered: open walnut lounge frame, slate cushions, blush pillow
     const cw = mat.walnut, cf = mat.linenSlate;  // frame, upholstery (the black in e9f8dba undone, 26 Oct)
     for (const s of [-1, 1]) {
       const x = s * 0.36;

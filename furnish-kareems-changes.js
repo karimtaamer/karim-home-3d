@@ -1744,34 +1744,77 @@ export function furnish(scene, M, mat, version = "main") {
   // (2.00) and 0.18 under the ceiling.
   if (["kareems-changes", "karims-version"].includes(version)) ac(14.972, 8.697, "E", 2.42, 1.05, 0.3, 0.23, true);
   else if (NCAC) ac(14.852, 8.79, "E", 2.42, 1.05, 0.3, 0.23, true);
-  item(20.474, 9.5, "S", p => {  // coffee corner (DWG, 0.60 deep), column to wall: walnut base, white top, lit shelves
-    // Two bays: left = one swinging door over a single shelf (water dispenser sits on the top above it);
-    // right = drawer stack top to bottom. Opens with a tap / E in Walk.
+  item(20.474, 9.5, "S", p => {  // coffee corner (DWG 0.60 deep; 0.66 here for the flip desk), column to wall: walnut base, marble top, lit shelves
+    // Two bays: left = a pair of doors (درفة) over Karim's flip desk, stowed on its casters on the floor (water
+    // dispenser sits on the top above it); right = drawer stack top to bottom. Opens with a tap / E in Walk.
+    // رخامة top 1.00 AFF (was 0.92), 3 cm thick; the desk bay is 1.055 W x 0.625 D x 0.95 H clear for the closed
+    // desk's 1.00 x 0.60 x 0.84 (Karim, 27 Oct 2026: bay >= 100 x 62 x 82).
     const c = new THREE.Group(), q = part(c), leaves = []; p.g.add(c);
-    const F = 0.58, mid = 0.0;  // front face; split at centre
-    q.box(-0.75, 0.75, 0.1, 0.88, 0, ["kareems-changes", "karims-version"].includes(version) ? 0.015 : F - 0.02, mat.walnut);  // carcass (Kareem's: back only, interior visible when opened)
-    q.box(-0.75, 0.75, 0.1, 0.12, 0, F, mat.walnut);  // plinth shelf
-    q.box(-0.02, 0.02, 0.12, 0.88, 0, F - 0.02, mat.walnut);  // centre divider
-    // Left bay: one shelf at mid-height, open behind the door.
-    q.box(-0.73, -0.02, 0.48, 0.505, 0.02, F - 0.04, mat.oakVeneer);
+    const F = 0.64, T = 1.0, X = 0.305;  // door plane (back of the doors); top of the marble; desk bay | drawers divider
+    q.box(-0.75, 0.75, 0, T - 0.03, 0, 0.015, mat.walnut);  // carcass back only, interior visible when opened
+    q.box(-0.75, 0.75, T - 0.05, T - 0.03, 0.015, F, mat.walnut);  // top panel under the marble
+    q.box(X + 0.015, 0.75, 0.1, 0.12, 0, F, mat.walnut);  // plinth shelf (drawer bay; the desk bay is open to the floor)
+    q.box(X, X + 0.03, 0, T - 0.05, 0.015, F, mat.walnut);  // divider
+    // Desk bay: two doors hinged at the column and at the divider, meeting in the middle.
+    const xm = (-0.75 + X + 0.015) / 2;
     const dL = new THREE.Group(); dL.position.set(-0.75, 0, F); c.add(dL);
-    part(dL).box(0, 0.73, 0.12, 0.88, 0, 0.02, mat.walnut);
+    part(dL).box(0, xm + 0.75 - 0.002, 0.01, T - 0.035, 0, 0.02, mat.walnut);
     leaves.push({ obj: dL, axis: "y", open: -100 * Math.PI / 180 });
+    const dR = new THREE.Group(); dR.position.set(X + 0.015, 0, F); c.add(dR);
+    part(dR).box(xm - X - 0.015 + 0.002, 0, 0.01, T - 0.035, 0, 0.02, mat.walnut);
+    leaves.push({ obj: dR, axis: "y", open: 100 * Math.PI / 180 });
     // Right bay: three drawers, top to bottom.
-    const rh = [[0.12, 0.36], [0.36, 0.60], [0.60, 0.88]];
+    const rh = [[0.12, 0.40], [0.40, 0.68], [0.68, T - 0.035]];
     rh.forEach(([y0, y1], k) => {
-      const d = new THREE.Group(); d.position.set(0.02, 0, F); c.add(d);
-      part(d).box(0, 0.73, y0, y1, 0, 0.02, mat.walnut);
-      part(d).box(0.28, 0.45, (y0 + y1) / 2 - 0.01, (y0 + y1) / 2 + 0.01, 0.02, 0.025, mat.blackSteel);  // pull
+      const d = new THREE.Group(); d.position.set(X + 0.015, 0, F); c.add(d);
+      part(d).box(0.002, 0.735 - X, y0, y1, 0, 0.02, mat.walnut);
+      part(d).box(0.12, 0.31, (y0 + y1) / 2 - 0.01, (y0 + y1) / 2 + 0.01, 0.02, 0.025, mat.blackSteel);  // pull
       leaves.push({ obj: d, slide: new THREE.Vector3(0, 0, 0.35) });
     });
     c.userData.openable = { id: "coffee-corner", label: "Coffee corner", leaves,
-      anchor: new THREE.Vector3(0, 0.5, F + 0.06), reach: 1.8, duration: 0.6 };
-    p.box(-0.75, 0.75, 0.88, 0.92, 0, 0.6, mat.marbleTop);
+      anchor: new THREE.Vector3(0, 0.5, F + 0.08), reach: 1.8, duration: 0.6 };
+    // Karim's flip desk (Savouring-style clamshell, custom for a Xiaomi 34" UW): 1.00 L x 0.60 D x 0.84 H closed on
+    // 5 cm lockable casters, leg clear 0.68, 16 cm well. Rear-hinged lid 0.55 deep with the monitor bolted (VESA
+    // 100) to its underside, screen 15.5-52 cm from the hinge, so lid up at 90 deg = top of screen 0.84 + 0.52 =
+    // 1.36 AFF. Two openables, used in turn (the engine runs one motion per tap, and the lid must clear the marble):
+    // open the coffee corner (doors), "flip desk" rolls it 0.80 out, "flip desk lid" lifts the lid and monitor.
+    const xd = (-0.75 + X) / 2, out = 0.8;
+    const desk = new THREE.Group(), r = part(desk); desk.position.set(xd, 0, 0.02); c.add(desk);
+    for (const x of [-0.46, 0.46]) for (const z of [0.04, 0.56]) {
+      r.cyl(x, z, 0.022, 0.005, 0.045, mat.blackSteel, 16);  // caster wheel
+      r.box(x - 0.02, x + 0.02, 0.045, 0.05, z - 0.02, z + 0.02, mat.blackSteel);  // caster plate
+      r.box(x - 0.02, x + 0.02, 0.05, 0.84, z - 0.02, z + 0.02, mat.walnut);  // leg
+    }
+    r.box(-0.48, 0.48, 0.68, 0.70, 0.02, 0.58, mat.oakVeneer);  // well floor, underside 0.68
+    for (const x of [-0.5, 0.48]) r.box(x, x + 0.02, 0.68, 0.82, 0.02, 0.58, mat.walnut);  // side aprons
+    for (const z of [0, 0.58]) r.box(-0.5, 0.5, 0.68, 0.82, z, z + 0.02, mat.walnut);  // back / front aprons
+    r.box(-0.5, 0.5, 0.82, 0.84, 0.55, 0.6, mat.walnut);  // fixed front leaf
+    r.cyl(0, 0, 0.006, 0.84 - 0.45, 0.84 + 0.45, mat.chrome, 8).rotation.z = Math.PI / 2;  // rear piano hinge
+    const lid = new THREE.Group(), l = part(lid); lid.position.set(0, 0.84, 0); desk.add(lid);
+    l.box(-0.5, 0.5, -0.02, 0, 0, 0.55, mat.walnut);
+    l.box(-0.06, 0.06, -0.045, -0.02, 0.278, 0.398, mat.blackSteel);  // VESA 100 plate
+    // Curved 1500R panel, 81 cm wide, 36.5 cm along the lid, face down (toward the user once the lid is up).
+    const band = (r0, r1, w, z0, h, m) => {
+      const cy = -0.075 - 1.5, a = Math.asin(w / 2 / r1), s = new THREE.Shape();
+      s.moveTo(r1 * Math.cos(Math.PI / 2 - a), cy + r1 * Math.sin(Math.PI / 2 - a));
+      s.absarc(0, cy, r1, Math.PI / 2 - a, Math.PI / 2 + a, false);
+      s.absarc(0, cy, r0, Math.PI / 2 + a, Math.PI / 2 - a, true);
+      mesh(new THREE.ExtrudeGeometry(s, { depth: h, bevelEnabled: false, curveSegments: 24 }), m, lid).position.z = z0;
+    };
+    band(1.502, 1.53, 0.81, 0.155, 0.365, mat.blackSteel);
+    band(1.5, 1.502, 0.79, 0.165, 0.345, mat.screen);
+    for (const x of [-0.46, 0.46]) l.cyl(x, 0.155, 0.007, -0.201, 0.061, mat.blackSteel, 8).rotation.x = Math.atan2(0.25, 0.08);  // gas struts
+    desk.userData.openable = { id: "coffee-flip-desk", label: "Flip desk", leaves: [{ obj: desk, slide: new THREE.Vector3(0, 0, out) }],
+      anchor: new THREE.Vector3(0, 0.6, 0.98), reach: 1.8, duration: 0.9 };
+    // The lid's cue is set where the lid sits once the desk is rolled out (cues stay where they were built).
+    lid.userData.openable = { id: "coffee-flip-desk-lid", label: "Flip desk lid", leaves: [{ obj: lid, axis: "x", open: -Math.PI / 2 }],
+      anchor: new THREE.Vector3(0, 0.05, out + 0.45), reach: 1.8, duration: 0.8 };
+    p.box(-0.75, 0.75, T - 0.03, T, 0, F + 0.02, mat.marbleTop);
     p.label("two lit floating shelves", p => {
-      for (const y of [1.55, 1.8]) { p.box(-0.75, 0.75, y, y + 0.035, 0, 0.28, mat.oakVeneer); p.box(-0.73, 0.73, y - 0.012, y, 0.03, 0.26, mat.ledStrip); }
+      for (const y of [1.63, 1.88]) { p.box(-0.75, 0.75, y, y + 0.035, 0, 0.28, mat.oakVeneer); p.box(-0.73, 0.73, y - 0.012, y, 0.03, 0.26, mat.ledStrip); }
     });
     // Espresso machine: steel body over a recessed brew bay, group head, portafilter, steam wand, cup
+    // (drawn on the old 0.92 top, lifted to the 1.00 رخامة with the dispenser).
     p.label("espresso machine", p => {
       p.box(0.2, 0.5, 0.92, 0.95, 0.06, 0.42, mat.blackSteel, 0.008);
       p.box(0.2, 0.5, 0.95, 1.12, 0.06, 0.2, mat.chrome, 0.015);
@@ -1782,14 +1825,14 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(0.335, 0.365, 1.05, 1.075, 0.3, 0.5, mat.blackSteel, 0.012);
       p.cyl(0.46, 0.34, 0.005, 0.99, 1.12, mat.chrome, 8);
       p.cyl(0.35, 0.3, 0.032, 0.95, 1.01, mat.whiteLacquer, 16, 0.026);
-    });
+    }).position.y = T - 0.92;
     // Fresh 2-tap countertop water dispenser, 31.5 W x 54 H x 42.5 D cm, at the column end (over the left bay)
     p.label("two-tap countertop water dispenser", p => {
       p.box(-0.694, -0.379, 0.92, 1.46, 0, 0.425, mat.blackSteel, 0.03);
       p.box(-0.6, -0.47, 1.32, 1.38, 0.425, 0.43, mat.blackGlass);
       for (const x of [-0.6, -0.48]) p.box(x - 0.02, x + 0.02, 1.13, 1.2, 0.41, 0.45, mat.chrome);
       p.box(-0.68, -0.39, 0.93, 0.95, 0.3, 0.44, mat.chrome);
-    });
+    }).position.y = T - 0.92;
   });
   item(16.95, 9.5, "S", p => p.box(-1.0, 1.0, 2.5, 2.52, 0.02, 0.22, mat.ledStrip));
   if (["kareems-changes", "karims-version"].includes(version)) item(18.55, 9.502, "S", p => {

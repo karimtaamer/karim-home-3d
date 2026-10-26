@@ -106,6 +106,9 @@ export function furnish(scene, M, mat, version = "main") {
     return m;
   }
 
+  // Move and Resize (move_tool.py) for pieces a loop or shared code places, which have no line of their own to change:
+  // "x,y,facing" as the code places them -> [x, y, across, out] where they go instead, one version-guarded line each.
+  const MOVED = {};
   // An item is built in its own frame (x across, y up, z out from the wall it backs onto, back
   // at z = 0), then placed with its back-centre on a plan point, facing N/E/S/W into the room.
   function item(x, y, facing, build, parent = root) {
@@ -113,8 +116,14 @@ export function furnish(scene, M, mat, version = "main") {
     build(part(g));
     g.position.set(x, 0, -y);
     g.rotation.y = typeof facing === "number" ? facing : FACING[facing];
-    // For the Move tool (move.js / move_tool.py): where this item( call sits in furnish.js and what it was given.
+    // For Move and Resize (move.js / move_tool.py): where this item( call sits in furnish.js and what it was given.
     g.userData.piece = { x, y, facing, lines: callLines() };
+    const moved = MOVED[`${+x.toFixed(4)},${+y.toFixed(4)},${facing}`];
+    if (moved) {
+      g.position.set(moved[0], 0, -moved[1]);
+      g.scale.set(moved[2], 1, moved[3]);
+      g.userData.piece.moved = true;
+    }
     parent.add(g);
     return g;
   }
@@ -245,10 +254,13 @@ export function furnish(scene, M, mat, version = "main") {
       },
       // A named part, built by build(p) in a child group at the item's origin: Generate Photo Spot lists what the
       // view shows by these names (and by spotnames.js words), so the image model knows what each grey shape is.
-      label(text, build) {
+      // param (Move and Resize): the part is drawn from numbers in the item's code, e.g. a niche cut from `tall`:
+      // { src: "tall", at: [0], x: [0, 1] } = across from tall[0][0] to tall[0][1]; resizing it changes those numbers.
+      label(text, build, param) {
         const c = new THREE.Group();
         c.userData.label = text;
-        c.userData.part = true;  // the Move tool can pick it on its own
+        c.userData.part = true;  // Move and Resize can pick it on its own
+        if (param) c.userData.param = param;
         g.add(c);
         build(part(c));
         return c;
@@ -1453,7 +1465,7 @@ export function furnish(scene, M, mat, version = "main") {
   rug(7.1, 4.3, 10.9, 5.1, mat.art[1]);
 
   // --- Reception: TV wall with lit oak niches, two sofas, armchair -----------------------------
-  item(17.25, 3.67, "E", p => {  // per render 10: a plaster TV box standing proud of a built-out run
+  named(item(17.25, 3.67, "E", p => {  // per render 10: a plaster TV box standing proud of a built-out run
     // holding two tall rounded oak-lined niches (south), and a lit rounded oak recess under the TV.
     // North end (local x 1.72) meets the reception column at plan y 5.3914 — keep that edge flat/flush.
     const KC = version === "kareems-changes";
@@ -1468,11 +1480,11 @@ export function furnish(scene, M, mat, version = "main") {
       for (const h of holes) s.holes.push(roundRect(new THREE.Path(), ...h));
       mesh(new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: false, curveSegments: 12 }), mat.limewash, p.g);
     };
-    const lined = (x0, x1, y0, y1, r, d) => {  // oak lining and back for a rounded opening d deep
+    const lined = (q, x0, x1, y0, y1, r, d) => {  // oak lining and back for a rounded opening d deep
       const ring = roundRect(new THREE.Shape(), x0, x1, y0, y1, r);
       ring.holes.push(roundRect(new THREE.Path(), x0 + 0.018, x1 - 0.018, y0 + 0.018, y1 - 0.018, r - 0.018));
-      mesh(new THREE.ExtrudeGeometry(ring, { depth: d, bevelEnabled: false, curveSegments: 12 }), honeyOak, p.g);
-      mesh(new THREE.ExtrudeGeometry(roundRect(new THREE.Shape(), x0, x1, y0, y1, r), { depth: 0.01, bevelEnabled: false, curveSegments: 12 }), honeyOak, p.g);
+      mesh(new THREE.ExtrudeGeometry(ring, { depth: d, bevelEnabled: false, curveSegments: 12 }), honeyOak, q.g);
+      mesh(new THREE.ExtrudeGeometry(roundRect(new THREE.Shape(), x0, x1, y0, y1, r), { depth: 0.01, bevelEnabled: false, curveSegments: 12 }), honeyOak, q.g);
     };
     // Kareem's (Karim t315, 25 Oct 2026): the TV and its low niche are centred on the ELEVATED panel — the proud D1
     // box face from the splayed return (local edge -0.51) to the column seam (local 1.72, plan y 5.3914): centre
@@ -1494,16 +1506,19 @@ export function furnish(scene, M, mat, version = "main") {
     const wedgeGeo = new THREE.ExtrudeGeometry(wedge, { depth: H, bevelEnabled: false });
     wedgeGeo.rotateX(-Math.PI / 2);  // shape v = -z, extruded up the wall
     mesh(wedgeGeo, mat.limewash, p.g);
-    lined(...low, D1);
-    p.box(low[0] + 0.1, low[1] - 0.1, 0.665, 0.675, 0.05, D1 - 0.03, mat.ledStrip);
-    for (const [x0, x1] of tall) {
-      lined(x0, x1, 0.42, 2.2, 0.13, D0);
+    // Each niche is a named part, so Move and Resize can drill into it; resizing one changes its numbers in low / tall.
+    p.label("TV niche", q => {
+      lined(q, ...low, D1);
+      q.box(low[0] + 0.1, low[1] - 0.1, 0.665, 0.675, 0.05, D1 - 0.03, mat.ledStrip);
+    }, { src: "low", x: [0, 1] });
+    tall.forEach(([x0, x1], k) => p.label(k ? "north tall niche" : "south tall niche", q => {
+      lined(q, x0, x1, 0.42, 2.2, 0.13, D0);
       for (const y of [0.86, 1.3, 1.74]) {
-        p.box(x0 + 0.015, x1 - 0.015, y, y + 0.025, 0.01, D0, honeyOak);
-        p.box(x0 + 0.03, x1 - 0.03, y - 0.012, y, 0.04, D0 - 0.03, mat.ledStrip);
+        q.box(x0 + 0.015, x1 - 0.015, y, y + 0.025, 0.01, D0, honeyOak);
+        q.box(x0 + 0.03, x1 - 0.03, y - 0.012, y, 0.04, D0 - 0.03, mat.ledStrip);
       }
-      p.box(x0 + 0.06, x1 - 0.06, 2.1, 2.112, 0.04, D0 - 0.03, mat.ledStrip);
-    }
+      q.box(x0 + 0.06, x1 - 0.06, 2.1, 2.112, 0.04, D0 - 0.03, mat.ledStrip);
+    }, { src: "tall", at: [k], x: [0, 1] }));
     // Shelf styling as rendered: vases, books, a bowl.
     p.cyl(-1.42 + n0, 0.15 + dz0, 0.045, 1.765, 1.97, mat.linenSage, 16, 0.065); p.cyl(-0.94 + n1, 0.15 + dz0, 0.035, 1.765, 1.99, mat.linenSlate, 16, 0.06);
     for (const [x, y] of [[-1.47 + n0, 1.325], [-0.99 + n1, 0.885], [-1.0 + n1, 1.325]]) for (let k = 0; k < 4; k++) p.box(x + k * 0.03, x + k * 0.03 + 0.025, y, y + 0.2 - (k % 2) * 0.03, 0.06 + dz0, 0.24 + dz0, k % 2 ? mat.linenBlush : mat.walnut);
@@ -1519,7 +1534,7 @@ export function furnish(scene, M, mat, version = "main") {
     const skirt = p.box(-L / 2, L / 2, 0, 0.08, -0.006, 0.006, mat.oakVeneer);
     skirt.position.set(edge - splay / 2 - Math.sin(a) * 0.006, 0.04, (D0 + D1) / 2 + Math.cos(a) * 0.006);
     skirt.rotation.y = -a;
-  });
+  }), "TV library wall");
   // Kareem's Changes: sofa, prints and split AC centred on the south wall's visible face, x 17.462 (TV-wall run,
   // 0.08 behind the column-flush TV box) to 21.222 (east wall), so x 19.342; side table and plant each mid-way in
   // the 0.855 m left either side (1.4525 from the centre).
@@ -1600,7 +1615,7 @@ export function furnish(scene, M, mat, version = "main") {
   }
   // Buffet wall per the DWG and the dining render (15): a plaster mass with a tall lit oak niche (south),
   // splayed back into the wall like the TV wall, then a walnut sideboard under a backlit pebble mirror.
-  item(14.79, 8.0, "E", p => {  // local x = plan y - 8, z = plan x - 14.79
+  named(item(14.79, 8.0, "E", p => {  // local x = plan y - 8, z = plan x - 14.79
     // Kareem's: the niche is the reception TV wall's tall niche (0.34 wide, 0.42-2.2 high, r 0.13, shelves 0.86 /
     // 1.3 / 1.74, LED 2.1), so the two rooms read as one family. Karim t332: centred on the mass as it reads, not
     // on the flat face alone: the r 0.2 corner reads as face (~0.16 in the dining view), so the niche sits 0.02 / 0.34 / 0.12 on the flat face and the corner is r 0.12 (was 0.20),
@@ -1628,27 +1643,31 @@ export function furnish(scene, M, mat, version = "main") {
     splay.rotateX(-Math.PI / 2);  // shape v = -z, extruded up the wall
     mesh(splay, mat.limewash, p.g);
     const [x0, x1, y0, y1, r] = niche;  // oak lining, back and lit shelves
-    const ring = roundRect(new THREE.Shape(), x0, x1, y0, y1, r);
-    ring.holes.push(roundRect(new THREE.Path(), x0 + 0.018, x1 - 0.018, y0 + 0.018, y1 - 0.018, r - 0.018));
-    mesh(new THREE.ExtrudeGeometry(ring, { depth: F, bevelEnabled: false, curveSegments: 12 }), honeyOak, p.g);
-    mesh(new THREE.ExtrudeGeometry(roundRect(new THREE.Shape(), x0, x1, y0, y1, r), { depth: F - deep, bevelEnabled: false, curveSegments: 12 }), honeyOak, p.g);
-    for (const y of BK ? [0.86, 1.3, 1.74] : [0.85, 1.25, 1.65, 1.95]) {
-      p.box(x0 + 0.015, x1 - 0.015, y, y + 0.025, F - deep, F - 0.01, honeyOak);
-      p.box(x0 + 0.03, x1 - 0.03, y - 0.012, y, F - deep + 0.03, F - 0.03, mat.ledStrip);
-    }
     const ly = BK ? 2.1 : 2.14, sy = BK ? [0.885, 1.325, 1.765] : [0.875, 1.275, 1.675];  // top LED, styled shelf tops
-    p.box(x0 + 0.06, x1 - 0.06, ly, ly + 0.012, F - deep + 0.03, F - 0.03, mat.ledStrip);
+    p.label("tall niche", p => {  // Move and Resize: a named part; resizing it changes the numbers in `niche`
+      const ring = roundRect(new THREE.Shape(), x0, x1, y0, y1, r);
+      ring.holes.push(roundRect(new THREE.Path(), x0 + 0.018, x1 - 0.018, y0 + 0.018, y1 - 0.018, r - 0.018));
+      mesh(new THREE.ExtrudeGeometry(ring, { depth: F, bevelEnabled: false, curveSegments: 12 }), honeyOak, p.g);
+      mesh(new THREE.ExtrudeGeometry(roundRect(new THREE.Shape(), x0, x1, y0, y1, r), { depth: F - deep, bevelEnabled: false, curveSegments: 12 }), honeyOak, p.g);
+      for (const y of BK ? [0.86, 1.3, 1.74] : [0.85, 1.25, 1.65, 1.95]) {
+        p.box(x0 + 0.015, x1 - 0.015, y, y + 0.025, F - deep, F - 0.01, honeyOak);
+        p.box(x0 + 0.03, x1 - 0.03, y - 0.012, y, F - deep + 0.03, F - 0.03, mat.ledStrip);
+      }
+      p.box(x0 + 0.06, x1 - 0.06, ly, ly + 0.012, F - deep + 0.03, F - 0.03, mat.ledStrip);
+    }, { src: "niche", x: [0, 1] });
     p.cyl(-0.76 + dn, F - 0.12, 0.05, sy[0], sy[0] + 0.205, mat.linenSage, 16, 0.065); p.cyl(-0.6 + dn, F - 0.12, 0.04, sy[1], sy[1] + 0.145, mat.planter, 16);
     for (let k = 0; k < 4; k++) p.box(-0.8 + dn + k * 0.03, -0.775 + dn + k * 0.03, sy[2], sy[2] + 0.185 - (k % 2) * 0.03, F - 0.2, F - 0.04, k % 2 ? mat.linenBlush : mat.walnut);
     // Walnut sideboard from the mass to the corner, front in line with the mass (DWG x 15.25; Kareem's x 15.372).
-    p.box(E, N - 0.02, 0.12, 0.8, P, B, mat.walnut);
-    fronts(p, E, N - 0.02, 0.12, 0.8, B, 0.45);
-    p.box(E + 0.03, N - 0.05, 0, 0.12, P, B - 0.06, mat.darkTop);
-    p.box(E, N - 0.02, 0.8, 0.83, P, B + 0.01, mat.walnut);
+    p.label("walnut sideboard", p => {
+      p.box(E, N - 0.02, 0.12, 0.8, P, B, mat.walnut);
+      fronts(p, E, N - 0.02, 0.12, 0.8, B, 0.45);
+      p.box(E + 0.03, N - 0.05, 0, 0.12, P, B - 0.06, mat.darkTop);
+      p.box(E, N - 0.02, 0.8, 0.83, P, B + 0.01, mat.walnut);
+    });
     p.pebble((K + N) / 2, 1.6, 0.92, 0.8, P + 0.012, mat.mirror, true);
     p.cyl(0.15, 0.3 + dz, 0.07, 0.83, 1.02, mat.planter, 16, 0.05); p.cyl(1.3, 0.28 + dz, 0.06, 0.83, 1.0, mat.stoneTable, 16, 0.045);
     p.cyl(1.05, 0.3 + dz, 0.045, 0.83, 0.88, mat.blackSteel, 16);
-  });
+  }), "buffet wall");
   plant(version === "kareems-changes" ? 15.16 : 15.04, 8.15, 0.5, 0.06, 0.83);
   // 2.25 hp split on the buffet wall panel (x 14.852; Kareem's 14.972), centred on the pebble mirror (y 8.79; Kareem's
   // 8.697, the centre of the wider panel): 1.05 W x 0.30 H x 0.23 D, top 2.42, its underside 0.12 over the mirror top

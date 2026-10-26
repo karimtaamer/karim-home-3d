@@ -126,7 +126,8 @@
   .measure-overlay circle { fill: #ff8a3d; stroke: #fffaf3; stroke-width: 2; }
   .measure-overlay circle.hover { fill: none; stroke: #ff8a3d; stroke-width: 2.5; }
   .measure-overlay .snap { fill: none; stroke: #2b2622; stroke-width: 2; }
-  /* Move / Resize (move.js): the picked piece's plan box with edge and corner handles, its name and size, part chips. */
+  /* Move and Resize (move.js): the picked piece's plan box with edge and corner handles, its name and size, the drill-in
+     trail and part chips; a draft shows where it was (dashed) and waits for Accept / Cancel. */
   .move-overlay { position: fixed; inset: 0; z-index: 3; pointer-events: none; }
   body.drawing .move-overlay { z-index: 4; }
   .move-overlay svg { width: 100%; height: 100%; }
@@ -140,6 +141,18 @@
   .move-chips button { font: 500 12px Inter, sans-serif; padding: 5px 11px; border-radius: 999px; border: 0; background: #fffaf3f2; color: #2b2622;
     box-shadow: 0 1px 4px #0003; cursor: pointer; white-space: nowrap; }
   .move-chips button.on { background: #ff8a3d; color: #fff; }
+  .move-chips button.part { background: #2b2622e6; color: #f3eee5; }
+  .move-overlay polygon.was { fill: none; stroke: #2b2622; stroke-width: 1.5; stroke-dasharray: 5 4; opacity: 0.7; }
+  .move-label.draft { background: #ff8a3d; color: #fff; }
+  #move-accept { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 7; display: flex; gap: 8px; align-items: center;
+    max-width: min(520px, calc(100vw - 24px)); padding: 8px 8px 8px 16px; border-radius: 16px; background: #2b2622f2; color: #f3eee5;
+    font: 500 12.5px Inter, sans-serif; box-shadow: 0 6px 20px #0004; }
+  #move-accept[hidden] { display: none; }
+  #move-accept .what { flex: 1; }
+  #move-accept button { border: 0; border-radius: 999px; padding: 8px 16px; font: 600 12.5px Inter, sans-serif; cursor: pointer; }
+  #move-accept .accept { background: #ff8a3d; color: #fff; }
+  #move-accept .cancel { background: none; color: #f3eee5; box-shadow: inset 0 0 0 1px #f3eee566; }
+  #move-accept.busy button { opacity: 0.4; pointer-events: none; }
   #move-toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 6; display: flex; gap: 8px; align-items: center;
     max-width: min(420px, calc(100vw - 24px)); padding: 10px 10px 10px 16px; border-radius: 16px; background: #2b2622f2; color: #f3eee5;
     font: 12.5px Inter, sans-serif; box-shadow: 0 6px 20px #0004; }
@@ -249,7 +262,7 @@
     <span class="sep"></span>
     <button id="measure" class="tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg>Measure</button>
     <button id="clearMeasure" class="tool" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>Clear</button>
-    <button id="move" class="tool" title="Move or resize a piece"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3 9 6M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg>Move</button>
+    <button id="move" class="tool" title="Move and Resize: pick a piece, adjust it, then Accept"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3 9 6M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg>Move and Resize</button>
     <span class="sep"></span>
     <button id="photogen" hidden disabled title="Walk to a view first"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h5M21 12v7H3V8"/><circle cx="12" cy="13" r="3.5"/><path d="M19 2v6M16 5h6"/></svg>Generate a render</button>
   </div>
@@ -721,10 +734,12 @@ const HELP = {
 // They get help only while measuring (the joystick speaks for itself), so the empty pill hides.
 const TOUCH = matchMedia("(max-width: 760px), (pointer: coarse)");
 const HELP_MEASURE = "Click or drag to measure · Shift squares it up · Esc cancels · Backspace undoes";
-const HELP_MOVE = "Click a piece, then drag it to move it or pull a handle to resize it · Esc cancels";
+const HELP_MOVE = "Click a piece, drag it or pull a handle, then Accept · double-click for a part inside · Esc cancels";
 function showHelp() {
-  if (move?.active) help.textContent = TOUCH.matches
-    ? "Tap a piece, drag it to move it or a handle to resize it · " + (mode === "walk" ? "a second finger looks around" : "two fingers pan / zoom")
+  if (move?.pending) help.textContent = TOUCH.matches ? "Adjust, then Accept to save · Cancel puts it back"
+    : "Keep adjusting, then Accept (Enter) to save · Cancel (Esc) puts it back";
+  else if (move?.active) help.textContent = TOUCH.matches
+    ? "Tap a piece, drag it or a handle, then Accept · double-tap for a part inside · " + (mode === "walk" ? "a second finger looks around" : "two fingers pan / zoom")
     : HELP_MOVE + (mode === "walk" ? " · drag elsewhere to look" : " · drag elsewhere to pan");
   else if (measure?.active) help.textContent = TOUCH.matches
     ? "Tap or drag to measure · " + (mode === "walk" ? "a second finger looks around" : "two fingers pan / zoom")
@@ -1010,7 +1025,7 @@ document.getElementById("clearMeasure").onclick = () => measure.clear();
 
 const drawing = createDrawing(document.getElementById("drawing"), live.url(version.drawing));
 
-// --- Move / Resize (move.js, move_tool.py): beside Measure in the bar, and beside the drawing's own Measure ------------
+// --- Move and Resize (move.js, move_tool.py): beside Measure in the bar, and beside the drawing's own Measure -----------
 const moveBtn = document.getElementById("move");
 const moveBtn2D = Object.assign(moveBtn.cloneNode(true), { id: "" });
 moveBtn2D.dataset.tool = "move";

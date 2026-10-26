@@ -572,6 +572,29 @@ def for_version(text, version):
                 t = re.sub(r"(?<![\w$.])" + re.escape(m[1]) + r"(?![\w$])(?!=[^=])", m[2], t)
         if t == t0:
             break
+    return _unsized(t)
+
+
+def _unsized(t):
+    """sized(x,1,1) is x: Move and Resize's size for one version folds to that in the others."""
+    k = 0
+    while (i := t.find("sized(", k)) >= 0:
+        depth, j, cut = 0, i + 5, []
+        while j < len(t):
+            if t[j] in "([{":
+                depth += 1
+            elif t[j] in ")]}":
+                depth -= 1
+                if depth == 0:
+                    break
+            elif t[j] == "," and depth == 1:
+                cut.append(j)
+            j += 1
+        if len(cut) == 2 and t[cut[0] + 1:cut[1]] == "1" and t[cut[1] + 1:j] == "1" and (i == 0 or not (t[i - 1].isalnum() or t[i - 1] in "_$.") or t[:i].endswith(("true", "false"))):  # iffalsesized(
+            t = t[:i] + t[i + 6:cut[0]] + t[j + 1:]
+            k = i
+        else:
+            k = i + 1
     return t
 
 
@@ -593,13 +616,13 @@ def _fold_ternary(t):
                 depth -= 1
             elif depth == 0 and c == "?":
                 nest += 1
-            elif depth == 0 and c == ":":
-                if colon is None and nest == 0:
-                    colon = i
-                elif colon is not None:
-                    break
-                else:
+            elif depth == 0 and c == ":":  # a ternary nested in either branch (a ? b : c ? d : e) closes its own ':'
+                if nest > 0:
                     nest -= 1
+                elif colon is None:
+                    colon = i
+                else:
+                    break
             elif depth == 0 and c in ",;" and colon is not None:
                 break
             i += 1

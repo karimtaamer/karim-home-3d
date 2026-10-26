@@ -1,16 +1,21 @@
-// Move / Resize: the Move button beside Measure. Tap a piece (in Walk, Top or the 2D drawing) to pick it, drag it to
-// move it, or pull an edge / corner handle to resize it. On release move_tool.py (POST api/edit-ai/transform, no AI
-// model) makes the same change in furnish.js and, when the piece is drawn on the plan, in the DXF, so the 3D and the
-// 2D always agree; then the page reloads on the same view, like an Edit AI change, and Edit AI's Undo takes it back.
-// A part inside a piece (the espresso machine on the coffee bar) is offered as a chip beside the whole piece.
+// Move and Resize: the button beside Measure. Tap a piece (in Walk, Top or the 2D drawing) to pick it, drag it to
+// move it, or pull an edge / corner handle to resize it. Nothing is saved while you adjust: the piece previews in
+// place with its size and how far it moved, and Accept saves it (Cancel, Esc or a tap elsewhere throws the draft
+// away). Accept sends one change to move_tool.py (POST api/edit-ai/transform, no AI model), which makes it in
+// furnish.js and, when the piece is drawn on the plan, in the DXF, so the 3D and the 2D always agree; then the page
+// reloads on the same view, like an Edit AI change, and Edit AI's Undo takes it back.
+// In 3D a tap picks the whole piece; a double-tap on it goes one level in, to the named part under the pointer (the
+// coffee bar's espresso machine, a TV-wall niche), like a group in Figma. The chips under it climb back out.
 import * as THREE from "three";
 
 const API = "api/edit-ai";
-const DRAG_PX = 4, HANDLE_PX = 12, HANDLE_TOUCH_PX = 22, HEAD = 1.5;
+const DRAG_PX = 4, HANDLE_PX = 12, HANDLE_TOUCH_PX = 22, HEAD = 1.5, DOUBLE_MS = 400, DOUBLE_PX = 10;
 const SIDES = { N: [0, 1], S: [0, -1], E: [1, 0], W: [-1, 0], NE: [1, 1], NW: [-1, 1], SE: [1, -1], SW: [-1, -1] };
+const NAME = "Move and Resize";
 const store = sessionStorage;
 const r4 = v => Math.round(v * 10000) / 10000;
 const cm = v => `${Math.round(Math.abs(v) * 100)} cm`;
+const same = (a, b, tol = 0.003) => a.every((v, i) => Math.abs(v - b[i]) < tol);
 
 export function createMove({ camera, renderer, scene, root, cutPlane, live, version, showing, mode, drawingFrame, drawingRoot,
   onChange, reload, freeMouse }) {
@@ -20,15 +25,36 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
   overlay.innerHTML = `<svg></svg><div class="move-label" hidden></div><div class="move-chips" hidden></div>`;
   document.body.appendChild(overlay);
   const svg = overlay.querySelector("svg"), label = overlay.querySelector(".move-label"), chips = overlay.querySelector(".move-chips");
+  // Accept / Cancel for the draft: nothing is saved until Accept.
+  const bar = Object.assign(document.createElement("div"), { id: "move-accept", className: "ui", hidden: true });
+  bar.innerHTML = `<span class="what"></span><button class="cancel ghost">Cancel</button><button class="accept">Accept</button>`;
+  document.body.appendChild(bar);
+  for (const b of bar.querySelectorAll("button")) b.onpointerdown = e => e.stopPropagation();
+  bar.querySelector(".accept").onclick = () => accept();
+  bar.querySelector(".cancel").onclick = () => discard();
   const ray = new THREE.Raycaster();
-  let active = false, sel = null, drag = null, busy = false, where = null, furnishText = null;
+  // sel: the picked object, its plan box, the pose it had (the draft previews over it) and the drill-in path
+  // (outermost piece first). draft: the plan box it should get, until Accept or Cancel.
+  let active = false, sel = null, drag = null, draft = null, busy = false, where = null, furnishText = null, lastDown = null;
 
   // --- What a piece is: its plan box, height, the code that placed it -------------------------------------------------
   const isPiece = o => o.userData.piece && o.parent === root;
   const isPart = o => o.userData.part && hostOf(o);
+  const pickable = o => isPiece(o) || isPart(o);
   function hostOf(o) {
     for (let p = o.parent; p; p = p.parent) if (isPiece(p)) return p;
     return null;
+  }
+  // The pickable thing o sits in (a part's parent part, or its piece); null for a piece.
+  function outerOf(o) {
+    for (let p = o.parent; p && p !== root; p = p.parent) if (pickable(p)) return p;
+    return null;
+  }
+  // Outermost first: the piece, then each part down to o.
+  function pathTo(o) {
+    const out = [];
+    for (let p = o; p; p = outerOf(p)) out.unshift(p);
+    return out;
   }
   function visible(o) {
     for (let p = o; p; p = p.parent) if (!p.visible) return false;
@@ -46,20 +72,26 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     const ns = o.userData.piece.lines || [];
     for (const n of ns) {
       const m = (L[n - 1] || "").match(/\/\/\s*(.+)$/);
-      if (m && !/^Move tool/.test(m[1])) return tidy(m[1]);
+      if (m && !/^(Move|---|local )/.test(m[1])) return tidy(m[1]);
     }
     for (const n of ns) {
-      const m = (L[n - 1] || "").match(/item\([^,]+,[^,]+,\s*"[NSEW]",\s*([a-zA-Z]\w*)\(/);
+      const m = (L[n - 1] || "").match(/item\([^,]+,[^,]+,\s*"[NSEW]",\s*(?:p\s*=>\s*)?([a-zA-Z]\w*)\(/);
       if (m && !/^(p|part)$/.test(m[1])) return m[1].replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
     }
     for (const n of ns) {
       const m = (L[n - 2] || "").match(/\/\/\s*(.+)$/);
-      if (m) return tidy(m[1]);
+      if (m && !/^(Move|---|local )/.test(m[1])) return tidy(m[1]);
     }
     return null;
   }
   function nameOf(o) {
     return o.userData.label || (isPiece(o) && lineLabel(o)) || "piece";
+  }
+  // Pieces placed with the same x, y, facing (move_tool.py can't tell them apart when no line of code is their own).
+  const keyOf = p => `${+(+p.x).toFixed(4)},${+(+p.y).toFixed(4)},${p.facing}`;
+  function twinsOf(item) {
+    const k = keyOf(item.userData.piece);
+    return root.children.filter(c => c.userData.piece && keyOf(c.userData.piece) === k).length;
   }
   function describe(o) {
     const host = isPart(o) ? hostOf(o) : null, item = host || o, pb = planBox(o);
@@ -67,10 +99,22 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
       kind: host ? "part" : "item", label: nameOf(o), x: item.userData.piece.x, y: item.userData.piece.y,
       facing: item.userData.piece.facing, lines: item.userData.piece.lines, scale: [r4(item.scale.x), r4(item.scale.z)],
       box: pb.box.map(r4), low: r4(pb.low), high: r4(pb.high),
-      hasParts: !host && item.children.some(c => c.userData.part),
+      hasParts: item.children.some(c => c.userData.part) && !host,
+      anchor: [r4(item.position.x), r4(-item.position.z)], moved: !!item.userData.piece.moved, twins: twinsOf(item),
     };
-    if (host) Object.assign(d, { part: o.userData.label, pos: [r4(o.position.x), r4(o.position.z)], pscale: [r4(o.scale.x), r4(o.scale.z)],
-      hostBox: planBox(host).box.map(r4), hostLabel: "the " + nameOf(host) });
+    if (host) {
+      Object.assign(d, { part: o.userData.label, pos: [r4(o.position.x), r4(o.position.z)], pscale: [r4(o.scale.x), r4(o.scale.z)],
+        hostBox: planBox(host).box.map(r4), hostLabel: "the " + nameOf(host) });
+      // A part inside another part: where its parent group sits in the piece's frame (move_tool.py works in that frame).
+      if (o.parent !== host) {
+        host.updateMatrixWorld(true);
+        const m = new THREE.Matrix4().copy(host.matrixWorld).invert().multiply(o.parent.matrixWorld);
+        const t = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3();
+        m.decompose(t, q, s);
+        d.frame = { pos: [r4(t.x), r4(t.z)], scale: [r4(s.x), r4(s.z)], turned: Math.abs(q.y) > 1e-3 || Math.abs(q.x) > 1e-3 || Math.abs(q.z) > 1e-3 };
+      }
+      if (o.userData.param) d.param = o.userData.param;  // a part drawn from numbers in its piece's code (a niche): those change
+    }
     return d;
   }
 
@@ -96,7 +140,7 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
 
   // --- Picking ------------------------------------------------------------------------------------------------------
   // In 3D: what the pointer hits first (walls and all count, so nothing is picked through a wall), and the piece and
-  // the part it belongs to. In 2D: the pieces whose plan box holds the point, smallest first; above head height only
+  // the parts it sits in. In 2D: the pieces whose plan box holds the point, smallest first; above head height only
   // when nothing at floor level is there.
   function pick3D(sx, sy) {
     aim(sx, sy);
@@ -109,7 +153,7 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
       if (!m || m.visible === false || (m.transparent && m.opacity < 0.05)) continue;
       if (m.clippingPlanes?.length && h.point.y > cut + 1e-3) continue;
       const out = [];
-      for (let p = h.object; p; p = p.parent) if (isPiece(p) || isPart(p)) out.push(p);
+      for (let p = h.object; p; p = p.parent) if (pickable(p)) out.push(p);
       return out;  // innermost first; [] when it's a wall or the floor
     }
     return [];
@@ -119,28 +163,107 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     const [x, y] = drawingFrame().toWorld(sx, sy), tol = 4 / Math.max(1, Math.abs(drawingFrame().toScreen([1, 0])[0] - drawingFrame().toScreen([0, 0])[0]));
     if (!all) {
       all = [];
-      root.traverse(o => (isPiece(o) || isPart(o)) && visible(o) && all.push(o));
+      root.traverse(o => pickable(o) && visible(o) && all.push(o));
     }
     const hits = all.map(o => ({ o, ...planBox(o) })).filter(c => c.box[0] - tol <= x && x <= c.box[2] + tol && c.box[1] - tol <= y && y <= c.box[3] + tol
       && (c.box[2] - c.box[0]) * (c.box[3] - c.box[1]) < 40);
     const low = hits.filter(c => c.low < HEAD);
     return (low.length ? low : hits).sort((a, b) => (a.box[2] - a.box[0]) * (a.box[3] - a.box[1]) - (b.box[2] - b.box[0]) * (b.box[3] - b.box[1])).map(c => c.o);
   }
-  function select(o, cands = []) {
-    sel = o && { o, ...planBox(o), cands: cands.length > 1 ? cands : [] };
+  const pickAt = (sx, sy) => (is2D() ? pick2D(sx, sy) : pick3D(sx, sy));
+  // A first tap: in 3D the whole piece (drill in for its parts); in 2D the smallest outline under the point.
+  const firstPick = cands => (is2D() ? cands[0] : cands[cands.length - 1]);
+  // A double tap on the selection: the next level in under the pointer.
+  function drillTarget(cands) {
+    const inner = cands.filter(c => outerOf(c) === sel.o);
+    return inner.length ? inner[0] : null;
+  }
+
+  function select(o) {
+    if (draft) discard(true);
+    sel = o && { o, ...planBox(o), path: pathTo(o), pos0: o.position.clone(), scale0: o.scale.clone() };
     if (sel) sel.h = Math.min(sel.high, Math.max(sel.low, 0.9));
-    chips.hidden = !sel?.cands.length;
-    if (sel?.cands.length) {
-      chips.replaceChildren(...sel.cands.slice(0, 4).map(c => {
-        const b = document.createElement("button");
-        b.textContent = (isPart(c) ? "" : "Whole ") + nameOf(c);
-        b.classList.toggle("on", c === o);
-        b.onpointerdown = e => e.stopPropagation();
-        b.onclick = e => { e.stopPropagation(); select(c, sel.cands); };
-        return b;
-      }));
-    }
+    showChips();
     onChange?.();
+  }
+  // Chips: the drill-in trail (Whole coffee bar › espresso machine) to climb back out, and the parts one level in.
+  function showChips() {
+    const parts = [];
+    if (sel) sel.o.traverse(c => c !== sel.o && pickable(c) && outerOf(c) === sel.o && visible(c) && parts.push(c));
+    const trail = sel ? sel.path : [];
+    if (!sel || (trail.length < 2 && !parts.length)) return chips.replaceChildren();
+    const chip = (c, text, cls) => {
+      const b = document.createElement("button");
+      b.textContent = text;
+      b.className = cls;
+      b.classList.toggle("on", c === sel.o);
+      b.onpointerdown = e => e.stopPropagation();
+      b.onclick = e => { e.stopPropagation(); select(c); };
+      return b;
+    };
+    chips.replaceChildren(...trail.map((c, i) => chip(c, (i ? "› " : "Whole ") + nameOf(c), "crumb")),
+      ...parts.slice(0, 6).map(c => chip(c, "+ " + nameOf(c), "part")));
+  }
+
+  // --- The draft: a preview in place, saved only on Accept -----------------------------------------------------------
+  const shown = () => draft?.box || sel.box;
+  // Put the selection where box says: scaled in its own frame (height untouched), then shifted so its plan box lines up.
+  function preview(box) {
+    const o = sel.o;
+    o.position.copy(sel.pos0);
+    o.scale.copy(sel.scale0);
+    if (!box) return;
+    const b = sel.box, k = [(box[2] - box[0]) / Math.max(1e-6, b[2] - b[0]), (box[3] - box[1]) / Math.max(1e-6, b[3] - b[1])];
+    if (Math.abs(k[0] - 1) > 1e-4 || Math.abs(k[1] - 1) > 1e-4) {
+      o.updateMatrixWorld(true);
+      const ax = new THREE.Vector3(1, 0, 0).transformDirection(o.matrixWorld);  // the object's x along plan x or plan y
+      const [kx, kz] = Math.abs(ax.x) >= Math.abs(ax.z) ? k : [k[1], k[0]];
+      o.scale.x *= kx;
+      o.scale.z *= kz;
+    }
+    o.updateMatrixWorld(true);
+    const now = planBox(o).box;
+    const shift = new THREE.Vector3((box[0] + box[2] - now[0] - now[2]) / 2, 0, -(box[1] + box[3] - now[1] - now[3]) / 2);
+    const w = o.parent.localToWorld(o.position.clone()).add(shift);
+    o.position.copy(o.parent.worldToLocal(w));
+  }
+  // What the draft does, in words: its size (and what it was), how far it moved.
+  function draftText() {
+    const b = sel.box, n = shown(), w = n[2] - n[0], d = n[3] - n[1];
+    const size = `${Math.round(w * 100)} × ${Math.round(d * 100)} cm`;
+    if (!draft) return `${nameOf(sel.o)} · ${size}`;
+    const resized = !same([w, d], [b[2] - b[0], b[3] - b[1]]);
+    const c = [(n[0] + n[2] - b[0] - b[2]) / 2, (n[1] + n[3] - b[1] - b[3]) / 2];
+    const bits = [];
+    if (resized) bits.push(`${size} (was ${Math.round((b[2] - b[0]) * 100)} × ${Math.round((b[3] - b[1]) * 100)})`);
+    else bits.push(size);
+    if (!resized && (Math.abs(c[0]) >= 0.005 || Math.abs(c[1]) >= 0.005)) bits.push("moved " + dirText(c));
+    else if (resized) {
+      const grew = sideText(b, n);
+      if (grew) bits.push(grew);
+    }
+    return `${nameOf(sel.o)} · ${bits.join(" · ")}`;
+  }
+  const dirText = d => [Math.abs(d[0]) >= 0.005 && `${cm(d[0])} ${d[0] > 0 ? "E" : "W"}`, Math.abs(d[1]) >= 0.005 && `${cm(d[1])} ${d[1] > 0 ? "N" : "S"}`]
+    .filter(Boolean).join(" · ") || "0 cm";
+  function sideText(b, n) {
+    const g = { N: n[3] - b[3], S: b[1] - n[1], E: n[2] - b[2], W: b[0] - n[0] };
+    return Object.entries(g).filter(([, v]) => Math.abs(v) >= 0.005).map(([k, v]) => `${v > 0 ? "+" : "−"}${cm(v)} ${k}`).join(", ");
+  }
+  function setDraft(box) {
+    draft = same(box, sel.box, 0.0025) ? null : { box: box.map(r4) };
+    preview(draft?.box);
+    bar.hidden = !draft;
+    if (draft) bar.querySelector(".what").textContent = draftText();
+    onChange?.();
+  }
+  // Cancel: back where it was, nothing saved. quiet: from a new selection (no need to redraw).
+  function discard(quiet) {
+    drag = null;
+    if (sel) preview(null);
+    draft = null;
+    bar.hidden = true;
+    if (!quiet) onChange?.();
   }
 
   // --- Overlay ----------------------------------------------------------------------------------------------------
@@ -155,30 +278,28 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
   }
   function render() {
     const now = showing() + mode();
-    if (where && now !== where && sel && !busy) { cancelDrag(); select(null); }
+    if (where && now !== where && sel && !busy) { discard(); select(null); }
     where = now;
-    if (!active || !sel || (showing() !== "model" && !is2D())) { svg.innerHTML = ""; label.hidden = true; return; }
-    const b = drag?.box || sel.box, c = corners(b, sel.h);
-    if (c.some(p => !p)) { svg.innerHTML = ""; return; }
+    if (!active || !sel || (showing() !== "model" && !is2D())) { svg.innerHTML = ""; label.hidden = true; chips.hidden = true; return; }
+    const b = shown(), c = corners(b, sel.h);
+    if (c.some(p => !p)) { svg.innerHTML = ""; label.hidden = true; return; }
     const pts = c.map(p => p.join(",")).join(" ");
-    let s = `<polygon class="halo" points="${pts}"/><polygon points="${pts}"/>`;
+    let s = "";
+    if (draft) s += `<polygon class="was" points="${corners(sel.box, sel.h).map(p => p?.join(",")).join(" ")}"/>`;
+    s += `<polygon class="halo" points="${pts}"/><polygon points="${pts}"/>`;
     if (!busy) for (const [k, p] of Object.entries(handles(b, sel.h))) s += `<circle class="${k.length > 1 ? "corner" : ""}" cx="${p[0]}" cy="${p[1]}" r="${k.length > 1 ? 5 : 6.5}"/>`;
     svg.innerHTML = s;
-    const top = c.reduce((a, p) => (p[1] < a[1] ? p : a));
     label.hidden = false;
     label.style.left = `${(c[0][0] + c[2][0]) / 2}px`;
     label.style.top = `${Math.min(...c.map(p => p[1]))}px`;
-    const w = b[2] - b[0], d = b[3] - b[1];
-    label.textContent = busy ? "Saving… (3D and plan)" : drag?.moved && drag.type === "move"
-      ? `${nameOf(sel.o)} · ${dirText(drag.d)}` : `${nameOf(sel.o)} · ${Math.round(w * 100)} × ${Math.round(d * 100)} cm`;
+    label.textContent = busy ? "Saving… (3D and plan)" : draftText();
+    label.classList.toggle("draft", !!draft);
+    chips.hidden = !chips.childElementCount || busy;
     chips.style.left = label.style.left;
     chips.style.top = `${Math.max(...c.map(p => p[1])) + 14}px`;
-    void top;
   }
-  const dirText = d => [Math.abs(d[0]) >= 0.005 && `${cm(d[0])} ${d[0] > 0 ? "E" : "W"}`, Math.abs(d[1]) >= 0.005 && `${cm(d[1])} ${d[1] > 0 ? "N" : "S"}`]
-    .filter(Boolean).join(" · ") || "0 cm";
 
-  // --- Pointer: pick, drag, pull a handle -----------------------------------------------------------------------------
+  // --- Pointer: pick, drag, pull a handle, double-tap to drill in ------------------------------------------------------
   function inPoly(p, poly) {
     let inside = false;
     for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -186,6 +307,25 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
       if ((yi > p[1]) !== (yj > p[1]) && p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi) inside = !inside;
     }
     return inside;
+  }
+  // The handle (N, SE, ...) or the body of the selection under p, or null.
+  function grabAt(p, touch) {
+    const b = shown(), c = corners(b, sel.h);
+    // A small piece on screen: the handles reach less far, so its middle still drags it.
+    const side = c.some(q => !q) ? 0 : Math.min(...c.map((q, i) => Math.hypot(q[0] - c[(i + 1) % 4][0], q[1] - c[(i + 1) % 4][1])));
+    const hs = handles(b, sel.h), r = Math.max(5, Math.min(touch ? HANDLE_TOUCH_PX : HANDLE_PX, side * 0.3));
+    let best = r * r, grab = null;
+    for (const [k, q] of Object.entries(hs)) {
+      const d2 = q ? (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2 : Infinity;
+      if (d2 < best) { best = d2; grab = k; }
+    }
+    // A thin piece (a curtain, a panel): its middle is within reach of the side handles, so the middle drags it.
+    const ctr = toScreen((b[0] + b[2]) / 2, (b[1] + b[3]) / 2, sel.h);
+    if (grab && ctr && (ctr[0] - p[0]) ** 2 + (ctr[1] - p[1]) ** 2 < best) grab = null;
+    if (grab) return { type: "edge", side: grab };
+    if (!c.some(q => !q) && inPoly(p, c)) return { type: "move" };
+    if (!is2D() && pick3D(...p).includes(sel.o)) return { type: "move" };
+    return null;
   }
   const pointers = new Set();
   function ours(e) {
@@ -198,33 +338,34 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     pointers.add(e.pointerId);
     if (pointers.size > 1) { cancelDrag(); return; }  // a second finger: pan / pinch / look as ever
     if (e.button !== 0) return;
-    const p = [e.clientX, e.clientY], touch = e.pointerType !== "mouse";
-    let type = null, grab = null;
-    if (sel) {
-      // A small piece on screen: the handles reach less far, so its middle still drags it.
-      const c0 = corners(sel.box, sel.h), side = c0.some(q => !q) ? 0 : Math.min(...c0.map((q, i) => Math.hypot(q[0] - c0[(i + 1) % 4][0], q[1] - c0[(i + 1) % 4][1])));
-      const hs = handles(sel.box, sel.h), r = Math.max(5, Math.min(touch ? HANDLE_TOUCH_PX : HANDLE_PX, side * 0.3));
-      let best = r * r;
-      for (const [k, q] of Object.entries(hs)) {
-        const d2 = q ? (q[0] - p[0]) ** 2 + (q[1] - p[1]) ** 2 : Infinity;
-        if (d2 < best) { best = d2; grab = k; type = "edge"; }
+    const p = [e.clientX, e.clientY], touch = e.pointerType !== "mouse", t = performance.now();
+    const double = lastDown && t - lastDown.t < DOUBLE_MS && Math.hypot(p[0] - lastDown.p[0], p[1] - lastDown.p[1]) < DOUBLE_PX;
+    lastDown = double ? null : { t, p };
+    let g = null;
+    if (sel && double && !draft) {  // double tap on the selection: one level in
+      const inner = drillTarget(pickAt(...p));
+      if (inner) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        select(inner);
+        return;
       }
-      const c = corners(sel.box, sel.h);
-      if (!type && !c.some(q => !q) && inPoly(p, c)) type = "move";
-      if (!type && !is2D()) { const hit = pick3D(...p); if (hit.includes(sel.o)) type = "move"; }
     }
-    if (!type) {
-      const cands = is2D() ? pick2D(...p) : pick3D(...p);
+    if (sel) g = grabAt(p, touch);
+    if (!g) {
+      const cands = pickAt(...p);
+      if (draft) discard();  // a tap away from the draft throws it away
       if (!cands.length) { if (sel) select(null); return; }  // the floor / a wall: pan or look as ever
-      select(cands[0], cands);
-      type = "move";
+      const o = firstPick(cands);
+      if (!sel || o !== sel.o) select(o);
+      g = { type: "move" };
     }
     e.stopImmediatePropagation();
     e.preventDefault();
     freeMouse?.();
     const at = toPlan(...p, sel.h);
     if (!at) return;
-    drag = { type, side: grab, id: e.pointerId, from: p, at, box: [...sel.box], moved: false, d: [0, 0], pos: sel.o.position.clone() };
+    drag = { ...g, id: e.pointerId, from: p, at, base: [...shown()], moved: false };
   }, true);
   addEventListener("pointermove", e => {
     if (!drag || e.pointerId !== drag.id) return;
@@ -234,75 +375,86 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     const q = toPlan(e.clientX, e.clientY, sel.h);
     if (!q) return;
     const d = [Math.round((q[0] - drag.at[0]) * 200) / 200, Math.round((q[1] - drag.at[1]) * 200) / 200];  // 5 mm steps
-    const b = sel.box;
-    if (drag.type === "move") {
-      drag.d = d;
-      drag.box = [b[0] + d[0], b[1] + d[1], b[2] + d[0], b[3] + d[1]];
-      // Preview: the piece itself follows the pointer.
-      const w = sel.o.parent.localToWorld(drag.pos.clone()).add(new THREE.Vector3(d[0], 0, -d[1]));
-      sel.o.position.copy(sel.o.parent.worldToLocal(w));
-    } else {
+    const b = drag.base;
+    if (drag.type === "move") setDraft([b[0] + d[0], b[1] + d[1], b[2] + d[0], b[3] + d[1]]);
+    else {
       const [sx, sy] = SIDES[drag.side], nb = [...b], MIN = 0.03;
       if (sx > 0) nb[2] = Math.max(b[0] + MIN, b[2] + d[0]);
       if (sx < 0) nb[0] = Math.min(b[2] - MIN, b[0] + d[0]);
       if (sy > 0) nb[3] = Math.max(b[1] + MIN, b[3] + d[1]);
       if (sy < 0) nb[1] = Math.min(b[3] - MIN, b[1] + d[1]);
-      drag.box = nb;
+      setDraft(nb);
     }
   }, true);
+  // Letting go keeps the draft (nothing is saved): Accept saves it.
   const up = e => {
     pointers.delete(e.pointerId);
     if (!drag || e.pointerId !== drag.id) return;
     e.stopImmediatePropagation();
     const g = drag;
     drag = null;
-    if (!g.moved || e.type === "pointercancel") { sel.o.position.copy(g.pos); return; }
-    if (g.type === "move" && Math.abs(g.d[0]) < 0.005 && Math.abs(g.d[1]) < 0.005) { sel.o.position.copy(g.pos); return; }
-    if (g.type === "edge" && g.box.every((v, i) => Math.abs(v - sel.box[i]) < 0.003)) return;
-    commit(g);
+    if (e.type === "pointercancel" && g.moved) setDraft(g.base);
   };
   addEventListener("pointerup", up, true);
   addEventListener("pointercancel", up, true);
   function cancelDrag() {
-    if (drag && sel) sel.o.position.copy(drag.pos);
+    if (drag && sel) setDraft(drag.base);
     drag = null;
   }
   addEventListener("keydown", e => {
-    if (!active || e.key !== "Escape" || busy) return;
+    if (!active || busy || /input|textarea/i.test(e.target?.tagName || "")) return;
+    if (e.key === "Enter" && draft && !drag) { e.preventDefault(); accept(); return; }
+    if (e.key !== "Escape") return;
     if (drag) cancelDrag();
+    else if (draft) discard();
+    else if (sel?.path.length > 1) select(sel.path[sel.path.length - 2]);  // one level out
     else if (sel) select(null);
     else setActive(false);
   });
 
-  // --- Saving ------------------------------------------------------------------------------------------------------
+  // --- Saving (Accept) -------------------------------------------------------------------------------------------------
   async function call(action, body) {
     const r = await fetch(`${API}/${action}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const j = await r.json().catch(() => ({ error: `${r.status} ${r.statusText}` }));
     if (!r.ok) throw new Error(j.error || r.statusText);
     return j;
   }
-  async function commit(g) {
-    if (g.type === "move") sel.o.position.copy(g.pos);  // describe the piece where it was, not where the preview put it
+  // The draft as the request move_tool.py takes: a move when the size is the same, else a resize to the new box.
+  function request() {
+    const b = sel.box, n = draft.box;
+    const resized = !same([n[2] - n[0], n[3] - n[1]], [b[2] - b[0], b[3] - b[1]]);
+    preview(null);  // describe the piece where it is, not where the preview put it
     const piece = describe(sel.o);
-    piece.box = sel.box.map(r4);
-    const body = { version, rev: live.rev, op: g.type === "move" ? "move" : "resize", piece };
-    if (g.type === "move") Object.assign(body, { dx: g.d[0], dy: g.d[1] });
-    else body.box = g.box.map(r4);
+    preview(n);
+    piece.box = b.map(r4);
+    const body = { version, rev: live.rev, op: resized ? "resize" : "move", piece };
+    if (resized) body.box = n.map(r4);
+    else Object.assign(body, { dx: r4((n[0] + n[2] - b[0] - b[2]) / 2), dy: r4((n[1] + n[3] - b[1] - b[3]) / 2) });
+    return body;
+  }
+  async function accept() {
+    if (!draft || busy) return;
+    const body = request();
     busy = true;
-    if (g.type === "move") sel.o.position.copy(sel.o.parent.worldToLocal(sel.o.parent.localToWorld(g.pos.clone()).add(new THREE.Vector3(g.d[0], 0, -g.d[1]))));
-    drag = { ...g, moved: g.type === "move" };  // keep the preview drawn while it saves
+    bar.classList.add("busy");
+    bar.querySelector(".what").textContent = "Saving… (3D and plan)";
+    onChange?.();
     try {
       const res = await call("transform", body);
       store.setItem("move-applied", JSON.stringify({ version, text: res.summary, notes: res.notes || [] }));
       store.setItem("move-on", version);
+      lastResult = res;
       reload();
     } catch (e) {
       busy = false;
-      drag = null;
-      sel.o.position.copy(g.pos);
+      bar.classList.remove("busy");
+      bar.querySelector(".what").textContent = draftText();
       toast(e.message, true);
+      lastResult = { error: e.message };
+      onChange?.();
     }
   }
+  let lastResult = null;
   function toast(text, bad, undo) {
     document.getElementById("move-toast")?.remove();
     const t = Object.assign(document.createElement("div"), { id: "move-toast", className: "ui" + (bad ? " bad" : "") });
@@ -327,7 +479,7 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
   function setActive(on) {
     if (on === active) return;
     active = on;
-    if (!on) { cancelDrag(); select(null); }
+    if (!on) { discard(true); select(null); }
     else if (furnishText === null) {
       furnishText = "";
       fetch(live.url("furnish.js")).then(r => r.text()).then(t => (furnishText = t)).catch(() => {});
@@ -339,22 +491,62 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
   const applied = JSON.parse(store.getItem("move-applied") || "null");
   store.removeItem("move-applied");
   if (applied?.version === version) {
-    const text = applied.undone ? "Move undone." : `${applied.text}.${applied.notes?.length ? " Note: " + applied.notes.join("; ") + "." : ""}`;
+    const text = applied.undone ? `${NAME}: undone.` : `${applied.text}.${applied.notes?.length ? " Note: " + applied.notes.join("; ") + "." : ""}`;
     setTimeout(() => toast(text, false, !applied.undone), 600);
   }
   const resume = store.getItem("move-on") === version;
   store.removeItem("move-on");
+
+  // For the tests (index.html exposes this as window.__move with ?debug).
+  function find(x, y, part) {
+    let found = null;
+    root.traverse(o => { if (!found && isPiece(o) && Math.abs(o.userData.piece.x - x) < 0.002 && Math.abs(o.userData.piece.y - y) < 0.002) found = o; });
+    if (found && part) {
+      let p = null;
+      found.traverse(o => { if (!p && o.userData.part && o.userData.label === part) p = o; });
+      found = p;
+    }
+    return found;
+  }
   return {
     get active() { return active; }, get selected() { return sel && describe(sel.o); }, get busy() { return busy; },
+    get pending() { return !!draft; },
     setActive, render, resume,
-    // For the tests: select the piece placed at plan (x, y) (or its part named `part`).
     debugSelect(x, y, part) {
-      let found = null;
-      root.traverse(o => { if (!found && isPiece(o) && Math.abs(o.userData.piece.x - x) < 0.002 && Math.abs(o.userData.piece.y - y) < 0.002) found = o; });
-      if (found && part) found.traverse(o => { if (o.userData.part && o.userData.label === part) found = o; });
-      if (found) select(found, [found, ...(isPart(found) ? [hostOf(found)] : [])]);
-      return found && describe(found);
+      const o = find(x, y, part);
+      if (o) select(o);
+      return o && describe(o);
     },
-    screenOf(x, y) { return sel && toScreen(x, y, sel.h); },
+    debugList() {
+      const out = [];
+      root.traverse(o => pickable(o) && visible(o) && out.push({ ...describe(o), depth: pathTo(o).length }));
+      return out;
+    },
+    async ready() {
+      if (furnishText === null) { setActive(true); setActive(false); }
+      for (let i = 0; i < 100 && !furnishText; i++) await new Promise(r => setTimeout(r, 100));
+      return !!furnishText;
+    },
+    state() {
+      return {
+        active, busy, selected: sel && nameOf(sel.o), path: sel ? sel.path.map(nameOf) : [], box: sel && sel.box.map(r4),
+        draft: draft && draft.box, text: sel && draftText(), bar: !bar.hidden, chips: [...chips.querySelectorAll("button")].map(b => b.textContent),
+        request: draft && sel ? request() : null, result: lastResult,
+      };
+    },
+    // The live box of an object at (x, y) [part], as the scene has it now (to check a preview or a reload).
+    boxOf(x, y, part) { const o = find(x, y, part); return o && planBox(o).box.map(r4); },
+    // The box of the piece (or the part named `part`) whose plan box centre is nearest (x, y): a moved piece's item(x, y) changes.
+    boxNear(x, y, part) {
+      let best = null, bd = Infinity;
+      root.traverse(o => {
+        if (!(part ? o.userData.part && o.userData.label === part : isPiece(o)) || !visible(o)) return;
+        const b = planBox(o).box, d = Math.hypot((b[0] + b[2]) / 2 - x, (b[1] + b[3]) / 2 - y);
+        if (d < bd) { bd = d; best = b; }
+      });
+      return best && best.map(r4);
+    },
+    screenOf(x, y, h) { return toScreen(x, y, h ?? sel?.h ?? 0.5); },
+    accept, discard: () => discard(),
   };
 }

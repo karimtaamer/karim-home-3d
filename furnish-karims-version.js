@@ -1776,6 +1776,8 @@ export function furnish(scene, M, mat, version = "main") {
     c.userData.openable = { id: "coffee-corner", label: "Coffee corner", leaves,
       anchor: new THREE.Vector3(0, 0.5, F + 0.06), reach: 1.8, duration: 0.6 };
     p.box(-0.75, 0.75, 0.88, 0.92, 0, 0.6, mat.marbleTop);
+    // Walnut side panel closes the coffee-corner's exposed side toward the dining area.
+    p.box(-0.75, -0.72, 0.12, 0.88, 0.02, 0.58, mat.walnut);
     p.label("two lit floating shelves", p => {
       for (const y of [1.55, 1.8]) { p.box(-0.75, 0.75, y, y + 0.035, 0, 0.28, mat.oakVeneer); p.box(-0.73, 0.73, y - 0.012, y, 0.03, 0.26, mat.ledStrip); }
     });

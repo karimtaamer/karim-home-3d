@@ -1030,7 +1030,7 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-0.12, 0.12, 0.68, 0.84, 0, 0.015, mat.walnut, 0.005);
     p.box(-0.06, 0.06, 0.74, 0.78, 0.015, 0.025, mat.brass, 0.005);
   });
-  if (GKC) item(12.767, 6.8906, "N", p => {  // Karim t327: a 12 cm stone build-out on the south (door-end) wall, two wood-lined niches
+  if (GKC) sized(item(version === "kareems-changes" ? 12.737 : 12.767, version === "kareems-changes" ? 6.8906 : 6.8906, "N", p => {  // Karim t327: a 12 cm stone build-out on the south (door-end) wall, two wood-lined niches
     // DWG 2furni: build-out x 202.722-203.622 (plank wall to the bath end), face y -114.6026 (plan 7.0106); niches
     // dashed 0.25 x 0.105, x 202.862-203.112 / 203.232-203.482. Nothing cut into the wall (no --cut):
     // 12 cm leaves 1.5 cm of build-out behind each niche; lined in walnut all round (back too), 9.3 cm clear inside.
@@ -1048,7 +1048,7 @@ export function furnish(scene, M, mat, version = "main") {
       for (let k = 1; k < 6; k++) p.box(l + t, r - t, y0 + k * 0.2, y0 + k * 0.2 + 0.015, inner, D - 0.005, mat.walnut);  // shelves
       p.box(l + t + 0.008, r - t - 0.008, hi - t - 0.01, hi - t, inner + 0.01, D - 0.01, mat.ledStrip);  // soft LED under the top
     }
-  });
+  }), version === "kareems-changes" ? 0.9333 : 1, 1);
   else item(12.767, 9.18, "S", p => {  // stone build-out at the bath end with two recessed walnut-lined niches
     const H = M.ceiling, D = 0.28, niches = [[-0.18, 0.02], [0.1, 0.3]], y0 = 0.9, y1 = 2.1;
     const face = new THREE.Shape([new THREE.Vector2(-0.42, 0), new THREE.Vector2(0.42, 0), new THREE.Vector2(0.42, H), new THREE.Vector2(-0.42, H)]);

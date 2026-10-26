@@ -1316,9 +1316,7 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(-cw, cw, 1.58, 1.6, 0.05, 0.3, mat.ledStrip);
       return;
     }
-    // Kareem's (Nagham call, 25 Oct): the water heater lives in this upper (the left one, not over the washer). The
-    // cabinet is 0.45 deep, 10 cm proud of the old 0.35 upper, for the pipes behind the heater: an oak carcass, a 40 L
-    // vertical electric heater (0.36 round x 0.64) on the back, its pipes and valves under it, and one oak door
+    // The water heater lives in this upper (the left one, not over the washer). The cabinet is 0.45 deep, 10 cm proud of the old 0.35 upper, for the pipes behind the heater: an oak carcass, a compact 40 x 22 x 9 cm vertical electric heater on the back, its pipes and valves under it, and one oak door
     // hinged on the left (it opens 88 degrees, up to the tall joinery's face), marked openable (interact.js).
     const c = new THREE.Group(), q = part(c), D = 0.45, t = 0.018, y0 = 1.6, y1 = 2.5;
     p.g.add(c);
@@ -1327,15 +1325,15 @@ export function furnish(scene, M, mat, version = "main") {
     q.box(-cw + t, cw - t, y0 + t, y1 - t, 0, 0.01, honeyOak);                                                     // back
     q.box(-cw, cw, y0 - 0.02, y0, 0.05, D - 0.05, mat.ledStrip);                                                   // strip onto the counter
     const hz = 0.01 + 0.03 + 0.18;  // heater centre: 3 cm of pipes behind it, its front 3 cm inside the door
-    q.cyl(0, hz, 0.18, y0 + 0.2, y0 + 0.82, mat.applianceWhite, 40);
-    q.cyl(0, hz, 0.17, y0 + 0.82, y0 + 0.84, mat.applianceWhite, 40, 0.18);
-    q.cyl(0, hz + 0.18, 0.025, y0 + 0.5, y0 + 0.53, mat.grille, 20).rotation.x = Math.PI / 2;  // thermostat dial
+    const heaterH = 0.40, heaterW = 0.22, heaterD = 0.09;
+    q.box(-heaterW / 2, heaterW / 2, y0 + 0.2, y0 + 0.2 + heaterH, hz, hz + heaterD, mat.applianceWhite, 0.025);
+    q.box(-0.025, 0.025, y0 + 0.2 + heaterH * 0.48, y0 + 0.2 + heaterH * 0.52, hz + heaterD, hz + heaterD + 0.004, mat.grille, 0.02);  // thermostat detail
     for (const [x, m] of [[-0.07, mat.chrome], [0.07, mat.brass]]) {  // cold in, hot out: down from its base to valves
-      q.cyl(x, hz, 0.011, y0 + t, y0 + 0.2, m, 12);
-      q.box(x - 0.02, x + 0.02, y0 + 0.08, y0 + 0.11, hz - 0.02, hz + 0.02, mat.chrome, 0.005);
-      q.cyl(x, 0.02, 0.011, y0 + t, y0 + 0.06, m, 12);
+      q.cyl(x, hz + heaterD / 2, 0.009, y0 + t, y0 + 0.2, m, 12);
+      q.box(x - 0.02, x + 0.02, y0 + 0.08, y0 + 0.11, hz - 0.02, hz + heaterD / 2 + 0.02, mat.chrome, 0.005);
+      q.cyl(x, 0.02, 0.009, y0 + t, y0 + 0.06, m, 12);
     }
-    q.cyl(0.17, 0.02, 0.008, y0 + 0.3, y0 + 0.86, mat.applianceWhite, 8);  // supply cable down the back corner
+    q.cyl(0.1, 0.02, 0.006, y0 + 0.3, y0 + 0.86, mat.applianceWhite, 8);  // supply cable down the back corner
     const door = new THREE.Group(), dq = part(door);
     door.position.set(-cw, 0, D - 0.02);
     c.add(door);

@@ -504,7 +504,7 @@ export function furnish(scene, M, mat, version = "main") {
   // Kareem's floating vanity body, w x d, 0.30 to the 0.86 counter, in place of the modelled one: a mid-oak carcass under a
   // pale oak counter, two handle-less doors hinged at the outer ends on their front corners (they meet the side walls
   // 1 cm off, so they stop at 88 degrees), marked openable (interact.js). Inside: an instant electric water heater flat on
-  // the left side panel (as you face it: local -x), its hoses to angle valves on the back, a socket, and the trough's trap.
+  // the back panel left of the trap (as you face it: local -x), its hoses to angle valves and a socket beside it, and the trough's trap.
   const heaterVanity = (p0, w, d) => {
     const c = new THREE.Group(), p = part(c), leaves = [];
     p0.g.add(c);
@@ -534,27 +534,27 @@ export function furnish(scene, M, mat, version = "main") {
       if (k === 2) o.rotation.x = Math.PI / 2;
     };
     const path = (pts, r, m) => pts.slice(1).forEach((b, i) => run(pts[i], b, r, m));
-    // Instant water heater (Purity / Cemsan SPEED 7.5 kW: 37 x 24 x 10.5 cm), back on the left panel, its face to the middle.
-    const x0 = -H + t, x1 = x0 + 0.105, hy0 = 0.37, hy1 = 0.74, hz = 0.3;
-    p.box(x0, x1, hy0, hy1, hz - 0.12, hz + 0.12, white, 0.012);
-    p.box(x1, x1 + 0.004, 0.53, 0.66, hz - 0.06, hz + 0.06, mat.greyLacquer, 0.003);  // control panel
+    // Instant water heater (Purity / Cemsan SPEED 7.5 kW: 37 x 24 x 10.5 cm), back on the back panel left of the trap,
+    // its face to the doors.
+    const hx = -0.38, hy0 = 0.37, hy1 = 0.74, z1 = B + 0.105;
+    p.box(hx - 0.12, hx + 0.12, hy0, hy1, B, z1, white, 0.012);
+    p.box(hx - 0.06, hx + 0.06, 0.53, 0.66, z1, z1 + 0.004, mat.greyLacquer, 0.003);  // control panel
     const dial = p.cyl(0, 0, 0.022, -0.006, 0.006, mat.grille, 24);                   // temperature dial on the panel
-    dial.position.set(x1 + 0.01, 0.6, hz);
-    dial.rotation.z = Math.PI / 2;
-    p.box(x1 + 0.004, x1 + 0.007, 0.548, 0.554, hz + 0.035, hz + 0.041, mat.downlight);  // power LED
-    // Hoses from its bottom (cold in, hot out) to two angle valves on the back panel.
-    for (const [hzz, vx, hy] of [[hz - 0.04, -0.36, 0.35], [hz + 0.04, -0.27, 0.33]]) {
-      const hx = x0 + 0.05;
-      path([[hx, hy0, hzz], [hx, hy, hzz], [hx, hy, 0.075], [vx, hy, 0.075], [vx, 0.4, 0.075]], 0.006, mat.brushedNickel);
+    dial.position.set(hx, 0.6, z1 + 0.01);
+    dial.rotation.x = Math.PI / 2;
+    p.box(hx + 0.035, hx + 0.041, 0.548, 0.554, z1 + 0.004, z1 + 0.007, mat.downlight);  // power LED
+    // Hoses from its bottom (cold in, hot out) to two angle valves on the back panel, to its right; nested, not crossing.
+    for (const [hxx, vx, hy] of [[hx - 0.04, -0.12, 0.33], [hx + 0.04, -0.19, 0.35]]) {
+      path([[hxx, hy0, 0.075], [hxx, hy, 0.075], [vx, hy, 0.075], [vx, 0.4, 0.075]], 0.006, mat.brushedNickel);
       run([vx, 0.42, B], [vx, 0.42, 0.075], 0.012, mat.chrome);                       // valve body
       p.cyl(vx, B + 0.003, 0.022, 0.417, 0.423, mat.chrome, 24).rotation.x = Math.PI / 2;  // rosette
       p.box(vx - 0.006, vx + 0.006, 0.432, 0.46, 0.05, 0.062, mat.chrome, 0.003);     // quarter-turn handle
       run([vx, 0.4, 0.075], [vx, 0.42, 0.075], 0.008, mat.chrome);
     }
-    // White socket on the back panel, the heater's cable up and across to it.
-    p.box(-0.29, -0.21, 0.62, 0.7, B, B + 0.01, white, 0.004);
-    for (const x of [-0.262, -0.238]) p.box(x - 0.003, x + 0.003, 0.655, 0.665, B + 0.01, B + 0.011, shadowGap);
-    path([[x0 + 0.05, hy1, hz], [x0 + 0.05, 0.765, hz], [x0 + 0.05, 0.765, 0.06], [-0.25, 0.765, 0.06], [-0.25, 0.68, 0.06], [-0.25, 0.68, B + 0.012]],
+    // White socket on the back panel right of the heater, its cable up off the top and across to it.
+    p.box(-0.2, -0.12, 0.62, 0.7, B, B + 0.01, white, 0.004);
+    for (const x of [-0.172, -0.148]) p.box(x - 0.003, x + 0.003, 0.655, 0.665, B + 0.01, B + 0.011, shadowGap);
+    path([[hx + 0.08, hy1, 0.06], [hx + 0.08, 0.765, 0.06], [-0.16, 0.765, 0.06], [-0.16, 0.68, 0.06], [-0.16, 0.68, B + 0.012]],
       0.004, white);
     // Trough waste: tail down from the counter, a chrome bottle trap, and the arm back into the wall.
     run([0, y1 - t, 0.27], [0, 0.6, 0.27], 0.016, mat.chrome);
@@ -562,9 +562,9 @@ export function furnish(scene, M, mat, version = "main") {
     run([0, 0.57, 0.27], [0, 0.57, B], 0.016, mat.chrome);
     p.cyl(0, B + 0.003, 0.03, 0.564, 0.576, mat.chrome, 24).rotation.x = Math.PI / 2;
     // Under the 0.86 counter the inside can't be seen from standing eye height: opening it crouches you to 0.95, turned
-    // a little towards the heater.
+    // a little towards the heater on the back.
     c.userData.openable = { id: "vanity-cabinet", label: "Vanity cabinet", leaves, anchor: new THREE.Vector3(0, (y0 + y1) / 2, d + 0.06),
-      reach: 1.8, duration: 0.6, peek: 0.95, peekAt: new THREE.Vector3(-0.15, 0.5, 0.3) };
+      reach: 1.8, duration: 0.6, peek: 0.95, peekAt: new THREE.Vector3(-0.22, 0.5, 0.1) };
   };
   // DWG wardrobe w long. Default: smoked-glass sliding doors in a gypsum frame. `white`: plain white lacquer
   // leaves with a recessed vertical finger-pull between them (hidden handle), no walnut mullions.

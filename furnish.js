@@ -1414,7 +1414,7 @@ export function furnish(scene, M, mat, version = "main") {
   const dustyPink = mat.linenBlush.clone();
   dustyPink.color.setRGB(0.74, 0.5, 0.45);
   dustyPink.clippingPlanes = mat.linenBlush.clippingPlanes;
-  sized(item(version === "kareems-changes" ? 7.432 : 8.512, version === "kareems-changes" ? 5.55 : 5.55, "S", p => {
+  sized(item(version === "kareems-changes" ? 8.442 : 8.512, version === "kareems-changes" ? 5.55 : 5.55, "S", p => {
     const w = 0.78, h = 1.55, yc = 0.5 + h / 2;  // bottom 5 cm above the bench
     // Pebble outline grown (dz > 0) or shrunk by about dz all round: narrower top leaning left, fuller lower right
     const outline = dz => new THREE.CatmullRomCurve3([[-0.5, 0.95], [0.1, 1], [0.6, 0.85], [0.92, 0.35], [1, -0.3], [0.9, -0.86],
@@ -1433,7 +1433,7 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(0.08, 0.42, 0.45, 0.462, 0.02, 0.41, dustyPink, 0.004);   // throw over the seat
     p.box(0.08, 0.42, 0.07, 0.462, 0.41, 0.422, dustyPink, 0.004);  // hanging down the front
     for (let x = 0.095; x < 0.42; x += 0.02) p.box(x - 0.003, x + 0.003, 0.02, 0.07, 0.414, 0.418, dustyPink);  // fringe
-  }), version === "kareems-changes" ? 2.8 : 1, 1);
+  }), version === "kareems-changes" ? 1.1167 : 1, 1);
   item(9.365, 5.55, "S", p => {  // DWG shelf 0.40 x 0.18, rounded front corners, top at 1.02; books, reed diffuser
     const s = new THREE.Shape(), r = 0.08;
     s.moveTo(-0.2, 0); s.lineTo(0.2, 0); s.lineTo(0.2, 0.18 - r); s.absarc(0.2 - r, 0.18 - r, r, 0, Math.PI / 2, false);

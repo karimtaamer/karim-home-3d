@@ -29,15 +29,5 @@
   "openings": [
     {"at": [211.7522, -117.4482], "sill": 0.6, "head": 2.4, "kind": "window"}
   ],
-  "rooms": {"TERRACE": {"kind": "dry", "floor": "oakGrey", "light": {"brightness": 1.15, "warmth": "warm"}}},
-  "parapet": {"glass": true},
-  "heights": {"parapet": 1.05},
-  "walls": [
-    {"a": [211.8773, -119.9594], "b": [215.5473, -119.9594], "thickness": 0.2524, "height": 2.6, "glass": true},
-    {"a": [215.6142, -119.8332], "b": [215.6153, -116.1132], "thickness": 0.1338, "height": 2.6, "glass": true},
-    {"a": [215.2985, -115.8632], "b": [215.2985, -112.0732], "thickness": 0.2601, "height": 2.6, "glass": true},
-    {"a": [213.8685, -111.8355], "b": [215.1685, -111.8361], "thickness": 0.4462, "height": 2.6, "glass": true},
-    {"a": [211.8783, -112.1034], "b": [213.6194, -112.1046], "thickness": 0.4811, "height": 2.6, "glass": true},
-    {"a": [215.4285, -115.9882], "b": [215.5484, -115.9882], "thickness": 0.25, "height": 2.6, "glass": true}
-  ]
+  "rooms": {}
 }

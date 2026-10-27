@@ -1744,11 +1744,8 @@ export function furnish(scene, M, mat, version = "main") {
   for (const x of [17.6, 18.4, 19.2]) {
     item(x, 6.55, "N", p => chair(p));
     item(x, 8.65, "S", p => chair(p));
+    pendant(x, 7.6, 1.75, "lantern");
   }
-  item(18.4, 7.6, "S", p => {
-    p.model("https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/Chandelier_01/Chandelier_01_1k.gltf", null, 0, 1.85, -0.45, { size: [0.95, 0.8, 0.9] });
-  });
-  lamp(18.4, 7.6, 2.0, { color: 0xffd2a0, power: 2.5, beam: 65, target: [18.4, 7.6, 0.76] });
   item(16.95, 7.6, "E", p => chair(p)); item(19.85, 7.6, "W", p => chair(p));
   rug(16.6, 6.3, 20.2, 8.9);
   for (const y of [9.5]) {

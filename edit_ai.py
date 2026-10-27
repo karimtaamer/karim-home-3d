@@ -1582,8 +1582,9 @@ def find_model(words):
                         f'{{ size: [{m["size"][0]}, {m["size"][1]}, {m["size"][2]}] }})'} for m in hits]) + \
         ("\nIn an item(...) build: size: [w, h, d] makes it exactly that big (scale the catalogue size to the real piece "
          "the user wants); it stands on y = 0 and its back sits at z = 0. Models may face another way: if its front "
-         "doesn't face into the room, wrap it in a group rotated by Math.PI (or +-Math.PI / 2). Give it a 2furni outline "
-         "like any piece.")
+         "doesn't face into the room, wrap it in a group rotated by Math.PI (or +-Math.PI / 2). A new piece gets a 2furni "
+         "outline like any piece; a swap in place (this sofa for a real one) keeps the old outline as it is, no dxf_edit: "
+         "size the model to that footprint, and an L-shaped piece stays an L (one model along each arm).")
 
 
 def save_progress(ws, message, reply):
@@ -3438,6 +3439,8 @@ def review(ws, message, reply):
         src = ws.tmp / "plan-before.dxf"
         src.write_bytes(ws.orig.get(ws.cfg["dxf"]) or ws.read(ws.cfg["dxf"]))
         for i, px, py, line in gone:
+            if any(b and b[0] - 0.15 <= px <= b[2] + 0.15 and b[1] - 0.15 <= py <= b[3] + 0.15 for b in ws.pieces.values()):
+                continue  # its own outline changed in this edit; a big outline round it (an L-bench) isn't its footprint
             code, q = run([dwg_python(), str(ROOT / "edit_ai_dxf.py"), "query", str(src), f"--origin={ORIGIN[0]},{ORIGIN[1]}",
                            f"--bbox={px - 0.05},{py - 0.05},{px + 0.05},{py + 0.05}", "--layers=2furni,2 furni", "--limit", "400"],
                           timeout=90)

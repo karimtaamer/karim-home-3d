@@ -149,5 +149,25 @@ class Home(unittest.TestCase):
                 setattr(edit_ai, n, f)
 
 
+    def test_a_moved_piece_is_not_blamed_on_the_big_outline_around_it(self):
+        # Live 27 Oct 2026, "ضيف كنبة وترابيزة صغيرة في التراس": the terrace table moved in both views, but the check
+        # pinned its old 3D line on the L-bench outline round the lounge (its bounding box covers the table) and refused.
+        ws = edit_ai.Workspace("karims-version")
+        try:
+            ws.plan_dirty, ws.dxf_furni, ws.pieces, ws.clashes, ws.new_outlines, ws.moves = False, False, {}, {}, [], []
+            ws.pieces_now, ws.win_moved, ws.allow_as_built, ws.refs, ws.message = {}, [], False, [PNG], "test"
+            edit_ai.rebuild(ws)
+            for name, args in (("dxf_edit", {"ops": [{"op": "resize_piece", "handle": "C94/D5", "x_size": 0.9, "y_size": 0.9},
+                                                     {"op": "move_piece", "handle": "C94/D5", "dx": 0.57435, "dy": -0.59785}]}),
+                               ("edit_file", {"path": "furnish.js", "old": 'item(23.4, 3.4, "S", p => p.cyl(0, 0, 0.45, 0, 0.38, mat.stoneTable, 40));',
+                                              "new": 'item(23.4, 3.85, "S", p => p.box(-0.45, 0.45, 0, 0.38, 0, 0.9, mat.stoneTable, 0.02));'})):
+                out = edit_ai.tool(ws, name, args)
+                self.assertNotIn("nothing changed:", out, out)
+            note = edit_ai.review(ws, "ضيف ترابيزة صغيرة في التراس", "حطّيت ترابيزة صغيرة في التراس.") or ""
+            self.assertNotIn("plan outline it stands on", note, note)
+        finally:
+            shutil.rmtree(ws.tmp, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()

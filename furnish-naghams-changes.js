@@ -39,6 +39,8 @@ function metreUVs(g) {
 const FACING = { S: 0, E: Math.PI / 2, N: Math.PI, W: -Math.PI / 2 };
 
 export function furnish(scene, M, mat, version = "main") {
+  // Exact visual copy of Main: this view must run every Main (kareems-changes) furniture branch.
+  if (version === "naghams-changes") version = "kareems-changes";
   const root = new THREE.Group();
   const ceilingBits = new THREE.Group();  // shown only with the ceiling (downlights, grilles)
   scene.add(root, ceilingBits);

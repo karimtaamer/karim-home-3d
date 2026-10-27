@@ -17,7 +17,7 @@
     {"room": "DINING", "caption": "Dining", "eye": [209.6, -119.2], "look": [208.4, -113.0]},
     {"room": "TERRACE", "caption": "Terrace", "eye": [212.6, -119.3], "look": [214.6, -113.0]},
     {"room": "KITCHEN", "caption": "Kitchen", "eye": [199.9, -115.4], "look": [197.4, -113.0]},
-    {"room": "LAUNDRY", "caption": "Laundry", "eye": [202.2, -114.6], "look": [201.8, -112.9]},
+    {"room": "مخزن", "caption": "Laundry", "eye": [202.2, -114.6], "look": [201.8, -112.9]},
     {"room": "TOILET 2", "caption": "Guest bathroom", "eye": [204.3, -114.3], "look": [203.3, -113.0]},
     {"room": "LIVING ROOM", "caption": "Living room", "eye": [196.2, -117.7], "look": [194.2, -120.6]},
     {"room": "MASTER BEDROOM", "caption": "Master bedroom", "eye": [195.5, -115.45], "look": [192.7, -113.9]},

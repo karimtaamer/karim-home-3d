@@ -995,6 +995,15 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
   }, true);
 
   // --- Saving (Accept) -------------------------------------------------------------------------------------------------
+  // The furnish file this page's scene was built from, as the server names files (sha-256, 20 hex): a newer revision
+  // that left it alone (a ceiling, a finish, an Edit AI edit undone) doesn't make an Accept stale. A live file's sha
+  // comes with it; the deployed one's is worked out from its text.
+  let textSha = null;
+  function hashText(t) {
+    crypto.subtle?.digest("SHA-256", new TextEncoder().encode(t))
+      .then(d => (textSha = [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 20))).catch(() => {});
+  }
+  const furnishSha = () => Object.entries(live.sha || {}).find(([p]) => /^furnish(-[\w-]+)?\.js$/.test(p))?.[1] || textSha;
   async function call(action, body) {
     const r = await fetch(`${API}/${action}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const j = await r.json().catch(() => ({ error: `${r.status} ${r.statusText}` }));
@@ -1014,13 +1023,13 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
       if (keep.del) sel.o.visible = false;
       else preview(keep.box, keep.rot, keep.z);
       previewGroup();
-      return { version, rev: live.rev, op: "batch", items };
+      return { version, rev: live.rev, furnish: furnishSha(), op: "batch", items };
     }
     if (draft.del) {
       sel.o.visible = true;
       const piece = describe(sel.o);
       sel.o.visible = false;
-      return { version, rev: live.rev, op: "delete", piece };
+      return { version, rev: live.rev, furnish: furnishSha(), op: "delete", piece };
     }
     const b = sel.box, n = draft.box, z = draft.z, z0 = [sel.low, sel.high];
     const taller = z && Math.abs((z[1] - z[0]) - (z0[1] - z0[0])) >= 0.001;
@@ -1031,7 +1040,7 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     piece.box = b.map(r4);
     piece.low = r4(sel.low);
     piece.high = r4(sel.high);
-    const body = { version, rev: live.rev, op: resized ? "resize" : "move", piece };
+    const body = { version, rev: live.rev, furnish: furnishSha(), op: resized ? "resize" : "move", piece };
     if (resized) Object.assign(body, { box: n.map(r4) }, z ? { z: z.map(r4) } : {});
     else Object.assign(body, { dx: r4((n[0] + n[2] - b[0] - b[2]) / 2), dy: r4((n[1] + n[3] - b[1] - b[3]) / 2) },
       z ? { dz: r4(z[0] - z0[0]) } : {}, draft.rot ? { rotate: draft.rot } : {});
@@ -1088,7 +1097,7 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     if (on) loadOrigins();
     if (on && furnishText === null) {
       furnishText = "";
-      fetch(live.url("furnish.js")).then(r => r.text()).then(t => (furnishText = t)).catch(() => {});
+      fetch(live.url("furnish.js")).then(r => r.text()).then(t => (furnishText = t, hashText(t))).catch(() => {});
     }
     all = null;
     document.body.classList.toggle("moving", on);

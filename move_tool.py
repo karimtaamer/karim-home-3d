@@ -818,7 +818,7 @@ def batch(req, v):
     ws.batch, notes, out = [], [], []
     for it in sorted(items, key=lead):
         try:
-            r = transform({**it, "version": v, "rev": req.get("rev")}, ws)
+            r = transform({**it, "version": v, "rev": req.get("rev"), "furnish": req.get("furnish")}, ws)
         except ValueError as e:
             raise ValueError(f"The {it['piece'].get('label') or 'piece'}: {e} Nothing in the group was saved.")
         out.append(r)
@@ -875,6 +875,17 @@ def delete(ws, v, piece, text, found, sh, label):
             "plan": kind in ("own", "block", "lines"), "outline": outline and outline[1], "how": found["how"], "sync": man.get("sync")}
 
 
+def behind(ws, req):
+    """Is the page older than this version's furniture? The same rev is the quick yes-it's-current. A newer rev from a
+    change that left the furnish file alone (a ceiling height, a finish, an Edit AI edit and its Undo, which leave the
+    same file) doesn't count: the page sends the sha of the furnish file it built its scene from, and its pieces' line
+    numbers are right as long as that is the file here now. (27 Oct 2026: an Edit AI test loop on the live site bumped
+    Karim's version's rev every 30 s, so every Accept was refused.)"""
+    if req.get("rev") is None or req.get("rev") == (ws.man and ws.man.get("rev")):
+        return False
+    return not (req.get("furnish") and req["furnish"] == E.sha(ws.read("furnish.js")))
+
+
 def transform(req, ws=None):
     v = E.plan_version(req.get("version"))
     if v not in E.VERSIONS:
@@ -892,9 +903,8 @@ def transform(req, ws=None):
     ws = ws or E.Workspace(v)  # a batch passes its own: every piece in one workspace, saved once
     ws.allow_as_built = False
     ws.plan_dirty, ws.dxf_furni, ws.pieces, ws.clashes, ws.new_outlines, ws.moves = getattr(ws, "plan_dirty", False), False, {}, {}, [], []
-    cur = ws.man and ws.man.get("rev")
-    if req.get("rev") is not None and req.get("rev") != cur:
-        raise ValueError("This page is behind the latest change to this version. Reload and try again.")
+    if behind(ws, req):
+        raise ValueError("This version's furniture changed since this page loaded. Reload and try again.")
     text = f0 = ws.text("furnish.js")
     shared = lambda n: False  # the version's own file: no line of it runs for another version (see the docstring)
     try:

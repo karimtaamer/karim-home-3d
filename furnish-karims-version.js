@@ -1862,6 +1862,7 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(-0.68, -0.39, 0.93, 0.95, 0.3, 0.44, mat.chrome);
     });
   }), 1, version === "karims-version" ? 1.8678 : 1);
+  ac(16.954, 9.502, "S", 2.45, 0.9, 0.3, 0.24, true); // split centred above the reception window
   item(16.95, 9.5, "S", p => p.box(-1.0, 1.0, 2.5, 2.52, 0.02, 0.22, mat.ledStrip));
   if (["kareems-changes", "karims-version"].includes(version)) item(18.55, 9.502, "S", p => {
     const c = new THREE.Group(), q = part(c), leaves = []; p.g.add(c);

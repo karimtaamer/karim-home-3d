@@ -522,7 +522,7 @@ export function furnish(scene, M, mat, version = "main") {
   const medCabinet = (w = 0.8, y0 = 1.32, y1 = 2.07, shelves = 3, open = 0) => vanityPart => {
     const c = new THREE.Group(), p = part(c), leaves = [];
     vanityPart.g.add(c);
-    const h = w / 2, b = 0.02, f = version === "karims-version" ? 0.185 : 0.285, t = 0.018;  // back on the battens, carcass front edge, board
+    const h = w / 2, b = 0.02, f = 0.185, t = 0.018;  // back on the battens, carcass front edge, board
     p.box(-h - 0.02, h + 0.02, y0 - 0.02, y1 + 0.02, b, b + 0.006, mat.ledStrip, 0.02);  // halo
     p.box(-h, h, y0, y1, b, b + 0.012, honeyOak);                                          // back, 25.3 cm to the front edge
     for (const s of [-1, 1]) p.box(s < 0 ? -h : h - t, s < 0 ? -h + t : h, y0, y1, b, f, mat.oakVeneer);  // sides

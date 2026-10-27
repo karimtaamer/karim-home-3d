@@ -1710,7 +1710,7 @@ export function furnish(scene, M, mat, version = "main") {
   else for (const x of [18.195, 19.525]) art(x, 2.0705, "N", 1.0, 1.25, 1.62, x < 19 ? 0 : 1);
   // Curtains either side of each slider (the sofa one 2.00 m, centred on the sofa): sheer on the track nearest
   // the glass, curtains stacked in front, both clear of the sofa back (x 21.027).
-  for (const [y0, y1] of [[2.935, 5.395], [6.34, 8.08]]) {
+  for (const [y0, y1] of [[3.135, 5.195], [6.34, 8.08]]) {
     for (const y of [y0 - 0.15, y1 + 0.15]) item(21.22, y, "W", p => {
       const m = mesh(curtainGeometry(0.45, 2.5), mat.curtain, p.g); m.position.set(0, 1.3, 0.14);
     });
@@ -1719,7 +1719,7 @@ export function furnish(scene, M, mat, version = "main") {
   const NCAC = version === "naghams-changes" || ["kareems-changes", "karims-version"].includes(version);  // Nagham's Changes: wall-mounted splits, no ducted AC
   if (NCAC) {
     // Slim ceiling-fixed double track over each slider (sheer and curtain runs), as long as the curtain stacks.
-    for (const [y0, y1] of [[2.935, 5.395], [6.34, 8.08]]) item(21.222, (y0 + y1) / 2, "W", p =>
+    for (const [y0, y1] of [[3.135, 5.195], [6.34, 8.08]]) item(21.222, (y0 + y1) / 2, "W", p =>
       p.box(-(y1 - y0) / 2 - 0.375, (y1 - y0) / 2 + 0.375, M.ceiling - 0.03, M.ceiling, 0.02, 0.18, mat.applianceWhite, 0.005));
     // 1.5 hp split on the south wall's built-out face, east of the right-hand print (frame edge x 20.05),
     // 0.20 short of the east wall and clear of the curtain stack (y 2.76): 0.85 W x 0.29 H x 0.22 D, top 2.40.

@@ -58,7 +58,6 @@ export function furnish(scene, M, mat, version = "main") {
         Math.abs(o.geometry.parameters.width - (swing.r - 0.02)) < 0.001 &&
         Math.hypot(o.position.x - hx, o.position.z + hy) < swing.r * 0.6);
       if (leaf) {
-        if (dId === "guest-wc-door") { const darkDoor = mat.oakVeneer.clone(); darkDoor.color.setRGB(0.20, 0.11, 0.065); darkDoor.clippingPlanes = mat.oakVeneer.clippingPlanes; leaf.material = darkDoor; }
         const closed = Math.atan2(swing.closed[1] - hy, swing.closed[0] - hx);
         const openAngle = leaf.rotation.y;
         const cabinet = new THREE.Group(), hinge = new THREE.Group();

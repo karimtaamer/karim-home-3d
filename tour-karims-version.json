@@ -29,5 +29,6 @@
   "openings": [
     {"at": [211.7522, -117.4482], "sill": 0.6, "head": 2.4, "kind": "window"}
   ],
-  "rooms": {}
+  "rooms": {"LIVING ROOM": {"ceilingHeight": 2.9}},
+  "heights": {"ceiling": 2.6}
 }

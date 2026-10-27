@@ -38,5 +38,6 @@
     {"at": [198.8697, -118.1381], "frame": "#ffffff", "leaf": "#ffffff", "handle": "brass"},
     {"at": [211.7527, -114.4039], "frame": "#ffffff", "leaf": "#ffffff", "handle": "brass"}
   ],
-  "rooms": {}
+  "rooms": {"LIVING ROOM": {"ceilingHeight": 2.9}},
+  "heights": {"ceiling": 2.9}
 }

@@ -475,7 +475,7 @@ export function furnish(scene, M, mat, version = "main") {
     p.cyl(-0.62, 0.2, 0.05, 0.75, 0.88, mat.planter, 16, 0.04);
   });
   if (!["kareems-changes", "karims-version"].includes(version)) plant(5.12, 0.84, 1.8, 0.24);  // tall olive by the end of the chaise (removed on Kareem's via Edit AI)
-  plant(5.9, 1.08, 1.35, 0.2);   // beside the TV console
+  item(5.86, 0.65, "N", p => p.model("https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/potted_plant_01/potted_plant_01_1k.gltf", null, 0, 0, 0, { size: [0.5, 1.8, 0.6] }));   // tall corner plant beside the TV console
   art(3.62, 0.548, "N", 0.9, 1.25, 1.62, 0);  // large abstracts on both side walls, picture lights above
   art(4.35, 4.443, "S", 0.75, 1.0, 1.48, 1);
   ac(2.945, 1.2, "E", 2.38);  // split AC high on the window wall, between the south wall and the left curtain, under the cove

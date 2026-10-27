@@ -1948,7 +1948,7 @@ export function furnish(scene, M, mat, version = "main") {
   item(25.4, 3.5, "W", p => p.box(-1.9, 1.9, 1.1, 1.35, 0, 0.36, mat.render));
   for (let x = 21.7; x < 25.0; x += 0.45) plant(x, 1.6, 1.2, 0.1, 1.2);
   for (let y = 2.0; y < 5.4; y += 0.45) plant(25.22, y, 1.2, 0.1, 1.2);
-  plant(21.15, 2.2, 2.3, 0.32);
+  plant(21.85, 2.2, 1.9, 0.3);
 
   // --- Ceilings: downlights in every indoor room, linear AC grilles in the living spaces ---------
   const rooms = {};

@@ -1931,12 +1931,6 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-0.3, 0.3, 0.45, 0.8, 0.12, 0.3, mat.linenSage, 0.06);
   });
   item(23.35, 7.1, "S", p => p.box(-0.35, 0.35, 0, 0.4, -0.45, 0.45, mat.walnut, 0.02));
-  // Warm layered glow on the clear west wall, visible from the living-room slider.
-  item(21.62, 4.85, "E", p => {
-    p.box(-0.11, 0.11, 1.72, 2.12, 0.005, 0.07, mat.blackSteel, 0.025);
-    p.box(-0.075, 0.075, 1.78, 2.08, 0.071, 0.085, mat.lampShade, 0.03);
-  });
-  lamp(21.62, 4.85, 1.8, { color: "#ffd9a1", power: 18, beam: 60, target: [22.2, 4.85, 0.4] });
   item((T.x0 + T.x1) / 2, 9.27, "S", p => {  // DWG BBQ counter, front at y 8.80 (no sink, per the client)
     const len = T.x1 - T.x0;
     p.box(-len / 2, len / 2, 0.08, 0.9, 0, 0.47, mat.walnut);

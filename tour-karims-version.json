@@ -30,5 +30,5 @@
     {"at": [211.7522, -117.4482], "sill": 0.6, "head": 2.4, "kind": "window"}
   ],
   "heights": {"ceiling": 2.9},
-  "rooms": {"LIVING ROOM": {"ceilingHeight": 2.9}, "TOILET 2": {"ceilingHeight": 2.6, "floor": "cementTile"}, "LAUNDRY": {"ceilingHeight": 2.6}, "MASTER BEDROOM": {"ceilingHeight": 2.6}, "KITCHEN": {"ceilingHeight": 2.6}, "TOILET 1": {"ceilingHeight": 2.6}, "RECEPTION": {"ceilingHeight": 2.6}, "TERRACE": {"ceilingHeight": 2.6}}
+  "rooms": {"LIVING ROOM": {"ceilingHeight": 2.9}, "TOILET 2": {"ceilingHeight": 2.6}, "LAUNDRY": {"ceilingHeight": 2.6}, "MASTER BEDROOM": {"ceilingHeight": 2.6}, "KITCHEN": {"ceilingHeight": 2.6}, "TOILET 1": {"ceilingHeight": 2.6}, "RECEPTION": {"ceilingHeight": 2.6}, "TERRACE": {"ceilingHeight": 2.6}}
 }

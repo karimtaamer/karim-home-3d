@@ -1,5 +1,5 @@
 {
-  "_comment": "Standalone since 26 Oct 2026 (every version has its own everything; it used to extend tour.json). Nagham's Changes: starts as an exact copy of the Shifted Bedroom version (tour-shifted-bedroom.json). That version (master-v12.dwg; every version shares v12 outside the master suite, see README section 4): tour.json with these seeds / stops swapped in by name / room. The master bathroom moves to the west end of the suite, the bed is centred on its partition and the wardrobe runs along the kitchen wall, so the bathroom's seed moves west and the bedroom's moves out of the old suite lobby (now the wardrobe end of the bedroom). The passage to the bedroom door is open to the entrance and stays ENTRANCE. 'doorsAsDrawn': the bathroom and bedroom doors open inwards, as the DWG swings them.",
+  "_comment": "Standalone since 26 Oct 2026 (every version has its own everything; it used to extend tour.json). Kareem's Changes: starts as an exact copy of Nagham's Changes (tour-naghams-changes.json), itself first an exact copy of the Shifted Bedroom version (tour-shifted-bedroom.json). That version (master-v12.dwg; every version shares v12 outside the master suite, see README section 4): tour.json with these seeds / stops swapped in by name / room. The master bathroom moves to the west end of the suite, the bed is centred on its partition and the wardrobe runs along the kitchen wall, so the bathroom's seed moves west and the bedroom's moves out of the old suite lobby (now the wardrobe end of the bedroom). The passage to the bedroom door is open to the entrance and stays ENTRANCE. 'doorsAsDrawn': the bathroom and bedroom doors open inwards, as the DWG swings them. Kareem's Changes (2026-10-25): the master bathroom door sits 0.16 m further east (hinge DWG x 192.49). 2026-10-25 (Nagham call): the guest WC door is hinged on its east jamb (DWG x 204.366) and opens inwards against the vanity, as drawn. 2026-10-25 (batch): new hinged door corridor -> dining (hinge DWG 205.164, -114.872, north jamb), swinging east into the dining area, as drawn. 2026-10-25 (Karim): the guest WC door is hinged on its west jamb (DWG x 203.678) and opens inwards toward the shower, as drawn; the laundry door (hinge DWG 202.45, -114.72) opens inwards into the laundry, as drawn.",
   "title": "Karim's Apartment",
   "subtitle": "A walk through home",
   "seeds": [
@@ -25,5 +25,8 @@
   ],
   "entry": [198.9, -118.1],
   "finishes": {"KITCHEN": "wood"},
-  "doorsAsDrawn": [[192.33, -115.48], [195.98, -115.95]]
+  "doorsAsDrawn": [[192.49, -115.48], [195.98, -115.95], [203.678, -114.723], [205.164, -114.872], [202.45, -114.72]],
+  "openings": [
+    {"at": [211.7522, -117.4482], "sill": 0.6, "head": 2.4, "kind": "window"}
+  ]
 }

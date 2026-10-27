@@ -582,7 +582,7 @@ def _axes(lines, p, reach=1.6):
     return out
 
 
-def _pair(sides, lo=0.06, hi=0.4):
+def _pair(sides, lo=0.06, hi=0.5):  # 0.5: build_geometry's MAX_T (the terrace's north parapet is 48 cm)
     """The two face offsets (n0 < n1) a wall's thickness apart that p (n = 0) sits in, or nearest to."""
     best = None
     for i, a_ in enumerate(sides):
@@ -1387,6 +1387,14 @@ def edit(a):
             for h in o["handles"]:
                 e = get(h)
                 touched.add(e.dxf.handle)
+                if e.dxftype() == "INSERT":  # by hand: ezdxf throws a turned block's stretch metres off (the WC symbol)
+                    # a block can only stretch along its own axes: those nearest plan x / y (exact at 0 / 90 / 180 / 270°)
+                    across = abs(math.sin(math.radians(e.dxf.get("rotation", 0)))) > abs(math.cos(math.radians(e.dxf.get("rotation", 0))))
+                    p_ = e.dxf.insert
+                    e.dxf.insert = (bx + (p_.x - bx) * sx + dx, by + (p_.y - by) * sy + dy, p_.z)
+                    e.dxf.xscale = e.dxf.get("xscale", 1) * (sy if across else sx)
+                    e.dxf.yscale = e.dxf.get("yscale", 1) * (sx if across else sy)
+                    continue
                 try:
                     e.transform(m)
                 except Exception:  # a circle / arc can't stretch one way only: its centre moves, its radius takes the smaller

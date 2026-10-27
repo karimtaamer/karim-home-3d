@@ -205,7 +205,7 @@ def get(path):
     if path in _cache:  # files and revisions are written once under their own names
         return _cache[path]
     data = photogen_blob.get(path) if BLOB else (ROOT / path).read_bytes()
-    if len(_cache) > 64:
+    if len(_cache) > 256:  # revisions are read again for own_shas(): room for the recent ones
         _cache.clear()
     _cache[path] = data
     return data
@@ -308,7 +308,7 @@ def replay(text, ops):
 def resolve(man):
     """{path: (status, entry, content or None)} for a revision against the files deployed now.
     status: live (use the stored file), replayed (content given), synced (deployed already equals it), conflict."""
-    out = {}
+    out, owned = {}, None
     if not man:
         return out
     for path, e in man["files"].items():
@@ -321,7 +321,10 @@ def resolve(man):
         dep = deployed(path)
         if sha(dep) == e["sha"]:
             out[path] = ("synced", e, None)
-        elif sha(dep) == e["base"]:
+        elif sha(dep) == e["base"] or sha(dep) in (owned := owned if owned is not None else own_shas(man["version"]))[path]:
+            # The bundle is one of this version's own recent states (a deploy of an earlier Edit AI commit catching up,
+            # e.g. an edit whose Undo isn't deployed yet): not a newer push, so the live file stands as it is. Merging
+            # onto it brought an undone change back on 27 Oct 2026 (glass parapet, test 19 -> 21).
             out[path] = ("live", e, None)
         else:
             # The deployed file moved on (a git push): keep the live edit on top of it. A three-way merge against the
@@ -340,6 +343,19 @@ def resolve(man):
     for path, (st, e, _) in list(out.items()):
         if e.get("derived") and out.get(e["derived"], ("synced",))[0] == "conflict":
             out[path] = ("conflict", e, None)
+    return out
+
+
+def own_shas(v, n=30):
+    """{path: shas} this version's last n revisions stored: states Edit AI itself made (one listing, cached reads)."""
+    out = defaultdict(set)
+    for name in revisions(v)[-n:]:
+        try:
+            files = json.loads(get(name)).get("files", {})
+        except Exception:
+            continue
+        for path, f in files.items():
+            out[path].add(f["sha"])
     return out
 
 
@@ -672,7 +688,9 @@ def _unsized(t):
                 cut.append(j)
             j += 1
         vals = [t[a + 1:b] for a, b in zip(cut, cut[1:] + [j])]
-        is_call = i == 0 or not (t[i - 1].isalnum() or t[i - 1] in "_$.") or t[:i].endswith(("true", "false"))  # iffalsesized(
+        # not part of a longer name (iffalsesized( is a folded condition); "." too: a comment the folding keeps (one with
+        # an apostrophe) can end in one, and nothing calls .sized(
+        is_call = i == 0 or not (t[i - 1].isalnum() or t[i - 1] in "_$") or t[:i].endswith(("true", "false"))
         if is_call and len(cut) > 2 and vals[2:] == ["1", "0"][:len(cut) - 2]:  # height 1, lift 0: as sized(x, a, o)
             t = t[:cut[2]] + t[j:]
             k = i
@@ -1838,7 +1856,9 @@ slider unless set to "window"), a wooden or glass sliding panel; and home-wide c
 parapet heights. "Make the window shorter with wall under it" = set_openings sill (keep its head). "Lower the doors" = \
 home door height. All of it is for this version only. How openings look is set_openings too: frame / leaf / handle material or \
 colour, glass (frosted, tinted, bronze, reflective), panes and transoms, door style (panelled, glazed, louvred, hidden \
-flush), a slider's style (bifold, pocket, barn), arch, a glass fanlight over a door, a round window.
+flush), a slider's style (bifold, pocket, barn), arch, a glass fanlight over a door, a round window. "All the doors
+white with brass handles" = plan_rooms (it lists every opening), then ONE set_openings call with an entry per door
+(at: its centre, leaf: "#ffffff", handle: "brass"); the front door too unless the user leaves it out.
 - Walls: only with dxf_edit's wall ops (add_wall, remove_wall, move_wall, set_wall_thickness, mark_wall), never face \
 lines by hand: they keep junctions closed. A half / low wall or a glass wall = height / glass on add_wall or mark_wall; a glass \
 balustrade round the terrace = set_openings home {{ parapet: height, parapetGlass: true }} (all parapets at once); a curved wall = add_wall through. A wall that splits a room makes a new room: add_room_label it (its name \
@@ -1854,10 +1874,18 @@ stays a furnish panel.
 the plan); then shelves or lights in it in furnish.js if asked.
 - Light that lights something: lamp(x, y, h, {{ color, power, beam, target }}) in furnish.js next to the fitting (a \
 spot: beam = cone degrees, target = [x, y, h]); a fitting alone only glows. At most 12 lamps in the home.
+- The rooms' everyday Arabic names (the plan's labels in brackets): الصالة / الليفنج (LIVING ROOM); الريسبشن (RECEPTION);
+السفرة (DINING); المطبخ (KITCHEN); الغسيل / المغسلة (LAUNDRY); المدخل (ENTRANCE); الطرقة / الممر (HALLWAY); أوضة النوم
+الرئيسية / الماستر / أوضتي (MASTER BEDROOM); الحمام الكبير / الرئيسي / حمام الماستر / حمام أوضة النوم = the master bath
+(TOILET 1, off the master bedroom), whatever its area; الحمام الصغير / حمام الضيوف / التواليت = the guest WC (TOILET 2);
+التراس / البلكونة (TERRACE). A request naming a room means that room, not the one in the picture.
 - Reply in the user's language and dialect: most users are Egyptian, so an Egyptian Arabic request gets a short
 Egyptian Arabic reply (مافيش، عشان، دلوقتي، كده; never Levantine or Gulf words like "ما في" or "هلق"), a formal Arabic
 request a formal one; sizes in cm and areas in m2. Say only what the plan shows: two rooms are one space only when
 no wall stands between them.
+- Questions ("how big is...", "what is the biggest sofa that fits..."): answer the question asked, with the numbers
+(measure / plan_rooms / furniture_near), in a sentence or two; if it depends on something, give the answer for the
+likely case and say what it depends on.
 - Questions ("how big is...", "how much paint / tile do I need?", "where are..."): answer from measure / plan_rooms \
 and change nothing. Notes ("mark this door fire-rated", "underfloor heating here") and where the walk-through starts: \
 set_home. A photo the user sends for a frame, a print or a tile / fabric sample: save_picture, then use the material. \
@@ -2237,10 +2265,12 @@ _COMPLEX_RES = [re.compile(p, re.I) for p in (
     r"\b(replace[sd]?\b[^.]{0,40}?\bwith|turn\b[^.]{0,40}?\binto|convert)\b",
     r"\b(and then|then also|also)\b",
     r"\b(hang|hung|mount|fit|fix (a|an|some))\b", r"\b(chandelier|pendant|lamp|light fitting|spotlight|sconce)s?\b",
+    r"\b(all|every) (the )?doors?\b", r"\bniche", r"\bsliding\b",
 )]
 # Egyptian / standard Arabic (no \b: "والحيطة" = and + the + wall is one word). Adding, building, hanging, swapping or
 # turning one thing into another, light fittings, and the plan's walls / windows / doors with a verb that changes them.
-_AR_COMPLEX = re.compile(r"ضيف|اضيف|أضيف|اضف|أضف|زود|ركب|ركّب|علق|علّق|حط |حطلي|حطّ|اعمل|إعمل|اعملي|ابني|جديد|"
+_AR_COMPLEX = re.compile(r"ضيف|اضيف|أضيف|اضف|أضف|زود|ركب|ركّب|علق|علّق|(?:^|[\sوف])حط(?:لي|ي|وا|ّ)?(?:\s|$)|اعمل|إعمل|اعملي|ابني|جديد|"
+                         r"كل الابواب|كل الأبواب|كل ابواب|كل أبواب|كل باب|الابواب كلها|الأبواب كلها|نيش|سحاب|جرار|منزلق|"
                          r"بدل|استبدل|حول|حوّل|اقلب|نجف|اباليك|أباليك|ابليك|سبوت|لمبة|اضاءة|إضاءة|ينطوي|قابل للطي|بيتفتح|يتفتح|"
                          r"وكمان|وبعدين|كمان")
 _AR_PLAN = re.compile(r"حيط|حائط|جدار|شباك|شبابيك|نافذ|باب|ابواب|أبواب|عمود|فاصل|فتح")
@@ -2374,7 +2404,8 @@ Score 0-10 how well the change does exactly what was asked:
 right piece (the circled / named one), right direction and amount, right colour or material, a sensible size and place,
 nothing unrelated changed, and the reply truthfully describes the diff.
 10 exactly right; 7 right with nitpicks; 4 partly right or a visible mistake; 0 wrong piece or nothing asked for done.
-Judge the result, not code style; don't guess at what the diff doesn't show.
+Judge the result, not code style; don't guess at what the diff doesn't show. Check the changed thing is in the room the
+user named (the diff says which rooms an opening sits between): the right change on the wrong window scores 2.
 Answer JSON only: {"score":n,"problems":["a fix for the editor, max 25 words"],"summary":"max 20 words"}"""
 
 
@@ -2392,8 +2423,33 @@ def edit_diff(ws, trace, limit=12000):
     plan = [f"{t['tool']} {t['args']}" for t in trace if t["tool"].startswith("dxf_") and t["tool"] not in ("dxf_query", "dxf_find")]
     if plan:
         out += ["Plan edits:"] + plan[-10:]
+    if ws.cfg["tour"] in ws.changed:  # which rooms an opening spec's point sits between: "at" alone doesn't say
+        try:
+            t0 = json.loads(ws.orig.get(ws.cfg["tour"], b"{}") or b"{}")
+            t1 = json.loads(ws.text(ws.cfg["tour"]))
+            s_ = ws.text(ws.cfg["model"])
+            floors = json.loads(s_[s_.index("{"):s_.rindex("}") + 1]).get("floor", [])
+            old = {json.dumps(o, sort_keys=True) for o in t0.get("openings", [])}
+            for o in t1.get("openings", []):
+                if json.dumps(o, sort_keys=True) in old:
+                    continue
+                x, y = o["at"][0] - ORIGIN[0], o["at"][1] - ORIGIN[1]
+                near = sorted({f["room"] for f in floors if min(math.dist((x, y), q) for q in f["outer"]) < 1.0
+                               or _inside(f["outer"], x, y)})
+                out.append(f"Opening spec changed at plan ({round(x, 2)}, {round(y, 2)}): between {' and '.join(near) or 'no named room'}")
+        except Exception:
+            pass
     text = "\n".join(out)
     return text if len(text) <= limit else text[:limit] + "\n... (diff cut)"
+
+
+def _inside(ring, x, y):
+    c = False
+    for i in range(len(ring)):
+        (x1, y1), (x2, y2) = ring[i], ring[i - 1]
+        if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / (y2 - y1) + x1:
+            c = not c
+    return c
 
 
 def review_edit(ws, message, reply, where, image, trace, total):

@@ -66,6 +66,19 @@ class Undo(Sandbox):
         live = edit_ai.patches(V)["files"][F]  # the page loads the restored file
         self.assertEqual(live["sha"], edit_ai.sha(before.encode()))
 
+    def test_a_lagging_deploy_of_an_undone_edit_does_not_bring_it_back(self):
+        # 27 Oct 2026: edit A, undo A, edit B, undo B in under a minute; the bundle then caught up to A's commit (the
+        # undo's commit not deployed yet) and the live file was merged onto it, so A came back. Our own states win.
+        base, a, b = furnish(CHAIR), furnish(BLACK), furnish(CHAIR).replace("// frame, upholstery", "// frame, upholstery (b)")
+        self.deploy(base)
+        self.edit(a, "A")
+        edit_ai.undo({"version": V})
+        self.edit(b, "B")
+        self.deploy(a)  # the deploy of A's commit lands now
+        live = edit_ai.patches(V)["files"][F]
+        self.assertEqual(live["sha"], edit_ai.sha(b.encode()), "the page must show B, not A merged back in")
+        self.assertNotIn("chairBlack", edit_ai.Workspace(V).text("furnish.js"))
+
     def test_undo_before_git_sync_goes_back_to_deployed(self):
         before = furnish(CHAIR)
         self.deploy(before)

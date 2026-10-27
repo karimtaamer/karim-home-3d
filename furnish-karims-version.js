@@ -823,7 +823,7 @@ export function furnish(scene, M, mat, version = "main") {
     // LED under each top. The model carves the rough slot full height (build --cut); the 1 cm stone lining plus
     // 5 mm porcelain here finish it, and porcelain fills it below, between and above (5 mm into the lining).
     item(0.976, 7.5201, "N", p => {
-      const floors = [0.895, 1.19, 1.485], top = 1.74, t = 0.04, w = 0.335, d = 0.135, D = 0.155;
+      const floors = [1.0, 1.295, 1.59], top = 1.845, t = 0.04, w = 0.335, d = 0.135, D = 0.155;
       p.box(-w - 0.02, w + 0.02, 0, floors[0], -D, 0, mat.stoneWall);                        // solid below the first floor
       for (const y of floors.slice(1)) p.box(-w - 0.02, w + 0.02, y - t, y, -D, 0, mat.stoneWall); // slab shelves
       p.box(-w - 0.02, w + 0.02, top, M.ceiling, -D, 0, mat.stoneWall);                       // above the top

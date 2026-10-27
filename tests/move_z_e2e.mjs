@@ -19,6 +19,9 @@ const check = (c, name, ok, info = "") => {
   results.push({ case: c, name, ok: !!ok, info });
   console.log(ok ? "PASS" : "FAIL", c, "·", name, info ? "· " + (typeof info === "string" ? info : JSON.stringify(info)) : "");
 };
+// Where the terrace plant (placed at 21.8, 4.75 in the code) stands now: Karim moved it 27 Oct (MOVED table).
+const src = fs.readFileSync(new URL("../furnish-karims-version.js", import.meta.url), "utf8");
+const PY = (src.match(/MOVED\["21\.8,4\.75,S"\] = \[[\d.]+, ([\d.]+)/) || [, 4.75])[1];
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: "new", protocolTimeout: 120000,
   args: ["--no-sandbox", "--enable-unsafe-swiftshader", "--use-angle=swiftshader", "--ignore-gpu-blocklist"] });
 const page = await browser.newPage();
@@ -55,7 +58,7 @@ async function key(k, mods = []) {
   for (const m of mods.reverse()) await page.keyboard.up(m);
   await sleep(120);
 }
-// Accept, wait for the reload, return the piece's {box, low, high} near (x, y) and the files before / after.
+// Accept, wait for the reload, check the piece placed by item(at…) (box, low, high), the plan, then Undo.
 async function acceptAndCheck(c, at, want) {
   const p0 = await rev();
   const nav = page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 150000 }).then(() => "saved");
@@ -63,7 +66,7 @@ async function acceptAndCheck(c, at, want) {
   await page.click("#move-accept .accept");
   if ((await Promise.race([nav, bad])) === "refused") return check(c, "Accept saved", false, await page.$eval("#move-toast span", e => e.textContent));
   await settle();
-  const p1 = await rev(), got = await M("pieceNear", ...at);
+  const p1 = await rev(), got = await M("debugSelect", ...at);  // by its code x, y: the MOVED table keeps them
   const note = await page.$eval("#move-toast span", e => e.textContent).catch(() => "");
   check(c, "Accept saved one revision", p1.rev !== p0.rev, note);
   check(c, "3D after the reload: box and height as dragged", near(got.box, want.box, 0.012) && near([got.low, got.high], want.z, 0.012), { got, want });
@@ -78,15 +81,17 @@ async function acceptAndCheck(c, at, want) {
   await btn.click();
   await nav2;
   await settle();
-  const back = await M("pieceNear", ...at), p2 = await rev();
+  const back = await M("debugSelect", ...at), p2 = await rev();
   check(c, "Undo: files and 3D back", JSON.stringify(p2.files) === JSON.stringify(p0.files) && near(back.box, want.box0, 0.004) && near([back.low, back.high], want.z0, 0.004), { back });
 }
 
 // --- 1. Walk: the terrace plant from the photo (21.8, 4.75), by its handles ---------------------------------------
 let c = "walk plant: lift handle + height square";
-await open("cam=24.4,4.75,1.6,21.8,4.75,1.25,60");
+await open(`cam=24.4,${PY},1.6,21.8,${PY},1.25,60`);
 await on();
-let s0 = await M("screenOf", 21.8, 4.75, 0.3);
+const pl = await M("debugSelect", 21.8, 4.75);  // where it stands now, then a real click on it
+await page.keyboard.press("Escape"); await sleep(150);
+let s0 = await M("screenOf", (pl.box[0] + pl.box[2]) / 2, (pl.box[1] + pl.box[3]) / 2, 0.3);
 await page.mouse.click(...s0); await sleep(300);
 let s = await state();
 check(c, "click picks the potted plant", s.selected === "potted plant", s.selected);
@@ -120,7 +125,7 @@ if (s.zh) {
 
 // --- 2. Walk: keys, and a plan move in the same draft ---------------------------------------------------------------
 c = "walk plant: PageUp ×3 (Shift) + Alt+PageDown + drag east";
-await open("cam=24.4,4.75,1.6,21.8,4.75,1.25,60");
+await open(`cam=24.4,${PY},1.6,21.8,${PY},1.25,60`);
 await on();
 await M("debugSelect", 21.8, 4.75);
 s = await state();

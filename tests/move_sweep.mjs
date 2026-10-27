@@ -101,16 +101,20 @@ async function planCheck(p, j, want, p0, p1) {
   const box = p.box, nb = want, dx = (nb[0] + nb[2] - box[0] - box[2]) / 2, dy = (nb[1] + nb[3] - box[1] - box[3]) / 2;
   if (!j.plan) return { ok: u0 === u1 && !(j.changed || []).includes("drawing-karims-version.json"), why: "plan untouched" };
   if (!(j.changed || []).includes("drawing-karims-version.json")) return { ok: false, why: "drawing not rebuilt" };
-  if (j.lines) {  // drawn as several lines: their extent moves / stretches with the 3D box
-    const real = j.lines.filter(h => !h.includes("/"));
-    const before = Object.values(plan(f0, box, real)).filter(Boolean), after = Object.values(plan(f1, nb, real)).filter(Boolean);
-    const kx = (nb[2] - nb[0]) / (box[2] - box[0]), ky = (nb[3] - nb[1]) / (box[3] - box[1]), u = union(before);
-    const exp = [nb[0] + (u[0] - box[0]) * kx, nb[1] + (u[1] - box[1]) * ky, nb[0] + (u[2] - box[0]) * kx, nb[1] + (u[3] - box[1]) * ky];
-    return { ok: before.length === after.length && near(union(after), exp, 0.006), why: "lines", before: u, after: union(after), exp };
+  const kx = (nb[2] - nb[0]) / (box[2] - box[0]), ky = (nb[3] - nb[1]) / (box[3] - box[1]);
+  if (j.lines) {  // their extent goes where the 3D box's mapping takes it (block members get new handles when split out)
+    const b0 = Object.values(plan(f0, box, j.lines)).filter(Boolean);
+    if (!b0.length) return { ok: false, why: "lines not found before" };
+    const want = [nb[0] + (union(b0)[0] - box[0]) * kx, nb[1] + (union(b0)[1] - box[1]) * ky, nb[0] + (union(b0)[2] - box[0]) * kx, nb[1] + (union(b0)[3] - box[1]) * ky], t = 0.006;
+    const got = plan(f1, nb).map(([, b]) => b).filter(b => b[0] >= want[0] - t && b[1] >= want[1] - t && b[2] <= want[2] + t && b[3] <= want[3] + t);
+    // a circle can't stretch one way: it keeps its radius and its centre moves, so the lines may end up a little
+    // inside the stretched extent, centred on it
+    const g = got.length && union(got), mid = b => [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
+    const fits = g && (near(g, want, t) || (near(mid(g), mid(want), t) && g[0] >= want[0] - t && g[1] >= want[1] - t && g[2] <= want[2] + t && g[3] <= want[3] + t));
+    return { ok: got.length >= b0.length && !!fits, why: "lines", want, got: g };
   }
   const ob = plan(f0, box, [j.outline])[j.outline];
   if (!ob) return { ok: false, why: `outline ${j.outline} not found before` };
-  const kx = (nb[2] - nb[0]) / (box[2] - box[0]), ky = (nb[3] - nb[1]) / (box[3] - box[1]);
   const exp = j.op === "move" ? [ob[0] + dx, ob[1] + dy, ob[2] + dx, ob[3] + dy]
     : j.drawn === "block"  // a block stretches as the 3D box does; an outline's sides move as far as the box's
       ? [nb[0] + (ob[0] - box[0]) * kx, nb[1] + (ob[1] - box[1]) * ky, nb[0] + (ob[2] - box[0]) * kx, nb[1] + (ob[3] - box[1]) * ky]

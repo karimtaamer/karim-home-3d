@@ -13,9 +13,10 @@ Where each piece started: move-origins-<version>.json lists, for every piece Mov
 and turn (rotation.y) before its FIRST change, found by its label and where its plan box is now; move.js measures
 "moved" and "turned" from there, not from the last Accept. It is stored, undone and git-synced with the change.
 
-One version's change stays in that version (docs/edit-ai/version-isolation.md): a number on a line other versions
-also run becomes `version === "<v>" ? new : old`; a piece a loop or shared code places gets a version-guarded line in
-furnish.js's MOVED table; and before saving, other_versions_changed() must find every other version unchanged.
+One version's change stays in that version: since 26 Oct 2026 every version has its own furnish-<version>.js, which
+no other version runs, so numbers are written plainly (no `version === "<v>" ? new : old` gates, and no
+other_versions_changed() check: on a file only one version runs it can only refuse by mistake). Code in another
+version's branch of the file (`if (version === "kareems-changes") ...`, left from the shared file) is still refused.
 
 Request: {version, rev, op: "move" | "resize", piece: {...}, dx, dy, rotate (move; rotate: degrees, + = anticlockwise
 on the plan, about the centre of its plan box) | box (resize: the new plan box)}
@@ -346,10 +347,10 @@ def drawn_lines(lines, box, others):
     a line or polyline): all those lying inside its plan box, less any inside a smaller neighbour's box (a rug's box
     holds the coffee table's outline, which isn't the rug's). A block member counts only when its block doesn't."""
     a0 = area(box)
-    whole = {l["handle"] for l in lines if l["block"] and within(l["box"], box)}
+    whole = {l["handle"] for l in lines if l["block"] and within(l["box"], box, 0.01)}
     out = []
-    for l in lines:
-        if not within(l["box"], box) or ("/" in l["handle"] and l["handle"].split("/")[0] in whole):
+    for l in lines:  # 1 cm slack: a neighbour's line 2 cm off its edge (a plant beside the TV wall) isn't its own
+        if not within(l["box"], box, 0.01) or ("/" in l["handle"] and l["handle"].split("/")[0] in whole):
             continue
         if any(area(o) < a0 - 1e-6 and within(l["box"], o, 0.005) for o in others):
             continue
@@ -507,7 +508,8 @@ def sized_args(text, call):
     if not call["sized"]:
         return list(SIZED_DEFAULTS)
     so_open = text.index("(", call["outer"])
-    olds = [t.strip() for t in split_args(text[so_open + 1:close_paren(text, so_open)])[1:5]]
+    # only what follows the piece's own call: its body can hold comments with apostrophes, which split_args reads as quotes
+    olds = [t.strip() for t in split_args(text[call["close"] + 1:close_paren(text, so_open)])[1:5]]
     return olds + SIZED_DEFAULTS[len(olds):]
 
 
@@ -862,10 +864,7 @@ def delete(ws, v, piece, text, found, sh, label):
         notes.append("on the plan it's drawn inside one outline with the pieces next to it, so only the 3D changed")
     else:
         notes.append("it isn't drawn on the 2D plan (3D-only), so only the 3D changed")
-    if (others := E.other_versions_changed(f0, text, v)):
-        raise ValueError(f"That change would also show in {', '.join(others)}, and a change in one version must stay in it, "
-                         "so nothing was saved. Make an Edit can do it.")
-    write_furnish(ws, text)
+    write_furnish(ws, text)  # the version's own furnish file: nothing to check against other versions (module docstring)
     if (breaks := E.lock_breaks(ws, "")):  # a settled decision: deleted on purpose (Accept), its lock suspended; Undo restores it
         E.lock_breaks(ws, " ".join(l["names"][0] for l, _ in breaks), record=True)
         notes.append("this changes a settled design decision (" + "; ".join(l["what"][:90] for l, _ in breaks)
@@ -897,7 +896,7 @@ def transform(req, ws=None):
     if req.get("rev") is not None and req.get("rev") != cur:
         raise ValueError("This page is behind the latest change to this version. Reload and try again.")
     text = f0 = ws.text("furnish.js")
-    shared = scopes(text, v)
+    shared = lambda n: False  # the version's own file: no line of it runs for another version (see the docstring)
     try:
         found = find_call(text, piece, v)
     except ValueError:
@@ -1154,9 +1153,6 @@ def transform(req, ws=None):
         hb = [float(t) for t in piece["hostBox"]]
         if nbox[0] < hb[0] - 0.01 or nbox[2] > hb[2] + 0.01 or nbox[1] < hb[1] - 0.01 or nbox[3] > hb[3] + 0.01:
             notes.append(f"the {label} now hangs past the edge of {piece.get('hostLabel') or 'the piece it sits on'}")
-    if (others := E.other_versions_changed(f0, text, v)):
-        raise ValueError(f"That change would also show in {', '.join(others)}, and a change in one version must stay in it, "
-                         "so nothing was saved. Make an Edit can do it.")
     write_furnish(ws, text)
     rot0 = float(piece.get("rot") or 0)
     record_origin(ws, v, label, box, rot0, nbox, rot0 + math.radians(rot), [L0, H0], nz)

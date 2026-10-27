@@ -1002,7 +1002,8 @@ export function furnish(scene, M, mat, version = "main") {
   // and the 12 cm niche build-out on the SOUTH (door-end) wall. The glass now starts at the north wall and keeps its
   // 1.209 length, so the 0.967 opening is at the south end, to the build-out face (DWG 2furni 1847 / 1848 / 26BE).
   const GKC = ["kareems-changes", "karims-version"].includes(version);
-  const bath = item(version === "kareems-changes" ? 12.122 : 12.324, 8.05, "E", p => {  // wood-look plank wall, stone-clad bath, framed screen at the WC end
+  // out 0.90 / 0.812: modelled 0.81 m deep; the DWG bath is 0.90 (Main's 0.95 since 26 Oct)
+  const bath = sized(item(version === "kareems-changes" ? 12.122 : 12.324, 8.05, "E", p => {  // wood-look plank wall, stone-clad bath, framed screen at the WC end
     p.box(GKC ? -1.167 : -1.08, GKC ? 1.12 : 1.08, 0, M.ceiling, 0, 0.02, mat.woodTile);
     p.box(GKC ? -1.167 : -0.85, GKC ? 1.12 : 0.85, 0, 0.55, 0.02, 0.75, mat.stoneWall);  // Kareem's: south wall to the north wall's stone lining
     p.box(-0.78, 0.78, 0.52, 0.56, 0.08, 0.7, mat.ceramic);
@@ -1031,8 +1032,7 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(x - 0.1, x + 0.1, 1.2, 1.85, z + 0.025, z + 0.05, mat.boucle, 0.01);
       p.box(x - 0.012, x + 0.012, 1.84, 1.9, z + 0.02, z + 0.05, mat.blackSteel);
     }
-  });
-  bath.scale.z = (version === "kareems-changes" ? 0.95 : 0.9) / 0.812;  // modelled 0.81 m deep; the DWG bath is 0.90 (Main's 0.95 since 26 Oct)
+  }), 1, (version === "kareems-changes" ? 0.95 : 0.9) / 0.812);
   if (GKC) item(version === "kareems-changes" ? 12.546 : 12.725, 9.1716, "S", p => {  // Karim t327: all the shower fittings on the north (WC) wall's tile face, centred between plank wall and glass
     // Local +x is east (toward the glass), z south out of the wall. Brass, as before.
     // Concealed thermostatic mixer: only its square trim plate and two knobs, at 1.05 (0.5 over the deck)

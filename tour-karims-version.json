@@ -29,6 +29,5 @@
   "openings": [
     {"at": [211.7522, -117.4482], "sill": 0.6, "head": 2.4, "kind": "window"}
   ],
-  "rooms": {},
-  "heights": {"door": 2.2, "slider": 2.2}
+  "rooms": {}
 }

@@ -428,7 +428,7 @@ export function furnish(scene, M, mat, version = "main") {
   // opposite, framed art on both side walls, the split AC high on the north (door) wall by the window.
   item(0, 0, "S", p => {  // DWG corner sofa: west run x 2.95-3.98, y 0.58-4.22; return x 3.98-4.80, y 0.58-1.61
     const B = (x0, x1, y0, y1, h0, h1, m, r = 0) => p.box(x0, x1, h0, h1, -y1, -y0, m, r);
-    const X0 = 2.95, X1 = 3.98, XC = 4.80, Y0 = 0.58, YC = 1.606, Y1 = 4.219, fab = mat.greige;
+    const X0 = 2.95, X1 = 3.98, XC = 4.80, Y0 = 0.58, YC = 1.606, Y1 = 4.219, fab = mat.livingModernSand;
     B(X0 + 0.03, X1 - 0.03, Y0 + 0.03, Y1 - 0.03, 0, 0.08, shadowGap);  // recessed plinth
     B(X1 - 0.03, XC - 0.03, Y0 + 0.03, YC - 0.03, 0, 0.08, shadowGap);
     for (const [a, b] of [[Y0, YC], [1.602, 2.428], [2.424, 3.249], [3.245, 4.045]])  // seat modules
@@ -442,8 +442,8 @@ export function furnish(scene, M, mat, version = "main") {
     B(X1 + 0.01, XC - 0.01, Y0 + 0.14, Y0 + 0.36, 0.42, 0.84, fab, 0.09).rotation.x = 0.12;
     // Scatter cushions as rendered: blush and sage in the corner, sage, slate and mustard along the run.
     const cushion = (x, y, m, along) => B(x - (along ? 0.07 : 0.21), x + (along ? 0.07 : 0.21), y - (along ? 0.21 : 0.07), y + (along ? 0.21 : 0.07), 0.44, 0.84, m, 0.08);
-    cushion(3.55, Y0 + 0.42, mat.linenBlush, false); cushion(X0 + 0.42, 1.25, mat.linenSage, true);
-    cushion(X0 + 0.42, 2.45, mat.linenSage, true); cushion(X0 + 0.42, 3.05, mat.linenSlate, true); cushion(X0 + 0.42, 3.6, mat.cushionMustard, true);
+    cushion(3.55, Y0 + 0.42, mat.livingModernCharcoal, false); cushion(X0 + 0.42, 1.25, mat.livingModernSand, true);
+    cushion(X0 + 0.42, 2.45, mat.livingModernSand, true); cushion(X0 + 0.42, 3.05, mat.livingModernCharcoal, true); cushion(X0 + 0.42, 3.6, mat.livingModernSand, true);
     B(X1 + 0.05, X1 + 0.55, Y0 + 0.4, YC - 0.05, 0.44, 0.47, mat.linenSage, 0.012);  // sage throw over the chaise
     B(2.937, X1, 4.219, 4.442, 0, 0.55, mat.walnut, 0.02);  // DWG end table between the arm and the north wall
   });
@@ -451,7 +451,7 @@ export function furnish(scene, M, mat, version = "main") {
   item(2.94, 2.8, "E", p => p.box(-1.75, 1.75, 2.5, 2.52, 0.02, 0.2, mat.ledStrip));  // cove light over the window wall
   item(4.645, 2.529, "S", p => {  // DWG coffee table 0.72 x 1.23: light stone top on two round walnut pedestals
     p.box(-0.36, 0.36, 0.36, 0.42, -0.617, 0.617, mat.stoneTable, 0.03);
-    for (const z of [-0.33, 0.33]) p.cyl(0, z, 0.13, 0, 0.36, mat.walnut, 24);
+    for (const z of [-0.33, 0.33]) p.cyl(0, z, 0.13, 0, 0.36, mat.livingModernCharcoal, 24);
     p.cyl(-0.05, -0.15, 0.1, 0.42, 0.47, mat.walnut, 20, 0.06);  // fruit bowl, vase, books, candle
     p.cyl(0.05, 0.12, 0.05, 0.42, 0.6, mat.planter, 16, 0.04);
     p.box(0.02, 0.22, 0.42, 0.48, 0.3, 0.48, mat.oatmeal);
@@ -459,10 +459,10 @@ export function furnish(scene, M, mat, version = "main") {
   // Kareem's (Karim t288): the TV wall's face is on the column's (plan x 6.1379, 2 cm west), coplanar with it, so the
   // limewash panel and the console move back onto it.
   const LKC = ["kareems-changes", "karims-version"].includes(version);
-  item(LKC ? 6.1379 : 6.15, 2.25, "W", p => p.box(-1.75, 1.75, 0, M.ceiling, 0, 0.012, mat.limewashTaupe));
+  item(LKC ? 6.1379 : 6.15, 2.25, "W", p => p.box(-1.75, 1.75, 0, M.ceiling, 0, 0.012, mat.livingModernWall));
   item(LKC ? 6.1396 : 6.16, 2.25, "W", p => {  // DWG TV unit on the east wall: floating walnut console, 3 drawers, light top
-    p.box(-0.87, 0.87, 0.45, 0.72, 0, 0.4, mat.walnut);
-    fronts(p, -0.87, 0.87, 0.45, 0.72, 0.4, 0.58);
+    p.box(-0.87, 0.87, 0.45, 0.72, 0, 0.4, mat.livingModernCharcoal);
+    for (let k = 0; k < 3; k++) p.box(-0.866 + k * 0.58, -0.294 + k * 0.58, 0.455, 0.715, 0.4, 0.42, mat.livingModernCharcoal, 0.003);
     p.box(-0.87, 0.87, 0.72, 0.75, 0, 0.42, mat.stoneTable);
     p.box(-0.87, 0.87, 0.43, 0.45, 0.05, 0.36, mat.ledStrip);
     p.box(-0.8, 0.8, 1.1, 1.95, 0, 0.05, mat.screen);

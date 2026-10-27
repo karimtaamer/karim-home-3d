@@ -314,9 +314,6 @@ export function makeMaterials(clip) {
     lampShade: std({ color: 0xe2c9a8, emissive: 0xffa95c, emissiveIntensity: 0.9, roughness: 0.9 }),
     limewashTaupe: scanned("beige_wall_001", 3, { colour: false, tint: 0xd9c6b4, normal: 1.4 }),
     grille: std({ color: 0x3a3836, roughness: 0.6 }),
-    livingModernSand: std({ color: 0xd2c8b8, roughness: 0.9 }),
-    livingModernCharcoal: std({ color: 0x292b2c, roughness: 0.62 }),
-    livingModernWall: scanned("beige_wall_001", 3, { colour: false, tint: 0xbdbbb5, normal: 0.45 }),
     // Drawn finishes (floors, walls) for Edit AI's room specs, and the scans in other tones
     herringbone: std({ map: DRAWN.herringbone(), roughness: 0.55 }),
     chevron: std({ map: DRAWN.chevron(), roughness: 0.55 }),

@@ -27,8 +27,7 @@
   "finishes": {"KITCHEN": "wood"},
   "doorsAsDrawn": [[192.49, -115.48], [195.98, -115.95], [203.678, -114.723], [205.164, -114.872], [202.45, -114.72]],
   "openings": [
-    {"at": [192.2087, -112.468], "frosted": true},
-    {"at": [211.7522, -117.4482], "sill": 0.6, "head": 2.4, "kind": "window", "frosted": true, "glass": "frosted"}
+    {"at": [211.7522, -117.4482], "sill": 0.6, "head": 2.4, "kind": "window"}
   ],
   "rooms": {},
   "parapet": {"glass": true},

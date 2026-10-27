@@ -658,7 +658,8 @@ rebuilds, so the 2D and the 3D always agree.
   dot turns (R = 90°). **Smart guides** (like Figma's): while dragging, the piece snaps within 6 px to a nearby piece's
   centre line (pink line, × on each centre) or to the middle of its gap along x or y, between two pieces, a piece and
   a wall, or two walls (pink gap lines with the equal sizes); a drilled-in part does the same with the parts beside it
-  and its piece's box; hold Ctrl / ⌘ to drag without snapping. **Delete** / Backspace (or the red Delete chip) deletes it: a version-guarded `REMOVED` line in
+  and its piece's box; a wall the piece is sunk into (over 2 cm) gives no gap. The name label and chips hide mid-drag
+  so the sizes show (the bar keeps the text); hold Ctrl / ⌘ to drag without snapping (the e2e drags do). **Delete** / Backspace (or the red Delete chip) deletes it: a version-guarded `REMOVED` line in
   the furniture file and its outline, block or lines on the plan.
 - **Groups:** **Shift-click** adds a piece to the selection or takes it out; the group moves, nudges and deletes
   together and saves as one revision (`op: "batch"`), so one Undo takes it all back. Resize and turn stay one at a time.

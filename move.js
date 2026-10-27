@@ -484,8 +484,9 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     return true;
   }
   // How far the nearest wall face is from c along axis ax (0: x, 1: y) in direction s (±1), anywhere across the band
-  // q0..q1. An edge running through c (a piece set into a wall) doesn't count.
-  function wallSweep(walls, c, ax, s, q0, q1) {
+  // q0..q1: Infinity when there is none, -1 when a wall reaches nearer than dMin (into the piece, as a planter sunk in a
+  // parapet): the piece overlaps it, so there's no gap that side (the wall's far face isn't a neighbour).
+  function wallSweep(walls, c, ax, s, q0, q1, dMin) {
     const p = 1 - ax;
     let best = Infinity;
     for (const ring of walls) for (let i = 0; i < ring.length; i++) {
@@ -493,13 +494,15 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
       if (a0 > a1) continue;
       const at = q => u[ax] + (q - u[p]) / (v[p] - u[p]) * (v[ax] - u[ax]);
       const ds = (u[p] === v[p] ? [u[ax], v[ax]] : [at(a0), at(a1)]).map(t => (t - c) * s);  // the ends of its part in the band
-      if (Math.min(...ds) > 0) best = Math.min(best, ...ds);
+      if (Math.max(...ds) <= 0) continue;  // behind c: the other side's
+      if (Math.min(...ds) <= dMin) return -1;
+      best = Math.min(best, ...ds);
     }
     return best;
   }
   // The nearest thing each side of box b along axis ax: [low side, high side], each {at: its face} or null. A piece
   // counts when it overlaps b across the axis and sits wholly on that side; a wall, door or window when any of its
-  // outline lies across b's width (2 cm in from each side, so a piece set a little into a wall still counts).
+  // outline lies across b's width and beyond b's face (both less 2 cm, so a piece set a little into a wall still counts).
   function sides(b, ax, R) {
     const p = 1 - ax, c = mid(b, ax), lo = b[p], hi = b[p + 2];
     return [-1, 1].map(s => {
@@ -512,7 +515,8 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
       }
       if (R.frame) take(s < 0 ? R.frame[ax] : R.frame[ax + 2]);
       if (R.walls.length) {
-        const e = Math.min(0.02, (hi - lo) / 4), d = wallSweep(R.walls, c, ax, s, lo + e, hi - e);
+        const e = Math.min(0.02, (hi - lo) / 4), d = wallSweep(R.walls, c, ax, s, lo + e, hi - e, Math.max(0, (b[ax + 2] - b[ax]) / 2 - 0.02));
+        if (d < 0) return null;
         if (d < Infinity) take(c + s * d);
       }
       return at !== null && Math.abs(at - c) <= GAP_FAR ? { at } : null;
@@ -524,10 +528,11 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     return R.align.filter(r => Math.abs(mid(r, ax) - c[ax]) <= tol
       && Math.max(r[0] - b[2], b[0] - r[2], r[1] - b[3], b[1] - r[3]) <= ALIGN_NEAR && seen(c, [mid(r, 0), mid(r, 1)], R.walls));
   }
-  // The shift along ax (smallest first) that centres b on a piece's centre line or in its gap, if one is within tol.
+  // The shift along ax (smallest first) that centres b on a piece's centre line or in its gap (one with room on both
+  // sides, as guidesFor shows it), if one is within tol.
   function snapAxis(b, ax, R, tol) {
     const ds = aligners(b, ax, R, tol).map(r => mid(r, ax) - mid(b, ax)), [lo, hi] = sides(b, ax, R);
-    if (lo && hi) ds.push(((hi.at - b[ax + 2]) - (b[ax] - lo.at)) / 2);
+    if (lo && hi && (hi.at - b[ax + 2]) + (b[ax] - lo.at) >= 0.01) ds.push(((hi.at - b[ax + 2]) - (b[ax] - lo.at)) / 2);
     const ok = ds.filter(d => Math.abs(d) <= tol).sort((u, v) => Math.abs(u) - Math.abs(v));
     return ok.length ? ok[0] : 0;
   }
@@ -554,8 +559,8 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
       const [lo, hi] = sides(b, ax, R);
       if (!lo || !hi) continue;
       const L = b[ax] - lo.at, H = hi.at - b[ax + 2], m = mid(b, p);
-      if (L >= 0.005 && Math.abs(L - H) <= CENTRED)
-        out.push({ type: "gap", a: pt(lo.at, m), b: pt(b[ax], m), text: cm1(L) }, { type: "gap", a: pt(b[ax + 2], m), b: pt(hi.at, m), text: cm1(H) });
+      if (L >= 0.005 && Math.abs(L - H) <= CENTRED)  // equal: one size on both (each rounded alone can read 111.9 / 111.8)
+        out.push({ type: "gap", a: pt(lo.at, m), b: pt(b[ax], m), text: cm1((L + H) / 2) }, { type: "gap", a: pt(b[ax + 2], m), b: pt(hi.at, m), text: cm1((L + H) / 2) });
     }
     return out;
   }
@@ -602,7 +607,9 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
       + `<rect class="z" x="${zh.size[0] - 5.5}" y="${zh.size[1] - 5.5}" width="11" height="11"/><circle class="z" cx="${zh.lift[0]}" cy="${zh.lift[1]}" r="7"/>`;
     if (drag?.guides) s += guideSvg(drag.guides);
     svg.innerHTML = s;
-    label.hidden = false;
+    // While it's dragged the label and chips step aside so the guides' sizes show (the bar below still says how far).
+    const moving = drag?.moved && drag.type === "move";
+    label.hidden = moving;
     label.style.left = `${(c[0][0] + c[2][0]) / 2}px`;
     label.style.top = `${Math.min(...c.map(p => p[1]))}px`;
     const many = group.length && `${group.length + 1} pieces`, d = group.length && groupShift();
@@ -610,7 +617,7 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
       : (many ? `${many} · ${Math.abs(d[0]) >= 0.005 || Math.abs(d[1]) >= 0.005 ? "moved " + dirText(d) : "Shift-click adds or drops one"}` : draftText())
         + (axis ? ` · ${axis.toUpperCase()} only` : "");
     label.classList.toggle("draft", !!draft);
-    chips.hidden = !chips.childElementCount || busy;
+    chips.hidden = !chips.childElementCount || busy || moving;
     chips.style.left = label.style.left;
     chips.style.top = `${Math.max(...c.map(p => p[1])) + 14}px`;
   }

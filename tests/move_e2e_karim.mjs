@@ -76,7 +76,9 @@ async function on() {
     await sleep(200);
   }
 }
+// ⌘ held throughout: no smart-guide snapping, so the piece lands exactly as far as it was dragged.
 async function drag(a, b, steps = 10, keys = []) {
+  keys = ["Meta", ...keys];
   await page.mouse.move(...a);
   await page.mouse.down();
   for (const k of keys) await page.keyboard.down(k);

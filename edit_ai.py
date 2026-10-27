@@ -1305,7 +1305,10 @@ def opening_spec(ws, ch, o):
     if k != "window":
         f.pop("sill", None)
     if f:
-        t.setdefault("openings", []).append({"at": _dwg(ch["centre"]), **f})
+        spec = {"at": _dwg(ch["centre"]), **f}
+        if f.get("kind") and ch.get("box"):  # the doorway's own box: the build makes it an opening even if nothing else does
+            spec["box"] = [_dwg(ch["box"][0]), _dwg(ch["box"][1])]
+        t.setdefault("openings", []).append(spec)
     for h in ch.get("hinges") or ([ch["hinge"]] if ch.get("hinge") else []):
         t.setdefault("doorsAsDrawn", []).append(_dwg(h))
     ws.write(ws.cfg["tour"], dump_tour(t).encode())
@@ -2350,6 +2353,8 @@ Without the view: naming the kind is enough.
 A room or a home-wide thing named in words (kitchen, laundry, living room, terrace, the parapets, all the doors...) is
 named even when it isn't in view: this home has one of each, never ask "which". A wall "between" two named rooms is
 named too. Egyptian Arabic (e.g. "شيل الحيطة اللي بين المطبخ والغسيل", "حط نجفة فوق السفرة") is as clear as English.
+"الحمام الكبير" (the master bath) and "الحمام الصغير" / "حمام الضيوف" (the guest WC) name one bathroom each; a room's
+window or door is named by naming the room when it has one ("شباك الحمام الكبير").
 A room named in words (kitchen, laundry, living room, terrace...) is named even when it isn't in view: this home has one of each, never ask "which". A wall "between" two named rooms is named too.
 A question about the home (sizes, areas, how much paint / tile, what is where) is fine: score 5.
 Reply in the request's language.
@@ -2406,6 +2411,9 @@ nothing unrelated changed, and the reply truthfully describes the diff.
 10 exactly right; 7 right with nitpicks; 4 partly right or a visible mistake; 0 wrong piece or nothing asked for done.
 Judge the result, not code style; don't guess at what the diff doesn't show. Check the changed thing is in the room the
 user named (the diff says which rooms an opening sits between): the right change on the wrong window scores 2.
+When the request names a room or a thing that isn't in the picture ("the big bathroom's window" seen from the
+terrace), judge by the words and the diff's room notes, not the picture: the picture only shows where the user stands,
+and a change far from it is right when it is in the room they named.
 Answer JSON only: {"score":n,"problems":["a fix for the editor, max 25 words"],"summary":"max 20 words"}"""
 
 
@@ -3902,7 +3910,9 @@ def undo(req):
     contents, shas = {}, {}  # shas: what the page must show after the reload, so the client can tell a no-op Undo
     for path in cur["changed"]:
         e = cur["files"].get(path)
-        dep = deployed(path)
+        dep = deployed(path)  # what the page loads now: the reference for keeping an override
+        head = fresh(path)  # git main now: what "later commits" really are (the bundle can be a lagging build of an
+        # earlier edit; taking the edit off it brought that earlier, undone edit back, 27 Oct 2026: white doors)
         data = None
         if path in res_before and res_before[path][0] in ("live", "replayed"):
             data = live_content(path, res_before[path])
@@ -3911,9 +3921,9 @@ def undo(req):
         if data is None and e and (e.get("pre_url") or e.get("base_url")):
             # The file the edit started from. Never plain deployed(): once git_sync has pushed the edit, the deployed
             # file IS the edit, and "restoring" it changes nothing (26 Oct: 0dfc896, an empty Undo of the black armchair).
-            data = unapply(path, get(e["url"]), get(e.get("pre_url") or e["base_url"]), dep)
+            data = unapply(path, get(e["url"]), get(e.get("pre_url") or e["base_url"]), head)
         if data is None:
-            data = dep
+            data = head
         if sha(data) == sha(dep):
             files.pop(path, None)
         else:

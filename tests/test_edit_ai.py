@@ -79,6 +79,26 @@ class Undo(Sandbox):
         self.assertEqual(live["sha"], edit_ai.sha(b.encode()), "the page must show B, not A merged back in")
         self.assertNotIn("chairBlack", edit_ai.Workspace(V).text("furnish.js"))
 
+    def test_undo_takes_the_edit_off_git_not_a_lagging_bundle(self):
+        # 27 Oct 2026: edit A (white doors), undo A, then edit B and undo B while the bundle was a build of A's commit:
+        # B's undo took B off that bundle and kept A as a "later commit", so A came back. Undo works on git main.
+        base, a = furnish(CHAIR), furnish(BLACK)
+        b = base + "\n// B: an edit elsewhere in the file\n"  # a different line from A's (they'd merge, not conflict)
+        git = {}
+        saved = edit_ai.fresh, edit_ai.git_sync
+        edit_ai.fresh = lambda p: git.get(p, edit_ai.deployed(p))
+        edit_ai.git_sync = lambda v, contents, summary: git.update(contents) or "test"
+        try:
+            self.deploy(base)
+            self.edit(a, "A")
+            edit_ai.undo({"version": V})
+            self.deploy(a)  # the build of A's commit lands; the undo's commit isn't built yet
+            self.edit(b, "B")
+            edit_ai.undo({"version": V})
+            self.assertEqual(git[F].decode(), base, "undoing B must leave git as it was before B, without A")
+        finally:
+            edit_ai.fresh, edit_ai.git_sync = saved
+
     def test_undo_before_git_sync_goes_back_to_deployed(self):
         before = furnish(CHAIR)
         self.deploy(before)

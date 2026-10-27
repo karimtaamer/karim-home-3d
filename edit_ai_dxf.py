@@ -715,11 +715,18 @@ def close_gap(msp, q, u, n, t0, t1, n0, n1):
 
 
 def clear_gap(msp, q, u, n, t0, t1, n0, n1):
-    """Delete what fills the opening: window lines, a door (swing, leaf, jambs, frame hatch, a 3door block), sliding
-    panels. Wall faces and other walls stay. Returns how many entities went."""
+    """Delete what fills the opening: window lines, this door (its swing arcs hinged at its jambs, the leaves drawn from
+    those hinges, its frame bits in the wall band, a 3door block at it), sliding panels. Wall faces, other walls and a
+    neighbouring door's swing stay (27 Oct 2026: clearing the whole swing area took the next door's frame with it)."""
     T = lambda z: (z[0] - q[0]) * u[0] + (z[1] - q[1]) * u[1]
     N = lambda z: (z[0] - q[0]) * n[0] + (z[1] - q[1]) * n[1]
     w, th = t1 - t0, n1 - n0
+    in_band = lambda ts, ns, m: min(ts) >= t0 - 0.05 and max(ts) <= t1 + 0.05 and min(ns) >= n0 - m and max(ns) <= n1 + m
+    hinges = []  # this door's swings: big arcs centred at its jambs, inside the wall band
+    for e in msp.query("ARC"):
+        z = (e.dxf.center.x, e.dxf.center.y)
+        if e.dxf.radius >= 0.4 and t0 - 0.15 <= T(z) <= t1 + 0.15 and n0 - 0.15 <= N(z) <= n1 + 0.15:
+            hinges.append((z, e.dxf.radius))
     gone = []
     for e in list(msp):
         lay, t_ = e.dxf.layer, e.dxftype()
@@ -736,8 +743,12 @@ def clear_gap(msp, q, u, n, t0, t1, n0, n1):
             continue
         cs = [(b_[0], b_[1]), (b_[2], b_[1]), (b_[0], b_[3]), (b_[2], b_[3])]
         ts, ns = [T(z) for z in cs], [N(z) for z in cs]
-        slack = 0.06 if lay == WINDOW_LAYER else w + 0.1  # a door swings out into the room
-        if not (min(ts) >= t0 - 0.05 and max(ts) <= t1 + 0.05 and min(ns) >= n0 - slack and max(ns) <= n1 + slack):
+        if lay == WINDOW_LAYER:
+            if in_band(ts, ns, 0.06):
+                gone.append(e)
+            continue
+        if t_ == "ARC" and any(math.dist((e.dxf.center.x, e.dxf.center.y), h) < 0.02 for h, _ in hinges):
+            gone.append(e)  # this door's swing (and the frame's small arcs drawn about the same hinge)
             continue
         if lay == WALL_LAYER and t_ == "LINE":
             s_ = segs_of(e)[0]
@@ -747,7 +758,13 @@ def clear_gap(msp, q, u, n, t0, t1, n0, n1):
                 continue  # another wall's face out in the room
             if along < 0.001 and d > th + 0.06:
                 continue  # a wall running off this one, not a jamb
-        gone.append(e)
+        if in_band(ts, ns, 0.12):
+            gone.append(e)  # frame bits, jambs, a closed leaf, sliding panels: in the wall band
+            continue
+        # a leaf standing open out in the room: drawn from one of this door's hinges and no longer than its swing
+        if hinges and min(ts) >= t0 - 0.05 and max(ts) <= t1 + 0.05 and any(
+                min(math.dist(h, z) for z in cs) < 0.08 and max(math.dist(h, z) for z in cs) <= r + 0.12 for h, r in hinges):
+            gone.append(e)
     for e in gone:
         msp.delete_entity(e)
     return len(gone)

@@ -460,6 +460,21 @@ def main():
     for d in doors:
         if not any(k == "door" and g.symmetric_difference(d).area < 0.01 for k, g in openings):
             openings.append(("door", d))
+    # A gap the tour names with a kind (a door made a sliding door, a bare doorway Edit AI drew) is an opening even when
+    # no swing or plain-gap rule finds it (27 Oct 2026: the master bedroom door made sliding vanished from the 3D).
+    for sp in tour.get("openings", []):
+        if not isinstance(sp, dict) or sp.get("kind") not in ("door", "slider", "window") or len(sp.get("at") or []) != 2:
+            continue
+        pt = Point(*sp["at"])
+        if any(g.buffer(0.05).contains(pt) for _, g in openings):
+            continue
+        if len(sp.get("box") or []) == 2:  # the doorway itself, as the edit drew it (not the gap round it)
+            (x0, y0), (x1, y1) = sp["box"]
+            g = box(min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1))
+        else:
+            g = next((g for g in as_polys(gaps) if g.buffer(0.02).contains(pt) and g.area < 1.2), None)
+        if g is not None and g.area > 0.02:
+            openings.append(("door", g.minimum_rotated_rectangle))
     # A wall-thin gap narrower than any door is wall the drawing left out (e.g. behind an open leaf).
     taken = unary_union([g for _, g in openings]).buffer(0.01, join_style=2)
     fills = []

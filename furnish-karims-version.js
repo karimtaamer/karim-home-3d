@@ -1944,10 +1944,7 @@ export function furnish(scene, M, mat, version = "main") {
   });
   for (const [x, y, h] of [[21.8, 4.75, 1.9], [24.5, 5.75, 1.8], [24.45, 8.45, 1.7]]) plant(x, y, h, 0.28);
   for (const y of [5.0, 8.6]) sconce(T.x0, y, "E", 2.0);
-  item(23.3, 1.42, "N", p => p.box(-1.85, 1.85, 1.1, 1.35, 0, 0.36, mat.render));  // planter troughs on the parapets
-  item(25.4, 3.5, "W", p => p.box(-1.9, 1.9, 1.1, 1.35, 0, 0.36, mat.render));
-  for (let x = 21.7; x < 25.0; x += 0.45) plant(x, 1.6, 1.2, 0.1, 1.2);
-  for (let y = 2.0; y < 5.4; y += 0.45) plant(25.22, y, 1.2, 0.1, 1.2);
+  // Exterior planter troughs removed for the full-height glazed sitting room.
   plant(21.85, 2.2, 1.9, 0.3);
 
   // --- Ceilings: downlights in every indoor room, linear AC grilles in the living spaces ---------

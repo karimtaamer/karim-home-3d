@@ -17,7 +17,7 @@
     {"room": "DINING", "caption": "Dining", "eye": [209.6, -119.2], "look": [208.4, -113.0]},
     {"room": "TERRACE", "caption": "Terrace", "eye": [212.6, -119.3], "look": [214.6, -113.0]},
     {"room": "KITCHEN", "caption": "Kitchen", "eye": [199.9, -115.4], "look": [197.4, -113.0]},
-    {"room": "LAUNDRY", "caption": "Laundry", "eye": [202.2, -114.6], "look": [201.8, -112.9]},
+    {"room": "مخزن", "caption": "Laundry", "eye": [202.2, -114.6], "look": [201.8, -112.9]},
     {"room": "TOILET 2", "caption": "Guest bathroom", "eye": [204.3, -114.3], "look": [203.3, -113.0]},
     {"room": "LIVING ROOM", "caption": "Living room", "eye": [196.2, -117.7], "look": [194.2, -120.6]},
     {"room": "MASTER BEDROOM", "caption": "Master bedroom", "eye": [195.5, -115.45], "look": [192.7, -113.9]},
@@ -27,17 +27,7 @@
   "finishes": {"KITCHEN": "wood"},
   "doorsAsDrawn": [[192.49, -115.48], [195.98, -115.95], [203.678, -114.723], [205.164, -114.872], [202.45, -114.72]],
   "openings": [
-    {"at": [211.7522, -117.4482], "sill": 0.6, "head": 2.4, "kind": "window"},
-    {"at": [200.6641, -115.3459], "frame": "#ffffff", "leaf": "#ffffff", "handle": "brass"},
-    {"at": [204.0238, -114.7697], "frame": "#ffffff", "leaf": "#ffffff", "handle": "brass"},
-    {"at": [202.0157, -114.779], "frame": "#ffffff", "leaf": "#ffffff", "handle": "brass"},
-    {"at": [195.9773, -117.1195], "frame": "#ffffff", "leaf": "#ffffff", "handle": "brass"},
-    {"at": [192.1453, -115.5458], "frame": "#ffffff", "leaf": "#ffffff", "handle": "brass"},
-    {"at": [195.5868, -116.0087], "frame": "#ffffff", "leaf": "#ffffff", "handle": "brass"},
-    {"at": [205.128, -115.3575], "frame": "#ffffff", "leaf": "#ffffff", "handle": "brass"},
-    {"at": [198.8697, -118.1381], "frame": "#ffffff", "leaf": "#ffffff", "handle": "brass"},
-    {"at": [211.7527, -114.4039], "frame": "#ffffff", "leaf": "#ffffff", "handle": "brass"}
+    {"at": [211.7522, -117.4482], "sill": 0.6, "head": 2.4, "kind": "window"}
   ],
-  "rooms": {"LIVING ROOM": {"ceilingHeight": 2.9}},
-  "heights": {"ceiling": 2.9}
+  "rooms": {}
 }

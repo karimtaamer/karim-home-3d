@@ -117,6 +117,25 @@ class Gates(unittest.TestCase):
         self.assertAlmostEqual(c["total"], c["edit"] + c["fix"] + c["review"], places=4)
         self.assertEqual(len(self.sent), 2, "one review, one re-score: no second fix round")
 
+    def test_a_fix_round_that_gives_up_keeps_the_first_edit(self):
+        # 27 Oct 2026: mosaic asked, terrazzo given (review 6); the fix round discarded and the user got nothing.
+        self.scores = [{"score": 5, "problems": ["Use mosaic, not terrazzo."], "summary": "Close."}]
+        editor = self.fake_editor
+
+        def gives_up(messages, first=False, model=None):
+            if "reviewer" in str(messages[-1].get("content")):
+                call = {"id": "dz", "type": "function", "function": {"name": "discard", "arguments": "{}"}}
+                return {"choices": [{"message": {"role": "assistant", "content": None, "tool_calls": [call]}}], "usage": {"prompt_tokens": 10, "completion_tokens": 1}}
+            if messages[-1].get("tool_call_id") == "dz":
+                return {"choices": [{"message": {"role": "assistant", "content": "Couldn't do mosaic."}}], "usage": {"prompt_tokens": 10, "completion_tokens": 1}}
+            return editor(messages, first, model)
+        edit_ai.openai = gives_up
+        write = edit_ai.tool
+        edit_ai.tool = lambda ws, name, args: (ws.discard() or "discarded") if name == "discard" else write(ws, name, args)
+        res, _ = self.chat()
+        self.assertEqual(res["changed"], ["furnish.js"], "the first edit is kept")
+        self.assertIn("Made the sofa 2.", res["reply"])
+
     def test_no_review_when_gates_are_off(self):
         os.environ["EDIT_AI_GATES"] = "0"
         try:

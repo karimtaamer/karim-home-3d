@@ -1671,6 +1671,10 @@ def set_openings(ws, a):
                 continue
             if not lo <= float(v) <= hi:
                 raise ValueError(f"{k} {v} m is outside {lo}-{hi} m")
+            taller = [n for n, r_ in (t.get("rooms") or {}).items() if k == "ceiling" and float(r_.get("ceilingHeight", 0)) > float(v) + 0.001]
+            if taller:  # walls stop at the home ceiling: a room above it would show a gap over its walls
+                raise ValueError(f"{', '.join(taller)} has its own ceiling above {v} m; walls stop at the home ceiling. Keep "
+                                 f"the home ceiling at least that high (a taller room = home ceiling up, the others' ceilingHeight back down)")
             h[k] = round(float(v), 3)
         t["heights"] = h
         if not h:
@@ -1882,6 +1886,10 @@ spot: beam = cone degrees, target = [x, y, h]); a fitting alone only glows. At m
 الرئيسية / الماستر / أوضتي (MASTER BEDROOM); الحمام الكبير / الرئيسي / حمام الماستر / حمام أوضة النوم = the master bath
 (TOILET 1, off the master bedroom), whatever its area; الحمام الصغير / حمام الضيوف / التواليت = the guest WC (TOILET 2);
 التراس / البلكونة (TERRACE). A request naming a room means that room, not the one in the picture.
+- Finishes in Arabic (materials.js names): رخام = marbleFloor (floors) / marbleTop (worktops); باركيه / خشب = oak,
+herringbone (هيرنج بون), chevron (شيفرون), oakDark (غامق), oakGrey (رمادي); سيراميك / بورسلين = porcelain or tile;
+موزاييك / بلاط ملوّن / بلاط مزخرف = cementTile; تيرازو = terrazzo; خرسانة / أسمنت = concrete; موكيت / سجاد = carpet;
+طوب = brick; ورق حائط = wallpaperStripe / wallpaperLeaf; نجيلة = grass. Use the closest one and say which.
 - Reply in the user's language and dialect: most users are Egyptian, so an Egyptian Arabic request gets a short
 Egyptian Arabic reply (مافيش، عشان، دلوقتي، كده; never Levantine or Gulf words like "ما في" or "هلق"), a formal Arabic
 request a formal one; sizes in cm and areas in m2. Say only what the plan shows: two rooms are one space only when
@@ -2276,6 +2284,7 @@ _AR_COMPLEX = re.compile(r"ضيف|اضيف|أضيف|اضف|أضف|زود|ركب|
                          r"كل الابواب|كل الأبواب|كل ابواب|كل أبواب|كل باب|الابواب كلها|الأبواب كلها|نيش|سحاب|جرار|منزلق|"
                          r"بدل|استبدل|حول|حوّل|اقلب|نجف|اباليك|أباليك|ابليك|سبوت|لمبة|اضاءة|إضاءة|ينطوي|قابل للطي|بيتفتح|يتفتح|"
                          r"وكمان|وبعدين|كمان")
+AR_TEXT = re.compile(r"[\u0600-\u06FF]")  # an Arabic request gets Arabic canned replies
 _AR_PLAN = re.compile(r"حيط|حائط|جدار|شباك|شبابيك|نافذ|باب|ابواب|أبواب|عمود|فاصل|فتح")
 _AR_PLAN_VERB = re.compile(r"شيل|اشيل|انقل|حرك|حرّك|وسع|وسّع|ضيق|ضيّق|كبر|كبّر|صغر|صغّر|اقفل|قفل|افتح|اهد|هد |اكسر|اقسم|قسم|"
                            r"طول|طوّل|قصر|قصّر|زق|ارفع|نزل|نزّل|امسح")
@@ -2413,7 +2422,11 @@ Judge the result, not code style; don't guess at what the diff doesn't show. Che
 user named (the diff says which rooms an opening sits between): the right change on the wrong window scores 2.
 When the request names a room or a thing that isn't in the picture ("the big bathroom's window" seen from the
 terrace), judge by the words and the diff's room notes, not the picture: the picture only shows where the user stands,
-and a change far from it is right when it is in the room they named.
+and a change far from it is right when it is in the room they named. Room names: الحمام الكبير / حمام الماستر = TOILET 1
+(the master bath); الحمام الصغير / حمام الضيوف = TOILET 2; أوضة النوم / الماستر = MASTER BEDROOM; الصالة = LIVING ROOM;
+الريسبشن = RECEPTION; السفرة = DINING; المطبخ = KITCHEN; الغسيل = LAUNDRY; الطرقة = HALLWAY; التراس = TERRACE.
+A room taller than the rest needs the home ceiling raised to it and the other rooms' ceilingHeight set back: that is
+the right way, not an unneeded change.
 Answer JSON only: {"score":n,"problems":["a fix for the editor, max 25 words"],"summary":"max 20 words"}"""
 
 
@@ -2544,7 +2557,7 @@ def chat(req, emit=None):
     content += [{"type": "image_url", "image_url": {"url": u, "detail": "low"}} for u in refs]
     messages.append({"role": "user", "content": content})
     total, reply, steps, trace = {"prompt_tokens": 0, "completion_tokens": 0, "cached": 0, "cache_write": 0}, "", [], []
-    nudged, fixing, verdict, final, edit_usd = 0, False, None, None, None
+    nudged, fixing, verdict, final, edit_usd, before_fix = 0, False, None, None, None, ({}, set(), {}, {}, "")
     review_total = {"prompt_tokens": 0, "completion_tokens": 0, "cached": 0, "cache_write": 0}
     gates = gates_on() and not req.get("noReview")
     try:
@@ -2558,8 +2571,10 @@ def chat(req, emit=None):
                     if ws.changed:
                         trace.append({"tool": "(time)", "args": "", "out": "out of time"})
                         ws.changed.clear()
-                    reply = ("I ran out of time before finishing" + (f"; the {ws.saved_parts} part(s) I saved are live" if getattr(ws, "saved_parts", 0)
-                             else "; nothing was changed") + ". Ask again for the rest, or try a smaller change.")
+                    reply = (("خلص الوقت قبل ما أخلّص" + (f"، والـ{ws.saved_parts} جزء اللي حفظتهم موجودين" if getattr(ws, "saved_parts", 0)
+                              else "، ومافيش حاجة اتغيّرت") + ". اطلب الباقي تاني، أو جرّب تعديل أصغر.") if AR_TEXT.search(message) else
+                             ("I ran out of time before finishing" + (f"; the {ws.saved_parts} part(s) I saved are live" if getattr(ws, "saved_parts", 0)
+                              else "; nothing was changed") + ". Ask again for the rest, or try a smaller change."))
                     break
                 if left_ < 50 and not getattr(ws, "warned_time", False):
                     ws.warned_time = True
@@ -2587,7 +2602,9 @@ def chat(req, emit=None):
                         elif last_ and last_.startswith("Check 2D vs 3D"):
                             trace.append({"tool": "(review, final)", "args": "", "out": last_[:700]})
                             ws.changed.clear()
-                            reply = ("I couldn't finish this with the 2D plan and the 3D model matching, so I left both as they "
+                            reply = ("ماقدرتش أخلّص التعديل والمخطط والـ3D متطابقين، فسيبتهم زي ما كانوا. جرّب طلب أصغر أو أوضح."
+                                     if AR_TEXT.search(message) else
+                                     "I couldn't finish this with the 2D plan and the 3D model matching, so I left both as they "
                                      "were. Try a smaller or more specific change.")
                     break
                 for call in msg["tool_calls"]:
@@ -2604,7 +2621,8 @@ def chat(req, emit=None):
                                      "passed, reply to the user now (no more tool calls); otherwise call discard and tell the user "
                                      "nothing was changed and what couldn't be finished."})
             else:
-                reply = "I ran out of steps before finishing; nothing was changed. Try a narrower request."
+                reply = ("خلصت الخطوات قبل ما أخلّص، ومافيش حاجة اتغيّرت. جرّب طلب أضيق." if AR_TEXT.search(message) else
+                         "I ran out of steps before finishing; nothing was changed. Try a narrower request.")
                 ws.changed.clear()
             if fixing or not gates or not ws.changed or time.time() - t_start > TIME_LIMIT - 70:
                 break  # no review when the clock is nearly out
@@ -2613,15 +2631,28 @@ def chat(req, emit=None):
             if not verdict or verdict["score"] >= REVIEW_PASS:
                 break
             fixing, nudged, edit_usd = True, 0, dollars(total, model)
+            before_fix = (dict(ws.files), set(ws.changed), dict(ws.orig), {k_: list(v_) for k_, v_ in ws.ops.items()}, reply)
             if model != live_model(COMPLEX_MODEL):  # the cheap model's miss: the strong one fixes it (priced as such)
                 model = live_model(COMPLEX_MODEL)
             emit("We found improvements, please wait a moment")
             messages.append({"role": "user", "content": fix_note(verdict)})
+        if fixing and not ws.changed and before_fix[1]:
+            # The fix round gave up (discarded): keep the edit from before it, not nothing (27 Oct 2026: a terrazzo floor
+            # asked as mosaic was thrown away with the failed fix, 3 EGP for no change).
+            ws.files.update(before_fix[0])
+            ws.changed, ws.orig = set(before_fix[1]), dict(before_fix[2])
+            ws.ops = defaultdict(list, {k_: list(v_) for k_, v_ in before_fix[3].items()})
+            if ws.cfg["dxf"] in ws.changed and ws.dxf_path:
+                ws.dxf_path.write_bytes(ws.files[ws.cfg["dxf"]])
+            ws.plan_dirty = bool(ws.changed & {ws.cfg["dxf"], ws.cfg["tour"]})  # rebuild the model only for a plan / tour edit
+            reply = before_fix[4] + (" (حاولت أحسّنه أكتر بس ماقدرتش، فسيبت التعديل ده.)" if AR_TEXT.search(message) else
+                                     " (I tried to improve it further but couldn't, so I kept this.)")
+            trace.append({"tool": "(fix round gave up: kept the edit before it)", "args": "", "out": ""})
         if fixing and ws.changed:  # the fixed edit's score, for the record
             emit("Checking the fix")
             final = review_edit(ws, message, reply, where, image, trace, review_total)
         if not ws.changed and reply and re.search(r"\b(I('ve| have)?|have been) (changed|made|moved|added|removed|replaced|updated|set)\b", reply):
-            reply = "Nothing was changed yet: " + reply  # the model claimed an edit it never made
+            reply = ("لسه ماتغيّرش حاجة: " if AR_TEXT.search(message) else "Nothing was changed yet: ") + reply  # claimed, never made
         if ws.changed:  # last gate: a settled design lock (design-locks.json) the request didn't name stays as it is
             if ws.plan_dirty:
                 rebuild(ws)
@@ -2629,8 +2660,11 @@ def chat(req, emit=None):
             if breaks := lock_breaks(ws, message, record=True):
                 print(f"[edit-ai] refused, design lock: {lock_note(breaks)}", flush=True)
                 ws.discard()
-                reply = ("Nothing was changed: this edit would undo a decision you already settled — " + lock_note(breaks) +
-                         ". If you do want to change that, say so and name it (e.g. the column, the TV wall, the niches or the buffet).")
+                reply = (("ماتغيّرش حاجة: التعديل ده كان هيلغي قرار اتفقتوا عليه — " + lock_note(breaks) +
+                          ". لو عايز تغيّره فعلًا، قول كده واذكره بالاسم (العمود، حيطة التلفزيون، النيش أو البوفيه).")
+                         if AR_TEXT.search(message) else
+                         ("Nothing was changed: this edit would undo a decision you already settled — " + lock_note(breaks) +
+                          ". If you do want to change that, say so and name it (e.g. the column, the TV wall, the niches or the buffet)."))
         if ws.changed:
             emit("Saving your edit")
         result = save(ws, reply or message) if ws.changed else None
@@ -2774,6 +2808,20 @@ def blocked_spot(ws, f0, f1):
 NAMED_PLACE = re.compile(r"\b(at|on|in|by|beside|next to|near|behind|under|above|over|opposite|facing|between|corner|"
                          r"foot|left|right|wall)\b|جنب|فوق|تحت|ورا|قدام|عند|على|في|يمين|شمال", re.I)
 POINTED = re.compile(r"\b(here|there|this (spot|place|corner|area|room))\b|هنا|هناك", re.I)
+# Everyday Arabic names of the plan's rooms (the SYSTEM glossary too): a request naming one names that room.
+AR_ROOMS = {"LIVING ROOM": ("صالة", "صاله", "ليفنج", "ليفينج"), "RECEPTION": ("ريسبشن", "رسبشن", "ريسيبشن", "استقبال"),
+            "DINING": ("سفرة", "سفره", "سفرا"), "KITCHEN": ("مطبخ",), "LAUNDRY": ("غسيل", "مغسلة", "غساله"),
+            "ENTRANCE": ("مدخل",), "HALLWAY": ("طرقة", "طرقه", "ممر", "كوريدور"),
+            "MASTER BEDROOM": ("أوضة النوم", "اوضة النوم", "أوضه النوم", "اوضه النوم", "غرفة النوم", "الماستر", "أوضتي", "اوضتي"),
+            "TOILET 1": ("الحمام الكبير", "الحمام الرئيسي", "حمام الماستر", "حمام أوضة النوم", "حمام اوضة النوم"),
+            "TOILET 2": ("الحمام الصغير", "حمام الضيوف", "التواليت"), "TERRACE": ("تراس", "تيراس", "بلكونة", "بلكونه", "روف")}
+
+
+def room_named(name, message):
+    """Whether the request names this room: a word of its label (English) or one of its Arabic names."""
+    n = (name or "").upper().rstrip(".")
+    msg_l = (message or "").lower()
+    return any(w in msg_l for w in n.lower().split() if len(w) > 3) or any(a in (message or "") for a in AR_ROOMS.get(n, ()))
 
 
 MOVE_ASK = re.compile(r"\b(move|put|place|relocate|shift|bring|take|transfer|carry|here|there)\b|انقل|نقل|حط|هنا|هناك", re.I)
@@ -2855,7 +2903,7 @@ def off_view(ws, message, f0, f1, rings):
         for i, px, py, line in added[:4]:
             r = room_of(px, py)
             other = names[r] if 0 <= r < len(names) else ""
-            if home >= 0 and r >= 0 and r != home and not any(w in msg_l for w in other.lower().split() if len(w) > 3):
+            if home >= 0 and r >= 0 and r != home and not room_named(other, message):
                 return (f"Check placement: {say(i, line)} puts the new piece in the {other.title() or 'next room'}, but the "
                         f"user is standing in the {names[home].title() or 'room the camera is in'} and didn't name another room. "
                         "Put it in this room, where the user is looking (move the 3D line and its plan outline together), "

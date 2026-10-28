@@ -666,7 +666,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
       store.setItem(histKey, JSON.stringify(history));
       say("bot", res.reply);
       const cost = costLine(res, checkUsd);
-      if (!res.changed?.length) { say("note", `No change made${cost}`); return; }
+      if (!res.changed?.length) { say("note", `No change made${cost}`); offerStronger(body, res); return; }
       say("note", `Applying the change${cost}…`);
       phase("Loading your edit", true);
       await apply(res, cost, body);
@@ -679,6 +679,47 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
       $(".send").disabled = $(".shut").disabled = false;
       if (!leaving) working(false);
     }
+  }
+  // The cheap model gave up with no change: the same request to the strong one, from the chat (the done toast's "Try a
+  // stronger model" only comes with a change to undo first; e2e J234 / J249 / J319).
+  function offerStronger(body, res) {
+    if (!res.retryModel || res.model === res.retryModel) return;
+    const m = say("tip", "The quicker model couldn't do it.");
+    const row = document.createElement("div");
+    const b = Object.assign(document.createElement("button"), { type: "button", className: "go", textContent: "Try a stronger model" });
+    row.append(b);
+    m.appendChild(row);
+    msgs.scrollTop = msgs.scrollHeight;
+    b.onclick = async () => {
+      if (busy) return;
+      m.remove();
+      busy = true;
+      $(".send").disabled = $(".shut").disabled = true;
+      const wait = say("note", "");
+      wait.classList.add("busy");
+      wait.append("Trying a stronger model…");
+      working(true);
+      try {
+        const res2 = await callChat({ ...body, history, retry: true }, p => phase(p, true));
+        wait.remove();
+        history.push({ role: "user", text: body.message }, { role: "assistant", text: res2.reply });
+        history = history.slice(-12);
+        store.setItem(histKey, JSON.stringify(history));
+        say("bot", res2.reply);
+        const cost = costLine(res2, null);
+        if (!res2.changed?.length) { say("note", `No change made${cost}`); return; }
+        say("note", `Applying the change${cost}…`);
+        phase("Loading your edit", true);
+        await apply(res2, cost, body);
+      } catch (e) {
+        wait.remove();
+        say("err", e.message);
+      } finally {
+        busy = false;
+        $(".send").disabled = $(".shut").disabled = false;
+        if (!leaving) working(false);
+      }
+    };
   }
   // The scan over the frozen view while an edit runs; its line steps through what the server is doing, roughly.
   const PHASES = ["Reading the view", "Finding the piece", "Editing the model", "Rebuilding the home", "Almost there"];

@@ -120,6 +120,9 @@ export function furnish(scene, M, mat, version = "main") {
   // Move and Resize (move_tool.py) for pieces a loop or shared code places, which have no line of their own to change:
   // "x,y,facing" as the code places them -> [x, y, across, out(, up, lift)] where they go instead (up: height scale,
   // lift: metres raised), one version-guarded line each.
+  // Pieces placed at the same x, y, facing (the dining table, its rug and the pendant over it): the nth one placed is
+  // also "x,y,facing#n" (twin), so one of them can be moved or deleted on its own (as Karim's file; e2e J253).
+  const placed = {};
   const MOVED = {};
   if (version === "karims-version") MOVED["21.47,5,E"] = [21.635, 5.63, 1, 1];  // Move and Resize: wall sconce
   if (version === "kareems-changes") MOVED["21.47,5,E"] = [21.51, 5.775, 1, 1];  // Move and Resize: wall sconce
@@ -166,14 +169,15 @@ export function furnish(scene, M, mat, version = "main") {
     g.position.set(x, levelAt(x, y), -y);
     g.rotation.y = typeof facing === "number" ? facing : FACING[facing];
     // For Move and Resize (move.js / move_tool.py): where this item( call sits in furnish.js and what it was given.
-    g.userData.piece = { x, y, facing, lines: callLines() };
-    const key = `${+x.toFixed(4)},${+y.toFixed(4)},${facing}`, moved = MOVED[key];
+    const key = `${+x.toFixed(4)},${+y.toFixed(4)},${facing}`, twin = parent === root ? (placed[key] = (placed[key] || 0) + 1) : 0;
+    g.userData.piece = { x, y, facing, lines: callLines(), twin };
+    const moved = MOVED[`${key}#${twin}`] || MOVED[key];
     if (moved) {
       g.position.set(moved[0], levelAt(moved[0], moved[1]) + (moved[5] ?? 0), -moved[1]);
       g.scale.set(moved[2], moved[4] ?? 1, moved[3]);
       g.userData.piece.moved = true;
     }
-    if (REMOVED.has(key)) { g.userData.piece.removed = true; return g; }  // built, never added to the scene
+    if (REMOVED.has(`${key}#${twin}`) || REMOVED.has(key)) { g.userData.piece.removed = true; return g; }  // built, never added to the scene
     parent.add(g);
     return g;
   }
@@ -766,7 +770,9 @@ export function furnish(scene, M, mat, version = "main") {
       p.model("models/plant-vase.glb", null, -0.84, 1.77, 0.08, { height: 0.3, cross: true });
       p.model("models/plant-vase.glb", null, -0.58, 0.75, 0.1, { height: 0.4, cross: true });  // on the top, by the column
       p.model("models/mbath-bottles.glb", null, 0.62, 0.75, 0.06, { width: 0.28 });
-      p.pebble(["kareems-changes", "karims-version"].includes(version) || version === "naghams-changes" ? 0.16265 : -0.05, 1.35, 1.1, 0.75, 0.012, mat.mirror, true);   // 1.10 wide x 0.75 tall, 0.98 to 1.73; centred between wardrobe edge and shelf column edge
+      p.label("pebble mirror", q => {  // a part of its own: Move and Resize picks it (e2e J073 / J193)
+        q.pebble(["kareems-changes", "karims-version"].includes(version) || version === "naghams-changes" ? 0.16265 : -0.05, 1.35, 1.1, 0.75, 0.012, mat.mirror, true);   // 1.10 wide x 0.75 tall, 0.98 to 1.73; centred between wardrobe edge and shelf column edge
+      });
       p.cyl(-0.05, 0.25, 0.225, 0, 0.43, mat.boucle, 32);           // pouf 45 x 45, pushed in to 2.5 cm off the back panel
       p.cyl(-0.05, 0.25, 0.215, 0.43, 0.45, mat.boucle, 32, 0.225);
     });
@@ -786,7 +792,9 @@ export function furnish(scene, M, mat, version = "main") {
     // Kareem's Changes: the bathroom door sits 0.16 further east, so the vanity runs the whole wall (1.185, south wall
     // to the partition) and is 0.60 deep; the backlit mirror becomes a 0.80 x 0.75 mirrored medicine cabinet, 0.30
     // out from the battens, bottom 1.32 (0.46 over the counter), three glass shelves, all centred on the bowl.
-    if (["kareems-changes", "karims-version"].includes(version)) item(0.556, 6.7276, "E", vanity(1.185, true, 0.6, medCabinet(0.8, 1.32, 2.07, 3, 0, 0.5), heaterVanity));  // centre DWG y -114.8856
+    if (["kareems-changes", "karims-version"].includes(version)) item(0.556, 6.7276, "E", vanity(1.185, true, 0.6, p => p.label("medicine cabinet", q => {  // centre DWG y -114.8856
+      medCabinet(0.8, 1.32, 2.07, 3, 0, 0.5)(q);  // a part of its own: Move and Resize picks it (e2e J178)
+    }), heaterVanity));
     else item(0.556, 6.7435, "E", vanity(1.153, true));  // centre DWG y -114.8697, bowl, mixer and mirror on it
     item(1.8037, 9.0201, "S", p => {  // WC bay 1.416..2.192 (local +x east)
       const h = 0.3878, d = 0.3, top = 1.12;
@@ -1204,10 +1212,12 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(-nw, nw, N1, N1 + f, 0.02, D, fin);                        // niche top
       // Countertop microwave 55.3 W x 32.6 H x 44 D on the shelf, centred, front 1.5 behind the frame face.
       const mw = 0.2765, mz = D - 0.015;
-      p.box(-mw, mw, N0, N0 + MH, mz - 0.44, mz - 0.02, mat.blackSteel);            // cabinet
-      p.box(-mw, mw, N0, N0 + MH, mz - 0.02, mz, mat.blackGlass);                   // door
-      p.box(-mw + 0.03, mw - 0.16, N0 + 0.03, N0 + MH - 0.03, mz, mz + 0.002, mat.smokedGlass);
-      p.box(mw - 0.13, mw - 0.03, N0 + MH - 0.05, N0 + MH - 0.035, mz, mz + 0.002, mat.ledStrip);  // display
+      p.label("countertop microwave", p => {  // a part of its own: Move and Resize picks it (e2e J055 / J169)
+        p.box(-mw, mw, N0, N0 + MH, mz - 0.44, mz - 0.02, mat.blackSteel);            // cabinet
+        p.box(-mw, mw, N0, N0 + MH, mz - 0.02, mz, mat.blackGlass);                   // door
+        p.box(-mw + 0.03, mw - 0.16, N0 + 0.03, N0 + MH - 0.03, mz, mz + 0.002, mat.smokedGlass);
+        p.box(mw - 0.13, mw - 0.03, N0 + MH - 0.05, N0 + MH - 0.035, mz, mz + 0.002, mat.ledStrip);  // display
+      });
       for (const y of [O0, O1, N1]) p.box(-w, w, y - 0.002, y + 0.002, D, D + 0.003, shadowGap);
       doors(p, -w, w, N1, 2.25, 1);                   // lift-up flaps to the ceiling,
       doors(p, -w, w, 2.25, H, 1);                    // jointed in line with the oak uppers
@@ -1449,14 +1459,18 @@ export function furnish(scene, M, mat, version = "main") {
     mesh(new THREE.ShapeGeometry(rounded(mx0 - 0.025, mx1 + 0.025, 0.725, 1.975, 0.105)), mat.ledStrip, p.g, false).position.z = 0.008;
     const glass = mesh(new THREE.ExtrudeGeometry(rounded(mx0, mx1, 0.75, 1.95, 0.08), { depth: 0.01, bevelEnabled: false, curveSegments: 12 }), mat.mirror, p.g, false);
     glass.position.z = 0.012;
-    // Three brass hooks beside it, a linen scarf on the first and a bag on the third.
-    for (const x of [10.95, 11.07, 11.19]) {
-      B(x - 0.007, x + 0.007, W, W + 0.06, 1.6, 1.614, mat.brass);
-      B(x - 0.007, x + 0.007, W + 0.05, W + 0.064, 1.6, 1.64, mat.brass, 0.005);
-    }
-    B(10.89, 11.01, W + 0.03, W + 0.06, 1.0, 1.61, mat.oatmeal, 0.015);
-    B(11.08, 11.3, W + 0.03, W + 0.11, 1.2, 1.4, mat.walnut, 0.02);  // leather bag on the third
-    for (const x of [11.12, 11.26]) B(x - 0.006, x + 0.006, W + 0.065, W + 0.075, 1.4, 1.6, mat.walnut);
+    // Three brass hooks beside it, a linen scarf on the first and a bag on the third: a part of their own, so Move and
+    // Resize picks them (e2e J086 / J172).
+    p.label("three brass hooks", q => {
+      const B = (x0, x1, y0, y1, h0, h1, m, r = 0) => q.box(-x1, -x0, h0, h1, y0 - W, y1 - W, m, r);
+      for (const x of [10.95, 11.07, 11.19]) {
+        B(x - 0.007, x + 0.007, W, W + 0.06, 1.6, 1.614, mat.brass);
+        B(x - 0.007, x + 0.007, W + 0.05, W + 0.064, 1.6, 1.64, mat.brass, 0.005);
+      }
+      B(10.89, 11.01, W + 0.03, W + 0.06, 1.0, 1.61, mat.oatmeal, 0.015);
+      B(11.08, 11.3, W + 0.03, W + 0.11, 1.2, 1.4, mat.walnut, 0.02);  // leather bag on the third
+      for (const x of [11.12, 11.26]) B(x - 0.006, x + 0.006, W + 0.065, W + 0.075, 1.4, 1.6, mat.walnut);
+    });
   });
   plant(10.13, 3.89, 0.5, 0.07, 0.9);  // cream vase of olive branches on the column piece
   // Facing the front door, as the entrance render: tall pebble mirror (0.78 x 1.55, thin oak frame, warm LED glow
@@ -1598,8 +1612,10 @@ export function furnish(scene, M, mat, version = "main") {
     }
     // TV centred over the niche; on Kareem's it sits in the opening so the face reads flat with the plaster.
     const z0 = KC ? D1 - TD : D1, z1 = KC ? D1 : D1 + TD;
-    p.box(tvX0, tvX1, tvY0, tvY1, z0, z1, mat.blackSteel);
-    p.face(tvX0 + 0.01, tvX1 - 0.01, tvY0 + 0.01, tvY1 - 0.01, z1 + 0.001, mat.screen);
+    p.label("TV", q => {  // a part of its own: Move and Resize picks it (e2e J190 / J309)
+      q.box(tvX0, tvX1, tvY0, tvY1, z0, z1, mat.blackSteel);
+      q.face(tvX0 + 0.01, tvX1 - 0.01, tvY0 + 0.01, tvY1 - 0.01, z1 + 0.001, mat.screen);
+    });
     p.box(-1.72, edge - splay, 0, 0.08, D0, D0 + 0.012, mat.oakVeneer);
     p.box(edge, 1.72, 0, 0.08, D1, D1 + 0.012, mat.oakVeneer);
     const skirt = p.box(-L / 2, L / 2, 0, 0.08, -0.006, 0.006, mat.oakVeneer);
@@ -1782,6 +1798,7 @@ export function furnish(scene, M, mat, version = "main") {
     // open the coffee corner (doors), "flip desk" rolls it 0.80 out, "flip desk lid" lifts the lid and monitor.
     const xd = (-0.75 + X) / 2, out = 0.8;
     const desk = new THREE.Group(), r = part(desk); desk.position.set(xd, 0, 0.02); c.add(desk);
+    Object.assign(desk.userData, { label: "flip desk", part: true });  // drill-in picks it (e2e J304)
     for (const x of [-0.46, 0.46]) for (const z of [0.04, 0.56]) {
       r.cyl(x, z, 0.022, 0.005, 0.045, mat.blackSteel, 16);  // caster wheel
       r.box(x - 0.02, x + 0.02, 0.045, 0.05, z - 0.02, z + 0.02, mat.blackSteel);  // caster plate
@@ -1808,9 +1825,9 @@ export function furnish(scene, M, mat, version = "main") {
     for (const x of [-0.46, 0.46]) l.cyl(x, 0.155, 0.007, -0.201, 0.061, mat.blackSteel, 8).rotation.x = Math.atan2(0.25, 0.08);  // gas struts
     desk.userData.openable = { id: "coffee-flip-desk", label: "Flip desk", leaves: [{ obj: desk, slide: new THREE.Vector3(0, 0, out) }],
       anchor: new THREE.Vector3(0, 0.6, 0.98), reach: 1.8, duration: 0.9 };
-    // The lid's cue is set where the lid sits once the desk is rolled out (cues stay where they were built).
+    // The lid's cue follows the lid (rolled out with the desk, lifted with the lid: e2e J008), in the lid's own frame.
     lid.userData.openable = { id: "coffee-flip-desk-lid", label: "Flip desk lid", leaves: [{ obj: lid, axis: "x", open: -Math.PI / 2 }],
-      anchor: new THREE.Vector3(0, 0.05, out + 0.45), reach: 1.8, duration: 0.8 };
+      anchor: new THREE.Vector3(0, 0.05, 0.45), follow: true, reach: 1.8, duration: 0.8 };
     p.box(-0.75, 0.75, T - 0.03, T, 0, F + 0.02, mat.marbleTop);
     p.label("two lit floating shelves", p => {
       for (const y of [1.63, 1.88]) { p.box(-0.75, 0.75, y, y + 0.035, 0, 0.28, mat.oakVeneer); p.box(-0.73, 0.73, y - 0.012, y, 0.03, 0.26, mat.ledStrip); }

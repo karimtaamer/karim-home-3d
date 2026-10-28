@@ -148,5 +148,45 @@ class Heights(unittest.TestCase):
         self.assertIn('sized(item(version === "karims-version" ? 19.85 : 19.85', t2)
         self.assertIn('item(16.95, 7.6, "E"', t2)
 
+
+NV = "naghams-changes"
+NSRC = (Path(__file__).resolve().parent.parent / f"furnish-{NV}.js").read_text()
+
+
+class NaghamsRunsAsMain(unittest.TestCase):
+    """Nagham's file runs Main's branches (`if (version === "naghams-changes") version = "kareems-changes";`): Move's
+    lines must be gated on what the code sees, or they never run (e2e 28 Oct 2026: J027 / J127 / J258 / J285)."""
+    def test_alias_read(self):
+        self.assertEqual(E.runs_as(NSRC, NV), "kareems-changes")
+        self.assertEqual(E.runs_as(KSRC, KV), KV)
+
+    def test_main_branch_runs_here(self):  # the dining fold-down desk: was refused as "another plan version" (J149)
+        n = NSRC[:NSRC.index('item(18.55, 9.502, "S"')].count("\n") + 1
+        self.assertIsNot(E.version_scope(NSRC, NV)[n - 1], False)
+
+    def test_moved_line_runs(self):
+        cv = E.runs_as(NSRC, NV)
+        piece = {"x": 24.5, "y": 5.75, "facing": "S"}
+        t = MT.set_table(NSRC, piece, 24.3, 5.75, 1, 1, cv, "potted plant")
+        self.assertIn('if (version === "kareems-changes") MOVED["24.5,5.75,S"] = [24.3, 5.75, 1, 1];', t)
+        self.assertNotEqual(E.for_version(t, NV), E.for_version(NSRC, NV))  # it changes what Nagham's runs
+        self.assertEqual(MT.set_table(t, piece, 24.5, 5.75, 1, 1, cv, "potted plant"), NSRC)
+
+    def test_removed_line_runs(self):
+        cv = E.runs_as(NSRC, NV)
+        t = MT.set_removed(NSRC, {"x": 24.5, "y": 5.75, "facing": "S"}, cv, "potted plant")
+        self.assertNotEqual(E.for_version(t, NV), E.for_version(NSRC, NV))
+
+    def test_niche_gate_edited_again(self):  # a second Move on a niche it gated: edits its own array (J314)
+        n, c = call_at(KSRC, 'item(14.79, 8.0, "E"')
+        t, _ = MT.set_param(KSRC, c, {"src": "niche", "x": [0, 1]}, -1.0, -0.6, KV)
+        self.assertIn('const niche = version === "karims-version" ? [-1, -0.6, 0.42, 2.2, 0.13] :', t)
+        c2 = next(x for x in MT.calls_on_line(t, n) if x["kind"] == "item")
+        t2, old = MT.set_param(t, c2, {"src": "niche", "x": [0, 1]}, -1.05, -0.6, KV)
+        self.assertEqual(old, (-1.0, -0.6))
+        self.assertIn('const niche = version === "karims-version" ? [-1.05, -0.6, 0.42, 2.2, 0.13] :', t2)
+        self.assertEqual(t2.count('version === "karims-version" ? [-1.05'), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

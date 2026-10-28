@@ -9,6 +9,7 @@
 //            | { obj, slide: Vector3 }],                //   or a sliding one: obj moves by `slide` (its parent's frame)
 //     anchor: Vector3,                                  // where the cue sits, in g's frame (the doors' centre, a little out)
 //     reach: 1.8, duration: 0.6,                        // plan metres from the anchor it opens from; seconds to open
+//     follow: true,                                     // optional: the cue moves with g (a lid that lifts, a desk that rolls)
 //     peek: 1.0, peekAt: Vector3,                       // optional, low cabinets: crouch to this eye height on opening,
 //   };                                                  //   turned to peekAt (g's frame; default the anchor)
 // createInteract() collects them from the scene; call update() every frame. Leaves start from their built pose (closed).
@@ -153,10 +154,17 @@ export function createInteract({ THREE, camera, scene, renderer, isActive, isLoc
     // Real time, not the loop's capped step: a swing takes `duration` even on a slow phone.
     const now = performance.now(), dt = (now - last) / 1000;
     last = now;
+    let moved = false;
     for (const o of list) {
       if (o.t === o.to) continue;
       o.t = o.to ? Math.min(1, o.t + dt / o.duration) : Math.max(0, o.t - dt / o.duration);
       pose(o);
+      moved = true;
+    }
+    if (moved) for (const o of list) if (o.follow) {  // the cue where its piece is now
+      o.root.updateWorldMatrix(true, false);
+      o.root.localToWorld(o.at.copy(o.anchor));
+      o.root.localToWorld(o.look.copy(o.peekAt || o.anchor));
     }
     if (crouch && (bare || !isActive() || Math.hypot(crouch.o.at.x - camera.position.x, crouch.o.at.z - camera.position.z) > crouch.o.reach)) rise();
     bob(dt);

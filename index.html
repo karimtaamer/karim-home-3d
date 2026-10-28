@@ -998,19 +998,37 @@ function setMode(m) {
   photogen?.sync();
 }
 
+// Top from Walk centres on the room you stood in, and keeps where you stood: the Walk chip drops you back there.
+let walkPose = null;
 function goTop() {
   clearTimeout(intro);
+  const r = mode === "walk" && rooms[roomHere()];
+  if (mode === "walk") walkPose = currentPose();
   setMode("top");
-  animate([topPose()], { duration: 1.8, cut: PLAN_CUT, finish: 1, onDone: () => { orbitTop.target.copy(centre); orbitTop.enabled = true; } });
+  const p = topPose();
+  if (r) { p.pos.set(r.centre.x, p.pos.y, r.centre.z); p.target.set(r.centre.x, 0, r.centre.z); }
+  animate([p], { duration: 1.8, cut: PLAN_CUT, finish: 1, onDone: () => { orbitTop.target.copy(p.target); orbitTop.enabled = true; } });
 }
 function goRoom(v) {
   clearTimeout(intro);
   if (mode === "walk") return walkTo(v);
-  // From above: drop in over the room (no walls in the way), then settle at eye height.
+  dropIn({ pos: v.eye.clone(), target: v.look.clone(), fov: FOV.walk, up: UP.clone() }, () => arrive(v));
+}
+// From above: drop in over the spot (no walls in the way), then settle at eye height.
+function dropIn(eyePose, onDone) {
   setMode("walk");
-  const eyePose = { pos: v.eye.clone(), target: v.look.clone(), fov: FOV.walk, up: UP.clone() };
-  const over = { pos: v.eye.clone().setY(7), target: v.eye.clone().lerp(v.look, 0.3).setY(0), fov: 55, up: UP.clone() };
-  animate([over, eyePose], { duration: 2.4, cut: FULL, finish: 1, onDone: () => arrive(v) });
+  const over = { pos: eyePose.pos.clone().setY(7), target: eyePose.pos.clone().lerp(eyePose.target, 0.3).setY(0), fov: 55, up: UP.clone() };
+  animate([over, eyePose], { duration: 2.4, cut: FULL, finish: 1, onDone });
+}
+// The Walk chip: in Walk it stays put (it used to glide off to the first stop: e2e J026); from Top, back to where you
+// stood (else the first room).
+function goWalk() {
+  if (mode === "walk") return;
+  if (!walkPose) return goRoom(viewpoints[0]);
+  const at = walkPose.pos.clone().setY(EYE), ahead = walkPose.target.clone().sub(walkPose.pos).setY(0);
+  if (ahead.lengthSq() < 1e-6) ahead.set(0, 0, -1);
+  dropIn({ pos: at, target: at.clone().add(ahead.normalize()).setY(EYE - 0.15), fov: FOV.walk, up: UP.clone() },
+    () => { captionRoom = null; showCaption(roomHere()); });
 }
 
 // --- Walking: free movement with wall collision, or a glide along the route to a room ---------
@@ -1070,10 +1088,12 @@ stickEl.addEventListener("contextmenu", e => e.preventDefault());
 const ray = new THREE.Raycaster();
 const velocity = new THREE.Vector3();
 function blocked(from, dir, dist) {
+  // a door that opens (interact.js) stops you while it is shut: more than half closed (e2e J003)
+  const doors = (interact?.list || []).filter(o => /door$/.test(o.id) && o.t < 0.5).map(o => o.root);
   for (const h of [0.35, 1.2]) {
     ray.set(new THREE.Vector3(from.x, h, from.z), dir);
     ray.far = dist + 0.3;
-    if (ray.intersectObjects(flat.solids).length) return true;
+    if (ray.intersectObjects(flat.solids).length || (doors.length && ray.intersectObjects(doors, true).length)) return true;
   }
   return false;
 }
@@ -1193,7 +1213,15 @@ function showCaption(name) {
     .fromTo(caption, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" })
     .to(caption, { opacity: 0, duration: 0.8, delay: 2.6 });
 }
-function arrive(v) { captionRoom = null; showCaption(v.room); }
+function arrive(v) { stopAt = v; captionRoom = null; showCaption(v.room); }
+// The room you're in: the tour stop's while you still stand where it put you (some stops stand across an open-plan
+// boundary: the Reception stop's eye is in the dining end, the Dining stop's in the reception; e2e J001 / J202, so the
+// caption and Edit AI's "room" said the other one), else the room under the camera.
+let stopAt = null;
+function roomHere() {
+  if (stopAt && Math.hypot(camera.position.x - stopAt.eye.x, camera.position.z - stopAt.eye.z) < 0.5) return stopAt.room;
+  return flat.roomAt(camera.position.x, -camera.position.z)?.name || null;
+}
 
 // --- UI -------------------------------------------------------------------------------------------
 const roomBar = document.getElementById("rooms");
@@ -1223,6 +1251,7 @@ for (const v of VERSIONS) {
       q.set("cam", [p.x, -p.z, p.y, p.x + d.x, -(p.z + d.z), p.y + d.y, camera.fov].map(n => +n.toFixed(3)).join(","));
     } else q.set("view", mode);
     if (showing !== "model") q.set("show", showing);
+    if (params.has("debug")) q.set("debug", "");  // the headless checks' hooks survive a version switch
     location.search = q;
   };
   versionBar.appendChild(b);
@@ -1238,7 +1267,7 @@ addEventListener("pointerdown", e => !bar.contains(e.target) && closeMenu());
 document.querySelectorAll("[data-view]").forEach(b => (b.onclick = () => {
   stopGlide();
   if (b.dataset.view === "top") goTop();
-  else goRoom(viewpoints[0]);
+  else goWalk();
 }));
 
 // --- Measuring in 3D, and the DWG as a drawing to measure on ----------------------------------------
@@ -1288,8 +1317,13 @@ const toggleMove = () => {
 };
 moveBtn.onclick = moveBtn2D.onclick = toggleMove;
 document.getElementById("drawing").addEventListener("measure-on", () => move.setActive(false));
-if (move.resume) move.setActive(true);
+// As-built is the survey: move_tool.py refuses it, so the tool says so up front instead of after a drag and Accept (e2e J013).
+const surveyOnly = vid === "as-built";
+for (const b of surveyOnly ? [moveBtn, moveBtn2D] : []) Object.assign(b, { disabled: true, title: "As-built is the survey of the flat as it stands: it can't be moved or resized" });
+if (move.resume && !surveyOnly) move.setActive(true);
 if (params.has("debug")) window.__move = move;  // the Move suite's hook
+if (params.has("debug")) window.__e2e = { drawing, measure, camera, scene, mode: () => mode, showing: () => showing, cam: () => [camera.position.x, -camera.position.z, camera.position.y].map(v => +v.toFixed(3)) };  // e2e hook (measure checks)
+if (params.has("debug")) window.__cam = () => ({ x: camera.position.x, y: -camera.position.z, h: camera.position.y, room: flat.roomAt(camera.position.x, -camera.position.z)?.name || null, solid: flat.solids?.length ?? null });  // e2e hook
 // After a move or an Edit AI change the page reloads where it was, with Move still on. The frame from before goes with it
 // (sessionStorage "handoff", picked up by the inline script above the module) with the top view's zoom and the 2D's,
 // so the reload shows no splash and reveal() opens the old frame onto the new one from `focus` (screen px).
@@ -1386,6 +1420,32 @@ const interact = createInteract({
     && document.getElementById("photogen-box")?.hidden !== false && !(+document.getElementById("photo")?.style.opacity > 0),
 });
 if (params.has("debug")) window.__interact = interact;  // headless checks: the openables list
+// headless checks: where the camera is (plan x, y, eye height), the view, the screen and the room it stands in
+if (params.has("debug")) window.__view = {
+  get mode() { return mode; }, get showing() { return showing; }, get busy() { return !!(tween || glide); }, version: vid,
+  pos: () => [camera.position.x, -camera.position.z, camera.position.y].map(v => +v.toFixed(3)),
+  dir: () => { const d = camera.getWorldDirection(new THREE.Vector3()); return [d.x, -d.z, d.y].map(v => +v.toFixed(3)); },
+  room: () => flat.roomAt(camera.position.x, -camera.position.z)?.name || null, here: roomHere,
+  rooms: () => viewpoints.map(v => ({ room: v.room, caption: v.caption })),
+  blocked: (x, y, dx, dy, d) => blocked(new THREE.Vector3(x, 0, -y), new THREE.Vector3(dx, 0, -dy).normalize(), d),
+  turn: deg => camera.rotateOnWorldAxis(UP, THREE.MathUtils.degToRad(deg)),  // look round in Walk without pointer lock
+  stand: (x, y, lx, ly, h = EYE, lh = h - 0.15) => { stopGlide(); setPose({ pos: toWorld([x, y], h), target: toWorld([lx, ly], lh), fov: FOV.walk, up: UP }); },
+  swings: () => M.swings || [],
+  screen: (x, y, h = 0) => { const v = toWorld([x, y], h).project(camera); return [(v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight, +v.z.toFixed(4)]; },
+  realtime: () => gsap.ticker.lagSmoothing(0),  // slow software GL: tweens keep to the clock, not to the frames drawn
+  // textures in the scene and the ones with no picture behind them (failed or still loading: the pink / black ones)
+  textures: () => {
+    const seen = new Set(), bad = [];
+    scene.traverse(o => [o.material].flat().forEach(m => m && ["map", "normalMap", "roughnessMap", "aoMap"].forEach(k => {
+      const t = m[k];
+      if (!t || seen.has(t)) return;
+      seen.add(t);
+      const im = t.image;
+      if (!t.isDataTexture && !t.isCanvasTexture && !(im && (im.width || im.videoWidth))) bad.push(`${m.name || o.name || "?"}.${k}`);
+    })));
+    return { n: seen.size, bad };
+  },
+};
 
 // --- Start: Walk inside by default (Top via chip or ?view=top); legacy ?view=dollhouse → Walk too -----
 const startRoom = params.get("room") && viewpoints.find(v => v.caption.toLowerCase().startsWith(params.get("room").toLowerCase()));
@@ -1400,6 +1460,7 @@ if (cam?.length >= 6) {
   setMode("walk");
   look.cut = FULL; look.finish = 1; applyLook();
   setPose({ pos: startRoom.eye, target: startRoom.look, fov: FOV.walk, up: UP });
+  stopAt = startRoom;
 } else if (params.get("view") === "top") {
   setMode("top");
   look.cut = PLAN_CUT; look.finish = 1; applyLook();
@@ -1427,7 +1488,7 @@ import("./spots.js").then(m => m.photoSpots({
 // --- Edit AI: freeze the 3D or the 2D, circle what to change, say how (edit-ai.js, edit_ai.py) -----------
 if (!params.has("clean")) createEditAI({
   THREE, camera, scene, live, showing: () => showing, mode: () => mode, furniture: flat.furniture.root, materials: flat.lib,
-  cutPlane: flat.cutPlane, room: () => flat.roomAt(camera.position.x, -camera.position.z)?.name, drawingFrame: () => drawing.frame(),
+  cutPlane: flat.cutPlane, room: roomHere, drawingFrame: () => drawing.frame(),
   freeMouse: () => walker.isLocked && walker.unlock(), reload: reloadHere,
 });
 
@@ -1456,8 +1517,8 @@ renderer.setAnimationLoop(() => {
   if (showing !== "model") return;  // the drawing or the renders cover the scene; no need to keep rendering it
   if (mode === "walk" && !tween && !glide) {
     walkStep(dt);
-    const r = flat.roomAt(camera.position.x, -camera.position.z);
-    if (r && viewpoints.some(v => v.room === r.name)) showCaption(r.name);
+    const r = roomHere();
+    if (r && viewpoints.some(v => v.room === r)) showCaption(r);
   }
   if (orbitTop.enabled) {
     orbitTop.update();

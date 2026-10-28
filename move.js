@@ -84,17 +84,25 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
       if (m && !/^(Move|---|local )/.test(m[1])) return tidy(m[1]);
     }
     for (const n of ns) {
-      const m = (L[n - 1] || "").match(/item\([^,]+,[^,]+,\s*"[NSEW]",\s*(?:p\s*=>\s*)?([a-zA-Z]\w*)\(/);
+      const m = (L[n - 1] || "").match(/item\([^,]+,[^,]+,\s*"[NSEW]",\s*(?:p\s*=>\s*)?([a-zA-Z]\w*)\s*[(),]/);  // called, or passed as it is (towelRail)
       if (m && !/^(p|part)$/.test(m[1])) return m[1].replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
     }
-    for (const n of ns) {
-      const m = (L[n - 2] || "").match(/\/\/\s*(.+)$/);
+    for (const n of ns) {  // the comment above: from the first line of its block (a long note's last line names something else)
+      let i = n - 2;
+      while (i > 0 && /^\s*\/\//.test(L[i]) && /^\s*\/\//.test(L[i - 1])) i--;
+      const m = (L[i] || "").match(/\/\/\s*(.+)$/);
       if (m && !/^(Move|---|local )/.test(m[1])) return tidy(m[1]);
     }
     return null;
   }
+  // A cupboard with no name of its own: what its doors' open cue calls it (interact.js), e.g. "Water heater cupboard".
+  function openableLabel(o) {
+    let l = null;
+    o.traverse(c => (l ||= c.userData.openable?.label || null));
+    return l;
+  }
   function nameOf(o) {
-    return o.userData.label || (isPiece(o) && lineLabel(o)) || "piece";
+    return o.userData.label || (isPiece(o) && (lineLabel(o) || openableLabel(o))) || "piece";
   }
   // Pieces placed with the same x, y, facing (move_tool.py can't tell them apart when no line of code is their own).
   const keyOf = p => `${+(+p.x).toFixed(4)},${+(+p.y).toFixed(4)},${p.facing}`;
@@ -283,7 +291,15 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
   // The height the overlay is drawn at: the piece's own, carried up or down with a lift.
   const hNow = () => sel.h + heightNow()[0] - sel.low;
   // Only a whole piece turns (a part sits in its piece's frame).
-  const turnable = () => sel && isPiece(sel.o) && !(draft && !same(sizeOf(draft.box), sizeOf(sel.box)));
+  const turnable = () => sel && isPiece(sel.o) && hasFacing(sel.o) && !(draft && !same(sizeOf(draft.box), sizeOf(sel.box)));
+  // As move_tool.py's facing_at(): only a piece placed by item / art / ac / sconce has a facing to turn (a plant, pendant,
+  // rug or chair placed by its own helper or a loop: Accept would refuse the turn, and the move with it; e2e J049 / J077 / J101).
+  function hasFacing(o) {
+    const ns = o.userData.piece.lines || [], n = ns[ns.length - 1];  // innermost first: the last is the placing call
+    if (!furnishText || !n) return true;
+    const L = furnishText.split("\n")[n - 1] || "";
+    return /\b(item|art|ac|sconce)\(/.test(L) && !/\b(rug|plant|pendant)\(/.test(L) && !/\bfor\s*\(/.test(L);
+  }
   const sizeOf = b => [b[2] - b[0], b[3] - b[1]];
   // Plan points p turned by deg about c.
   function spin(ps, c, deg) {
@@ -414,8 +430,15 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     const c = [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2], [m] = spin([[c[0], b[3]]], c, turn());
     const sc = toScreen(c[0], c[1], h), sm = toScreen(m[0], m[1], h);
     if (!sc || !sm) return null;
-    const d = Math.hypot(sm[0] - sc[0], sm[1] - sc[1]) || 1;
-    return [[sm[0] + (sm[0] - sc[0]) / d * ROT_PX, sm[1] + (sm[1] - sc[1]) / d * ROT_PX], sm];
+    const d = Math.hypot(sm[0] - sc[0], sm[1] - sc[1]) || 1, u = [(sm[0] - sc[0]) / d, (sm[1] - sc[1]) / d];
+    // in Walk the north side can face away, putting the handle on the lift dot (a turn became a lift: e2e J037):
+    // then swing it round the side's middle until it's clear of the height handles
+    const zh = zHandles(b), clear = q => !zh || [zh.lift, zh.size].every(z => Math.hypot(z[0] - q[0], z[1] - q[1]) > 2 * HANDLE_PX + 4);
+    for (const a of [0, 60, -60, 90, -90]) {
+      const t = a * Math.PI / 180, q = [sm[0] + (u[0] * Math.cos(t) - u[1] * Math.sin(t)) * ROT_PX, sm[1] + (u[0] * Math.sin(t) + u[1] * Math.cos(t)) * ROT_PX];
+      if (clear(q)) return [q, sm];
+    }
+    return [[sm[0] + u[0] * ROT_PX, sm[1] + u[1] * ROT_PX], sm];
   }
   // The height handles, in Walk only (Top and the drawing look straight down: PageUp / PageDown there): a stalk up from
   // the middle of the box to its top, a square there to make it taller or shorter, and a dot above that to raise or
@@ -908,7 +931,8 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     if (drag.zh) {  // up / down the screen's vertical through the piece, in 5 mm steps
       const { u, px } = drag.zh, z = drag.z;
       const m = Math.round(((e.clientX - drag.from[0]) * u[0] + (e.clientY - drag.from[1]) * u[1]) / px * 200) / 200;
-      setDraft(drag.base, drag.rot, drag.type === "lift" ? [z[0] + m, z[1] + m] : [z[0], Math.max(z[0] + 0.01, z[1] + m)]);
+      const dl = sel.low > -0.005 ? Math.max(m, -z[0]) : m;  // a piece on (or above) the floor doesn't sink into it (e2e J037)
+      setDraft(drag.base, drag.rot, drag.type === "lift" ? [z[0] + dl, z[1] + dl] : [z[0], Math.max(z[0] + 0.01, z[1] + m)]);
       return;
     }
     const q = toPlan(e.clientX, e.clientY, hNow());
@@ -961,7 +985,8 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     }
     if ((e.key === "PageUp" || e.key === "PageDown") && sel && !drag && !group.length) {  // raise / lower 1 cm (Shift 10); Alt: taller / shorter
       e.preventDefault();
-      const d = (e.key === "PageUp" ? 1 : -1) * (e.shiftKey ? 0.1 : 0.01), z = heightNow();
+      const z = heightNow(), d0 = (e.key === "PageUp" ? 1 : -1) * (e.shiftKey ? 0.1 : 0.01);
+      const d = e.altKey || sel.low <= -0.005 ? d0 : Math.max(d0, -z[0]);  // not down through the floor
       setDraft([...shown()], turn(), e.altKey ? [z[0], Math.max(z[0] + 0.01, z[1] + d)] : [z[0] + d, z[1] + d]);
       return;
     }
@@ -974,7 +999,8 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
   });
 
   // AutoCAD-style keys, ahead of the drawing's and Walk's own (capture): X / Y lock a drag to that plan axis (again: free),
-  // the arrows nudge the piece 1 cm (Shift 10 cm) on the drawing and in Top, Delete / Backspace marks it for deletion.
+  // the arrows nudge the piece 1 cm (Shift 10 cm) along the plan's axes (in Walk too while a piece is picked, instead of
+  // walking: WASD still walk; e2e J025 / J048 / J061), Delete / Backspace marks it for deletion.
   addEventListener("keydown", e => {
     if (pel && active && !busy && !pdrag && !/input|textarea/i.test(e.target?.tagName || "")) return planKey(e);
     if (!active || busy || !sel || drag || e.metaKey || e.ctrlKey || e.altKey || /input|textarea/i.test(e.target?.tagName || "")) return;
@@ -986,7 +1012,7 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     }
     if (k === "Delete" || k === "Backspace") { markDelete(); return stop(); }
     const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] }[k];
-    if (!step || draft?.del || (!is2D() && mode() === "walk")) return;
+    if (!step || draft?.del) return;
     const s = e.shiftKey ? 0.1 : 0.01, b = shown();
     if (axis === "x") step[1] = 0;
     if (axis === "y") step[0] = 0;

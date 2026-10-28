@@ -129,6 +129,25 @@ class Undo(Sandbox):
         self.assertEqual(self.synced[-1][F].decode(), b)
 
 
+class UndoStack(Sandbox):
+    """Undo, Undo takes back the change before the last one; it used to undo the Undo (re-apply it: e2e J244 / J277)."""
+    def test_second_undo_takes_back_the_change_before(self):
+        a, b = furnish(CHAIR), furnish(BLACK)
+        c = b.replace("mat.linenSlate;  // frame", 'version === "kareems-changes" ? mat.chairBlackFabric : mat.linenSlate;  // frame')
+        self.deploy(a)
+        self.edit(b, "black frame")
+        self.edit(c, "black cushions")
+        edit_ai.undo({"version": V})
+        self.assertEqual(self.synced[-1][F].decode(), b)
+        self.assertTrue(edit_ai.patches(V)["undo"])  # the black frame is still there to undo
+        edit_ai.undo({"version": V})
+        self.assertEqual(self.synced[-1][F].decode(), a)
+        self.assertNotIn(F, edit_ai.patches(V)["files"])
+        self.assertFalse(edit_ai.patches(V)["undo"])  # nothing left: no Undo offered (it used to redo)
+        with self.assertRaises(ValueError):
+            edit_ai.undo({"version": V})
+
+
 class VersionIsolation(Sandbox):
     """Each version has its own furnish-<v>.js / materials-<v>.js: an edit in one never reaches another."""
     def test_own_file_names(self):

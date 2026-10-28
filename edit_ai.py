@@ -63,6 +63,9 @@ MAX_STEPS = 36  # tool rounds per message (was 20; hard openable/plan builds wer
 PRECHECK_MODEL = os.environ.get("EDIT_AI_PRECHECK_MODEL", "gpt-6-luna")
 REVIEW_MODEL = os.environ.get("EDIT_AI_REVIEW_MODEL", "gpt-6.1-sol")
 REVIEW_PASS = 7
+# Below this the edit isn't saved, whatever the fix round did: the reviewer found it missed the request (e2e 28 Oct 2026:
+# edits scored 0-4 were saved as "Your edit is done": J211 / J212 / J215 / J218 / J225 / J265).
+REVIEW_KEEP = 5
 FIX_STEPS = 20
 MAX_STEPS_COMPLEX = 60  # the strong model's big jobs (a whole room redone); TIME_LIMIT still bounds it
 TIME_LIMIT = float(os.environ.get("EDIT_AI_TIME_LIMIT", "270" if os.environ.get("VERCEL") else "900"))  # s; Vercel stops at 300
@@ -402,7 +405,7 @@ def patches(v):
         elif status == "conflict":
             conflicts.append(path)
     return {"version": v, "rev": man and man["rev"], "summary": man and man.get("summary"), "files": files,
-            "conflicts": conflicts, "ready": ready(), "model": live_model(MODEL), "undo": bool(man and man.get("changed"))}
+            "conflicts": conflicts, "ready": ready(), "model": live_model(MODEL), "undo": undo_target(man) is not None}
 
 
 # --- One message: the workspace the model edits ---------------------------------------------------------------------
@@ -586,9 +589,20 @@ def js_balance(src):
     return None
 
 
+def runs_as(text, version):
+    """The version a furnish file's code runs as. Nagham's file (an exact copy of Main's 3D, 8c99f62) starts
+    `if (version === "naghams-changes") version = "kareems-changes";`, so in it Main's branches are the ones that run and
+    a `version === "naghams-changes"` test never passes (e2e 28 Oct 2026: Move saves and Edit AI edits that never showed,
+    and Main's branches there refused as "another plan version")."""
+    m = re.search(r'^[ \t]*if \(version === "' + re.escape(version) + r'"\) version = "([\w-]+)";', text, re.M)
+    return m[1] if m else version
+
+
 def version_scope(text, version):
     """Per line of furnish.js: False when the line sits in (or is guarded by) a version branch that doesn't run for
     `version`, True when the version branches around it all do, None when there are none or it can't tell."""
+    version = runs_as(text, version)
+
     def ev(cond):
         if "version" not in cond:
             return None
@@ -643,6 +657,7 @@ def version_scope(text, version):
 def for_version(text, version):
     """furnish.js as `version` runs it, near enough to compare: comments, spacing and the lines in other versions'
     branches dropped, `version === "x"` conditions folded to true / false and `true ? a : b` to the side taken."""
+    version = runs_as(text, version)
     sc = version_scope(text, version)
     L = text.splitlines()
     # A line closing another version's block ends in the scope around it, but belongs to that block.
@@ -1903,6 +1918,21 @@ and change nothing. Notes ("mark this door fire-rated", "underfloor heating here
 set_home. A photo the user sends for a frame, a print or a tile / fabric sample: save_picture, then use the material. \
 A photo of the room: say Generate Photo Spot makes those. Things the 3D can't hold (plumbing, wiring routes): say so \
 and offer a note.
+- The piece the request NAMES wins over what the circle happens to touch: "the buffet" means the buffet even when the
+ring also covers the TV wall or the vanity behind the same wall; if the named piece isn't where the user looks, find it
+(furniture_near / plan_rooms) and say where it is. If the named piece doesn't exist in that room, say so and ask.
+- Change only what was asked. Never delete, move or restyle another piece or plan outline to make room or to silence an
+overlap (move it only if the user agrees), never edit doors other than the one asked about, and never move a piece the
+user only asked to resize, recolour or turn.
+- "Towards / away from / next to X": work the direction out from the two pieces' positions (furniture_near), so the
+piece really ends nearer to (or further from) X. A table and its chairs go together: move or resize the set.
+- Before offering choices ("which wall?"), check each option fits (measure / furniture_near) and offer only those that
+do; if only one fits, do it and say so. If what is asked already exists (a door on a cupboard), say so and change nothing.
+- A colour change keeps the material's kind: a tinted copy of the same material (const beigeBoucle =
+mat.boucle.clone(); beigeBoucle.color.set(...)), never another kind (fabric to plaster or stone). A size change says
+the old and the new size.
+- A piece drawn on the plan (furniture_near shows its outline) is moved, turned or resized in both the 3D and its plan
+outline; if the plan can't follow, say so plainly instead of claiming both changed.
 - Before adding a piece, look at what is already at that spot (furniture_near): a new chandelier over the table
 replaces the pendants hanging there, a new sofa replaces the old one, a new rug the old rug. Remove or move what it
 replaces in the same edit, never leave two things in one place, and say what you took out.
@@ -2541,6 +2571,11 @@ def chat(req, emit=None):
     if not plan_edits():
         sys_prompt += ("\n\nThis server can't edit the plan DXF (walls, windows, doors): only furnish.js, materials.js and the tour. "
                        "If the request needs a wall, window or door moved, say plainly that plan edits are unavailable right now.")
+    if (alias := runs_as(ws.text("furnish.js"), v)) != v:
+        sys_prompt += (f"\n\nThis version's furnish.js starts with `if (version === \"{v}\") version = \"{alias}\";`: it runs "
+                       f"every branch written for \"{alias}\" (those are the lines that build what the user sees) and a "
+                       f"`version === \"{v}\"` test never passes in it. Edit the lines that run (furniture_near lists them); "
+                       "never add a new `version === ...` gate.")
     messages = [{"role": "system", "content": sys_prompt}]
     for h in (req.get("history") or [])[-8:]:
         if h.get("role") in ("user", "assistant") and isinstance(h.get("text"), str):
@@ -2553,7 +2588,9 @@ def chat(req, emit=None):
     except Exception:
         rings_ = []
     where = context_text(ctx, ws.aspect, rings_)
-    content = [{"type": "text", "text": f"{where}\n\nRequest: {message}"},
+    lang = ("Reply in Egyptian Arabic, as the request is." if AR_TEXT.search(message) else
+            "The request is in English: reply in English only (no Arabic or other scripts).")
+    content = [{"type": "text", "text": f"{where}\n\nRequest: {message}\n\n({lang})"},
                {"type": "image_url", "image_url": {"url": image, "detail": "high"}}]
     content += [{"type": "image_url", "image_url": {"url": u, "detail": "low"}} for u in refs]
     messages.append({"role": "user", "content": content})
@@ -2652,6 +2689,16 @@ def chat(req, emit=None):
         if fixing and ws.changed:  # the fixed edit's score, for the record
             emit("Checking the fix")
             final = review_edit(ws, message, reply, where, image, trace, review_total)
+        last_v = final if fixing else verdict
+        if ws.changed and last_v and last_v["score"] < REVIEW_KEEP:  # a miss isn't saved: say why, change nothing
+            trace.append({"tool": f"(review {last_v['score']} < {REVIEW_KEEP}: not saved)", "args": "", "out": str(last_v.get("summary"))[:700]})
+            ws.discard()
+            why = str(last_v.get("summary") or "").strip()
+            reply = (("ماغيّرتش حاجة: التعديل اللي عملته ماكانش هو المطلوب" + (f" ({why})" if why else "") +
+                      ". قولّي بالظبط عايز إيه يتغيّر وفين، وأنا أجرّب تاني.")
+                     if AR_TEXT.search(message) else
+                     ("Nothing was changed: the edit I made didn't do what you asked" + (f" ({why})" if why else "") +
+                      ". Tell me exactly what to change and where, and I'll try again."))
         if not ws.changed and reply and re.search(r"\b(I('ve| have)?|have been) (changed|made|moved|added|removed|replaced|updated|set)\b", reply):
             reply = ("لسه ماتغيّرش حاجة: " if AR_TEXT.search(message) else "Nothing was changed yet: ") + reply  # claimed, never made
         if ws.changed:  # last gate: a settled design lock (design-locks.json) the request didn't name stays as it is
@@ -2818,11 +2865,22 @@ AR_ROOMS = {"LIVING ROOM": ("صالة", "صاله", "ليفنج", "ليفينج"
             "TOILET 2": ("الحمام الصغير", "حمام الضيوف", "التواليت"), "TERRACE": ("تراس", "تيراس", "بلكونة", "بلكونه", "روف")}
 
 
+# Fixtures only one kind of room has: "by the shower" names the bathroom it's in (e2e J225: a hook by the en-suite
+# shower was refused because the camera stood in the bedroom).
+ROOM_FIXTURES = {"TOILET": re.compile(r"\b(shower|bath(tub)?|basin|sink|vanity|wc|toilet|bidet|towel)\b|دش|شاور|بانيو|حوض|"
+                                      r"تواليت|مرحاض|فوط", re.I),
+                 "KITCHEN": re.compile(r"\b(oven|hob|cooker|stove|fridge|kitchen sink|extractor)\b|فرن|بوتاجاز|تلاجة|تلاجه", re.I),
+                 "LAUNDRY": re.compile(r"\b(washer|washing machine|dryer)\b|غسالة|غساله|نشافة", re.I),
+                 "TERRACE": re.compile(r"\b(bbq|barbecue|parapet|planter)\b|شواية", re.I)}
+
+
 def room_named(name, message):
-    """Whether the request names this room: a word of its label (English) or one of its Arabic names."""
+    """Whether the request names this room: a word of its label (English), one of its Arabic names, or a fixture only
+    that kind of room has (the shower: a bathroom)."""
     n = (name or "").upper().rstrip(".")
     msg_l = (message or "").lower()
-    return any(w in msg_l for w in n.lower().split() if len(w) > 3) or any(a in (message or "") for a in AR_ROOMS.get(n, ()))
+    return any(w in msg_l for w in n.lower().split() if len(w) > 3) or any(a in (message or "") for a in AR_ROOMS.get(n, ())) \
+        or any(n.startswith(k) and rx.search(message or "") for k, rx in ROOM_FIXTURES.items())
 
 
 MOVE_ASK = re.compile(r"\b(move|put|place|relocate|shift|bring|take|transfer|carry|here|there)\b|انقل|نقل|حط|هنا|هناك", re.I)
@@ -2901,10 +2959,14 @@ def off_view(ws, message, f0, f1, rings):
     say = lambda i, line: f"furnish.js line {i} ({line.strip()[:110]})"
     if cam and len(cam) >= 6:
         home = room_of(float(cam[0]), float(cam[1]))
+        # the rooms the user circled into (seen through a doorway: the en-suite from the bedroom) count as pointed at
+        aimed = {room_of(float(h["x"]), float(h["y"])) for h in c.get("hits") or [] if h.get("x") is not None and h.get("y") is not None}
+        if (b_ := c.get("highlightBox")) and len(b_) == 4 and not c.get("wholeView"):
+            aimed.add(room_of((b_[0] + b_[2]) / 2, (b_[1] + b_[3]) / 2))
         for i, px, py, line in added[:4]:
             r = room_of(px, py)
             other = names[r] if 0 <= r < len(names) else ""
-            if home >= 0 and r >= 0 and r != home and not room_named(other, message):
+            if home >= 0 and r >= 0 and r != home and r not in aimed and not room_named(other, message):
                 return (f"Check placement: {say(i, line)} puts the new piece in the {other.title() or 'next room'}, but the "
                         f"user is standing in the {names[home].title() or 'room the camera is in'} and didn't name another room. "
                         "Put it in this room, where the user is looking (move the 3D line and its plan outline together), "
@@ -3115,6 +3177,8 @@ def unplanned(ws, f0, f1, new_items):
             low, deep, b = 0.0, None, (x, y, x, y)
         else:
             continue
+        if deep is not None and b[2] - b[0] <= 0.45 and b[3] - b[1] <= 0.45:
+            continue  # small free-standing decor (a floor lamp, a stool), 3D-only like the plants (e2e J315: a lamp refused)
         cx, cy = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
         inside = lambda c: c[0] - 0.05 <= cx <= c[2] + 0.05 and c[1] - 0.05 <= cy <= c[3] + 0.05
         drawn = [[min(q[0] for q in p_), min(q[1] for q in p_), max(q[0] for q in p_), max(q[1] for q in p_)] for p_ in ws.new_outlines if p_]
@@ -3920,12 +3984,14 @@ def save(ws, summary):
                      {own(ws.v, p): ws.files[p] for p in ws.changed})
 
 
-def write_rev(v, files, summary, changed, contents):
+def write_rev(v, files, summary, changed, contents, undoes=None):
     stamp = time.strftime("%Y%m%dT%H%M%S", time.gmtime()) + f"{int(time.time() * 1000) % 1000:03d}"
     rev = f"{stamp}-{secrets.token_hex(3)}"
     prev = revisions(v)
     man = {"version": v, "rev": rev, "parent": prev[-1] if prev else None, "summary": summary[:300],
            "changed": changed, "files": files, "at": int(time.time())}
+    if undoes:  # an Undo: the revision it took back (undo_target steps past both)
+        man["undoes"] = f"{LIVE}/{v}/rev-{undoes}.json"
     put(f"{LIVE}/{v}/rev-{rev}.json", json.dumps(man).encode(), "application/json")
     man["sync"] = git_sync(v, contents, summary)
     return man
@@ -3944,20 +4010,42 @@ def unapply(path, edited, pre, dep):
     return t.encode() if t is not None else pre
 
 
+def is_undo(man):
+    """Is this revision an Undo? Its parent is then the revision it took back (`undoes`; older ones: by the summary)."""
+    return bool(man) and (bool(man.get("undoes")) or str(man.get("summary", "")).startswith("Undo: "))
+
+
+def undo_target(man):
+    """The change the next Undo takes back: the latest revision, past every Undo and the change it took back (an Undo
+    is a stack: change A, change B, Undo, Undo -> before A; it used to undo the Undo, i.e. re-apply B: e2e 28 Oct 2026,
+    J244 / J277 / J286). None when there's nothing left to undo."""
+    for _ in range(200):
+        if not man or not man.get("changed"):
+            return None
+        if not is_undo(man):
+            return man
+        undone = man.get("undoes") or man.get("parent")
+        undone = json.loads(get(undone)) if undone else None
+        man = json.loads(get(undone["parent"])) if undone and undone.get("parent") else None
+    return None
+
+
 def undo(req):
-    """Put the version back as it was before its last Edit AI change (a new revision, so it can be redone by hand)."""
+    """Put the version back as it was before its last Edit AI change not undone yet (a new revision, so it can be
+    redone by hand). Undo again takes back the change before that, and so on."""
     v = plan_version(req.get("version"))
     if v not in VERSIONS:
         raise ValueError(f"unknown version {v!r}")
-    cur = latest(v)
-    if not cur or not cur.get("changed"):
+    head = latest(v)
+    cur = undo_target(head)
+    if not cur:
         raise ValueError("there is no Edit AI change to undo here")
     if set(cur["changed"]) & set(OWN):
         raise ValueError("that change was made before each version got its own files (26 Oct 2026), so it can't be "
                          "undone from here; ask for the opposite change instead")
     before = json.loads(get(cur["parent"])) if cur.get("parent") else None
     res_before = resolve(before)
-    files = {p: e for p, (st, e, _) in resolve(cur).items() if st in ("live", "replayed", "conflict")}
+    files = {p: e for p, (st, e, _) in resolve(head).items() if st in ("live", "replayed", "conflict")}
     contents, shas = {}, {}  # shas: what the page must show after the reload, so the client can tell a no-op Undo
     for path in cur["changed"]:
         e = cur["files"].get(path)
@@ -3983,8 +4071,9 @@ def undo(req):
         shas[path] = {"from": e and e["sha"], "to": sha(data), "live": path in files}
     if all(cur["files"].get(p) and sha(d) == cur["files"][p]["sha"] for p, d in contents.items()):
         raise ValueError("Undo found nothing to go back to: every file would stay exactly as the last edit left it")
-    man = write_rev(v, files, f"Undo: {cur.get('summary', '')}", sorted(contents), contents)
-    return {"rev": man["rev"], "changed": sorted(contents), "sync": man.get("sync"), "shas": shas}
+    man = write_rev(v, files, f"Undo: {cur.get('summary', '')}", sorted(contents), contents, undoes=cur["rev"])
+    return {"rev": man["rev"], "changed": sorted(contents), "sync": man.get("sync"), "shas": shas,
+            "summary": man["summary"], "more": undo_target(man) is not None}
 
 
 def reset(req):

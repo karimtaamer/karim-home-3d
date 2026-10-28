@@ -201,7 +201,7 @@ def facing_at(call):
     """Index of the facing arg of a placing call, or None (a plant or pendant is round: nothing to turn)."""
     if call["kind"] not in ("item", "art", "ac", "sconce"):
         return None
-    return 1 if call["args"][0].strip().startswith("...(") else 2
+    return 1 if call["args"][0].strip().startswith(("...(", "...[")) else 2
 
 
 def turned(facing, deg):
@@ -251,7 +251,7 @@ def find_call(text, piece, v):
             if len(cs) != 1:
                 continue
             a = cs[0]["args"]
-            if a[0].strip().startswith("...(") and len(a) >= 2:
+            if a[0].strip().startswith(("...(", "...[")) and len(a) >= 2:
                 return {"line": n, "call": cs[0], "how": "spread"}
             if len(a) >= 3 and cs[0]["kind"] not in ("plant", "pendant") and same_facing(facing_of(a[2], v), piece.get("facing")):
                 return {"line": n, "call": cs[0], "how": "expr"}
@@ -338,6 +338,18 @@ def inside(p, pts):
     return hit
 
 
+def on_floor(ws, box):
+    """Does the middle of plan box stand on one of the version's floors (a room or the terrace, model floor rings)? True
+    when the model can't be read."""
+    try:
+        sm = ws.text(ws.cfg["model"])
+        rings = [f.get("outer") or [] for f in json.loads(sm[sm.index("{"):sm.rindex("}") + 1]).get("floor", [])]
+    except Exception:
+        return True
+    mid = ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
+    return not rings or any(len(r) > 2 and inside(mid, [q[:2] for q in r]) for r in rings)
+
+
 def within(b, outer, tol=0.02):
     return outer[0] - tol <= b[0] and outer[1] - tol <= b[1] and b[2] <= outer[2] + tol and b[3] <= outer[3] + tol
 
@@ -390,7 +402,10 @@ def outline_of(ws, piece):
     drawn = drawn_lines(lines, box, [[float(t) for t in o] for o in piece.get("others") or []])
     if drawn:
         b = [min(l["box"][0] for l in drawn), min(l["box"][1] for l in drawn), max(l["box"][2] for l in drawn), max(l["box"][3] for l in drawn)]
-        return "lines", [l["handle"] for l in drawn], b
+        # its drawing fills its box; a scrap of a neighbour's linework it stands on doesn't (a 3D-only plant moved over
+        # the terrace sofa's lines, a table over its end chair's: e2e J078 / J146 / J302, 28 Oct 2026)
+        if (b[2] - b[0]) >= 0.5 * (box[2] - box[0]) and (b[3] - b[1]) >= 0.5 * (box[3] - box[1]):
+            return "lines", [l["handle"] for l in drawn], b
     return None
 
 
@@ -482,13 +497,15 @@ def write_furnish(ws, new_text):
 
 def set_xy(text, call, x, y, v, shared):
     a = call["args"]
-    if a[0].strip().startswith("...("):  # item(...(KC ? [a, b] : [c, d]), "S", ...)
+    if a[0].strip().startswith(("...(", "...[")):  # item(...(KC ? [a, b] : [c, d]), "S", ...)
         inner = a[0].strip()[3:]
         body = inner[1:-1].strip()
         m = re.match(r'^version\s*===\s*"' + re.escape(v) + r'"\s*\?\s*\[[^\]]*\]\s*:\s*(.+)$', body, re.S)
         rest = m[1] if m else body
+        # unshared: plain numbers, so the next Move finds it as a literal call with its facing (an `...[x, y]` left here
+        # sent it to the MOVED table, which refuses any turn: e2e J027, 28 Oct 2026)
         new0 = re.match(r"\s*", a[0]).group(0) + (f'...(version === "{v}" ? [{fmt(x)}, {fmt(y)}] : {rest})' if shared or m
-                                                  else f"...[{fmt(x)}, {fmt(y)}]")
+                                                  else f"{fmt(x)}, {fmt(y)}")
         return text[:call["open"] + 1] + ",".join([new0] + a[1:]) + text[call["close"]:]
     new_args = [set_arg(a[0], x, v, shared), set_arg(a[1], y, v, shared)] + a[2:]
     return text[:call["open"] + 1] + ",".join(new_args) + text[call["close"]:]
@@ -623,7 +640,11 @@ def set_param(text, call, param, lo, hi, v, axis="x"):
     expr = text[s:k].rstrip()
     e = s + len(expr)
     t = re.match(r"^(\w+)\s*\?\s*", expr)
-    if t and expr[t.end()] == "[":  # KC ? [...] : [...]
+    g = re.match(r'^version\s*===\s*"' + re.escape(v) + r'"\s*\?\s*(?=\[)', expr)
+    if g:  # this version's own numbers, written by an earlier Move: `version === "<v>" ? [...] : ...` (e2e J314)
+        exclusive, arr_s = True, s + g.end()
+        arr_e = close_paren(text, arr_s) + 1
+    elif t and expr[t.end()] == "[":  # KC ? [...] : [...]
         a0 = s + t.end()
         a1 = close_paren(text, a0) + 1
         cond = re.search(r"\b(?:const|let)\s+" + t[1] + r"\s*=\s*([^,;\n]+)", text)
@@ -708,6 +729,30 @@ OPEN_NAME = {"window": "window", "slider": "glass slider", "door": "door"}
 DOOR_FRAME = 0.0225  # m: a door redrawn by convert_opening rebuilds with a gap this much wider than its width (measured)
 
 
+def door_hang(ws, box, along):
+    """{hinge, opens} (compass sides, as edit_ai_dxf's convert_opening takes them) of the door swinging in gap box, read
+    off the version's model swings; {} when there is none. A block door redrawn without them got the default hinge
+    and swing: the laundry passage door flipped to its other jamb and lost its openable leaf (e2e J155)."""
+    try:
+        sm = ws.text(ws.cfg["model"])
+        swings = json.loads(sm[sm.index("{"):sm.rindex("}") + 1]).get("swings") or []
+    except Exception:
+        return {}
+    pad = 0.12
+    hit = [w for w in swings if box[0] - pad <= w["hinge"][0] <= box[2] + pad and box[1] - pad <= w["hinge"][1] <= box[3] + pad]
+    if len(hit) != 1:  # none, or double doors: leave them as convert_opening draws them
+        return {}
+    w = hit[0]
+    mid = (box[along] + box[along + 2]) / 2
+    out = {"hinge": ("E" if w["hinge"][0] > mid else "W") if along == 0 else ("N" if w["hinge"][1] > mid else "S")}
+    if w.get("open"):
+        k = 1 - along
+        d = w["open"][k] - w["hinge"][k]
+        if abs(d) > 0.05:
+            out["opens"] = ("N" if d > 0 else "S") if k == 1 else ("E" if d > 0 else "W")
+    return out
+
+
 def plan_element(req, v):
     """op "wall": {at: [x, y] a point in the wall; info: true -> its run, nothing saved; dx, dy -> slid across itself
     (the walls meeting it follow); del -> removed with its doors / windows}. op "opening": {at, kind (window / slider /
@@ -778,9 +823,10 @@ def plan_element(req, v):
             else:  # a block door (or a resize): emptied and redrawn the same kind at its own width, then resized about its centre
                 to = {"window": "window", "slider": "glass_slider", "door": "door"}.get(kind, "opening")
                 # a redrawn door's frame leaves the 3D gap ~2 cm wider than the width asked for: ask for the gap less that
+                hang = door_hang(ws, box, along) if kind == "door" else {}
                 rep = plan_op(ws, [{"op": "convert_opening", "at": at, "to": to, "shift": r4(shift),
-                                    "width": r4(width - (DOOR_FRAME if kind == "door" else 0))}])
-                if kind == "door":
+                                    "width": r4(width - (DOOR_FRAME if kind == "door" else 0)), **hang}])
+                if kind == "door" and len(hang) < 2:
                     notes.append("the door was redrawn from its block; check which way it opens")
             bits = ([f"{cm(shift)} {('east' if shift > 0 else 'west') if along == 0 else ('north' if shift > 0 else 'south')}"]
                     if abs(shift) >= 0.005 else []) + ([f"{width * 100:.0f} cm wide (was {w0 * 100:.0f})"] if abs(width - w0) >= 0.005 else [])
@@ -906,6 +952,9 @@ def transform(req, ws=None):
     if behind(ws, req):
         raise ValueError("This version's furniture changed since this page loaded. Reload and try again.")
     text = f0 = ws.text("furnish.js")
+    # the version its code runs as (Nagham's file runs Main's branches, E.runs_as): what the lines it writes are gated
+    # on; the move-origins file stays the real version's
+    store_v, v = v, E.runs_as(text, v)
     shared = lambda n: False  # the version's own file: no line of it runs for another version (see the docstring)
     try:
         found = find_call(text, piece, v)
@@ -984,6 +1033,10 @@ def transform(req, ws=None):
         raise ValueError(f"The {label}'s height is fixed in the code it's cut from in the wall (a settled design: the tall "
                          "niches match each other), " + CANT)
 
+    # a piece nothing on the plan holds back (3D-only) still can't leave the flat: a plant dragged over the terrace
+    # parapet was saved floating outside (e2e J291)
+    if planar and not outline and not is_part and L0 < 0.3 and on_floor(ws, box) and not on_floor(ws, nbox):
+        raise ValueError(f"That would put the {label} outside the flat. Nothing was saved.")
     if not planar:
         if outline:
             notes.append("the 2D plan shows no heights, so only the 3D changed")
@@ -1017,6 +1070,8 @@ def transform(req, ws=None):
         ob = outline[2]
         if op == "move":
             rep = plan_op(ws, [{"op": "move_piece", "handle": outline[1], "dx": r4(dx), "dy": r4(dy), "allow_overlap": True}])
+            if any("[INTO wall" in l for l in rep.get("log", [])):  # through a wall it was clear of: no piece goes there
+                raise ValueError("There's no room to move it that way: on the plan it would go into a wall. Nothing was saved.")
             nb = changed_box(rep, outline[1], ob)
             if not nb:
                 raise ValueError("There's no room to move it that way: on the plan it already touches " + blocker(rep) + ".")
@@ -1165,7 +1220,7 @@ def transform(req, ws=None):
             notes.append(f"the {label} now hangs past the edge of {piece.get('hostLabel') or 'the piece it sits on'}")
     write_furnish(ws, text)
     rot0 = float(piece.get("rot") or 0)
-    record_origin(ws, v, label, box, rot0, nbox, rot0 + math.radians(rot), [L0, H0], nz)
+    record_origin(ws, store_v, label, box, rot0, nbox, rot0 + math.radians(rot), [L0, H0], nz)
     if (breaks := E.lock_breaks(ws, "")):  # a settled decision: saved on purpose (Accept), its lock suspended; Undo restores it
         E.lock_breaks(ws, " ".join(l["names"][0] for l, _ in breaks), record=True)
         notes.append("this changes a settled design decision (" + "; ".join(l["what"][:90] for l, _ in breaks)

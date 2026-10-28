@@ -1543,6 +1543,11 @@ def edit(a):
                             dx = r(dx + s_ * back)
                         else:
                             dy = r(dy + s_ * back)
+            elif o.get("allow_overlap"):  # Move and Resize: overlaps stay, but say which walls it newly goes into
+                into = sorted({c["with"] for c in clashes(msp, doc, [h_], soft, 0, 0, m=0.003)
+                               if not c.get("free") and c["with"].startswith("wall ") and c["with"] not in hit0})
+                if into:
+                    note = f" [INTO {', '.join(into)}]"
             b = ext_of(ents[0])
             log.append(f"piece {o['handle']} ({len(ents)} entities: {[e.dxf.handle for e in ents]}) moved by ({dx}, {dy}); "
                        f"outline now x {r(b[0] - ox)}..{r(b[2] - ox)}, y {r(b[1] - oy)}..{r(b[3] - oy)}" + note)

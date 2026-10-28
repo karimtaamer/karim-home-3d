@@ -748,7 +748,8 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
         throw new Error(`That edit broke the 3D code (${e.message}), so I undid it. Try saying it another way.`);
       }
     }
-    store.setItem("editai-applied", JSON.stringify({ version: live.version, reply: res.reply, cost, sync: res.sync }));
+    store.setItem("editai-applied", JSON.stringify({ version: live.version, reply: res.reply, cost, sync: res.sync,
+      ar: /[\u0600-\u06FF]/.test(body?.message || "") }));  // the toast in the request's language (e2e J312)
     keepForRetry(body, res);
     reloadHere("Loading your edit", true);
   }
@@ -864,11 +865,13 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     toast(`The last Edit AI change didn't load (${[...new Set(live.broken)].join(", ")}); showing the code before it.`,
       [["Undo it", undoAndReload], ["×", () => document.getElementById("edit-ai-toast").remove(), true]], true);
   } else if (applied?.version === live.version) {
+    const ar = !!applied.ar;
     const retry = !applied.undone && again?.version === live.version && again.retryModel
-      && [again.model === again.retryModel ? "Try again" : "Try a stronger model", () => retryStrong(t, again)];
-    const t = toast(applied.undone ? applied.note || "Edit AI change undone." : `Your edit is done.${applied.cost || ""}`,
+      && [again.model === again.retryModel ? (ar ? "جرّب تاني" : "Try again") : (ar ? "جرّب نموذج أقوى" : "Try a stronger model"),
+        () => retryStrong(t, again)];
+    const t = toast(applied.undone ? applied.note || "Edit AI change undone." : `${ar ? "تم التعديل." : "Your edit is done."}${applied.cost || ""}`,
       applied.undone ? [["×", () => t.remove(), true]]
-        : [["Undo", undoAndReload], ...(retry ? [retry] : []), ["×", () => t.remove(), true]]);
+        : [[ar ? "تراجع" : "Undo", undoAndReload], ...(retry ? [retry] : []), ["×", () => t.remove(), true]]);
     if (applied.undone && !applied.note) setTimeout(() => t.remove(), 4000);
   }
   return { open, close };

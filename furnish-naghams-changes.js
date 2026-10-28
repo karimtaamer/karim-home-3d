@@ -793,7 +793,7 @@ export function furnish(scene, M, mat, version = "main") {
     // to the partition) and is 0.60 deep; the backlit mirror becomes a 0.80 x 0.75 mirrored medicine cabinet, 0.30
     // out from the battens, bottom 1.32 (0.46 over the counter), three glass shelves, all centred on the bowl.
     if (["kareems-changes", "karims-version"].includes(version)) item(0.556, 6.7276, "E", vanity(1.185, true, 0.6, p => p.label("medicine cabinet", q => {  // centre DWG y -114.8856
-      medCabinet(0.8, 1.32, 2.07, 3, 0, 0.5)(q);  // a part of its own: Move and Resize picks it (e2e J178)
+      medCabinet(0.8, 1.32, 2.07, 3, 0, 0.3)(q);  // 0.30 deep, clear of the basin (Karim 28 Oct 2026, was 0.50: e2e J010 / J184); a part of its own: Move and Resize picks it (e2e J178)
     }), heaterVanity));
     else item(0.556, 6.7435, "E", vanity(1.153, true));  // centre DWG y -114.8697, bowl, mixer and mirror on it
     item(1.8037, 9.0201, "S", p => {  // WC bay 1.416..2.192 (local +x east)
@@ -1071,12 +1071,14 @@ export function furnish(scene, M, mat, version = "main") {
     const basin = p.cyl(0, 0.3, 0.2, 0.85, 0.96, mat.ceramic, 48, 0.15); basin.scale.x = 1.5;  // wide low vessel
     p.box(-0.02, 0.02, 1.02, 1.05, 0.03, 0.18, mat.brass, 0.008);  // wall spout and two handles
     for (const x of [-0.11, 0.11]) { const k = p.cyl(x, 0.07, 0.022, 1.0, 1.06, mat.brass, 16); k.rotation.x = Math.PI / 2; k.position.y = 1.035; }
-    const rr = (x0, x1, y0, y1, r, z0, d, m) => {
-      const o = mesh(new THREE.ExtrudeGeometry(roundRect(new THREE.Shape(), x0, x1, y0, y1, r), { depth: d, bevelEnabled: false, curveSegments: 16 }), m, p.g);
+    const rr = (g, x0, x1, y0, y1, r, z0, d, m) => {
+      const o = mesh(new THREE.ExtrudeGeometry(roundRect(new THREE.Shape(), x0, x1, y0, y1, r), { depth: d, bevelEnabled: false, curveSegments: 16 }), m, g);
       o.position.z = z0;
     };
-    rr(-0.52, 0.52, 1.12, 2.0, 0.14, 0.03, 0.025, mat.bronze);  // rounded mirror, thin dark frame
-    rr(-0.5, 0.5, 1.14, 1.98, 0.12, 0.04, 0.02, mat.mirror);
+    p.label("rounded mirror", q => {  // a part of its own: Move and Resize picks it (e2e J259)
+      rr(q.g, -0.52, 0.52, 1.12, 2.0, 0.14, 0.03, 0.025, mat.bronze);  // rounded mirror, thin dark frame
+      rr(q.g, -0.5, 0.5, 1.14, 1.98, 0.12, 0.04, 0.02, mat.mirror);
+    });
     p.cyl(0.55, 0.3, 0.05, 0.85, 1.05, mat.planter, 16, 0.04);  // styling: vase, bottles
     for (const [x, h] of [[-0.45, 0.16], [-0.52, 0.12], [-0.6, 0.18]]) p.cyl(x, 0.3, 0.025, 0.85, 0.85 + h, mat.ceramic, 12);
   });
@@ -1797,8 +1799,10 @@ export function furnish(scene, M, mat, version = "main") {
     // 1.36 AFF. Two openables, used in turn (the engine runs one motion per tap, and the lid must clear the marble):
     // open the coffee corner (doors), "flip desk" rolls it 0.80 out, "flip desk lid" lifts the lid and monitor.
     const xd = (-0.75 + X) / 2, out = 0.8;
-    const desk = new THREE.Group(), r = part(desk); desk.position.set(xd, 0, 0.02); c.add(desk);
-    Object.assign(desk.userData, { label: "flip desk", part: true });  // drill-in picks it (e2e J304)
+    const desk = new THREE.Group(), r = part(desk); desk.position.set(xd, 0, 0.02);
+    q.label("flip desk", w => {  // a part of its own: Move and Resize picks and saves it (e2e J053 / J180 / J304); its openable rolls `desk` inside
+      w.g.add(desk);
+    });
     for (const x of [-0.46, 0.46]) for (const z of [0.04, 0.56]) {
       r.cyl(x, z, 0.022, 0.005, 0.045, mat.blackSteel, 16);  // caster wheel
       r.box(x - 0.02, x + 0.02, 0.045, 0.05, z - 0.02, z + 0.02, mat.blackSteel);  // caster plate

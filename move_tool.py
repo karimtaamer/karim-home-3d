@@ -380,8 +380,11 @@ def outline_of(ws, piece):
         return None
     best, best_iou, blk, blk_iou, cover = None, 0.0, None, 0.0, None
     outlines, lines = outlines_near(ws, box)
+    host = [float(v) for v in piece["hostBox"]] if piece.get("kind") == "part" and piece.get("hostBox") else None
     for o in outlines:
         i = inter(box, o["box"])
+        if host and inter(host, o["box"]) >= 0.9 * max(area(host), area(o["box"])):
+            continue  # its host's own outline (the appliance tower round the microwave: e2e J112 r2), not the part's
         iou = i / (area(box) + area(o["box"]) - i) if i else 0.0
         if o.get("block"):
             if iou > blk_iou:
@@ -404,7 +407,8 @@ def outline_of(ws, piece):
         b = [min(l["box"][0] for l in drawn), min(l["box"][1] for l in drawn), max(l["box"][2] for l in drawn), max(l["box"][3] for l in drawn)]
         # its drawing fills its box; a scrap of a neighbour's linework it stands on doesn't (a 3D-only plant moved over
         # the terrace sofa's lines, a table over its end chair's: e2e J078 / J146 / J302, 28 Oct 2026)
-        if (b[2] - b[0]) >= 0.5 * (box[2] - box[0]) and (b[3] - b[1]) >= 0.5 * (box[3] - box[1]):
+        # (0.45, not 0.5: Karim's water heater cupboard is drawn by front lines over 30.6 of its 62 cm; e2e J116 r2)
+        if (b[2] - b[0]) >= 0.45 * (box[2] - box[0]) and (b[3] - b[1]) >= 0.45 * (box[3] - box[1]):
             return "lines", [l["handle"] for l in drawn], b
     return None
 
@@ -680,6 +684,18 @@ def describe(dx, dy):
     return " and ".join(parts) or "a hair"
 
 
+def clash_notes(rep):
+    """The plan's clashes in plain words: "a wall" / "another piece on the plan", never a DXF handle (e2e r2 J178 J199)."""
+    out = []
+    for c in rep.get("clashes", []):
+        if c.get("free"):
+            continue
+        n = "it now runs into " + ("a wall" if str(c.get("with") or "").startswith("wall") else "another piece on the plan")
+        if n not in out:
+            out.append(n)
+    return out[:2]
+
+
 def plan_op(ws, ops):
     out = E.tool(ws, "dxf_edit", {"ops": ops})
     if out.startswith("nothing changed") or out.startswith("As-built"):
@@ -824,8 +840,14 @@ def plan_element(req, v):
                 to = {"window": "window", "slider": "glass_slider", "door": "door"}.get(kind, "opening")
                 # a redrawn door's frame leaves the 3D gap ~2 cm wider than the width asked for: ask for the gap less that
                 hang = door_hang(ws, box, along) if kind == "door" else {}
-                rep = plan_op(ws, [{"op": "convert_opening", "at": at, "to": to, "shift": r4(shift),
-                                    "width": r4(width - (DOOR_FRAME if kind == "door" else 0)), **hang}])
+                op_ = {"op": "convert_opening", "at": at, "to": to, **hang}
+                if abs(grow) >= 0.001:
+                    op_.update(shift=r4(shift), width=r4(width - (DOOR_FRAME if kind == "door" else 0)))
+                else:  # a slide: the jambs keep their DWG width (no wider leaf); the gap centres where the 3D gap goes (e2e J155)
+                    c = [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2]
+                    c[along] += shift
+                    op_["centre"] = [r4(c[0]), r4(c[1])]
+                rep = plan_op(ws, [op_])
                 if kind == "door" and len(hang) < 2:
                     notes.append("the door was redrawn from its block; check which way it opens")
             bits = ([f"{cm(shift)} {('east' if shift > 0 else 'west') if along == 0 else ('north' if shift > 0 else 'south')}"]
@@ -894,7 +916,9 @@ def delete(ws, v, piece, text, found, sh, label):
         if int(piece.get("twins") or 1) > 1 and not int(piece.get("twin") or 0):
             raise ValueError("Another piece is placed at the same spot by the same code, so this one can't be told apart, " + CANT)
         text = set_removed(text, piece, v, label)
-    outline = None if piece.get("noPlan") or is_part else outline_of(ws, piece)
+    outline = None if piece.get("noPlan") else outline_of(ws, piece)
+    if is_part and outline and outline[0] != "own":  # a part takes only an outline of its own (the end table: e2e J108 r2)
+        outline = None
     kind = outline and outline[0]
     if kind == "own":  # the outline and what's drawn inside it (a pillow, a sink bowl), not a smaller neighbour's lines
         outs, lines = outlines_near(ws, outline[2], pad=0.01)
@@ -976,6 +1000,8 @@ def transform(req, ws=None):
     notes = []
     box = [float(t) for t in piece["box"]]
     outline = None if piece.get("noPlan") or param else outline_of(ws, piece)  # a niche is cut into a wall: not on the plan
+    if is_part and outline and outline[0] == "shared":  # a group outline round a part is its host's, not the part's (e2e J178 / J184 r2)
+        outline = None
     own = outline and outline[0] == "own"
     block = outline and outline[0] == "block"
     x, y = float(piece["x"]), float(piece["y"])
@@ -997,7 +1023,10 @@ def transform(req, ws=None):
     if rot:
         if is_part:
             raise ValueError(f"The {label} is part of a piece; turn the whole piece instead.")
-        if found["how"] in ("rug", "table") or facing_at(call) is None or facing_of(call["args"][facing_at(call)], v) is None:
+        if found["how"] == "rug":  # a rug turns a quarter at a time: its width and depth swap about its centre (e2e J049 r2)
+            if min(abs(abs(rot) - 90), abs(abs(rot) - 180)) > 0.05:
+                raise ValueError("A rug turns a quarter at a time (R). Make an Edit can set it at an angle.")
+        elif found["how"] == "table" or facing_at(call) is None or facing_of(call["args"][facing_at(call)], v) is None:
             raise ValueError(f"The {label} is placed by code that has no facing of its own to turn, " + CANT)
     # Height: low / high (m) now; dz (move) or z = [low, high] (resize) asks for new ones. The plan has no heights.
     L0, H0 = float(piece.get("low", 0)), float(piece.get("high", 0))
@@ -1055,10 +1084,11 @@ def transform(req, ws=None):
             kx, ky = (nbox[2] - nbox[0]) / (box[2] - box[0]), (nbox[3] - nbox[1]) / (box[3] - box[1])
             plan_op(ws, [{"op": "scale", "handles": outline[1], "base": [r4(box[0]), r4(box[1])], "sx": round(kx, 6), "sy": round(ky, 6),
                           "dx": r4(nbox[0] - box[0]), "dy": r4(nbox[1] - box[1])}])
-    elif (block or own) and rot:  # turned: the plan piece turns about the same point and moves the same metres
+    elif (block or own) and rot:  # turned: the plan piece turns in place about its own centre, as the 3D does about its
+        ob = outline[2]  # (about the 3D box's centre, an outline drawn 3 cm off it swung 3 cm sideways: e2e J063 r2)
         rep = plan_op(ws, [{"op": "rotate_piece", "handle": outline[1], "angle": round(rot, 3),
-                            "centre": [r4((box[0] + box[2]) / 2), r4((box[1] + box[3]) / 2)], "dx": r4(dx), "dy": r4(dy)}])
-        notes += [f"it now runs into {c.get('with')}" for c in rep.get("clashes", []) if not c.get("free")][:2]
+                            "centre": [r4((ob[0] + ob[2]) / 2), r4((ob[1] + ob[3]) / 2)], "dx": r4(dx), "dy": r4(dy)}])
+        notes += clash_notes(rep)
     elif block:  # drawn as one block (the WC symbol): a move takes the whole block with it, a resize stretches it
         if op == "move":
             plan_op(ws, [{"op": "move", "handles": [outline[1]], "dx": r4(dx), "dy": r4(dy)}])
@@ -1095,7 +1125,7 @@ def transform(req, ws=None):
                 if abs(real[k] - side.get(k, 0)) > 0.005:
                     notes.append(f"the plan only had room for {cm(real[k])} on the {dict(N='north', S='south', E='east', W='west')[k]} side")
             nbox = [box[0] - real["W"], box[1] - real["S"], box[2] + real["E"], box[3] + real["N"]]
-        notes += [f"it now runs into {c.get('with')}" for c in rep.get("clashes", []) if not c.get("free")][:2]
+        notes += clash_notes(rep)
 
     dx, dy = (nbox[0] + nbox[2] - box[0] - box[2]) / 2, (nbox[1] + nbox[3] - box[1] - box[3]) / 2
     resized = op == "resize" and planar  # its plan size changed (a height-only resize is just zbox)
@@ -1220,7 +1250,7 @@ def transform(req, ws=None):
             notes.append(f"the {label} now hangs past the edge of {piece.get('hostLabel') or 'the piece it sits on'}")
     write_furnish(ws, text)
     rot0 = float(piece.get("rot") or 0)
-    record_origin(ws, store_v, label, box, rot0, nbox, rot0 + math.radians(rot), [L0, H0], nz)
+    record_origin(ws, store_v, label, box, rot0, nbox, rot0 + (0 if found["how"] == "rug" else math.radians(rot)), [L0, H0], nz)
     if (breaks := E.lock_breaks(ws, "")):  # a settled decision: saved on purpose (Accept), its lock suspended; Undo restores it
         E.lock_breaks(ws, " ".join(l["names"][0] for l, _ in breaks), record=True)
         notes.append("this changes a settled design decision (" + "; ".join(l["what"][:90] for l, _ in breaks)

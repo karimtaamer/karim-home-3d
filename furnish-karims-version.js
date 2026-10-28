@@ -1075,12 +1075,14 @@ export function furnish(scene, M, mat, version = "main") {
     const basin = p.cyl(0, 0.3, 0.2, 0.85, 0.96, mat.ceramic, 48, 0.15); basin.scale.x = 1.5;  // wide low vessel
     p.box(-0.02, 0.02, 1.02, 1.05, 0.03, 0.18, mat.brass, 0.008);  // wall spout and two handles
     for (const x of [-0.11, 0.11]) { const k = p.cyl(x, 0.07, 0.022, 1.0, 1.06, mat.brass, 16); k.rotation.x = Math.PI / 2; k.position.y = 1.035; }
-    const rr = (x0, x1, y0, y1, r, z0, d, m) => {
-      const o = mesh(new THREE.ExtrudeGeometry(roundRect(new THREE.Shape(), x0, x1, y0, y1, r), { depth: d, bevelEnabled: false, curveSegments: 16 }), m, p.g);
+    const rr = (g, x0, x1, y0, y1, r, z0, d, m) => {
+      const o = mesh(new THREE.ExtrudeGeometry(roundRect(new THREE.Shape(), x0, x1, y0, y1, r), { depth: d, bevelEnabled: false, curveSegments: 16 }), m, g);
       o.position.z = z0;
     };
-    rr(-0.52, 0.52, 1.12, 2.0, 0.14, 0.03, 0.025, mat.bronze);  // rounded mirror, thin dark frame
-    rr(-0.5, 0.5, 1.14, 1.98, 0.12, 0.04, 0.02, mat.mirror);
+    p.label("rounded mirror", q => {  // a part of its own: Move and Resize picks it (e2e J259)
+      rr(q.g, -0.52, 0.52, 1.12, 2.0, 0.14, 0.03, 0.025, mat.bronze);  // rounded mirror, thin dark frame
+      rr(q.g, -0.5, 0.5, 1.14, 1.98, 0.12, 0.04, 0.02, mat.mirror);
+    });
     p.cyl(0.55, 0.3, 0.05, 0.85, 1.05, mat.planter, 16, 0.04);  // styling: vase, bottles
     for (const [x, h] of [[-0.45, 0.16], [-0.52, 0.12], [-0.6, 0.18]]) p.cyl(x, 0.3, 0.025, 0.85, 0.85 + h, mat.ceramic, 12);
   });

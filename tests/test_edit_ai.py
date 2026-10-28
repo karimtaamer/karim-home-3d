@@ -196,5 +196,44 @@ class VersionScope(unittest.TestCase):
         self.assertEqual(edit_ai.other_versions_changed(f0, f1, V), [])
 
 
+class PieceChecks(unittest.TestCase):
+    """The deterministic wrong-piece / wrong-way checks (e2e r2 J244 J264 J266), on the real version files."""
+    def check(self, v, message, old, new, ctx=None):
+        ws = edit_ai.Workspace(v)
+        ws.ctx = ctx or {}
+        f0 = ws.text("furnish.js")
+        self.assertEqual(f0.count(old), 1, old)
+        return edit_ai.piece_checks(ws, message, f0, f0.replace(old, new), "")
+
+    def test_toward_the_shower_the_wrong_way_is_sent_back(self):  # J264: the shower is north of the radiator
+        out = self.check("naghams-changes", "Move the towel radiator 10 cm toward the shower",
+                         "item(2.192, 7.6632", "item(2.192, 7.5632")
+        self.assertTrue(out and out.startswith("Check the direction"), out)
+        self.assertIsNone(self.check("naghams-changes", "Move the towel radiator 10 cm toward the shower",
+                                     "item(2.192, 7.6632", "item(2.192, 7.7632"))
+
+    def test_the_named_piece_wins_over_a_similar_one(self):  # J266: "flip desk" is the reception one, not the fold-down desk
+        out = self.check("karims-version", "Widen flip desk 5 cm", "q.box(-0.42, 0.42, 0.75, 1.425, 0, 0.025, mat.limewash);",
+                         "q.box(-0.445, 0.445, 0.75, 1.425, 0, 0.025, mat.limewash);")
+        self.assertTrue(out and out.startswith("Check the piece") and "flip desk" in out, out)
+
+    def test_a_piece_in_the_ring_named_by_one_word(self):  # J244: the buffet, not the vanity behind the same wall
+        out = self.check("karims-version", "Shrink the buffet niche", "item(14.66, 7.75", "item(14.66, 8.035",
+                         {"highlightBox": [14.37, 6.5, 15.81, 9.5]})
+        self.assertTrue(out and "buffet" in out, out)
+
+    def test_the_right_piece_passes(self):
+        self.assertIsNone(self.check("karims-version", "Move the sofa 20 cm west", "item(21.027, version", "item(20.827, version",
+                                     {"highlightBox": [19.9, 3.3, 21.2, 5.7]}))
+
+
+class DrawingSame(unittest.TestCase):
+    def test_same_strokes_in_another_order(self):  # J229: a DXF rewritten with no net op isn't a change
+        a = '{"strokes": {"#f00": [[0, 0, 1, 1], [2, 2, 3, 3]]}, "texts": []}'
+        b = '{"strokes": {"#f00": [[2, 2, 3, 3.0001], [0, 0, 1, 1]]}, "texts": []}'
+        self.assertTrue(edit_ai.drawing_same(a, b))
+        self.assertFalse(edit_ai.drawing_same(a, '{"strokes": {"#f00": [[0, 0, 1, 1]]}, "texts": []}'))
+
+
 if __name__ == "__main__":
     unittest.main()

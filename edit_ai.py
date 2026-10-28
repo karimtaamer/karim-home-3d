@@ -1166,6 +1166,8 @@ def tool(ws, name, a):
         if not ops_:
             return "no ops given: nothing changed on the plan"
         a = {**a, "ops": ops_}
+        if any(o.get("op") == "rotate_piece" for o in ops_ if isinstance(o, dict)):
+            ws.rotated = True  # a plan piece turned (the facing check in review())
         for o in ops_:
             if o.get("op") == "add_polyline" and o.get("layer") in ("2furni", "2 furni") and len(o.get("points") or []) >= 4:
                 ws.new_outlines.append([pt[:2] for pt in o["points"]])
@@ -1932,7 +1934,14 @@ do; if only one fits, do it and say so. If what is asked already exists (a door 
 mat.boucle.clone(); beigeBoucle.color.set(...)), never another kind (fabric to plaster or stone). A size change says
 the old and the new size.
 - A piece drawn on the plan (furniture_near shows its outline) is moved, turned or resized in both the 3D and its plan
-outline; if the plan can't follow, say so plainly instead of claiming both changed.
+outline; if the plan can't follow, say so plainly instead of claiming both changed. Resize a drawn symbol (an armchair's
+curved back and arms) by scaling its own lines (resize_piece), never by deleting it and drawing a box; keep the line's
+// comment as it is (it names the piece in Move and Resize).
+- Raising or lowering part of a piece moves everything attached to it by the same amount (its seams, LED strip,
+handles); a thing in a niche or on a shelf stays inside it: if it won't fit, say so with the numbers.
+- When a move can't be done as asked (no room), measure the candidate spots (measure / furniture_near) and offer the
+one that fits, with its free length against the piece's size; never refuse with only "it won't fit".
+- "Add X" never removes or replaces an existing piece unless the user says replace.
 - Before adding a piece, look at what is already at that spot (furniture_near): a new chandelier over the table
 replaces the pendants hanging there, a new sofa replaces the old one, a new rug the old rug. Remove or move what it
 replaces in the same edit, never leave two things in one place, and say what you took out.
@@ -2458,7 +2467,28 @@ and a change far from it is right when it is in the room they named. Room names:
 الريسبشن = RECEPTION; السفرة = DINING; المطبخ = KITCHEN; الغسيل = LAUNDRY; الطرقة = HALLWAY; التراس = TERRACE.
 A room taller than the rest needs the home ceiling raised to it and the other rooms' ceilingHeight set back: that is
 the right way, not an unneeded change.
-Answer JSON only: {"score":n,"problems":["a fix for the editor, max 25 words"],"summary":"max 20 words"}"""
+Also answer three yes/no checks: "unrelated": a piece, wall or finish the request didn't ask about was changed, moved or
+removed (adding X never removes an existing X unless the user said replace); "reply_true": every claim in the editor's
+reply (what moved, which way, how far, what stayed) matches the diff; "defect": the result has a visible fault (parts left
+behind or floating, something poking through another, a part out of its niche / off its shelf).
+Answer JSON only: {"score":n,"unrelated":false,"reply_true":true,"defect":false,"problems":["a fix for the editor, max 25 words"],"summary":"max 20 words"}"""
+REVIEW_CAP = 4  # an unrelated change, an untrue reply or a visible defect scores at most this (under REVIEW_KEEP: not saved)
+
+
+def drawing_same(a, b):
+    """Do two drawing-<v>.json contents draw the same strokes and texts (to the mm, in any order)? A DXF rewritten with
+    no net op differs only in header stamps and handles, and draws the same."""
+    try:
+        A, B = json.loads(a), json.loads(b)
+    except (TypeError, ValueError):
+        return False
+    def norm(d):
+        st = {c: sorted(tuple(round(float(t), 3) for t in pl) for pl in v_) for c, v_ in (d.get("strokes") or {}).items()}
+        return st, sorted(json.dumps(t, sort_keys=True) for t in d.get("texts") or [])
+    try:
+        return norm(A) == norm(B)
+    except (TypeError, ValueError):
+        return False
 
 
 def edit_diff(ws, trace, limit=12000):
@@ -2514,6 +2544,13 @@ def review_edit(ws, message, reply, where, image, trace, total):
         cost(usage, total, REVIEW_MODEL)
         v = {"score": max(0, min(10, int(out.get("score")))), "summary": str(out.get("summary") or "")[:300],
              "problems": [str(x)[:300] for x in (out.get("problems") or []) if x][:6]}
+        # hard checks (e2e r2 J228 J229 J235 J244 J247: a 6-7 with "an unrelated bench moved" / "the reply misstates the
+        # change" / "dangling seams" was saved): any of them caps the score, so the fix round runs and a miss isn't saved
+        flags = [k for k, bad in (("an unrelated change", out.get("unrelated") is True), ("a reply that doesn't match the change",
+                 out.get("reply_true") is False), ("a visible defect", out.get("defect") is True)) if bad]
+        if flags and v["score"] > REVIEW_CAP:
+            v["score"] = REVIEW_CAP
+            v["summary"] = (v["summary"] + f" [capped: {', '.join(flags)}]").strip()
     except Exception as e:
         print(f"[edit-ai] review skipped: {type(e).__name__}: {e}", flush=True)
         trace.append({"tool": "(sol review, skipped)", "args": "", "out": str(e)[:700]})
@@ -2532,6 +2569,18 @@ def fix_note(v):
 
 def usd_sum(*vals):
     return None if any(v is None for v in vals) else round(sum(vals), 4)
+
+
+_VERSION_LOCKS, _VERSION_LOCKS_GUARD = {}, threading.Lock()
+
+
+def version_lock(v):
+    """This server's lock for one version's revisions: an Undo sent while an Accept of the same version is saving waits
+    for it, so neither is written over the other (e2e r2 J178: a lost update left a change nothing could undo). One
+    process only: on Vercel each call is its own (the page sends one at a time)."""
+    v = plan_version(v)
+    with _VERSION_LOCKS_GUARD:
+        return _VERSION_LOCKS.setdefault(v, threading.Lock())
 
 
 def chat(req, emit=None):
@@ -2637,6 +2686,13 @@ def chat(req, emit=None):
                             # Only 3D-only pieces changed (AC, curtain / AC box, bulkhead, high fitting, nothing on the plan):
                             # nothing to keep in step with the 2D, so save the 3D edit instead of throwing it away.
                             trace.append({"tool": "(review, final: 3D-only, kept)", "args": "", "out": last_[:700]})
+                        elif last_ and last_.startswith(("Check the piece", "Check the direction")):
+                            trace.append({"tool": "(review, final)", "args": "", "out": last_[:700]})
+                            ws.changed.clear()
+                            reply = ("ماغيّرتش حاجة: ماقدرتش أتأكد إني غيّرت الحتة اللي تقصدها (أو حرّكتها في الاتجاه اللي طلبته). "
+                                     "قولّي أنهي حتة وفين، وأنا أجرّب تاني." if AR_TEXT.search(message) else
+                                     "Nothing was changed: I couldn't be sure I changed the piece you meant (or moved it the way you "
+                                     "asked), so I left everything as it was. Say which piece and where, and I'll try again.")
                         elif last_ and last_.startswith("Check 2D vs 3D"):
                             trace.append({"tool": "(review, final)", "args": "", "out": last_[:700]})
                             ws.changed.clear()
@@ -2699,7 +2755,21 @@ def chat(req, emit=None):
                      if AR_TEXT.search(message) else
                      ("Nothing was changed: the edit I made didn't do what you asked" + (f" ({why})" if why else "") +
                       ". Tell me exactly what to change and where, and I'll try again."))
-        if not ws.changed and reply and re.search(r"\b(I('ve| have)?|have been) (changed|made|moved|added|removed|replaced|updated|set)\b", reply):
+        if ws.changed and not ws.plan_dirty:  # files that ended as they began (a move and its move back; a DXF rewritten with no net op: e2e J229)
+            same_ = {p_ for p_ in ws.changed if p_ in ws.orig and ws.files.get(p_) == ws.orig[p_]}
+            dw_ = ws.cfg.get("drawing")
+            if dw_ in ws.changed and dw_ not in same_ and dw_ in ws.orig and drawing_same(ws.orig[dw_], ws.files.get(dw_)):
+                same_ |= {ws.cfg.get(k) for k in ("dxf", "model", "drawing")} & ws.changed  # only header / handle noise
+            if same_ == ws.changed or (ws.changed - same_ <= {ws.cfg.get(k) for k in ("dxf", "model", "drawing")}
+                                       and ws.cfg.get("drawing") in same_):
+                trace.append({"tool": "(no net change: not saved)", "args": "", "out": ", ".join(sorted(same_))[:700]})
+                ws.discard()
+        if ws.changed and reply and GAVE_UP.search(reply) and NO_CHANGE.search(reply) and "kept this" not in reply \
+                and "فسيبت التعديل" not in reply:
+            trace.append({"tool": "(reply says nothing changed: not saved)", "args": "", "out": reply[:700]})
+            ws.discard()  # the reply says it couldn't / stayed put: what the user reads is what happens (e2e J229)
+        if not ws.changed and reply and not re.match(r"\s*(Nothing was changed|ماغيّرتش|ماتغيّرش|لسه ماتغيّرش)", reply) \
+                and re.search(r"\b(I('ve| have)?|have been) (changed|made|moved|added|removed|replaced|updated|set)\b", reply):
             reply = ("لسه ماتغيّرش حاجة: " if AR_TEXT.search(message) else "Nothing was changed yet: ") + reply  # claimed, never made
         if ws.changed:  # last gate: a settled design lock (design-locks.json) the request didn't name stays as it is
             if ws.plan_dirty:
@@ -2715,7 +2785,11 @@ def chat(req, emit=None):
                           ". If you do want to change that, say so and name it (e.g. the column, the TV wall, the niches or the buffet)."))
         if ws.changed:
             emit("Saving your edit")
-        result = save(ws, reply or message) if ws.changed else None
+        if ws.changed:
+            with version_lock(v):
+                result = save(ws, reply or message)
+        else:
+            result = None
     finally:
         shutil.rmtree(ws.tmp, ignore_errors=True)
     edit_all = dollars(total, model)
@@ -2740,6 +2814,10 @@ COMPASS = {"north": re.compile(r"\bnorth(wards?)?\b|شمال", re.I), "south": r
 NUMBER = re.compile(r"(?<![\w.])-?\d+(?:\.\d+)?(?![\w.])")
 GAVE_UP = re.compile(r"\b(couldn'?t|could not|can'?t|cannot|unable|wasn'?t able|not possible|left (it |them |everything )?(as it was|unchanged)|"
                      r"(made|changed) nothing|no changes?( were)? made|didn'?t change)\b", re.I)
+NO_CHANGE = re.compile(r"\b(stayed (in place|put|where it (was|is))|left (it |them |everything )?(as it was|in place|unchanged|where it was)|"
+                       r"nothing (was |has been )?changed|no changes? (was |were )?made|(made|changed) nothing)\b|ماغيّرتش|ماتغيّرش", re.I)
+
+
 def stands_on_floor(text, i, line):
     """Whether the item() at line i builds something standing on the floor (a named builder like bed(), or a box /
     cylinder from height 0), not a wall-hung or overhead thing (sheer, art, pendant) that has no plan footprint."""
@@ -3360,6 +3438,130 @@ def lock_note(breaks):
     return "; ".join(f"{l['what']} (decided by {l.get('decided_by')}, {l.get('date')}): {', '.join(p)}" for l, p in breaks)
 
 
+def footprint_at(L, i, line, version):
+    """The plan box (x0, y0, x1, y1) a furnish.js line places: a rug's rectangle (its placing point is a corner, not its
+    middle: e2e J214), an inline item's build; None when it can't be read (a helper like vanity(...))."""
+    if (m := RUG.search(line)):
+        a = [float(t) for t in m.groups()]
+        return (min(a[0], a[2]), min(a[1], a[3]), max(a[0], a[2]), max(a[1], a[3]))
+    b = item_box(L, i, version) if 0 < i <= len(L) else None
+    return b and tuple(b[:4])
+
+
+def _area(b):
+    return max(0.0, b[2] - b[0]) * max(0.0, b[3] - b[1])
+
+
+def _iou(a, b):
+    i_ = _area((max(a[0], b[0]), max(a[1], b[1]), min(a[2], b[2]), min(a[3], b[3])))
+    return i_ / (_area(a) + _area(b) - i_) if i_ else 0.0
+
+
+def block_end(L, i):
+    """The last line (1-based) of the call that opens at line i: its parentheses close again."""
+    dep = 0
+    for k in range(i - 1, min(i + 120, len(L))):
+        dep += L[k].count("(") - L[k].count(")")
+        if dep <= 0:
+            return k + 1
+    return i
+
+
+PIECE_STOP = set("""make move moved shrink widen bigger smaller wider narrower longer shorter taller raise lower change colour
+color turn rotate closer toward towards away from with the and into onto more less little please add remove delete swap
+centre center left right north south east west floating deep deeper high higher tall wide long round black white this that
+them those these its put place set new also just bit slightly side next beside near nearer over under above below behind
+front back the for your my our their other same than then there here what where which each every both all only keep
+inch metre metres meter meters about some one two three four five six seven eight nine ten face facing make sure piece
+pieces thing things area room""".split())
+
+
+def piece_checks(ws, message, f0, f1, tail):
+    """The piece the request names, and the way it asked a piece to go, against what the edit changed (deterministic,
+    not just the prompt: e2e r2 J202 J207 J244 J264 J266). A message to send back, or None."""
+    if f0 == f1 or AR_TEXT.search(message):
+        return None
+    L0, L1 = f0.splitlines(), f1.splitlines()
+    placed = [(i, px, py, line) for i, px, py, line in placed_lines(ws, f0)]
+    spans = {i: block_end(L0, i) for i, _, _, _ in placed}
+    def owner(k):  # the innermost placed block holding f0 line k (1-based)
+        hold = [i for i, _, _, _ in placed if i <= k <= spans[i]]
+        return max(hold) if hold else None
+    changed, pairs = set(), []
+    for tag_, i0, i1, j0, j1 in difflib.SequenceMatcher(None, L0, L1, autojunk=False).get_opcodes():
+        if tag_ == "equal":
+            continue
+        for k in range(i0 + 1, i1 + 1):
+            if (o := owner(k)) is not None and L0[k - 1].strip():
+                changed.add(o)
+        if tag_ == "replace" and i1 - i0 == j1 - j0:
+            pairs += list(zip(range(i0 + 1, i1 + 1), L1[j0:j1]))
+    if not changed:
+        return None  # only new pieces / materials: nothing named was missed
+    text_of = {i: "\n".join(L0[i - 1:spans[i]]).lower() for i, _, _, _ in placed}
+    at = {i: (px, py) for i, px, py, _ in placed}
+    toks = re.findall(r"[a-z]+", message.lower())
+    hb = (ws.ctx or {}).get("highlightBox")
+    in_ring = lambda i: bool(hb) and len(hb) == 4 and hb[0] - 0.3 <= at[i][0] <= hb[2] + 0.3 and hb[1] - 0.3 <= at[i][1] <= hb[3] + 0.3
+    room = (ws.ctx or {}).get("room")
+    try:
+        sm_ = ws.text(ws.cfg["model"])
+        rr_ = [f["outer"] for f in json.loads(sm_[sm_.index("{"):sm_.rindex("}") + 1]).get("floor", []) if f.get("room") == room]
+    except Exception:
+        rr_ = []
+    in_room = lambda i: any(_inside([q[:2] for q in r_], *at[i]) for r_ in rr_)
+    def tell(phrase, want, got):
+        w_, g_ = want[0], sorted(got)[0]
+        return (f"Check the piece: the user named the {phrase}, which furnish.js builds at line {w_} ({L0[w_ - 1].strip()[:90]}), "
+                f"but what you changed is the piece at line {g_} ({L0[g_ - 1].strip()[:90]}), a different one. Call discard "
+                f"and change the {phrase} itself (and its plan outline if it has one); if you're not sure which one they mean, "
+                "ask instead of editing." + tail)
+    # a two-word name ("flip desk") that some piece carries: one of the changed pieces must carry it
+    for a_, b_ in zip(toks, toks[1:]):
+        if a_ in PIECE_STOP or b_ in PIECE_STOP or len(a_) < 3 or len(b_) < 3:
+            continue
+        ph = f"{a_} {b_}"
+        has = [i for i in text_of if ph in text_of[i]]
+        if not has:
+            continue
+        if not any(ph in text_of[i] for i in changed):
+            return tell(ph, has, changed)
+        if room and rr_ and (ws.ctx or {}).get("wholeView") and not any(in_room(i) for i in changed if ph in text_of[i]) \
+                and (mine := [i for i in has if in_room(i)]):
+            return tell(f"{ph} in the {room} (where the user is)", mine, changed)
+        break
+    else:  # one word ("buffet"): only when a piece carrying it is in the circle the user drew
+        for w in toks:
+            if len(w) < 4 or w in PIECE_STOP:
+                continue
+            rx = re.compile(r"\b" + re.escape(w) + r"(e?s)?\b")
+            has = [i for i in text_of if rx.search(text_of[i])]
+            if has and not any(rx.search(text_of[i]) for i in changed) and (mine := [i for i in has if in_ring(i)]):
+                return tell(w, mine, changed)
+    # "toward / closer to / away from X": the moved piece's distance to X must go the asked way
+    m = re.search(r"\b(towards?|closer to|nearer( to)?|away from)\s+(?:the |my |our )?([a-z]+)", message.lower())
+    if m and m[3] not in PIECE_STOP:
+        rx = re.compile(r"\b" + re.escape(m[3]) + r"(e?s)?\b")
+        marks = [at[i] for i in text_of if rx.search(text_of[i]) and i not in changed]
+        moved = []
+        for k, new in pairs:
+            a0, a1 = PLACE.search(L0[k - 1]), PLACE.search(new)
+            if a0 and a1 and (float(a0[1]), float(a0[2])) != (float(a1[1]), float(a1[2])):
+                moved.append(((float(a0[1]), float(a0[2])), (float(a1[1]), float(a1[2])), L0[k - 1].strip()[:80]))
+        if marks and moved:
+            cx, cy = sum(p_[0] for p_ in marks) / len(marks), sum(p_[1] for p_ in marks) / len(marks)
+            away = m[1] == "away from"
+            gain = lambda o_, n_: math.dist(o_, (cx, cy)) - math.dist(n_, (cx, cy))  # > 0: it went closer
+            wrong = [(o_, n_, l_) for o_, n_, l_ in moved if (gain(o_, n_) > -0.01 if away else gain(o_, n_) < 0.01)]
+            if len(wrong) == len(moved):
+                o_, n_, l_ = wrong[0]
+                return (f"Check the direction: the user asked for it {m[1]} the {m[3]} (plan ({round(cx, 2)}, {round(cy, 2)}), "
+                        f"the middle of what furnish.js builds as {m[3]}), but you moved {l_} from ({o_[0]}, {o_[1]}) to "
+                        f"({n_[0]}, {n_[1]}), which is {'closer to' if away else 'no closer to'} it. Undo that (call discard) and "
+                        "move it the asked way (both views), or tell the user why it can't go that way." + tail)
+    return None
+
+
 def review(ws, message, reply):
     """What to point out to the model before its edits are saved, or None."""
     if not ws.changed:
@@ -3403,6 +3605,24 @@ def review(ws, message, reply):
                     f"(north = +y, south = -y, east = +x, west = -x), but what you moved went the opposite way "
                     f"({', '.join(f'{v_:+.2f} m' for v_ in along[:3])} in {'y' if ax else 'x'}). Undo that (call discard) and "
                     "redo it in the direction the user named, in both views." + tail)
+    if (pc_ := piece_checks(ws, message, f0, f1, tail)):
+        return pc_
+    # A piece turned in the 3D (its facing letter) while nothing on the plan turned (e2e J206 / J301)
+    if f0 != f1 and not getattr(ws, "rotated", False) and not getattr(ws, "turn_warned", False):
+        L0t, L1t = f0.splitlines(), f1.splitlines()
+        for tag_, i0, i1, j0, j1 in difflib.SequenceMatcher(None, L0t, L1t, autojunk=False).get_opcodes():
+            if tag_ != "replace" or i1 - i0 != j1 - j0:
+                continue
+            for a_, b_ in zip(L0t[i0:i1], L1t[j0:j1]):
+                fa_ = re.search(r'\bitem\([^"]*"([NSEW])"', a_)
+                fb_ = re.search(r'\bitem\([^"]*"([NSEW])"', b_)
+                if fa_ and fb_ and fa_[1] != fb_[1]:
+                    ws.turn_warned = True  # said once: a piece not drawn on the plan keeps its 3D turn
+                    return (f"Check 2D vs 3D: you turned {b_.strip()[:100]} in the 3D (facing {fa_[1]} -> {fb_[1]}) but nothing on the "
+                            "plan turned. If it is drawn there (furniture_near shows its outline or block), turn that too with "
+                            "dxf_edit rotate_piece about the piece's centre (it turns blocks as well). A new facing letter swings the "
+                            "item about its back-centre, so also move its x, y so the piece's centre stays where it was. If it isn't "
+                            "drawn on the plan, keep your 3D edit: you're done." + tail)
     # A resize the user asked to go one way (shorter / wider) while a plan outline went the other: 2D and 3D disagree.
     want_ = -1 if SHRINK.search(message) and not GROW.search(message) else 1 if GROW.search(message) and not SHRINK.search(message) else 0
     if want_ and ws.pieces:
@@ -3471,6 +3691,8 @@ def review(ws, message, reply):
     L0_, L1b = f0.splitlines(), f1.splitlines()
     def build_changed(i, line):  # an inline build whose size changed under an unchanged item( line
         j = next((k for k, l2 in enumerate(L1b, 1) if bare(l2) == bare(line)), None)
+        if j and [bare(l_) for l_ in L0_[i - 1:block_end(L0_, i)]] != [bare(l_) for l_ in L1b[j - 1:block_end(L1b, j)]]:
+            return True  # its build was rewritten (a round table's body): changed, even where its box can't be read (e2e J202)
         b0_, b1_ = item_box(L0_, i, ws.v), (item_box(L1b, j, ws.v) if j else None)
         return bool(b0_ and b1_ and any(abs(u - w) > 0.01 for u, w in zip(b0_[:4], b1_[:4])))
     for h, b in ws.pieces.items():
@@ -3479,7 +3701,12 @@ def review(ws, message, reply):
             continue  # put back where it was: nothing to match
         on = lambda px, py: b[0] - 0.15 <= px <= b[2] + 0.15 and b[1] - 0.15 <= py <= b[3] + 0.15
         loops = [(i, ls) for i, px, py, ls in loop_placed(ws, f0) if on(px, py)]  # e.g. one of two bedside tables
-        lines = [(i, [line]) for i, px, py, line in placed_lines(ws, f0) if on(px, py)] + loops
+        def on_b(i, px, py, line):
+            fp_ = footprint_at(L0_, i, line, ws.v)
+            if fp_ and _area(fp_) > 1e-4 and _area(b) > 1e-4:  # its footprint, not its placing point (a rug's corner: J213)
+                return _area((max(fp_[0], b[0]), max(fp_[1], b[1]), min(fp_[2], b[2]), min(fp_[3], b[3]))) >= 0.3 * min(_area(fp_), _area(b))
+            return on(px, py)
+        lines = [(i, [line]) for i, px, py, line in placed_lines(ws, f0) if on_b(i, px, py, line)] + loops
         if lines and all(bare(l) in now for _, ls in lines for l in ls) \
                 and not any(build_changed(i, ls[-1]) for i, ls in lines if len(ls) == 1):
             return (f"Check 2D vs 3D: you changed plan piece {h} (was x {b[0]}..{b[2]}, y {b[1]}..{b[3]}) but its 3D line(s) in "
@@ -3522,6 +3749,15 @@ def review(ws, message, reply):
                     if min(xs) - 0.15 <= px <= max(xs) + 0.15 and min(ys) - 0.15 <= py <= max(ys) + 0.15 \
                             and (max(xs) - min(xs)) * (max(ys) - min(ys)) >= 0.04 and not inner:
                         hits.append((d["handle"], [min(xs), min(ys), max(xs), max(ys)]))
+            fp_ = footprint_at(L0_, i, line, ws.v)
+            if hits and fp_ and _area(fp_) > 1e-4:  # the outline that is its footprint, else none: a 3D-only piece (J214)
+                best_ = max(hits, key=lambda t: _iou(fp_, t[1]))
+                hits = [best_] if _iou(fp_, best_[1]) >= 0.3 else []
+            elif hits:  # a part drawn inside a bigger outline here (a medicine cabinet in its vanity) isn't the piece:
+                # the same test as the part check below, so the two never name different outlines (e2e J221)
+                hits = [t for t in hits if not any(t2 is not t and _area(t2[1]) > 2 * _area(t[1]) + 0.05 and t2[1][0] - 0.01 <= t[1][0]
+                                                   and t[1][2] <= t2[1][2] + 0.01 and t2[1][1] - 0.01 <= t[1][1] and t[1][3] <= t2[1][3] + 0.01
+                                                   for t2 in hits)] or hits
             if hits:
                 h, bb = min(hits, key=lambda t: (t[1][2] - t[1][0]) * (t[1][3] - t[1][1]))
                 return (f"Check 2D vs 3D: you changed furnish.js line {i} ({line.strip()[:120]}) but the plan outline it stands on, "
@@ -3533,7 +3769,8 @@ def review(ws, message, reply):
     loop_ops = [o for o in ops if any(re.search(r"\bfor \(const|\bitem\(|\brug\(", l) and bare(l) in was
                                       and bare(l) not in {bare(n_) for n_ in o["new"].splitlines()}
                                       for l in o["old"].splitlines())]
-    if loop_ops and not ws.dxf_furni and not gone and not only3d:
+    if loop_ops and not ws.dxf_furni and not gone and not only3d and not getattr(ws, "loop_warned", False):
+        ws.loop_warned = True  # advice, given once: a 3D-only change the model kept after it is saved (e2e J208)
         return ("Check 2D vs 3D: you moved or resized furniture in furnish.js but nothing on the plan (2furni). If the "
                 "piece is drawn on the plan (furniture_near lists the outlines there), give its outline exactly the same "
                 "change now with dxf_edit move_piece / resize_piece; things not drawn on the plan, and changes of height or "
@@ -4255,7 +4492,7 @@ class Handler(photogen.Handler):
         self.reply(404, {"error": "not found"})
 
     def do_POST(self):
-        act, _ = self.edit_action()
+        act, _ = self.edit_action()  # (Accept / Undo / reset hold their version's lock: see version_lock)
         if not act:
             return super().do_POST()
         routes = {"chat": chat, "precheck": precheck, "undo": undo, "reset": reset,
@@ -4276,6 +4513,10 @@ class Handler(photogen.Handler):
             req = json.loads(self.rfile.read(n))
             if act == "chat" and req.get("stream"):
                 return self.stream(lambda emit: chat(req, emit))
+            if act in ("undo", "reset", "transform"):
+                with version_lock(req.get("version")):
+                    out = routes[act](req)
+                return self.reply(200, out)
             self.reply(200, routes[act](req))
         except PermissionError as e:
             self.reply(503, {"error": str(e), "code": "no-key"})

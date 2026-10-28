@@ -73,7 +73,7 @@ import argparse, json, math, sys
 from collections import Counter
 
 from ezdxf import recover
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString, Point, box as shapely_box
 from shapely.ops import unary_union
 
 WINDOW_LAYER, WALL_LAYER, DOOR_LAYER = "Windows", "1wall", "3door"
@@ -323,8 +323,12 @@ def ext_of(e):
     return (x.extmin.x, x.extmin.y, x.extmax.x, x.extmax.y)
 
 
+RUGS = []  # the rugs' plan boxes (DXF frame, from --soft): a rug lies under pieces, it doesn't carry them
+
+
 def piece_members(msp, outline, m=0.08):
-    """The outline plus every furniture entity inside it whose smallest enclosing outline is this one."""
+    """The outline plus every furniture entity inside it whose smallest enclosing outline is this one. A rug's are only
+    its own lines: the chairs / table drawn on it (outlines or blocks) are pieces of their own (e2e r2: the dining rug)."""
     if outline.dxf.layer not in FURNI or outline.dxftype() != "LWPOLYLINE" or len(outline) < 4:
         raise ValueError(f"{outline.dxf.handle} is not a furniture outline (a {outline.dxf.layer} {outline.dxftype()}); "
                          "pick the piece's outline polyline (4+ points) from dxf_query")
@@ -334,12 +338,15 @@ def piece_members(msp, outline, m=0.08):
     furni = [(e, b) for e, b in furni if b]
     outlines = [(e, b) for e, b in furni if e.dxftype() == "LWPOLYLINE" and len(e) >= 4 and area(b) >= 0.04]
     ob = ext_of(outline)
+    rug = any(all(abs(ob[i] - t[i]) < 0.06 for i in range(4)) for t in RUGS)
     out = [outline]
     def clips(a_, c_):  # piece a_ only pushes into the edge of c_ (a table run into the bed), not nested / standing on it
         ov = max(0, min(a_[2], c_[2]) - max(a_[0], c_[0])) * max(0, min(a_[3], c_[3]) - max(a_[1], c_[1]))
         return area(a_) < area(c_) and 0 < ov < 0.5 * area(a_) and not inside(a_, c_) and not inside(c_, a_)
     for e, b in furni:
         if e is outline or not inside(b, ob):
+            continue
+        if rug and (e.dxftype() == "INSERT" or (e.dxftype() == "LWPOLYLINE" and len(e) >= 4 and area(b) >= 0.04)):
             continue
         owners = [(area(b2), o, b2) for o, b2 in outlines if o is not e and inside(b, b2) and area(b2) >= area(b) * 1.05]
         # A line inside both a piece and one that clips its edge is the first piece's (the bed's pillow line, not the table's).
@@ -387,6 +394,31 @@ def room_around(msp, doc, h, soft_b):
     mine = {x.dxf.handle for x in piece_members(msp, e)[0]}
     walls = [w for w in msp.query("LINE") if w.dxf.layer == "1wall"]
     return free_span(msp, h, b, walls, [] if is_soft(b) else top, mine, is_soft, inside)
+
+
+def wall_depth(msp, b, m=0.003):
+    """How far (m) plan box b (DXF frame) reaches past the deepest 1wall face line that crosses it: for a face along x,
+    the shorter of the box's two parts either side of it (along y, the same across). A slanted face counts as deep as
+    the box's smaller side."""
+    x0, y0, x1, y1 = b[0] + m, b[1] + m, b[2] - m, b[3] - m
+    if x1 <= x0 or y1 <= y0:
+        return 0.0
+    deep = 0.0
+    for w in msp.query("LINE"):
+        if w.dxf.layer != "1wall":
+            continue
+        (ax, ay), (bx, by) = (w.dxf.start.x, w.dxf.start.y), (w.dxf.end.x, w.dxf.end.y)
+        cut = LineString([(ax, ay), (bx, by)]).intersection(shapely_box(x0, y0, x1, y1))
+        if cut.is_empty or cut.length <= 0.02:
+            continue
+        if abs(by - ay) < 1e-3:
+            d = min(ay - y0, y1 - ay)
+        elif abs(bx - ax) < 1e-3:
+            d = min(ax - x0, x1 - ax)
+        else:
+            d = min(x1 - x0, y1 - y0)
+        deep = max(deep, d)
+    return deep
 
 
 def clashes(msp, doc, handles, soft, ox, oy, soft_h=(), m=0.025):
@@ -1320,6 +1352,7 @@ def edit(a):
 
     soft = [tuple(float(v) for v in t.split(",")) for t in (a.soft or "").split(";") if t.strip()]
     soft = [(t[0] + ox, t[1] + oy, t[2] + ox, t[3] + oy) for t in soft]
+    RUGS[:] = soft
     pieces0 = {}  # furniture outlines touched: their extent before
 
     vmap = {}  # virtual handle "INSERT/ENTITY" -> the real one, once that block is exploded
@@ -1515,6 +1548,7 @@ def edit(a):
             dx, dy = float(o.get("dx", 0)), float(o.get("dy", 0))
             h_ = ents[0].dxf.handle
             hit0 = {c["with"] for c in clashes(msp, doc, [h_], soft, 0, 0, m=0.003) if not c.get("free")}
+            deep0 = wall_depth(msp, ext_of(ents[0]))
             for e in ents:
                 touched.add(e.dxf.handle)
                 e.translate(dx, dy, 0)
@@ -1546,6 +1580,10 @@ def edit(a):
             elif o.get("allow_overlap"):  # Move and Resize: overlaps stay, but say which walls it newly goes into
                 into = sorted({c["with"] for c in clashes(msp, doc, [h_], soft, 0, 0, m=0.003)
                                if not c.get("free") and c["with"].startswith("wall ") and c["with"] not in hit0})
+                # only when it goes deeper into the walls than it already sat: a built-in drawn into its recess's walls
+                # slides along them (the entrance console: e2e J317 r2), a piece that was clear doesn't go through one
+                if into and wall_depth(msp, ext_of(ents[0])) <= deep0 + 0.01:
+                    into = []
                 if into:
                     note = f" [INTO {', '.join(into)}]"
             b = ext_of(ents[0])
@@ -1821,7 +1859,11 @@ def edit(a):
                 cleared = clear_gap(msp, q, u, n, t0, t1, n0, n1)
                 close_gap(msp, q, u, n, t0, t1, n0, n1)
                 w = float(o.get("width") or (t1 - t0))
-                mid = (t0 + t1) / 2 + float(o.get("shift") or 0)
+                if o.get("centre"):  # an absolute new centre (plan [x, y]): Move's slides aim at where the 3D gap goes (e2e J155)
+                    c_ = W(o["centre"])
+                    mid = (c_[0] - q[0]) * u[0] + (c_[1] - q[1]) * u[1]
+                else:
+                    mid = (t0 + t1) / 2 + float(o.get("shift") or 0)
                 a_, b_ = mid - w / 2, mid + w / 2
             drawn = {}
             if to != "wall":

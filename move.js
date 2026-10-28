@@ -178,6 +178,7 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
       if (m.clippingPlanes?.length && h.point.y > cut + 1e-3) continue;
       const out = [];
       for (let p = h.object; p; p = p.parent) if (pickable(p)) out.push(p);
+      out.point = h.point;  // where the ray hit (drillTarget)
       return out;  // innermost first; [] when it's a wall or the floor
     }
     return [];
@@ -202,6 +203,16 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
   // A double tap on the selection: the next level in under the pointer.
   function drillTarget(cands) {
     const inner = cands.filter(c => outerOf(c) === sel.o);
+    // In 3D the part whose box holds the hit point wins: a face built inside one part's group can run past it (Nagham's
+    // TV wall: a double tap on the TV niche drilled into the north tall niche 1.4 m away; e2e J309 r2).
+    const pt = cands.point, boxOf = c => new THREE.Box3().setFromObject(c);
+    if (pt && !(inner.length && boxOf(inner[0]).expandByScalar(0.02).containsPoint(pt))) {
+      const parts = [];
+      sel.o.traverse(c => c !== sel.o && pickable(c) && outerOf(c) === sel.o && visible(c) && parts.push(c));
+      const vol = c => { const z = boxOf(c).getSize(new THREE.Vector3()); return z.x * z.y * z.z; };
+      const hold = parts.filter(c => boxOf(c).expandByScalar(0.02).containsPoint(pt)).sort((a, b) => vol(a) - vol(b));
+      if (hold.length) return hold[0];
+    }
     return inner.length ? inner[0] : null;
   }
 
@@ -291,14 +302,26 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
   // The height the overlay is drawn at: the piece's own, carried up or down with a lift.
   const hNow = () => sel.h + heightNow()[0] - sel.low;
   // Only a whole piece turns (a part sits in its piece's frame).
-  const turnable = () => sel && isPiece(sel.o) && hasFacing(sel.o) && !(draft && !same(sizeOf(draft.box), sizeOf(sel.box)));
+  const turnable = () => sel && isPiece(sel.o) && (hasFacing(sel.o) || isRug(sel.o)) && !(draft && !same(sizeOf(draft.box), sizeOf(sel.box)));
+  // A rug turns in quarter turns only (R): the server swaps its width and depth about its centre (e2e J049 r2).
+  const freeTurn = () => turnable() && !isRug(sel.o);
+  function isRug(o) {
+    const ns = o.userData.piece.lines || [], n = ns[ns.length - 1];
+    return !!furnishText && !!n && /\brug\(/.test(furnishText.split("\n")[n - 1] || "");
+  }
   // As move_tool.py's facing_at(): only a piece placed by item / art / ac / sconce has a facing to turn (a plant, pendant,
   // rug or chair placed by its own helper or a loop: Accept would refuse the turn, and the move with it; e2e J049 / J077 / J101).
   function hasFacing(o) {
     const ns = o.userData.piece.lines || [], n = ns[ns.length - 1];  // innermost first: the last is the placing call
     if (!furnishText || !n) return true;
-    const L = furnishText.split("\n")[n - 1] || "";
-    return /\b(item|art|ac|sconce)\(/.test(L) && !/\b(rug|plant|pendant)\(/.test(L) && !/\bfor\s*\(/.test(L);
+    const T = furnishText.split("\n"), L = T[n - 1] || "";
+    if (!/\b(item|art|ac|sconce)\(/.test(L) || /\b(rug|plant|pendant)\(/.test(L) || /\bfor\s*\(/.test(L)) return false;
+    // a loop opened on an earlier line (Nagham's dining chairs: `for (const x of [...]) {` then `item(x, ...)`; e2e J101 r2)
+    for (let i = n - 2, d = 0; i >= 0 && i >= n - 40; i--) {
+      d += (T[i].match(/}/g) || []).length - (T[i].match(/{/g) || []).length;
+      if (d < 0) { if (/\b(for|while)\s*\(|\.(forEach|map)\(/.test(T[i])) return false; d = 0; }
+    }
+    return true;
   }
   const sizeOf = b => [b[2] - b[0], b[3] - b[1]];
   // Plan points p turned by deg about c.
@@ -623,7 +646,7 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
       if (!mc.some(q => !q)) s += `<polygon class="halo" points="${mc.map(q => q.join(",")).join(" ")}"/><polygon points="${mc.map(q => q.join(",")).join(" ")}"/>`;
     }
     if (!busy && !turn() && !group.length) for (const [k, p] of Object.entries(handles(b, hNow()))) s += `<circle class="${k.length > 1 ? "corner" : ""}" cx="${p[0]}" cy="${p[1]}" r="${k.length > 1 ? 5 : 6.5}"/>`;
-    const rh = !busy && !group.length && turnable() && rotHandle(b, hNow());
+    const rh = !busy && !group.length && freeTurn() && rotHandle(b, hNow());
     if (rh) s += `<line class="rot" x1="${rh[1][0]}" y1="${rh[1][1]}" x2="${rh[0][0]}" y2="${rh[0][1]}"/><circle class="rot" cx="${rh[0][0]}" cy="${rh[0][1]}" r="7"/>`;
     const zh = !busy && !group.length && zHandles(b);  // heights: one piece at a time
     if (zh) s += `<line class="z" x1="${zh.base[0]}" y1="${zh.base[1]}" x2="${zh.lift[0]}" y2="${zh.lift[1]}"/>`
@@ -850,7 +873,7 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     const zh = !group.length && zHandles(b), R = (touch ? HANDLE_TOUCH_PX : HANDLE_PX) + 2;
     if (zh && Math.hypot(zh.lift[0] - p[0], zh.lift[1] - p[1]) < R) return { type: "lift", zh };
     if (zh && Math.hypot(zh.size[0] - p[0], zh.size[1] - p[1]) < R) return { type: "height", zh };
-    const rh = turnable() && rotHandle(b, hNow());
+    const rh = freeTurn() && rotHandle(b, hNow());
     if (rh && Math.hypot(rh[0][0] - p[0], rh[0][1] - p[1]) < (touch ? HANDLE_TOUCH_PX : HANDLE_PX) + 2) return { type: "turn" };
     // A small piece on screen: the handles reach less far, so its middle still drags it.
     const side = c.some(q => !q) ? 0 : Math.min(...c.map((q, i) => Math.hypot(q[0] - c[(i + 1) % 4][0], q[1] - c[(i + 1) % 4][1])));

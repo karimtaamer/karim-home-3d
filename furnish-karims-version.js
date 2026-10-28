@@ -123,6 +123,7 @@ export function furnish(scene, M, mat, version = "main") {
   // also "x,y,facing#n" (twin), so one of them can be moved or deleted on its own.
   const placed = {};
   const MOVED = {};
+  if (version === "karims-version") MOVED["2.95,9.02,S"] = [3.735, 9.045, 1, 1];  // Move and Resize: curtains either side of the 2
   if (version === "karims-version") MOVED["21.8,4.75,S"] = [21.88, 5.565, 1, 1];  // Move and Resize: potted plant
   if (version === "karims-version") MOVED["21.47,5,E"] = [21.635, 5.63, 1, 1];  // Move and Resize: wall sconce
   if (version === "kareems-changes") MOVED["21.47,5,E"] = [21.51, 5.775, 1, 1];  // Move and Resize: wall sconce

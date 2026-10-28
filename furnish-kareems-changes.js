@@ -441,7 +441,7 @@ export function furnish(scene, M, mat, version = "main") {
     B(2.937, X1, 4.219, 4.442, 0, 0.55, mat.walnut, 0.02);  // DWG end table between the arm and the north wall
   });
   rug(3.75, 0.95, 5.55, 3.95, mat.rug);  // cream shaggy rug
-  item(2.94, 2.8, "E", p => p.box(-1.75, 1.75, 2.5, 2.52, 0.02, 0.2, mat.ledStrip));  // cove light over the window wall
+  item(2.94, 2.495, "E", p => p.box(-1.75, 1.75, 2.5, 2.52, 0.02, 0.2, mat.ledStrip));  // cove light over the window wall
   item(4.645, 2.529, "S", p => {  // DWG coffee table 0.72 x 1.23: light stone top on two round walnut pedestals
     p.box(-0.36, 0.36, 0.36, 0.42, -0.617, 0.617, mat.stoneTable, 0.03);
     for (const z of [-0.33, 0.33]) p.cyl(0, z, 0.13, 0, 0.36, mat.walnut, 24);
@@ -472,7 +472,7 @@ export function furnish(scene, M, mat, version = "main") {
   art(3.62, 0.548, "N", 0.9, 1.25, 1.62, 0);  // large abstracts on both side walls, picture lights above
   art(4.35, 4.443, "S", 0.75, 1.0, 1.48, 1);
   ac(2.945, 1.2, "E", 2.38);  // split AC high on the window wall, between the south wall and the left curtain, under the cove
-  for (const y of [2.0, 3.59]) item(2.94, y, "E", p => { const m = mesh(curtainGeometry(0.5, 2.45), mat.curtain, p.g); m.position.set(0, 1.27, 0.06); });
+  for (const y of [1.70, 3.29]) item(2.94, y, "E", p => { const m = mesh(curtainGeometry(0.5, 2.45), mat.curtain, p.g); m.position.set(0, 1.27, 0.006); });
 
   // --- Master bedroom and bathroom: the same pieces in both plan versions, placed per version -----
   // King bed, built against its headboard wall: w wide, l long from the wall (headboard included),

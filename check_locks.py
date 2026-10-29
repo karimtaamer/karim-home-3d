@@ -61,7 +61,7 @@ def check(lock, files):
     """Problems (strings) with one lock; files: path -> text."""
     near = lambda a, b: a is not None and abs(a - b) <= lock.get("tol", 0.003)
     i = lock["id"]
-    if i in ("kc-column-face", "kv-column-face", "ng-column-face"):  # Main / Karim's / Nagham's (each its own plan since 26 Oct 2026)
+    if i in ("kc-column-face", "kv-column-face"):  # Main / Karim's version (its own plan since 26 Oct 2026)
         m = _model(files[lock["model"]])
         lo, hi = lock["y_range"]
         xs = [x for w in m["walls"] for ring in [w["outer"], *w.get("holes", [])] for x, y in ring

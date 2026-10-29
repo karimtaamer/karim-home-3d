@@ -117,7 +117,7 @@ export function furnish(scene, M, mat, version = "main") {
   const REMOVED = new Set();
   if (version === "karims-version") REMOVED.add("20.7945,2.45,S");  // reception corner side table: the flip desk stands there (Karim, 27 Oct)
   // Move and Resize (move_tool.py) for pieces a loop or shared code places, which have no line of their own to change:
-  // "x,y,facing" as the code places them -> [x, y, across, out(, up, lift)] where they go instead (up: height scale,
+  // "x,y,facing" as the code places them -> [x, y, across, out(, up, lift(, turn))] where they go instead (up: height scale,
   // lift: metres raised), one version-guarded line each.
   // Pieces placed at the same x, y, facing (the dining table, its rug and the pendant over it): the nth one placed is
   // also "x,y,facing#n" (twin), so one of them can be moved or deleted on its own.
@@ -176,6 +176,7 @@ export function furnish(scene, M, mat, version = "main") {
     if (moved) {
       g.position.set(moved[0], levelAt(moved[0], moved[1]) + (moved[5] ?? 0), -moved[1]);
       g.scale.set(moved[2], moved[4] ?? 1, moved[3]);
+      if (moved[6] != null) g.rotation.y = moved[6];  // turned (rotation.y): one of a loop's pieces turned on its own (e2e J101 r3)
       g.userData.piece.moved = true;
     }
     if (REMOVED.has(`${key}#${twin}`) || REMOVED.has(key)) { g.userData.piece.removed = true; return g; }  // built, never added to the scene
@@ -446,7 +447,9 @@ export function furnish(scene, M, mat, version = "main") {
     cushion(3.55, Y0 + 0.42, mat.linenBlush, false); cushion(X0 + 0.42, 1.25, mat.linenSage, true);
     cushion(X0 + 0.42, 2.45, mat.linenSage, true); cushion(X0 + 0.42, 3.05, mat.linenSlate, true); cushion(X0 + 0.42, 3.6, mat.cushionMustard, true);
     B(X1 + 0.05, X1 + 0.55, Y0 + 0.4, YC - 0.05, 0.44, 0.47, mat.linenSage, 0.012);  // sage throw over the chaise
-    B(2.937, X1, 4.219, 4.442, 0, 0.55, mat.walnut, 0.02);  // DWG end table between the arm and the north wall
+    p.label("end table", q => {  // DWG end table between the arm and the north wall (a part of its own: e2e J050 / J108)
+      q.box(2.937, X1, 0, 0.55, -4.442, -4.219, mat.walnut, 0.02);
+    });
   });
   rug(3.75, 0.95, 5.55, 3.95, mat.rug);  // cream shaggy rug
   item(2.94, 2.8, "E", p => p.box(-1.75, 1.75, 2.5, 2.52, 0.02, 0.2, mat.ledStrip));  // cove light over the window wall
@@ -772,7 +775,9 @@ export function furnish(scene, M, mat, version = "main") {
       p.model("models/plant-vase.glb", null, -0.84, 1.77, 0.08, { height: 0.3, cross: true });
       p.model("models/plant-vase.glb", null, -0.58, 0.75, 0.1, { height: 0.4, cross: true });  // on the top, by the column
       p.model("models/mbath-bottles.glb", null, 0.62, 0.75, 0.06, { width: 0.28 });
-      p.pebble(["kareems-changes", "karims-version"].includes(version) || version === "naghams-changes" ? 0.16265 : -0.05, 1.35, 1.1, 0.75, 0.012, mat.mirror, true);   // 1.10 wide x 0.75 tall, 0.98 to 1.73; centred between wardrobe edge and shelf column edge
+      p.label("pebble mirror", q => {  // a part of its own: Move and Resize picks it (e2e J073 / J126)
+        q.pebble(["kareems-changes", "karims-version"].includes(version) || version === "naghams-changes" ? 0.16265 : -0.05, 1.35, 1.1, 0.75, 0.012, mat.mirror, true);   // 1.10 wide x 0.75 tall, 0.98 to 1.73; centred between wardrobe edge and shelf column edge
+      });
       p.cyl(-0.05, 0.25, 0.225, 0, 0.43, mat.boucle, 32);           // pouf 45 x 45, pushed in to 2.5 cm off the back panel
       p.cyl(-0.05, 0.25, 0.215, 0.43, 0.45, mat.boucle, 32, 0.225);
     });
@@ -792,7 +797,9 @@ export function furnish(scene, M, mat, version = "main") {
     // Kareem's Changes: the bathroom door sits 0.16 further east, so the vanity runs the whole wall (1.185, south wall
     // to the partition) and is 0.60 deep; the backlit mirror becomes a 0.80 x 0.75 mirrored medicine cabinet, 0.30
     // out from the battens, bottom 1.32 (0.46 over the counter), three glass shelves, all centred on the bowl.
-    if (["kareems-changes", "karims-version"].includes(version)) item(0.556, 6.7276, "E", vanity(1.185, true, 0.6, medCabinet(), heaterVanity));  // centre DWG y -114.8856
+    if (["kareems-changes", "karims-version"].includes(version)) item(0.556, 6.7276, "E", vanity(1.185, true, 0.6, p => p.label("medicine cabinet", q => {  // centre DWG y -114.8856
+      medCabinet()(q);  // a part of its own: Move and Resize picks it (e2e J123)
+    }), heaterVanity));
     else item(0.556, 6.7435, "E", vanity(1.153, true));  // centre DWG y -114.8697, bowl, mixer and mirror on it
     item(1.8037, 9.0201, "S", p => {  // WC bay 1.416..2.192 (local +x east)
       const h = 0.3878, d = 0.3, top = 1.12;
@@ -1069,12 +1076,14 @@ export function furnish(scene, M, mat, version = "main") {
     const basin = p.cyl(0, 0.3, 0.2, 0.85, 0.96, mat.ceramic, 48, 0.15); basin.scale.x = 1.5;  // wide low vessel
     p.box(-0.02, 0.02, 1.02, 1.05, 0.03, 0.18, mat.brass, 0.008);  // wall spout and two handles
     for (const x of [-0.11, 0.11]) { const k = p.cyl(x, 0.07, 0.022, 1.0, 1.06, mat.brass, 16); k.rotation.x = Math.PI / 2; k.position.y = 1.035; }
-    const rr = (x0, x1, y0, y1, r, z0, d, m) => {
-      const o = mesh(new THREE.ExtrudeGeometry(roundRect(new THREE.Shape(), x0, x1, y0, y1, r), { depth: d, bevelEnabled: false, curveSegments: 16 }), m, p.g);
+    const rr = (g, x0, x1, y0, y1, r, z0, d, m) => {
+      const o = mesh(new THREE.ExtrudeGeometry(roundRect(new THREE.Shape(), x0, x1, y0, y1, r), { depth: d, bevelEnabled: false, curveSegments: 16 }), m, g);
       o.position.z = z0;
     };
-    rr(-0.52, 0.52, 1.12, 2.0, 0.14, 0.03, 0.025, mat.bronze);  // rounded mirror, thin dark frame
-    rr(-0.5, 0.5, 1.14, 1.98, 0.12, 0.04, 0.02, mat.mirror);
+    p.label("rounded mirror", q => {  // a part of its own: Move and Resize picks it (e2e J259)
+      rr(q.g, -0.52, 0.52, 1.12, 2.0, 0.14, 0.03, 0.025, mat.bronze);  // rounded mirror, thin dark frame
+      rr(q.g, -0.5, 0.5, 1.14, 1.98, 0.12, 0.04, 0.02, mat.mirror);
+    });
     p.cyl(0.55, 0.3, 0.05, 0.85, 1.05, mat.planter, 16, 0.04);  // styling: vase, bottles
     for (const [x, h] of [[-0.45, 0.16], [-0.52, 0.12], [-0.6, 0.18]]) p.cyl(x, 0.3, 0.025, 0.85, 0.85 + h, mat.ceramic, 12);
   });
@@ -1210,10 +1219,12 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(-nw, nw, N1, N1 + f, 0.02, D, fin);                        // niche top
       // Countertop microwave 55.3 W x 32.6 H x 44 D on the shelf, centred, front 1.5 behind the frame face.
       const mw = 0.2765, mz = D - 0.015;
-      p.box(-mw, mw, N0, N0 + MH, mz - 0.44, mz - 0.02, mat.blackSteel);            // cabinet
-      p.box(-mw, mw, N0, N0 + MH, mz - 0.02, mz, mat.blackGlass);                   // door
-      p.box(-mw + 0.03, mw - 0.16, N0 + 0.03, N0 + MH - 0.03, mz, mz + 0.002, mat.smokedGlass);
-      p.box(mw - 0.13, mw - 0.03, N0 + MH - 0.05, N0 + MH - 0.035, mz, mz + 0.002, mat.ledStrip);  // display
+      p.label("countertop microwave", p => {  // a part of its own: Move and Resize picks it (e2e J055 / J112)
+        p.box(-mw, mw, N0, N0 + MH, mz - 0.44, mz - 0.02, mat.blackSteel);            // cabinet
+        p.box(-mw, mw, N0, N0 + MH, mz - 0.02, mz, mat.blackGlass);                   // door
+        p.box(-mw + 0.03, mw - 0.16, N0 + 0.03, N0 + MH - 0.03, mz, mz + 0.002, mat.smokedGlass);
+        p.box(mw - 0.13, mw - 0.03, N0 + MH - 0.05, N0 + MH - 0.035, mz, mz + 0.002, mat.ledStrip);  // display
+      });
       for (const y of [O0, O1, N1]) p.box(-w, w, y - 0.002, y + 0.002, D, D + 0.003, shadowGap);
       doors(p, -w, w, N1, 2.25, 1);                   // lift-up flaps to the ceiling,
       doors(p, -w, w, 2.25, H, 1);                    // jointed in line with the oak uppers
@@ -1457,14 +1468,18 @@ export function furnish(scene, M, mat, version = "main") {
     mesh(new THREE.ShapeGeometry(rounded(mx0 - 0.025, mx1 + 0.025, 0.725, 1.975, 0.105)), mat.ledStrip, p.g, false).position.z = 0.008;
     const glass = mesh(new THREE.ExtrudeGeometry(rounded(mx0, mx1, 0.75, 1.95, 0.08), { depth: 0.01, bevelEnabled: false, curveSegments: 12 }), mat.mirror, p.g, false);
     glass.position.z = 0.012;
-    // Three brass hooks beside it, a linen scarf on the first and a bag on the third.
-    for (const x of [10.95, 11.07, 11.19]) {
-      B(x - 0.007, x + 0.007, W, W + 0.06, 1.6, 1.614, mat.brass);
-      B(x - 0.007, x + 0.007, W + 0.05, W + 0.064, 1.6, 1.64, mat.brass, 0.005);
-    }
-    B(10.89, 11.01, W + 0.03, W + 0.06, 1.0, 1.61, mat.oatmeal, 0.015);
-    B(11.08, 11.3, W + 0.03, W + 0.11, 1.2, 1.4, mat.walnut, 0.02);  // leather bag on the third
-    for (const x of [11.12, 11.26]) B(x - 0.006, x + 0.006, W + 0.065, W + 0.075, 1.4, 1.6, mat.walnut);
+    // Three brass hooks beside it, a linen scarf on the first and a bag on the third: a part of their own, so Move and
+    // Resize picks them (e2e J086 / J172).
+    p.label("three brass hooks", q => {
+      const B = (x0, x1, y0, y1, h0, h1, m, r = 0) => q.box(-x1, -x0, h0, h1, y0 - W, y1 - W, m, r);
+      for (const x of [10.95, 11.07, 11.19]) {
+        B(x - 0.007, x + 0.007, W, W + 0.06, 1.6, 1.614, mat.brass);
+        B(x - 0.007, x + 0.007, W + 0.05, W + 0.064, 1.6, 1.64, mat.brass, 0.005);
+      }
+      B(10.89, 11.01, W + 0.03, W + 0.06, 1.0, 1.61, mat.oatmeal, 0.015);
+      B(11.08, 11.3, W + 0.03, W + 0.11, 1.2, 1.4, mat.walnut, 0.02);  // leather bag on the third
+      for (const x of [11.12, 11.26]) B(x - 0.006, x + 0.006, W + 0.065, W + 0.075, 1.4, 1.6, mat.walnut);
+    });
   });
   plant(10.13, 3.89, 0.5, 0.07, 0.9);  // cream vase of olive branches on the column piece
   // Facing the front door, as the entrance render: tall pebble mirror (0.78 x 1.55, thin oak frame, warm LED glow
@@ -1606,8 +1621,10 @@ export function furnish(scene, M, mat, version = "main") {
     }
     // TV centred over the niche; on Kareem's it sits in the opening so the face reads flat with the plaster.
     const z0 = KC ? D1 - TD : D1, z1 = KC ? D1 : D1 + TD;
-    p.box(tvX0, tvX1, tvY0, tvY1, z0, z1, mat.blackSteel);
-    p.face(tvX0 + 0.01, tvX1 - 0.01, tvY0 + 0.01, tvY1 - 0.01, z1 + 0.001, mat.screen);
+    p.label("TV", q => {  // a part of its own: Move and Resize picks it (e2e J031 / J190)
+      q.box(tvX0, tvX1, tvY0, tvY1, z0, z1, mat.blackSteel);
+      q.face(tvX0 + 0.01, tvX1 - 0.01, tvY0 + 0.01, tvY1 - 0.01, z1 + 0.001, mat.screen);
+    });
     p.box(-1.72, edge - splay, 0, 0.08, D0, D0 + 0.012, mat.oakVeneer);
     p.box(edge, 1.72, 0, 0.08, D1, D1 + 0.012, mat.oakVeneer);
     const skirt = p.box(-L / 2, L / 2, 0, 0.08, -0.006, 0.006, mat.oakVeneer);

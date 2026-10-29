@@ -73,7 +73,7 @@ import argparse, json, math, sys
 from collections import Counter
 
 from ezdxf import recover
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString, Point, box as shapely_box
 from shapely.ops import unary_union
 
 WINDOW_LAYER, WALL_LAYER, DOOR_LAYER = "Windows", "1wall", "3door"
@@ -323,8 +323,14 @@ def ext_of(e):
     return (x.extmin.x, x.extmin.y, x.extmax.x, x.extmax.y)
 
 
+RUGS = []  # the rugs' plan boxes (DXF frame, from --soft): a rug lies under pieces, it doesn't carry them
+
+
 def piece_members(msp, outline, m=0.08):
-    """The outline plus every furniture entity inside it whose smallest enclosing outline is this one."""
+    """The outline plus every furniture entity inside it whose smallest enclosing outline is this one. A rug's are only
+    its own lines: the chairs / table drawn on it (outlines or blocks) are pieces of their own (e2e r2: the dining rug)."""
+    if outline.dxf.layer in FURNI and outline.dxftype() == "INSERT":  # a piece drawn as one block (the armchair A49: e2e J263 r3)
+        return [outline], ext_of(outline)
     if outline.dxf.layer not in FURNI or outline.dxftype() != "LWPOLYLINE" or len(outline) < 4:
         raise ValueError(f"{outline.dxf.handle} is not a furniture outline (a {outline.dxf.layer} {outline.dxftype()}); "
                          "pick the piece's outline polyline (4+ points) from dxf_query")
@@ -334,12 +340,17 @@ def piece_members(msp, outline, m=0.08):
     furni = [(e, b) for e, b in furni if b]
     outlines = [(e, b) for e, b in furni if e.dxftype() == "LWPOLYLINE" and len(e) >= 4 and area(b) >= 0.04]
     ob = ext_of(outline)
+    rug = any(all(abs(ob[i] - t[i]) < 0.06 for i in range(4)) for t in RUGS)
     out = [outline]
     def clips(a_, c_):  # piece a_ only pushes into the edge of c_ (a table run into the bed), not nested / standing on it
         ov = max(0, min(a_[2], c_[2]) - max(a_[0], c_[0])) * max(0, min(a_[3], c_[3]) - max(a_[1], c_[1]))
         return area(a_) < area(c_) and 0 < ov < 0.5 * area(a_) and not inside(a_, c_) and not inside(c_, a_)
     for e, b in furni:
-        if e is outline or not inside(b, ob):
+        # its middle inside the outline too: the 8 cm slack took a 6 cm box standing 3.5 cm off a towel rail's outline
+        # along with it (e2e J303-b r3)
+        if e is outline or not inside(b, ob) or not (ob[0] <= (b[0] + b[2]) / 2 <= ob[2] and ob[1] <= (b[1] + b[3]) / 2 <= ob[3]):
+            continue
+        if rug and (e.dxftype() == "INSERT" or (e.dxftype() == "LWPOLYLINE" and len(e) >= 4 and area(b) >= 0.04)):
             continue
         owners = [(area(b2), o, b2) for o, b2 in outlines if o is not e and inside(b, b2) and area(b2) >= area(b) * 1.05]
         # A line inside both a piece and one that clips its edge is the first piece's (the bed's pillow line, not the table's).
@@ -387,6 +398,31 @@ def room_around(msp, doc, h, soft_b):
     mine = {x.dxf.handle for x in piece_members(msp, e)[0]}
     walls = [w for w in msp.query("LINE") if w.dxf.layer == "1wall"]
     return free_span(msp, h, b, walls, [] if is_soft(b) else top, mine, is_soft, inside)
+
+
+def wall_depth(msp, b, m=0.003):
+    """How far (m) plan box b (DXF frame) reaches past the deepest 1wall face line that crosses it: for a face along x,
+    the shorter of the box's two parts either side of it (along y, the same across). A slanted face counts as deep as
+    the box's smaller side."""
+    x0, y0, x1, y1 = b[0] + m, b[1] + m, b[2] - m, b[3] - m
+    if x1 <= x0 or y1 <= y0:
+        return 0.0
+    deep = 0.0
+    for w in msp.query("LINE"):
+        if w.dxf.layer != "1wall":
+            continue
+        (ax, ay), (bx, by) = (w.dxf.start.x, w.dxf.start.y), (w.dxf.end.x, w.dxf.end.y)
+        cut = LineString([(ax, ay), (bx, by)]).intersection(shapely_box(x0, y0, x1, y1))
+        if cut.is_empty or cut.length <= 0.02:
+            continue
+        if abs(by - ay) < 1e-3:
+            d = min(ay - y0, y1 - ay)
+        elif abs(bx - ax) < 1e-3:
+            d = min(ax - x0, x1 - ax)
+        else:
+            d = min(x1 - x0, y1 - y0)
+        deep = max(deep, d)
+    return deep
 
 
 def clashes(msp, doc, handles, soft, ox, oy, soft_h=(), m=0.025):
@@ -1320,6 +1356,7 @@ def edit(a):
 
     soft = [tuple(float(v) for v in t.split(",")) for t in (a.soft or "").split(";") if t.strip()]
     soft = [(t[0] + ox, t[1] + oy, t[2] + ox, t[3] + oy) for t in soft]
+    RUGS[:] = soft
     pieces0 = {}  # furniture outlines touched: their extent before
 
     vmap = {}  # virtual handle "INSERT/ENTITY" -> the real one, once that block is exploded
@@ -1363,8 +1400,8 @@ def edit(a):
         if e is None or not e.is_alive or e.get_layout() is None or e.get_layout().name != msp.name:
             raise ValueError(f"no model-space entity with handle {h}")
         layers_hit.add(e.dxf.layer)
-        if h not in pieces0 and e.dxf.layer in FURNI and e.dxftype() == "LWPOLYLINE" and len(e) >= 4:
-            pieces0[h] = ext_of(e)
+        if h not in pieces0 and e.dxf.layer in FURNI and (e.dxftype() == "LWPOLYLINE" and len(e) >= 4 or e.dxftype() == "INSERT"):
+            pieces0[h] = ext_of(e)  # a block too: its net move is reported like an outline's (e2e J263 r3)
         return e
 
     def attrs(layer):
@@ -1374,6 +1411,18 @@ def edit(a):
         if layer not in doc.layers:
             doc.layers.add(layer)
         return {"layer": layer}
+
+    clash0 = {}  # what each piece the ops touch already overlapped before them
+    for h in {h for o in ops if isinstance(o, dict) for h in ([o.get("handle")] + list(o.get("handles") or [])) if isinstance(h, str) and "/" not in h}:
+        e = doc.entitydb.get(h)
+        if e is None or not e.is_alive or e.dxf.layer not in FURNI or not (e.dxftype() == "INSERT" or e.dxftype() == "LWPOLYLINE" and len(e) >= 4):
+            continue
+        try:
+            b0_ = ext_of(e)
+            sh0 = {h} if b0_ and any(all(abs(b0_[i] - t[i]) < 0.06 for i in range(4)) for t in soft) else set()
+            clash0[h] = {c["with"] for c in clashes(msp, doc, [h], soft, ox, oy, sh0) if not c.get("free")}
+        except Exception:
+            pass
 
     for o in ops:
         k = o.get("op")
@@ -1510,11 +1559,12 @@ def edit(a):
             moved[-1]["new_ends"] = [e0, e1]
             log.append(f"window of {len(ents)} lines moved by ({r(dx)}, {r(dy)}), width {r(w)} -> {r(w2)}; "
                        f"it now runs {e0} to {e1}, centre {P(c_new)}")
-        elif k == "move_piece":
+        elif k == "move_piece":  # an outline and what's drawn inside it, or a furniture block (INSERT) on its own
             ents, _ = piece_members(msp, get(o["handle"]))
             dx, dy = float(o.get("dx", 0)), float(o.get("dy", 0))
             h_ = ents[0].dxf.handle
             hit0 = {c["with"] for c in clashes(msp, doc, [h_], soft, 0, 0, m=0.003) if not c.get("free")}
+            deep0 = wall_depth(msp, ext_of(ents[0]))
             for e in ents:
                 touched.add(e.dxf.handle)
                 e.translate(dx, dy, 0)
@@ -1543,6 +1593,15 @@ def edit(a):
                             dx = r(dx + s_ * back)
                         else:
                             dy = r(dy + s_ * back)
+            elif o.get("allow_overlap"):  # Move and Resize: overlaps stay, but say which walls it newly goes into
+                into = sorted({c["with"] for c in clashes(msp, doc, [h_], soft, 0, 0, m=0.003)
+                               if not c.get("free") and c["with"].startswith("wall ") and c["with"] not in hit0})
+                # only when it goes deeper into the walls than it already sat: a built-in drawn into its recess's walls
+                # slides along them (the entrance console: e2e J317 r2), a piece that was clear doesn't go through one
+                if into and wall_depth(msp, ext_of(ents[0])) <= deep0 + 0.01:
+                    into = []
+                if into:
+                    note = f" [INTO {', '.join(into)}]"
             b = ext_of(ents[0])
             log.append(f"piece {o['handle']} ({len(ents)} entities: {[e.dxf.handle for e in ents]}) moved by ({dx}, {dy}); "
                        f"outline now x {r(b[0] - ox)}..{r(b[2] - ox)}, y {r(b[1] - oy)}..{r(b[3] - oy)}" + note)
@@ -1816,7 +1875,11 @@ def edit(a):
                 cleared = clear_gap(msp, q, u, n, t0, t1, n0, n1)
                 close_gap(msp, q, u, n, t0, t1, n0, n1)
                 w = float(o.get("width") or (t1 - t0))
-                mid = (t0 + t1) / 2 + float(o.get("shift") or 0)
+                if o.get("centre"):  # an absolute new centre (plan [x, y]): Move's slides aim at where the 3D gap goes (e2e J155)
+                    c_ = W(o["centre"])
+                    mid = (c_[0] - q[0]) * u[0] + (c_[1] - q[1]) * u[1]
+                else:
+                    mid = (t0 + t1) / 2 + float(o.get("shift") or 0)
                 a_, b_ = mid - w / 2, mid + w / 2
             drawn = {}
             if to != "wall":
@@ -1871,12 +1934,15 @@ def edit(a):
         b1 = ext_of(e) if e is not None and e.is_alive else None
         if b0 and b1 != b0:
             B = lambda b: b and [r(b[0] - ox), r(b[1] - oy), r(b[2] - ox), r(b[3] - oy)]
-            pieces.append({"handle": h, "old": B(b0), "new": B(b1)})
+            pieces.append({"handle": h, "old": B(b0), "new": B(b1), **({"block": True} if e is not None and e.dxftype() == "INSERT" else {})})
     check = [p_["handle"] for p_ in pieces if p_["new"]] + [
         h for h in new if (e := doc.entitydb.get(h)) is not None and e.dxf.layer in FURNI
         and e.dxftype() == "LWPOLYLINE" and len(e) >= 4]
     soft_h = {h for h, b0 in pieces0.items() if b0 and any(all(abs(b0[i] - t[i]) < 0.06 for i in range(4)) for t in soft)}
     clash = clashes(msp, doc, check, soft, ox, oy, soft_h) if check else []
+    for c in clash:  # an overlap it already had before this edit isn't one it "now runs into" (e2e J121 / J137 / J262 / J298 r3)
+        if not c.get("free") and c["with"] in clash0.get(c["piece"], ()):
+            c["was"] = True
     # New wall lines: what they run through, whether they join a wall, and the walkway left beside them.
     from shapely.geometry import box as _sbox
     nw_ = [doc.entitydb.get(h) for h in new]

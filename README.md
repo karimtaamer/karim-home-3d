@@ -655,7 +655,7 @@ rebuilds, so the 2D and the 3D always agree.
 - **Pieces:** tap to pick (on the drawing, what stands on the floor wins over what hangs above it; **Tab** cycles through
   everything under the tap). Drag to move; **X** / **Y** lock the drag to that axis (again: free), **Shift**-drag goes
   straight along whichever axis it mostly runs; arrows nudge 1 cm (Shift 10 cm). Edge / corner dots resize, the round
-  dot turns (R = 90°). **Smart guides** (like Figma's): while dragging, the piece snaps within 6 px to a nearby piece's
+  dot turns (R = 90°; a rug has no round dot and turns a quarter at a time with R, its width and depth swapping). **Smart guides** (like Figma's): while dragging, the piece snaps within 6 px to a nearby piece's
   centre line (pink line, × on each centre) or to the middle of its gap along x or y, between two pieces, a piece and
   a wall, or two walls (pink gap lines with the equal sizes); a drilled-in part does the same with the parts beside it
   and its piece's box; a wall the piece is sunk into (over 2 cm) gives no gap. The name label and chips hide mid-drag

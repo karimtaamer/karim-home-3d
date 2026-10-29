@@ -129,6 +129,25 @@ class Undo(Sandbox):
         self.assertEqual(self.synced[-1][F].decode(), b)
 
 
+class UndoStack(Sandbox):
+    """Undo, Undo takes back the change before the last one; it used to undo the Undo (re-apply it: e2e J244 / J277)."""
+    def test_second_undo_takes_back_the_change_before(self):
+        a, b = furnish(CHAIR), furnish(BLACK)
+        c = b.replace("mat.linenSlate;  // frame", 'version === "kareems-changes" ? mat.chairBlackFabric : mat.linenSlate;  // frame')
+        self.deploy(a)
+        self.edit(b, "black frame")
+        self.edit(c, "black cushions")
+        edit_ai.undo({"version": V})
+        self.assertEqual(self.synced[-1][F].decode(), b)
+        self.assertTrue(edit_ai.patches(V)["undo"])  # the black frame is still there to undo
+        edit_ai.undo({"version": V})
+        self.assertEqual(self.synced[-1][F].decode(), a)
+        self.assertNotIn(F, edit_ai.patches(V)["files"])
+        self.assertFalse(edit_ai.patches(V)["undo"])  # nothing left: no Undo offered (it used to redo)
+        with self.assertRaises(ValueError):
+            edit_ai.undo({"version": V})
+
+
 class VersionIsolation(Sandbox):
     """Each version has its own furnish-<v>.js / materials-<v>.js: an edit in one never reaches another."""
     def test_own_file_names(self):
@@ -175,6 +194,79 @@ class VersionScope(unittest.TestCase):
         f1 = f0.replace("  rug(17.9, 2.906", f'  if (version === "{V}") {{\n    rug(1, 1, 2, 2);\n  }}\n  rug(17.9, 2.906', 1)
         self.assertNotEqual(f0, f1)
         self.assertEqual(edit_ai.other_versions_changed(f0, f1, V), [])
+
+
+class PieceChecks(unittest.TestCase):
+    """The deterministic wrong-piece / wrong-way checks (e2e r2 J244 J264 J266), on the real version files."""
+    def check(self, v, message, old, new, ctx=None):
+        ws = edit_ai.Workspace(v)
+        ws.ctx = ctx or {}
+        f0 = ws.text("furnish.js")
+        self.assertEqual(f0.count(old), 1, old)
+        return edit_ai.piece_checks(ws, message, f0, f0.replace(old, new), "")
+
+    def test_toward_the_shower_the_wrong_way_is_sent_back(self):  # J264: the shower is north of the radiator
+        out = self.check("naghams-changes", "Move the towel radiator 10 cm toward the shower",
+                         "item(2.192, 7.6632", "item(2.192, 7.5632")
+        self.assertTrue(out and out.startswith("Check the direction"), out)
+        self.assertIsNone(self.check("naghams-changes", "Move the towel radiator 10 cm toward the shower",
+                                     "item(2.192, 7.6632", "item(2.192, 7.7632"))
+
+    def test_the_named_piece_wins_over_a_similar_one(self):  # J266: "flip desk" is the reception one, not the fold-down desk
+        out = self.check("karims-version", "Widen flip desk 5 cm", "q.box(-0.42, 0.42, 0.75, 1.425, 0, 0.025, mat.limewash);",
+                         "q.box(-0.445, 0.445, 0.75, 1.425, 0, 0.025, mat.limewash);")
+        self.assertTrue(out and out.startswith("Check the piece") and "flip desk" in out, out)
+
+    def test_a_piece_in_the_ring_named_by_one_word(self):  # J244: the buffet, not the vanity behind the same wall
+        out = self.check("karims-version", "Shrink the buffet niche", "item(14.66, 7.75", "item(14.66, 8.035",
+                         {"highlightBox": [14.37, 6.5, 15.81, 9.5]})
+        self.assertTrue(out and "buffet" in out, out)
+
+    def test_the_right_piece_passes(self):
+        self.assertIsNone(self.check("karims-version", "Move the sofa 20 cm west", "item(21.027, version", "item(20.827, version",
+                                     {"highlightBox": [19.9, 3.3, 21.2, 5.7]}))
+
+
+    def test_the_landmark_isnt_the_piece(self):  # J235 / J250 r3: "closer to the table" names the table only as a landmark
+        self.assertIsNone(self.check("naghams-changes", "Move the armchair next to the side table, keep the table where it is",
+                                     '? 18.33 : 19.1, version', '? 18.33 : 19.4, version'))
+        self.assertIsNone(self.check("naghams-changes", "Move each dining chair 5 cm closer to the dining table, keep the table",
+                                     'item(x, 6.55, "N", p => chair(p));', 'item(x, 6.6, "N", p => chair(p));'))
+
+
+class Round3(unittest.TestCase):
+    """e2e round 3: dxf_edit op shapes, the reviewer's diff, Arabic claims."""
+    def test_op_shorthand_and_zero_moves(self):  # J213 / J218 / J206
+        ops, dropped = edit_ai.norm_ops([{"delete": ["1A"]}, {"type": "move_piece", "handle": "2B", "dx": 0.1, "dy": 0},
+                                         {"handle": "3C", "dx": 0, "dy": -0.1}, {"handle": "4D", "grow": {"E": 0.1}},
+                                         {"op": "move", "handles": ["A49"], "dx": 0, "dy": 0}, {"delete": []}])
+        self.assertEqual([o["op"] for o in ops], ["delete", "move_piece", "move_piece", "resize_piece"])
+        self.assertEqual(ops[0]["handles"], ["1A"])
+        self.assertEqual(len(dropped), 2)
+
+    def test_review_diff_drops_failed_and_discarded_ops(self):  # J207 / J215 / J222
+        ws = SimpleNamespace(cfg={"dxf": "d", "model": "m", "drawing": "w", "tour": "t"}, changed=set(), orig={},
+                             pieces={"2C7C": [1, 1, 2, 2]}, pieces_now={"2C7C": [0.8, 1, 1.8, 2]})
+        trace = [{"tool": "dxf_edit", "args": "wrong way", "out": "{}"}, {"tool": "discard", "args": "", "out": ""},
+                 {"tool": "dxf_edit", "args": "failed door", "out": "nothing changed: no arc"},
+                 {"tool": "dxf_edit", "args": "the move", "out": "{}"}]
+        d = edit_ai.edit_diff(ws, trace)
+        self.assertIn("the move", d)
+        self.assertNotIn("wrong way", d)
+        self.assertNotIn("failed door", d)
+        self.assertIn("2C7C: x 1..2, y 1..2 -> x 0.8..1.8", d)
+
+    def test_arabic_claim(self):  # J223
+        self.assertTrue(edit_ai.AR_CLAIM.search("رجّعت عمق خزانة المراية لـ٣٠ سم"))
+        self.assertFalse(edit_ai.AR_CLAIM.search("ماغيّرتش حاجة"))
+
+
+class DrawingSame(unittest.TestCase):
+    def test_same_strokes_in_another_order(self):  # J229: a DXF rewritten with no net op isn't a change
+        a = '{"strokes": {"#f00": [[0, 0, 1, 1], [2, 2, 3, 3]]}, "texts": []}'
+        b = '{"strokes": {"#f00": [[2, 2, 3, 3.0001], [0, 0, 1, 1]]}, "texts": []}'
+        self.assertTrue(edit_ai.drawing_same(a, b))
+        self.assertFalse(edit_ai.drawing_same(a, '{"strokes": {"#f00": [[0, 0, 1, 1]]}, "texts": []}'))
 
 
 if __name__ == "__main__":

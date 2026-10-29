@@ -227,6 +227,40 @@ class PieceChecks(unittest.TestCase):
                                      {"highlightBox": [19.9, 3.3, 21.2, 5.7]}))
 
 
+    def test_the_landmark_isnt_the_piece(self):  # J235 / J250 r3: "closer to the table" names the table only as a landmark
+        self.assertIsNone(self.check("naghams-changes", "Move the armchair next to the side table, keep the table where it is",
+                                     '? 18.33 : 19.1, version', '? 18.33 : 19.4, version'))
+        self.assertIsNone(self.check("naghams-changes", "Move each dining chair 5 cm closer to the dining table, keep the table",
+                                     'item(x, 6.55, "N", p => chair(p));', 'item(x, 6.6, "N", p => chair(p));'))
+
+
+class Round3(unittest.TestCase):
+    """e2e round 3: dxf_edit op shapes, the reviewer's diff, Arabic claims."""
+    def test_op_shorthand_and_zero_moves(self):  # J213 / J218 / J206
+        ops, dropped = edit_ai.norm_ops([{"delete": ["1A"]}, {"type": "move_piece", "handle": "2B", "dx": 0.1, "dy": 0},
+                                         {"handle": "3C", "dx": 0, "dy": -0.1}, {"handle": "4D", "grow": {"E": 0.1}},
+                                         {"op": "move", "handles": ["A49"], "dx": 0, "dy": 0}, {"delete": []}])
+        self.assertEqual([o["op"] for o in ops], ["delete", "move_piece", "move_piece", "resize_piece"])
+        self.assertEqual(ops[0]["handles"], ["1A"])
+        self.assertEqual(len(dropped), 2)
+
+    def test_review_diff_drops_failed_and_discarded_ops(self):  # J207 / J215 / J222
+        ws = SimpleNamespace(cfg={"dxf": "d", "model": "m", "drawing": "w", "tour": "t"}, changed=set(), orig={},
+                             pieces={"2C7C": [1, 1, 2, 2]}, pieces_now={"2C7C": [0.8, 1, 1.8, 2]})
+        trace = [{"tool": "dxf_edit", "args": "wrong way", "out": "{}"}, {"tool": "discard", "args": "", "out": ""},
+                 {"tool": "dxf_edit", "args": "failed door", "out": "nothing changed: no arc"},
+                 {"tool": "dxf_edit", "args": "the move", "out": "{}"}]
+        d = edit_ai.edit_diff(ws, trace)
+        self.assertIn("the move", d)
+        self.assertNotIn("wrong way", d)
+        self.assertNotIn("failed door", d)
+        self.assertIn("2C7C: x 1..2, y 1..2 -> x 0.8..1.8", d)
+
+    def test_arabic_claim(self):  # J223
+        self.assertTrue(edit_ai.AR_CLAIM.search("رجّعت عمق خزانة المراية لـ٣٠ سم"))
+        self.assertFalse(edit_ai.AR_CLAIM.search("ماغيّرتش حاجة"))
+
+
 class DrawingSame(unittest.TestCase):
     def test_same_strokes_in_another_order(self):  # J229: a DXF rewritten with no net op isn't a change
         a = '{"strokes": {"#f00": [[0, 0, 1, 1], [2, 2, 3, 3]]}, "texts": []}'

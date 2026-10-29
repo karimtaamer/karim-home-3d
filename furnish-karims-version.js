@@ -117,7 +117,7 @@ export function furnish(scene, M, mat, version = "main") {
   const REMOVED = new Set();
   if (version === "karims-version") REMOVED.add("20.7945,2.45,S");  // reception corner side table: the flip desk stands there (Karim, 27 Oct)
   // Move and Resize (move_tool.py) for pieces a loop or shared code places, which have no line of their own to change:
-  // "x,y,facing" as the code places them -> [x, y, across, out(, up, lift)] where they go instead (up: height scale,
+  // "x,y,facing" as the code places them -> [x, y, across, out(, up, lift(, turn))] where they go instead (up: height scale,
   // lift: metres raised), one version-guarded line each.
   // Pieces placed at the same x, y, facing (the dining table, its rug and the pendant over it): the nth one placed is
   // also "x,y,facing#n" (twin), so one of them can be moved or deleted on its own.
@@ -176,6 +176,7 @@ export function furnish(scene, M, mat, version = "main") {
     if (moved) {
       g.position.set(moved[0], levelAt(moved[0], moved[1]) + (moved[5] ?? 0), -moved[1]);
       g.scale.set(moved[2], moved[4] ?? 1, moved[3]);
+      if (moved[6] != null) g.rotation.y = moved[6];  // turned (rotation.y): one of a loop's pieces turned on its own (e2e J101 r3)
       g.userData.piece.moved = true;
     }
     if (REMOVED.has(`${key}#${twin}`) || REMOVED.has(key)) { g.userData.piece.removed = true; return g; }  // built, never added to the scene

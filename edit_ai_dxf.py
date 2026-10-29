@@ -329,6 +329,8 @@ RUGS = []  # the rugs' plan boxes (DXF frame, from --soft): a rug lies under pie
 def piece_members(msp, outline, m=0.08):
     """The outline plus every furniture entity inside it whose smallest enclosing outline is this one. A rug's are only
     its own lines: the chairs / table drawn on it (outlines or blocks) are pieces of their own (e2e r2: the dining rug)."""
+    if outline.dxf.layer in FURNI and outline.dxftype() == "INSERT":  # a piece drawn as one block (the armchair A49: e2e J263 r3)
+        return [outline], ext_of(outline)
     if outline.dxf.layer not in FURNI or outline.dxftype() != "LWPOLYLINE" or len(outline) < 4:
         raise ValueError(f"{outline.dxf.handle} is not a furniture outline (a {outline.dxf.layer} {outline.dxftype()}); "
                          "pick the piece's outline polyline (4+ points) from dxf_query")
@@ -344,7 +346,9 @@ def piece_members(msp, outline, m=0.08):
         ov = max(0, min(a_[2], c_[2]) - max(a_[0], c_[0])) * max(0, min(a_[3], c_[3]) - max(a_[1], c_[1]))
         return area(a_) < area(c_) and 0 < ov < 0.5 * area(a_) and not inside(a_, c_) and not inside(c_, a_)
     for e, b in furni:
-        if e is outline or not inside(b, ob):
+        # its middle inside the outline too: the 8 cm slack took a 6 cm box standing 3.5 cm off a towel rail's outline
+        # along with it (e2e J303-b r3)
+        if e is outline or not inside(b, ob) or not (ob[0] <= (b[0] + b[2]) / 2 <= ob[2] and ob[1] <= (b[1] + b[3]) / 2 <= ob[3]):
             continue
         if rug and (e.dxftype() == "INSERT" or (e.dxftype() == "LWPOLYLINE" and len(e) >= 4 and area(b) >= 0.04)):
             continue
@@ -1396,8 +1400,8 @@ def edit(a):
         if e is None or not e.is_alive or e.get_layout() is None or e.get_layout().name != msp.name:
             raise ValueError(f"no model-space entity with handle {h}")
         layers_hit.add(e.dxf.layer)
-        if h not in pieces0 and e.dxf.layer in FURNI and e.dxftype() == "LWPOLYLINE" and len(e) >= 4:
-            pieces0[h] = ext_of(e)
+        if h not in pieces0 and e.dxf.layer in FURNI and (e.dxftype() == "LWPOLYLINE" and len(e) >= 4 or e.dxftype() == "INSERT"):
+            pieces0[h] = ext_of(e)  # a block too: its net move is reported like an outline's (e2e J263 r3)
         return e
 
     def attrs(layer):
@@ -1407,6 +1411,18 @@ def edit(a):
         if layer not in doc.layers:
             doc.layers.add(layer)
         return {"layer": layer}
+
+    clash0 = {}  # what each piece the ops touch already overlapped before them
+    for h in {h for o in ops if isinstance(o, dict) for h in ([o.get("handle")] + list(o.get("handles") or [])) if isinstance(h, str) and "/" not in h}:
+        e = doc.entitydb.get(h)
+        if e is None or not e.is_alive or e.dxf.layer not in FURNI or not (e.dxftype() == "INSERT" or e.dxftype() == "LWPOLYLINE" and len(e) >= 4):
+            continue
+        try:
+            b0_ = ext_of(e)
+            sh0 = {h} if b0_ and any(all(abs(b0_[i] - t[i]) < 0.06 for i in range(4)) for t in soft) else set()
+            clash0[h] = {c["with"] for c in clashes(msp, doc, [h], soft, ox, oy, sh0) if not c.get("free")}
+        except Exception:
+            pass
 
     for o in ops:
         k = o.get("op")
@@ -1543,7 +1559,7 @@ def edit(a):
             moved[-1]["new_ends"] = [e0, e1]
             log.append(f"window of {len(ents)} lines moved by ({r(dx)}, {r(dy)}), width {r(w)} -> {r(w2)}; "
                        f"it now runs {e0} to {e1}, centre {P(c_new)}")
-        elif k == "move_piece":
+        elif k == "move_piece":  # an outline and what's drawn inside it, or a furniture block (INSERT) on its own
             ents, _ = piece_members(msp, get(o["handle"]))
             dx, dy = float(o.get("dx", 0)), float(o.get("dy", 0))
             h_ = ents[0].dxf.handle
@@ -1918,12 +1934,15 @@ def edit(a):
         b1 = ext_of(e) if e is not None and e.is_alive else None
         if b0 and b1 != b0:
             B = lambda b: b and [r(b[0] - ox), r(b[1] - oy), r(b[2] - ox), r(b[3] - oy)]
-            pieces.append({"handle": h, "old": B(b0), "new": B(b1)})
+            pieces.append({"handle": h, "old": B(b0), "new": B(b1), **({"block": True} if e is not None and e.dxftype() == "INSERT" else {})})
     check = [p_["handle"] for p_ in pieces if p_["new"]] + [
         h for h in new if (e := doc.entitydb.get(h)) is not None and e.dxf.layer in FURNI
         and e.dxftype() == "LWPOLYLINE" and len(e) >= 4]
     soft_h = {h for h, b0 in pieces0.items() if b0 and any(all(abs(b0[i] - t[i]) < 0.06 for i in range(4)) for t in soft)}
     clash = clashes(msp, doc, check, soft, ox, oy, soft_h) if check else []
+    for c in clash:  # an overlap it already had before this edit isn't one it "now runs into" (e2e J121 / J137 / J262 / J298 r3)
+        if not c.get("free") and c["with"] in clash0.get(c["piece"], ()):
+            c["was"] = True
     # New wall lines: what they run through, whether they join a wall, and the walkway left beside them.
     from shapely.geometry import box as _sbox
     nw_ = [doc.entitydb.get(h) for h in new]

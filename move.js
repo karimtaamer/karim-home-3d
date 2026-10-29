@@ -123,7 +123,7 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
       // the plan boxes of the floor pieces round it: plan lines inside a smaller one are that piece's, not this one's
       others: !near ? [] : root.children.filter(c => c !== item && c.userData.piece && visible(c)).map(planBox)
         .filter(c => c.low < HEAD && c.box[0] < pb.box[2] + 0.3 && c.box[2] > pb.box[0] - 0.3 && c.box[1] < pb.box[3] + 0.3 && c.box[3] > pb.box[1] - 0.3)
-        .map(c => c.box.map(r4)),
+        .map(c => [...c.box.map(r4), r4(c.low), r4(c.high)]),  // + low, high: a 3D clash note (e2e J302 / J305 r3)
     };
     if (host) {
       Object.assign(d, { part: o.userData.label, pos: [r4(o.position.x), r4(o.position.z)], pscale: [r4(o.scale.x), r4(o.scale.z)],
@@ -311,17 +311,30 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
   }
   // As move_tool.py's facing_at(): only a piece placed by item / art / ac / sconce has a facing to turn (a plant, pendant,
   // rug or chair placed by its own helper or a loop: Accept would refuse the turn, and the move with it; e2e J049 / J077 / J101).
-  function hasFacing(o) {
+  // A loop-placed item turns through its MOVED entry where the version's furnish file reads a turn there (moved[6]; e2e J101 r3).
+  const hasFacing = o => !noFacing(o);
+  // Why a piece has no facing to turn (said on R, so it isn't a silent no-op: e2e J077 / J086 / J101 r3), or null.
+  function noFacing(o) {
     const ns = o.userData.piece.lines || [], n = ns[ns.length - 1];  // innermost first: the last is the placing call
-    if (!furnishText || !n) return true;
-    const T = furnishText.split("\n"), L = T[n - 1] || "";
-    if (!/\b(item|art|ac|sconce)\(/.test(L) || /\b(rug|plant|pendant)\(/.test(L) || /\bfor\s*\(/.test(L)) return false;
+    if (!furnishText || !n) return null;
+    const T = furnishText.split("\n"), L = T[n - 1] || "", loopTurn = /\bmoved\[6\]/.test(furnishText);
+    if (/\b(plant|pendant)\(/.test(L)) return "it's round (a plant or a pendant), so it has no front to turn";
+    if (!/\b(item|art|ac|sconce)\(/.test(L) || /\brug\(/.test(L)) return "the code that places it has no facing of its own; Make an Edit can turn it";
+    const loop = "it's placed together with its neighbours by one loop, and this version can't turn one of them on its own; Make an Edit can";
+    if (/\bfor\s*\(/.test(L)) return loopTurn ? null : loop;
     // a loop opened on an earlier line (Nagham's dining chairs: `for (const x of [...]) {` then `item(x, ...)`; e2e J101 r2)
     for (let i = n - 2, d = 0; i >= 0 && i >= n - 40; i--) {
       d += (T[i].match(/}/g) || []).length - (T[i].match(/{/g) || []).length;
-      if (d < 0) { if (/\b(for|while)\s*\(|\.(forEach|map)\(/.test(T[i])) return false; d = 0; }
+      if (d < 0) { if (/\b(for|while)\s*\(|\.(forEach|map)\(/.test(T[i])) return loopTurn ? null : loop; d = 0; }
     }
-    return true;
+    return null;
+  }
+  function whyNoTurn() {
+    if (!sel) return "";
+    if (!isPiece(sel.o)) return `The ${nameOf(sel.o)} is part of the ${nameOf(hostOf(sel.o))}: it turns with it. Pick the whole piece to turn it.`;
+    if (draft && !same(sizeOf(draft.box), sizeOf(sel.box))) return "Turn it in its own change: Accept or Cancel the resize first.";
+    const why = noFacing(sel.o);
+    return why ? `The ${nameOf(sel.o)} can't be turned here: ${why}.` : "";
   }
   const sizeOf = b => [b[2] - b[0], b[3] - b[1]];
   // Plan points p turned by deg about c.
@@ -1004,6 +1017,11 @@ export function createMove({ camera, renderer, scene, root, cutPlane, live, vers
     if ((e.key === "r" || e.key === "R") && !e.metaKey && !e.ctrlKey && !drag && turnable()) {  // 90° clockwise; Shift: anticlockwise
       e.preventDefault();
       setDraft([...shown()], turn() + (e.shiftKey ? 90 : -90));
+      return;
+    }
+    if ((e.key === "r" || e.key === "R") && !e.metaKey && !e.ctrlKey && !drag && sel && !group.length && whyNoTurn()) {
+      e.preventDefault();
+      toast(whyNoTurn());  // not a silent no-op (e2e J077 / J086 / J101 r3)
       return;
     }
     if ((e.key === "PageUp" || e.key === "PageDown") && sel && !drag && !group.length) {  // raise / lower 1 cm (Shift 10); Alt: taller / shorter

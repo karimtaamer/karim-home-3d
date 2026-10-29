@@ -188,5 +188,35 @@ class NaghamsRunsAsMain(unittest.TestCase):
         self.assertEqual(t2.count('version === "karims-version" ? [-1.05'), 1)
 
 
+class Round3(unittest.TestCase):
+    """e2e round 3: loop pieces turn through MOVED, walls stop a piece that was clear, 3D clash notes."""
+    def test_loop_piece_turns_through_its_moved_entry(self):  # J101: Nagham's dining chair, placed by a loop
+        src = (Path(__file__).resolve().parent.parent / "furnish-naghams-changes.js").read_text()
+        self.assertIn("moved[6]", src)
+        piece = {"x": 17.6, "y": 6.55, "facing": "N"}
+        t = MT.set_table(src, piece, 17.6, 6.55, 1, 1, "naghams-changes", "chair", turn=2.3562)
+        self.assertIn('MOVED["17.6,6.55,N"] = [17.6, 6.55, 1, 1, 1, 0, 2.3562];', t)
+        self.assertEqual(MT.table_entry(t, piece, "naghams-changes")[6], 2.3562)
+        back = MT.set_table(t, piece, 17.6, 6.55, 1, 1, "naghams-changes", "chair", turn=-3.14159265)  # facing N again
+        self.assertEqual(back, src)
+
+    def test_into_a_wall_only_from_clear(self):  # J196: a pantry flush on its wall, nudged 1 cm into it
+        wall = [((6.475, 5.0), (6.475, 8.0))]
+        self.assertTrue(MT.into_wall(wall, [6.4747, 6.0, 7.6666, 6.6], [6.4647, 6.0, 7.6566, 6.6]))
+        self.assertFalse(MT.into_wall(wall, [6.4747, 6.0, 7.6666, 6.6], [6.4847, 6.0, 7.6766, 6.6]))  # away from it
+        self.assertFalse(MT.into_wall(wall, [6.3, 6.0, 7.5, 6.6], [6.2, 6.0, 7.4, 6.6]))  # already in it: slides (J317)
+
+    def test_3d_clash_note(self):  # J302: a table made 40 cm longer over its end chair
+        chair = [19.359, 7.32, 19.86, 7.88, 0, 0.9]
+        piece = {"low": 0, "high": 0.75, "others": [chair, [16.5, 6.8, 20.5, 8.4, 0, 0.01]]}
+        self.assertTrue(MT.clash_3d(piece, [17.2, 7.1, 19.6, 8.1], [17.2, 7.1, 20.0, 8.1]))
+        self.assertEqual(MT.clash_3d(piece, [17.2, 7.1, 19.6, 8.1], [17.1, 7.1, 19.5, 8.1]), [])  # away from it
+        self.assertEqual(MT.clash_3d({**piece, "others": [chair[:4]]}, [17.2, 7.1, 19.6, 8.1], [17.2, 7.1, 20.0, 8.1]), [])
+
+    def test_shrink_clash_is_not_new(self):  # J121 / J137: an overlap it already had isn't "now runs into"
+        self.assertEqual(MT.clash_notes({"clashes": [{"with": "wall 1A", "was": True}]}), [])
+        self.assertEqual(MT.clash_notes({"clashes": [{"with": "wall 1A"}]}), ["it now runs into a wall"])
+
+
 if __name__ == "__main__":
     unittest.main()

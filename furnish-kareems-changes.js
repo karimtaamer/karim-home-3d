@@ -1523,7 +1523,7 @@ export function furnish(scene, M, mat, version = "main") {
     const H = M.ceiling, edge = KC ? -0.51 : -0.46, D0 = KC ? 0.2122 : 0.28, D1 = KC ? 0.2922 : 0.36;  // run depth, TV box depth
     const dz0 = D0 - 0.28, dz1 = D1 - 0.36;  // shelf styling keeps its distance from the fronts
     // Kareem's: TV 166.8 x 95.8 x 7.7 cm in a flat rectangular opening centred over the niche (render).
-    const TW = KC ? 1.668 : 1.50, TH = KC ? 0.958 : 0.85, TD = KC ? 0.077 : 0.03;
+    const TW = KC ? 1.673 : 1.50, TH = KC ? 0.960 : 0.85, TD = KC ? 0.079 : 0.03;
     const slab = (x0, x1, d, holes) => {
       const s = new THREE.Shape([new THREE.Vector2(x0, 0), new THREE.Vector2(x1, 0), new THREE.Vector2(x1, H), new THREE.Vector2(x0, H)]);
       for (const h of holes) s.holes.push(roundRect(new THREE.Path(), ...h));

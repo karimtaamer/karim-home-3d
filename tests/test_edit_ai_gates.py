@@ -135,6 +135,34 @@ class Gates(unittest.TestCase):
         res, _ = self.chat()
         self.assertEqual(res["changed"], ["furnish.js"], "the first edit is kept")
         self.assertIn("Made the sofa 2.", res["reply"])
+        self.assertEqual(len(self.sent), 1, "the kept edit is the one the first review scored: no re-review")
+
+    def test_a_fix_round_that_gives_up_on_a_rejected_edit_saves_nothing(self):
+        # e2e J202 r4: the first edit (plan rug shrunk) scored 4; the fix round was cleared and the 4 was kept, re-scored 10.
+        self.scores = [{"score": 4, "problems": ["The rug shrank."], "summary": "Rug shrunk."}]
+        editor = self.fake_editor
+
+        def gives_up(messages, first=False, model=None):
+            if "reviewer" in str(messages[-1].get("content")):
+                call = {"id": "dz", "type": "function", "function": {"name": "discard", "arguments": "{}"}}
+                return {"choices": [{"message": {"role": "assistant", "content": None, "tool_calls": [call]}}], "usage": USAGE}
+            if messages[-1].get("tool_call_id") == "dz":
+                return {"choices": [{"message": {"role": "assistant", "content": "Couldn't fix it."}}], "usage": USAGE}
+            return editor(messages, first, model)
+        edit_ai.openai = gives_up
+        write = edit_ai.tool
+        edit_ai.tool = lambda ws, name, args: (ws.discard() or "discarded") if name == "discard" else write(ws, name, args)
+        res, _ = self.chat()
+        self.assertEqual(res["changed"], [])
+        self.assertTrue(res["reply"].startswith("Nothing was changed"), res["reply"])
+        self.assertIn("rug shrunk", res["whyNot"].lower())
+
+    def test_a_comment_only_edit_is_not_saved(self):  # e2e J223 / J240 r4: "already so" saved as an edit, or churned
+        edit_ai.tool = lambda ws, name, args: ws.write("furnish.js", b"const sofa = 1;  // already 1\n") or "ok"
+        res, phases = self.chat()
+        self.assertEqual(res["changed"], [])
+        self.assertEqual(self.sent, [], "no review of a comment-only edit")
+        self.assertNotIn("Saving your edit", phases)
 
     def test_no_review_when_gates_are_off(self):
         os.environ["EDIT_AI_GATES"] = "0"

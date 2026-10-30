@@ -223,13 +223,13 @@ class PieceChecks(unittest.TestCase):
         self.assertTrue(out and "buffet" in out, out)
 
     def test_the_right_piece_passes(self):
-        self.assertIsNone(self.check("karims-version", "Move the sofa 20 cm west", "item(21.027, version", "item(20.827, version",
+        self.assertIsNone(self.check("karims-version", "Move the sofa 20 cm west", "item(21.027, 4.525", "item(20.827, 4.525",
                                      {"highlightBox": [19.9, 3.3, 21.2, 5.7]}))
 
 
     def test_the_landmark_isnt_the_piece(self):  # J235 / J250 r3: "closer to the table" names the table only as a landmark
         self.assertIsNone(self.check("naghams-changes", "Move the armchair next to the side table, keep the table where it is",
-                                     '? 18.33 : 19.1, version', '? 18.33 : 19.4, version'))
+                                     'item(19.1, 5.95, "S"', 'item(19.4, 5.95, "S"'))
         self.assertIsNone(self.check("naghams-changes", "Move each dining chair 5 cm closer to the dining table, keep the table",
                                      'item(x, 6.55, "N", p => chair(p));', 'item(x, 6.6, "N", p => chair(p));'))
 
@@ -259,6 +259,80 @@ class Round3(unittest.TestCase):
     def test_arabic_claim(self):  # J223
         self.assertTrue(edit_ai.AR_CLAIM.search("رجّعت عمق خزانة المراية لـ٣٠ سم"))
         self.assertFalse(edit_ai.AR_CLAIM.search("ماغيّرتش حاجة"))
+
+
+class Round4(unittest.TestCase):
+    """e2e round 4: gates that never fired or blamed the wrong line."""
+    def test_facing_on_an_expression_line(self):  # J206: a version ternary hid every turn
+        line = 'item(version === "karims-version" ? 18.33 : 19.1, version === "karims-version" ? 4.59 : 5.95, "S", p => {'
+        self.assertEqual(edit_ai.ITEM_FACING.search(line)[1], "S")
+        self.assertEqual(edit_ai.ITEM_FACING.search('item(19.1, 5.95, "W", p => {')[1], "W")
+
+    def test_a_loop_block_places_every_row(self):  # J210: the dining chairs' S row was never matched, the rug was
+        ws = edit_ai.Workspace("naghams-changes")
+        rows = {(x, y) for _, x, y, _ in edit_ai.loop_placed(ws, ws.text("furnish.js"))}
+        self.assertTrue({(17.6, 6.55), (17.6, 8.65), (19.2, 8.65)} <= rows, rows)
+
+    def test_comment_only(self):  # J223 / J240
+        self.assertTrue(edit_ai.comment_only(b"a(1);  // x\n", "a(1);  // y, already so\n\n"))
+        self.assertFalse(edit_ai.comment_only(b"a(1);\n", "a(2);  // y\n"))
+        self.assertFalse(edit_ai.comment_only(b'u("http://a");\n', 'u("http://b");\n'))
+
+    def test_a_turn_away_from_the_tv_is_sent_back(self):  # J206: "turn the armchair toward the TV", the TV is to its west
+        ws = edit_ai.Workspace("naghams-changes")
+        f0 = ws.text("furnish.js")
+        old = 'item(19.1, 5.95, "S", p => {  // DWG armchair'
+        self.assertEqual(f0.count(old), 1)
+        ws.changed = {"furnish.js"}
+        ws.orig = {"furnish.js": f0.encode()}
+        ws.plan_dirty, ws.dxf_furni, ws.pieces, ws.clashes, ws.new_outlines, ws.moves = False, False, {}, {}, [], []
+        ws.pieces_now, ws.ctx = {}, {}
+        for facing, bad in (("N", True), ("W", False)):
+            ws.face_warned = False
+            ws.write("furnish.js", f0.replace(old, old.replace('"S"', f'"{facing}"')).encode())
+            out = edit_ai.review(ws, "Turn the armchair toward the TV", "Turned it.") or ""
+            self.assertEqual(out.startswith("Check the direction") and "toward the TV" in out, bad, out)
+
+
+@unittest.skipUnless(edit_ai.plan_edits(), "no DWG Python (ezdxf + shapely) here")
+class Round4Plan(unittest.TestCase):
+    """e2e round 4, on DXF scratch copies (run with the DWG Python)."""
+    def dxf(self, ops, v="karims-version"):
+        import json, subprocess, tempfile
+        d = Path(tempfile.mkdtemp(prefix="r4-"))
+        try:
+            src = REPO / "dwg" / f"{v}.dxf"
+            p = subprocess.run([edit_ai.dwg_python(), str(REPO / "edit_ai_dxf.py"), "edit", str(src), str(d / "out.dxf"),
+                                f"--origin={edit_ai.ORIGIN[0]},{edit_ai.ORIGIN[1]}"], input=json.dumps(ops),
+                               capture_output=True, text=True, timeout=120)
+            return p.returncode, p.stdout + p.stderr
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
+    def test_a_part_of_a_moved_piece_isnt_moved_again(self):  # J215: 1244 took 1245 / 2C80 along; they moved on their own too
+        code, out = self.dxf([{"op": "move_piece", "handle": "1244", "dx": 0.05, "dy": 0},
+                              {"op": "move_piece", "handle": "1245", "dx": 0.05, "dy": 0}])
+        self.assertEqual(code, 0, out)
+        self.assertIn("1245 skipped: it is part of piece 1244", out)
+
+    def test_a_shrunk_wardrobe_takes_its_doors(self):  # J121: the doors sit in the inner carcass line 13F2, not in 13F1
+        code, out = self.dxf([{"op": "resize_piece", "handle": "13F1", "grow": {"E": -0.1}}])
+        self.assertEqual(code, 0, out)
+        import json
+        rep = json.JSONDecoder().raw_decode(out.lstrip())[0]
+        self.assertEqual([c for c in rep["clashes"] if not c.get("was") and not c.get("free")], [],
+                         "its own end door left outside read as 'runs into another piece'")
+
+    def test_the_same_swing_is_no_change(self):  # J222: "inward-left" redrew the same hinge E / opens N
+        code, out = self.dxf([{"op": "convert_opening", "at": [1.74, 6.07], "to": "door", "hinge": "E", "opens": "N"}],
+                             "naghams-changes")
+        self.assertNotEqual(code, 0, out)
+        self.assertIn("already hinges E and opens N", out)
+        code, out = self.dxf([{"op": "convert_opening", "at": [1.74, 6.07], "to": "door", "hinge": "W", "opens": "N"}],
+                             "naghams-changes")
+        self.assertEqual(code, 0, out)
+        self.assertIn("was 0.8", out)
+        self.assertIn("hinge E, opens N", out)
 
 
 class DrawingSame(unittest.TestCase):

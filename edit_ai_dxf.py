@@ -341,7 +341,7 @@ def piece_members(msp, outline, m=0.08):
     outlines = [(e, b) for e, b in furni if e.dxftype() == "LWPOLYLINE" and len(e) >= 4 and area(b) >= 0.04]
     ob = ext_of(outline)
     rug = any(all(abs(ob[i] - t[i]) < 0.06 for i in range(4)) for t in RUGS)
-    out = [outline]
+    out, own = [outline], {}  # own: handle -> (entity, handle of its smallest enclosing outline)
     def clips(a_, c_):  # piece a_ only pushes into the edge of c_ (a table run into the bed), not nested / standing on it
         ov = max(0, min(a_[2], c_[2]) - max(a_[0], c_[0])) * max(0, min(a_[3], c_[3]) - max(a_[1], c_[1]))
         return area(a_) < area(c_) and 0 < ov < 0.5 * area(a_) and not inside(a_, c_) and not inside(c_, a_)
@@ -355,8 +355,14 @@ def piece_members(msp, outline, m=0.08):
         owners = [(area(b2), o, b2) for o, b2 in outlines if o is not e and inside(b, b2) and area(b2) >= area(b) * 1.05]
         # A line inside both a piece and one that clips its edge is the first piece's (the bed's pillow line, not the table's).
         keep = [w for w in owners if not any(w is not w2 and clips(w[2], w2[2]) for w2 in owners)] or owners
-        if keep and min(keep, key=lambda x: x[0])[1] is outline:
-            out.append(e)
+        if keep:
+            own[e.dxf.handle] = (e, min(keep, key=lambda x: x[0])[1].dxf.handle)
+    # and what its own inner outlines hold: the wardrobe's door panels sit in its carcass line, so a resize left the
+    # end door outside the shrunk wardrobe (e2e J121 r4)
+    mem = {outline.dxf.handle}
+    while (add := [h for h, (e, o) in own.items() if h not in mem and o in mem]):
+        mem.update(add)
+        out += [own[h][0] for h in add]
     return out, ob
 
 
@@ -830,7 +836,32 @@ def _end(word, u):
         return -1
     if w_ in ("end", "+"):
         return 1
-    return _side(word, u)
+    try:
+        return _side(word, u)
+    except ValueError:  # about the ends, not the wall's sides (the old text sent the model round 4 tries: e2e J222 r4)
+        raise ValueError(f"hinge {word!r}: the opening's ends are {'E / W' if abs(u[0]) >= abs(u[1]) else 'N / S'}; "
+                         "say which end the hinge is at") from None
+
+
+def _compass(v, s=1):
+    """N / S / E / W of the plan direction s * v."""
+    return ("E" if v[0] * s > 0 else "W") if abs(v[0]) >= abs(v[1]) else ("N" if v[1] * s > 0 else "S")
+
+
+def door_swing(msp, q, u, n, t0, t1, n0, n1):
+    """(hinge end -1 / +1, opening side -1 / +1) of the hinged door drawn in a gap, from its swing ARC; None if none."""
+    lo, hi = min(n0, n1) - 0.05, max(n0, n1) + 0.05
+    for e in msp.query("ARC"):
+        c, rad = e.dxf.center, e.dxf.radius
+        t_, nn = (c.x - q[0]) * u[0] + (c.y - q[1]) * u[1], (c.x - q[0]) * n[0] + (c.y - q[1]) * n[1]
+        if not (0.45 <= rad <= 1.35 and t0 - 0.12 <= t_ <= t1 + 0.12 and lo <= nn <= hi):
+            continue
+        a0, a1 = e.dxf.start_angle, e.dxf.end_angle
+        am = math.radians(a0 + ((a1 - a0) % 360) / 2)
+        side = math.cos(am) * n[0] + math.sin(am) * n[1]
+        if abs(side) > 0.2:
+            return (-1 if t_ < (t0 + t1) / 2 else 1), (1 if side > 0 else -1)
+    return None
 
 
 def draw_opening(msp, q, u, n, a, b, n0, n1, kind, hinge=None, opens=None):
@@ -1424,6 +1455,7 @@ def edit(a):
         except Exception:
             pass
 
+    grouped = {}  # handle -> the move_piece op's piece it already moved with in this call
     for o in ops:
         k = o.get("op")
         for key in ("handle", "centre_on"):  # virtual handles -> real ones up front, so every op and log line uses those
@@ -1559,8 +1591,12 @@ def edit(a):
             moved[-1]["new_ends"] = [e0, e1]
             log.append(f"window of {len(ents)} lines moved by ({r(dx)}, {r(dy)}), width {r(w)} -> {r(w2)}; "
                        f"it now runs {e0} to {e1}, centre {P(c_new)}")
+        elif k == "move_piece" and isinstance(o.get("handle"), str) and o["handle"] in grouped:  # its piece already took it along (or stopped it at a wall):
+            # moving it again split the coffee corner's symbol (e2e J215 r4)
+            log.append(f"piece {o['handle']} skipped: it is part of piece {grouped[o['handle']]}, moved (or stopped) with it above")
         elif k == "move_piece":  # an outline and what's drawn inside it, or a furniture block (INSERT) on its own
             ents, _ = piece_members(msp, get(o["handle"]))
+            grouped.update({e.dxf.handle: o["handle"] for e in ents[1:]})
             dx, dy = float(o.get("dx", 0)), float(o.get("dy", 0))
             h_ = ents[0].dxf.handle
             hit0 = {c["with"] for c in clashes(msp, doc, [h_], soft, 0, 0, m=0.003) if not c.get("free")}
@@ -1872,6 +1908,16 @@ def edit(a):
                     raise ValueError("no door / window / doorway found there: give a point inside the opening (between its jambs)")
                 q, u, n, t0, t1, n0, n1 = g
                 old = opening_report(q, u, n, t0, t1, n0, n1, "old", {}, ox, oy)
+                swing0 = door_swing(msp, q, u, n, t0, t1, n0, n1)
+                if swing0:
+                    old["swing"] = f"hinge {_compass(u, swing0[0])}, opens {_compass(n, swing0[1])}"
+                if to == "door" and swing0 and not o.get("width") and not o.get("shift") and not o.get("centre"):
+                    want_ = (_end(o.get("hinge"), u), _side(o.get("opens"), n) if o.get("opens") else 1)
+                    if want_ == swing0:  # the same swing redrawn passed as "changed to open inward-left" (e2e J222 r4)
+                        raise ValueError(f"nothing changed: this door already hinges {_compass(u, swing0[0])} and opens "
+                                         f"{_compass(n, swing0[1])}. For the other hand give hinge {_compass(u, -swing0[0])}; "
+                                         f"to open the other way give opens {_compass(n, -swing0[1])}. (Inward = into the "
+                                         "room named; left / right = the hinge side as seen from outside, facing the door.)")
                 cleared = clear_gap(msp, q, u, n, t0, t1, n0, n1)
                 close_gap(msp, q, u, n, t0, t1, n0, n1)
                 w = float(o.get("width") or (t1 - t0))
@@ -1910,7 +1956,8 @@ def edit(a):
                 rep_["old_box"], rep_["old_width"] = old["box"], old["width"]
             opened.append(rep_)
             log.append(f"{k}: {to} {rep_['width']} m wide at {rep_['centre']}" + (f", hinge {rep_['hinge']}, opens {rep_['opens']}"
-                       if rep_.get("hinge") else "") + (f" (was {old['width']} m, {cleared} entities cleared)" if old else ""))
+                       if rep_.get("hinge") else "") + (f" (was {old['width']} m" + (f", {old['swing']}" if old.get("swing") else "")
+                                                        + f", {cleared} entities cleared)" if old else ""))
         else:
             raise ValueError(f"unknown op {k!r}")
     # No zero-length lines left behind.

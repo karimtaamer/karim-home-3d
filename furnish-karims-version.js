@@ -1755,10 +1755,6 @@ export function furnish(scene, M, mat, version = "main") {
   }
 
   // --- Dining: walnut table for six, tub chairs, lantern pendants; buffet wall and coffee bar ----
-  item(18.4, 7.6, "S", p => {
-    p.box(-1.2, 1.2, 0.72, 0.76, -0.5, 0.5, mat.walnut, 0.01);
-    for (const x of [-0.75, 0.75]) p.box(x - 0.05, x + 0.05, 0, 0.72, -0.3, 0.3, mat.walnut);
-  });
   for (const x of [17.6, 18.4, 19.2]) {
     item(x, 6.55, "N", p => chair(p));
     item(x, 8.65, "S", p => chair(p));

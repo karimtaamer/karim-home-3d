@@ -772,6 +772,9 @@ export function furnish(scene, M, mat, version = "main") {
     if (NC) {
     const champagne = mat.brass.clone(); champagne.color.setRGB(0.78, 0.67, 0.51); champagne.roughness = 0.5;  // brushed champagne bronze
     champagne.clippingPlanes = mat.brass.clippingPlanes;
+    // Main, 31 Oct 2026 (Karim): shower 1.35 deep (build-out face to partition) x 0.785 clear, partition 0.225 (the
+    // leftover 2.5 cm of the 2.675 run went into it, so the vanity zone is exactly 1.10), vanity 1.10, WC bay 0.83.
+    // The notes below give the older sizes (shower 0.84 x 1.29, partition 0.20, vanity 1.185, WC bay 0.776).
     // Nagham's Changes en-suite (DWG): shower in the north-west corner, 0.84 wide x 1.29 deep in front of a 0.21
     // solid build-out on the north wall (burying the column) that carries the concealed mixer, rain arm and hand
     // shower; a 20 cm solid partition (stone-lined, with one wide shelf niche) between it and the basin, and a 2 cm
@@ -784,18 +787,18 @@ export function furnish(scene, M, mat, version = "main") {
     // Kareem's Changes: the bathroom door sits 0.16 further east, so the vanity runs the whole wall (1.185, south wall
     // to the partition) and is 0.60 deep; the backlit mirror becomes a 0.80 x 0.75 mirrored medicine cabinet, 0.30
     // out from the battens, bottom 1.32 (0.46 over the counter), three glass shelves, all centred on the bowl.
-    if (["kareems-changes", "karims-version"].includes(version)) item(0.556, 6.7276, "E", vanity(1.185, true, 0.6, medCabinet(), heaterVanity));  // centre DWG y -114.8856
+    if (["kareems-changes", "karims-version"].includes(version)) item(0.556, 6.6851, "E", vanity(1.1, true, 0.6, medCabinet(), heaterVanity));  // 1.10, south wall to the partition: centre DWG y -114.9281
     else item(0.556, 6.7435, "E", vanity(1.153, true));  // centre DWG y -114.8697, bowl, mixer and mirror on it
-    item(1.8037, 9.0201, "S", p => {  // WC bay 1.416..2.192 (local +x east)
-      const h = 0.3878, d = 0.3, top = 1.12;
+    item(1.7762, 9.0201, "S", p => {  // WC bay 1.361..2.192 = 0.83 (local +x east); pan, plate and window stay where they were (o)
+      const h = 0.4153, d = 0.3, top = 1.12, o = 0.0275;
       p.box(-h, h, 0, top - 0.02, 0, d - 0.01, mat.stoneWall);                      // framed build-out, tiled
       p.box(-h, h, top - 0.02, top, 0, d, mat.stoneWall, 0.004);                    // porcelain top ledge
-      p.box(-0.12, 0.12, 0.92, 1.08, d - 0.01, d, mat.brass, 0.005);               // flush plate on the face
-      p.model("models/wc-wallhung.glb", mat.ceramic, 0, 0.1, d, { size: [0.36, 0.33, 0.54] });  // pan 0.54 long, as the DWG block
-      bidetMixer(p, -0.3, 0.55, d, mat.chrome);
-      p.box(-0.335, 0.335, top, 1.5, 0, 0.01, mat.stoneWall);                       // porcelain under the window (0.60 + 3 cm reveals), ledge to sill
+      p.box(o - 0.12, o + 0.12, 0.92, 1.08, d - 0.01, d, mat.brass, 0.005);        // flush plate on the face
+      p.model("models/wc-wallhung.glb", mat.ceramic, o, 0.1, d, { size: [0.36, 0.33, 0.54] });  // pan 0.54 long, as the DWG block, under the window
+      bidetMixer(p, o - 0.3, 0.55, d, mat.chrome);
+      p.box(o - 0.335, o + 0.335, top, 1.5, 0, 0.01, mat.stoneWall);               // porcelain under the window (0.60 + 3 cm reveals), ledge to sill
     });
-    item(1.4059, 8.8101, "S", p => {  // DWG glass: 2 cm with its channel, from the shower build-out face to 0.90 from the north wall, 2.00 tall
+    item(1.3509, 8.8101, "S", p => {  // DWG glass: 2 cm with its channel, from the shower build-out face to 0.90 from the north wall, 2.00 tall
       p.box(-0.005, 0.005, 0.01, 2.0, 0, 0.69, mat.clearGlass);
       p.box(-0.01, 0.01, 0, 2.0, 0, 0.02, mat.chrome);
       p.box(-0.01, 0.01, 0, 0.01, 0, 0.69, mat.chrome);
@@ -815,7 +818,7 @@ export function furnish(scene, M, mat, version = "main") {
     // 4 cm porcelain slab shelves with 25.5 cm clear: finished floors 0.895 / 1.19 / 1.485, niche top 1.74, a warm
     // LED under each top. The model carves the rough slot full height (build --cut); the 1 cm stone lining plus
     // 5 mm porcelain here finish it, and porcelain fills it below, between and above (5 mm into the lining).
-    item(0.976, 7.5201, "N", p => {
+    item(0.9485, 7.4601, "N", p => {  // Main 31 Oct: centred on the 0.785 shower, partition face 6 cm south
       const floors = [0.895, 1.19, 1.485], top = 1.74, t = 0.04, w = 0.335, d = 0.135, D = 0.155;
       p.box(-w - 0.02, w + 0.02, 0, floors[0], -D, 0, mat.stoneWall);                        // solid below the first floor
       for (const y of floors.slice(1)) p.box(-w - 0.02, w + 0.02, y - t, y, -D, 0, mat.stoneWall); // slab shelves
@@ -828,7 +831,7 @@ export function furnish(scene, M, mat, version = "main") {
     // Shower set on the 0.21 north build-out face: concealed thermostatic mixer and diverter on the shower's
     // centreline (east of the column, where the build-out is a full 0.21 deep), rain arm 0.42 out, and the
     // hand-shower outlet and holder at the west end, in front of the buried column.
-    item(0.976, 8.8101, "S", p => {
+    item(0.9485, 8.8101, "S", p => {
       p.cyl(0, 0.03, 0.075, 1.0, 1.02, mat.chrome, 32).rotation.x = Math.PI / 2;  // thermostatic mixer
       p.cyl(0, 0.045, 0.03, 1.0, 1.07, mat.chrome, 24).rotation.x = Math.PI / 2;
       p.cyl(0, 0.03, 0.06, 1.2, 1.22, mat.chrome, 32).rotation.x = Math.PI / 2;    // 3-way diverter
@@ -847,7 +850,7 @@ export function furnish(scene, M, mat, version = "main") {
     });
     // Fold-up shower seat on the west wall (DWG dashed), shown open: 0.45 along the wall from 0.05 off the
     // partition face, 0.35 deep, top 0.45; teak-tone slats on brushed champagne-bronze brackets.
-    item(0.556, 7.7951, "E", p => {
+    item(0.556, 7.7351, "E", p => {
       const teak = mat.oakVeneer.clone(); teak.color.setRGB(0.85, 0.58, 0.36); teak.clippingPlanes = mat.oakVeneer.clippingPlanes;
       for (let k = 0; k < 5; k++) { const z0 = 0.01 + k * 0.068; p.box(-0.225, 0.225, 0.42, 0.45, z0, z0 + 0.058, teak, 0.004); }  // slats
       for (const x of [-0.19, 0.19]) {
@@ -1882,20 +1885,73 @@ export function furnish(scene, M, mat, version = "main") {
     for (const s of [-1, 1]) p.box(s * w - (s > 0 ? 0.025 : 0), s * w + (s < 0 ? 0.025 : 0), b0, b1, 0, D, mat.limewash);
     for (let y = b0 + 0.045; y < b1 - 0.04; y += 0.05) p.box(-w + 0.025, w - 0.025, y, y + 0.03, D - 0.04, D - 0.005, mat.limewash).rotation.x = -0.5;
   });
-  item(25.14, 3.6, "W", p => {  // L-shaped built-in bench, east and south
-    p.box(-1.65, 1.65, 0, 0.42, 0, 0.6, mat.walnut);
-    p.box(-1.65, 1.65, 0.42, 0.55, 0.02, 0.6, mat.boucle, 0.04);
-    p.box(-1.65, 1.65, 0.55, 0.95, 0, 0.18, mat.boucle, 0.06);
-    p.box(-1.62, 1.62, 0.02, 0.04, 0.55, 0.6, mat.ledStrip);
-    [mat.linenSage, mat.linenBlush, mat.linenSlate, mat.cushionMustard, mat.linenBlush].forEach((c, k) => { const m = p.box(-1.3 + k * 0.62 - 0.22, -1.3 + k * 0.62 + 0.22, 0.55, 0.95, 0.18, 0.32, c, 0.08); m.rotation.x = -0.15; });
-  });
-  item(23.42, T.y0, "N", p => {
-    p.box(-1.1, 1.1, 0, 0.42, 0, 0.6, mat.walnut);
-    p.box(-1.1, 1.1, 0.42, 0.55, 0.02, 0.6, mat.boucle, 0.04);
-    p.box(-1.1, 1.1, 0.55, 0.95, 0, 0.18, mat.boucle, 0.06);
-    [mat.linenSlate, mat.cushionMustard, mat.linenSage].forEach((c, k) => { const m = p.box(-0.7 + k * 0.7 - 0.22, -0.7 + k * 0.7 + 0.22, 0.55, 0.95, 0.18, 0.32, c, 0.08); m.rotation.x = -0.15; });
-  });
-  item(23.4, 3.4, "S", p => p.cyl(0, 0, 0.45, 0, 0.38, mat.stoneTable, 40));
+  // L built-in seat on the east and south parapets (Main, 31 Oct 2026, Karim; DWG 2furni L): from the parapet face a
+  // 0.20 planter soil strip (not on the parapet top), a 0.10 masonry back rising 0.50 above the seat (top 0.95), then
+  // a 0.60 seat: hollow storage under hinged teak lids (top 0.40, 5 cm cushion to 0.45) on a 10 cm front wall set 5 cm
+  // back, so the lid's 5 cm lip hides a warm LED strip that washes the floor. 0.90 from the parapet in all. The south leg
+  // runs from the west wall (x 21.489) to the east leg, the east leg to y 5.443, as drawn; a fixed seat in the corner.
+  {
+    const PX = 25.143, PY = 1.78, WX = 21.489, EY = 5.443;                      // parapet faces, ends of the L (DWG)
+    const p1x = PX - 0.2, p1y = PY + 0.2, b1x = p1x - 0.1, b1y = p1y + 0.1;      // planter strip, back wall
+    const s1x = b1x - 0.6, s1y = b1y + 0.6;                                      // seat front
+    const IX = 23.3, IY = 3.0, SEAT = 0.36, LID = 0.04, CUSH = 0.05, BACK = 0.95, LIP = 0.05;
+    item(IX, IY, "S", p => {
+      // a plan rectangle [X0, X1] x [Y0, Y1] from height y0 to y1 (this item faces S: local x = plan x, z = -plan y)
+      const pb = (q, X0, X1, Y0, Y1, y0, y1, m, r = 0) => q.box(X0 - IX, X1 - IX, y0, y1, IY - Y1, IY - Y0, m, r);
+      // planter: soil strip 0.20 against the parapets, its far end closed by a return of the back wall
+      pb(p, WX, PX, PY, p1y, 0.52, 0.88, mat.darkTop);
+      pb(p, p1x, PX, p1y, EY - 0.1, 0.52, 0.88, mat.darkTop);
+      pb(p, p1x, PX, EY - 0.1, EY, 0, BACK, mat.render);
+      // masonry back, rendered, with a stone coping
+      pb(p, WX, p1x, p1y, b1y, 0, BACK - 0.02, mat.render);
+      pb(p, b1x, p1x, b1y, EY, 0, BACK - 0.02, mat.render);
+      pb(p, WX, p1x, p1y, b1y, BACK - 0.02, BACK, mat.stoneTable, 0.004);
+      pb(p, b1x, p1x, b1y, EY, BACK - 0.02, BACK, mat.stoneTable, 0.004);
+      // storage boxes: floor, front wall 5 cm behind the lid edge, end walls and module dividers
+      pb(p, WX, s1x, b1y, s1y - LIP - 0.1, 0, 0.05, mat.concrete);
+      pb(p, s1x + LIP + 0.1, b1x, s1y, EY, 0, 0.05, mat.concrete);
+      pb(p, WX, s1x + LIP, s1y - LIP - 0.1, s1y - LIP, 0, SEAT, mat.render);       // south front wall
+      pb(p, s1x + LIP, s1x + LIP + 0.1, s1y - LIP - 0.1, EY, 0, SEAT, mat.render); // east front wall
+      pb(p, s1x + LIP + 0.1, b1x, b1y, s1y - LIP - 0.1, 0, SEAT, mat.render);      // corner: solid, fixed top
+      pb(p, WX, WX + 0.05, b1y, s1y - LIP, 0, SEAT, mat.render);                   // west end
+      pb(p, s1x + LIP, b1x, EY - 0.05, EY, 0, SEAT, mat.render);                   // north end
+      pb(p, s1x, b1x, b1y, s1y, SEAT, SEAT + LID, mat.walnut, 0.005);              // corner top
+      pb(p, s1x + 0.02, b1x - 0.02, b1y + 0.02, s1y - 0.02, SEAT + LID, SEAT + LID + CUSH, mat.boucle, 0.025);
+      const sx = (s1x - WX) / 4, sy = (EY - s1y) / 4;
+      for (let k = 1; k < 4; k++) {                                                // dividers under the lid joints
+        pb(p, WX + k * sx - 0.025, WX + k * sx + 0.025, b1y, s1y - LIP - 0.1, 0.05, SEAT, mat.render);
+        pb(p, s1x + LIP + 0.1, b1x, s1y + k * sy - 0.025, s1y + k * sy + 0.025, 0.05, SEAT, mat.render);
+      }
+      // hinged lids, one openable each: teak boards, cushion, and the LED strip under the 5 cm lip
+      const lid = (k, south) => {
+        const c = new THREE.Group(), b = new THREE.Group(), h = new THREE.Group(), q = part(h);
+        p.g.add(c); c.add(b); b.add(h);
+        const w = (south ? sx : sy) / 2 - 0.004;
+        // b: on the hinge line at the back wall face, its -z pointing to the seat front; h: the leaf, turning about x
+        if (south) b.position.set(WX + (k + 0.5) * sx - IX, SEAT, IY - b1y);
+        else { b.position.set(b1x - IX, SEAT, IY - (s1y + (k + 0.5) * sy)); b.rotation.y = Math.PI / 2; }
+        q.box(-w, w, 0, LID, -0.6, -0.004, mat.walnut, 0.005);                                  // teak lid, 0.60 to the lip
+        q.box(-w + 0.02, w - 0.02, LID, LID + CUSH, -0.58, -0.03, mat.boucle, 0.025);           // seat cushion
+        q.box(-w + 0.01, w - 0.01, -0.01, 0, -0.6 + 0.01, -0.6 + LIP - 0.01, mat.ledStrip);     // LED under the 5 cm lip
+        const ax = b.position.x - (south ? 0 : 0.3), az = b.position.z + (south ? 0.3 : 0) * -1;
+        c.userData.openable = { id: `terrace-seat-${south ? "s" : "e"}${k + 1}`, label: "Seat storage", leaves: [{ obj: h, axis: "x", open: 78 * Math.PI / 180 }],
+          anchor: new THREE.Vector3(ax, SEAT + 0.12, az), reach: 1.8, duration: 0.7 };
+      };
+      for (let k = 0; k < 4; k++) { lid(k, true); lid(k, false); }
+      // back cushions on the masonry back
+      [mat.linenSage, mat.linenBlush, mat.linenSlate, mat.cushionMustard].forEach((m, k) => {
+        const c = pb(p, WX + 0.2 + k * 0.68, WX + 0.64 + k * 0.68, b1y + 0.04, b1y + 0.18, SEAT + LID + CUSH, 0.85, m, 0.06); c.rotation.x = 0.15;
+      });
+      [mat.linenSlate, mat.linenSage, mat.linenBlush, mat.cushionMustard].forEach((m, k) => {
+        const c = pb(p, b1x - 0.18, b1x - 0.04, s1y + 0.15 + k * 0.68, s1y + 0.59 + k * 0.68, SEAT + LID + CUSH, 0.85, m, 0.06); c.rotation.z = -0.15;
+      });
+    });
+    // planting in the soil strip (not on the parapet top): grasses along both legs, a taller one at the west end
+    for (let x = 21.75; x < PX - 0.1; x += 0.45) plant(x, PY + 0.1, 0.6, 0.06, 0.86);
+    for (let y = p1y + 0.3; y < EY - 0.2; y += 0.45) plant(p1x + 0.1, y, 0.6, 0.06, 0.86);
+    plant(21.62, PY + 0.1, 1.3, 0.07, 0.86);
+  }
+  item(22.826, 3.998, "S", p => p.cyl(0, 0, 0.45, 0, 0.38, mat.stoneTable, 40));  // table, on the DWG table's centre
   item(T.x1, 7.1, "W", p => sofa(p, 2.1, 0.9, mat.boucle, [mat.linenSage, mat.linenBlush, mat.linenSlate]));
   for (const y of [6.3, 7.9]) item(22.1, y, "E", p => {
     p.box(-0.4, 0.4, 0.05, 0.6, 0, 0.8, mat.walnut, 0.02);
@@ -1916,11 +1972,6 @@ export function furnish(scene, M, mat, version = "main") {
   });
   for (const [x, y, h] of [[21.8, 4.75, 1.9], [24.5, 5.75, 1.8], [24.45, 8.45, 1.7]]) plant(x, y, h, 0.28);
   for (const y of [5.0, 8.6]) sconce(T.x0, y, "E", 2.0);
-  item(23.3, 1.42, "N", p => p.box(-1.85, 1.85, 1.1, 1.35, 0, 0.36, mat.render));  // planter troughs on the parapets
-  item(25.4, 3.5, "W", p => p.box(-1.9, 1.9, 1.1, 1.35, 0, 0.36, mat.render));
-  for (let x = 21.7; x < 25.0; x += 0.45) plant(x, 1.6, 1.2, 0.1, 1.2);
-  for (let y = 2.0; y < 5.4; y += 0.45) plant(25.22, y, 1.2, 0.1, 1.2);
-  plant(21.85, 2.2, 1.9, 0.3);
 
   // --- Ceilings: downlights in every indoor room, linear AC grilles in the living spaces ---------
   const rooms = {};

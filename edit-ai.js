@@ -589,8 +589,10 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     }
     const reader = r.body.getReader(), dec = new TextDecoder();
     let buf = "", out = null;
+    const dropped = () => Object.assign(new Error("The connection dropped while the edit was running. It may still be saved: reload to check before sending it again."), { dropped: true });
     for (;;) {
-      const { done, value } = await reader.read();
+      let done, value;
+      try { ({ done, value } = await reader.read()); } catch { throw dropped(); }  // the server carries on (edit_ai.py stream)
       buf += dec.decode(value || new Uint8Array(), { stream: !done });
       for (let i; (i = buf.indexOf("\n")) >= 0;) {
         const line = buf.slice(0, i).trim();
@@ -603,7 +605,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
       }
       if (done) break;
     }
-    if (!out) throw new Error("The connection dropped before the edit finished. Reload to see whether it was saved.");
+    if (!out) throw dropped();
     return out;
   }
   // Luna's 1-5 grade of the wording before any edit model runs; null when the check is off or fails (it never blocks).
@@ -673,7 +675,7 @@ export function createEditAI({ THREE, camera, scene, live, showing, mode, room, 
     } catch (e) {
       wait.remove();
       say("err", e.message);
-      if (!area.value) area.value = text;
+      if (!area.value && !e.dropped) area.value = text;  // a dropped stream may have saved: no one-tap re-send (e2e J288 r4)
     } finally {
       busy = false;
       $(".send").disabled = $(".shut").disabled = false;

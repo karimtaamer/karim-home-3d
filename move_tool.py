@@ -521,6 +521,12 @@ def origins_path(v):
     return f"move-origins-{v}.json"
 
 
+def shown_name(label):
+    """A piece's name as the toast says it: no "DWG " source tag, no trailing index ("DWG coffee table 1 5 cm east"
+    read as 15 cm: e2e J025 / J087 r4)."""
+    return re.sub(r"\s+\d+$", "", re.sub(r"^DWG\s+", "", str(label))) or str(label)
+
+
 def origin_at(entries, label, box, tol=0.05):
     """The entry for the piece with this label whose plan box is now centred within tol of box's centre, or None."""
     c = ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
@@ -1030,7 +1036,7 @@ def delete(ws, v, piece, text, found, sh, label):
         E.lock_breaks(ws, " ".join(l["names"][0] for l, _ in breaks), record=True)
         notes.append("this changes a settled design decision (" + "; ".join(l["what"][:90] for l, _ in breaks)
                      + "), so that lock is now suspended; Undo puts it back")
-    summary = f"{NAME}: deleted the {label}"
+    summary = f"{NAME}: deleted the {shown_name(label)}"
     man = save(ws, summary + (" (" + "; ".join(notes) + ")" if notes else ""))
     return {"rev": man["rev"], "changed": sorted(ws.changed), "summary": summary, "notes": notes, "op": "delete",
             "plan": kind in ("own", "block", "lines"), "outline": outline and outline[1], "how": found["how"], "sync": man.get("sync")}
@@ -1341,15 +1347,17 @@ def transform(req, ws=None):
                 text = set_size(text, call, s_new[0], s_new[1], v, sh, S1 if (dz or zbox) else None, lift)
     w0, d0 = box[2] - box[0], box[3] - box[1]
     w1, d1 = nbox[2] - nbox[0], nbox[3] - nbox[1]
-    if resized:
-        summary = f"{NAME}: {label} to {w1 * 100:.0f} × {d1 * 100:.0f} cm on plan (was {w0 * 100:.0f} × {d0 * 100:.0f})"
+    shown = shown_name(label)
+    if resized:  # "on plan" only for a piece the plan draws (a 3D-only niche said both: e2e J102 / J104 r4)
+        summary = (f"{NAME}: {shown} to {w1 * 100:.0f} × {d1 * 100:.0f} cm{' on plan' if outline else ''} "
+                   f"(was {w0 * 100:.0f} × {d0 * 100:.0f})")
     elif rot:
-        summary = (f"{NAME}: {label} turned {abs(rot):g}° {'anticlockwise' if rot > 0 else 'clockwise'}"
+        summary = (f"{NAME}: {shown} turned {abs(rot):g}° {'anticlockwise' if rot > 0 else 'clockwise'}"
                    + (f" and moved {describe(dx, dy)}" if abs(dx) >= 0.005 or abs(dy) >= 0.005 else ""))
     elif planar:
-        summary = f"{NAME}: {label} {describe(dx, dy)}"
+        summary = f"{NAME}: {shown} {describe(dx, dy)}"
     else:
-        summary = f"{NAME}: {label}"
+        summary = f"{NAME}: {shown}"
     if dz:
         summary += (" and" if planar else "") + f" {cm(dz)} {'up' if dz > 0 else 'down'}"
     elif zbox:

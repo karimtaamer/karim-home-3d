@@ -1011,7 +1011,7 @@ export function furnish(scene, M, mat, version = "main") {
   // 1.209 length, so the 0.967 opening is at the south end, to the build-out face (DWG 2furni 1847 / 1848 / 26BE).
   const GKC = ["kareems-changes", "karims-version"].includes(version);
   // out 0.90 / 0.812: modelled 0.81 m deep; the DWG bath is 0.90 (Main's 0.95 since 26 Oct)
-  const bath = sized(item(version === "kareems-changes" ? 12.122 : 12.324, 8.05, "E", p => {  // wood-look plank wall, stone-clad bath, framed screen at the WC end
+  const bath = sized(item(12.324, 8.05, "E", p => {  // wood-look plank wall, stone-clad bath, framed screen at the WC end
     p.box(GKC ? -1.167 : -1.08, GKC ? 1.12 : 1.08, 0, M.ceiling, 0, 0.02, mat.woodTile);
     p.box(GKC ? -1.167 : -0.85, GKC ? 1.12 : 0.85, 0, 0.55, 0.02, 0.75, mat.stoneWall);  // Kareem's: south wall to the north wall's stone lining
     p.box(-0.78, 0.78, 0.52, 0.56, 0.08, 0.7, mat.ceramic);
@@ -1041,7 +1041,7 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(x - 0.012, x + 0.012, 1.84, 1.9, z + 0.02, z + 0.05, mat.blackSteel);
     }
   }), 1, (version === "kareems-changes" ? 0.95 : 0.9) / 0.812);
-  if (GKC) item(version === "kareems-changes" ? 12.546 : 12.725, 9.1716, "S", p => {  // Karim t327: all the shower fittings on the north (WC) wall's tile face, centred between plank wall and glass
+  if (GKC) item(12.725, 9.1716, "S", p => {  // Karim t327: all the shower fittings on the north (WC) wall's tile face, centred between plank wall and glass
     // Local +x is east (toward the glass), z south out of the wall. Brass, as before.
     // Concealed thermostatic mixer: only its square trim plate and two knobs, at 1.05 (0.5 over the deck)
     p.box(-0.09, 0.09, 0.96, 1.14, 0, 0.008, mat.brass, 0.004);
@@ -1096,7 +1096,7 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-0.12, 0.12, 0.68, 0.84, 0, 0.015, mat.walnut, 0.005);
     p.box(-0.06, 0.06, 0.74, 0.78, 0.015, 0.025, mat.brass, 0.005);
   });
-  if (GKC) sized(item(version === "kareems-changes" ? 12.559 : ["kareems-changes", "karims-version"].includes(version) ? 12.737 : 12.767, ["kareems-changes", "karims-version"].includes(version) ? 6.8906 : 6.8906, "N", p => {  // Karim t327: a 12 cm stone build-out on the south (door-end) wall, two wood-lined niches
+  if (GKC) sized(item(12.737, 6.8906, "N", p => {  // Karim t327: a 12 cm stone build-out on the south (door-end) wall, two wood-lined niches
     // DWG 2furni 26BE: build-out x 202.520-203.408 (plank wall to 1.3 cm past the glass; Main since 26 Oct, Karim's version 202.722-203.562),
     // face y -114.6026 (plan 7.0106); niches dashed 2667 / 2668, centred on it. Nothing cut into the wall (no --cut):
     // 12 cm leaves 1.5 cm of build-out behind each niche; lined in walnut all round (back too), 9.3 cm clear inside.
@@ -1363,7 +1363,7 @@ export function furnish(scene, M, mat, version = "main") {
     c.userData.openable = { id: "laundry-heater", label: "Water heater cupboard", leaves: [{ obj: door, axis: "y", open: -88 * Math.PI / 180 }],  // stops short of the tall joinery's face
       anchor: new THREE.Vector3(0, 2.0, D + 0.06), reach: 1.8, duration: 0.6 };
   });
-  item(version === "kareems-changes" ? 11.675 : 11.835, 9.18, "S", p => {  // DWG stacked washer and dryer 0.60 x 0.60 (x 11.535 to 12.135; Main's 11.375 to 11.975 since 26 Oct)
+  item(11.835, 9.18, "S", p => {  // DWG stacked washer and dryer 0.60 x 0.60 (x 11.535 to 12.135; Main's 11.375 to 11.975 since 26 Oct)
     if (["kareems-changes", "karims-version"].includes(version)) {
       // Batch 25 Oct (Karim t305, reference photo): the washer is built in. A taller oak base (0.76, a pull-out laundry
       // basket shelf over a plinth drawer) lifts the 0.84 machine so its top meets the upper's underside at 1.60, no
@@ -1639,9 +1639,9 @@ export function furnish(scene, M, mat, version = "main") {
   // Karim's version: both sofas slid along their walls for the flip desk in the east corner (Karim, 27 Oct). South
   // sofa 0.177 west (x 18.14-20.19, 1 cm clear of the plant pot at SC - SO); east sofa 0.36 north (y 3.525-5.525,
   // 1.455 from the south wall). Prints, AC, plant, rug and coffee table stay put.
-  item(version === "karims-version" ? 19.165 : KC ? SC : 18.86, 2.103, "N", p => sofa(p, 2.05, 1.02, mat.boucle, [mat.linenSlate, mat.linenBlush, mat.linenSlate]));  // DWG, clear of the pier
-  item(21.027, version === "karims-version" ? 4.525 : 4.165, "W", p => sofa(p, 2.0, 0.92, mat.boucle, [mat.linenSlate, mat.linenBlush]));  // centred on the DWG sofa, back on its back line, clear of the curtains
-  item(version === "karims-version" ? 18.99 : 19.1, version === "karims-version" ? 6 : 5.95, "S", p => {  // DWG armchair, as rendered: open walnut lounge frame, slate cushions, blush pillow
+  item(19.165, 2.103, "N", p => sofa(p, 2.05, 1.02, mat.boucle, [mat.linenSlate, mat.linenBlush, mat.linenSlate]));  // DWG, clear of the pier
+  item(21.027, 4.525, "W", p => sofa(p, 2.0, 0.92, mat.boucle, [mat.linenSlate, mat.linenBlush]));  // centred on the DWG sofa, back on its back line, clear of the curtains
+  item(18.99, 6, "S", p => {  // DWG armchair, as rendered: open walnut lounge frame, slate cushions, blush pillow
     const cw = mat.walnut, cf = mat.linenSlate;  // frame, upholstery (the black in e9f8dba undone, 26 Oct)
     for (const s of [-1, 1]) {
       const x = s * 0.36;

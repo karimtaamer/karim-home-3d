@@ -1522,8 +1522,11 @@ export function furnish(scene, M, mat, version = "main") {
     // North end (local x 1.72) meets the reception column at plan y 5.3914 — keep that edge flat/flush.
     const KC = ["kareems-changes", "karims-version"].includes(version);
     // Kareem's: the TV box face is flush with the reception column's face as the DXF and survey draw it (plan x
-    // 17.542, DWG 207.9471), one continuous surface; the run (tall niches) 0.08 behind it at 17.462.
-    const H = M.ceiling, edge = KC ? -0.51 : -0.46, D0 = KC ? 0.2122 : 0.28, D1 = KC ? 0.2922 : 0.36;  // run depth, TV box depth
+    // 17.542, DWG 207.9471), one continuous surface. Main (Karim, 1 Nov 2026): TV box 0.28 and the recessed run 0.18
+    // off the DWG back line (x 17.2622), so the run front is x 17.4422, 0.10 behind the box; the box runs 2.20 from the
+    // column seam (edge local -0.4786, plan y 3.1914) and the run 0.85 from the south wall face (plan y 2.0705, local
+    // -1.5995) to -0.7495, joined by a straight 10 cm diagonal cut over the 0.2709 between.
+    const H = M.ceiling, edge = KC ? -0.4786 : -0.46, D0 = KC ? 0.1922 : 0.28, D1 = KC ? 0.2922 : 0.36;  // run depth, TV box depth
     const dz0 = D0 - 0.28, dz1 = D1 - 0.36;  // shelf styling keeps its distance from the fronts
     // Kareem's: TV 166.8 x 95.8 x 7.7 cm in a flat rectangular opening centred over the niche (render).
     const TW = KC ? 1.673 : 1.50, TH = KC ? 0.960 : 0.85, TD = KC ? 0.079 : 0.03;
@@ -1539,11 +1542,11 @@ export function furnish(scene, M, mat, version = "main") {
       mesh(new THREE.ExtrudeGeometry(roundRect(new THREE.Shape(), x0, x1, y0, y1, r), { depth: 0.01, bevelEnabled: false, curveSegments: 12 }), honeyOak, q.g);
     };
     // Kareem's (Karim t315, 25 Oct 2026): the TV and its low niche are centred on the ELEVATED panel — the proud D1
-    // box face from the splayed return (local edge -0.51) to the column seam (local 1.72, plan y 5.3914): centre
-    // local 0.605 (plan y 4.275), 0.225 clear each side for the low niche. Nothing goes on the column. The run behind
-    // keeps the two tall niches centred in -1.60 to -0.71 (south wall face to splay start): 0.07 / 0.34 / 0.07 / 0.34 / 0.07.
-    const tall = KC ? [[-1.53, -1.19], [-1.12, -0.78]] : [[-1.59, -1.25], [-1.11, -0.77]];
-    const low = KC ? [-0.285, 1.495, 0.33, 0.69, 0.1] : [-0.4, 1.38, 0.33, 0.69, 0.1];
+    // box face from the diagonal cut (local edge -0.4786) to the column seam (local 1.72, plan y 5.3914): centre
+    // local 0.6207 (plan y 4.2907), 0.2093 clear each side for the low niche. Nothing goes on the column. The run behind
+    // keeps the two tall niches centred in -1.5995 to -0.7495 (south wall face to the cut): 0.0567 / 0.34 / 0.0566 / 0.34 / 0.0567.
+    const tall = KC ? [[-1.5428, -1.2028], [-1.1462, -0.8062]] : [[-1.59, -1.25], [-1.11, -0.77]];
+    const low = KC ? [-0.2693, 1.5107, 0.33, 0.69, 0.1] : [-0.4, 1.38, 0.33, 0.69, 0.1];
     // Main (26 Oct): the HW-B450F sub (34.3 high) can't stand in the 32.4 clear inside the 18 mm oak lining, so the
     // niche floor drops 3 cm to 0.30 (35.4 clear); styling on the floor follows it by fl.
     const SB = version === "kareems-changes";
@@ -1560,8 +1563,8 @@ export function furnish(scene, M, mat, version = "main") {
     const bar = [tcx - 0.4294, tcx + 0.4294, 0.7180, 0.7770], slot = SB ? [bar[0] - 0.015, bar[1] + 0.015, bar[2] - 0.008, bar[3] + 0.008, 0.01] : null;
     slab(-1.72, edge, D0, tall.map(([x0, x1]) => [x0, x1, 0.42, 2.2, 0.13]));
     slab(edge, 1.72, D1, [low, ...(open ? [open] : []), ...(slot ? [slot] : [])]);
-    // A splayed return instead of a square step between the run and the TV box: 0.08 m out over 0.2 m.
-    const splay = 0.2, L = Math.hypot(splay, D1 - D0), a = Math.atan2(D1 - D0, splay);
+    // A diagonal cut instead of a square step between the run and the TV box: 0.10 m out over 0.2709 m (Main), else 0.08 over 0.2.
+    const splay = KC ? 0.2709 : 0.2, L = Math.hypot(splay, D1 - D0), a = Math.atan2(D1 - D0, splay);
     const wedge = new THREE.Shape([new THREE.Vector2(edge - splay, -D0), new THREE.Vector2(edge, -D0), new THREE.Vector2(edge, -D1)]);
     const wedgeGeo = new THREE.ExtrudeGeometry(wedge, { depth: H, bevelEnabled: false });
     wedgeGeo.rotateX(-Math.PI / 2);  // shape v = -z, extruded up the wall
@@ -1581,7 +1584,7 @@ export function furnish(scene, M, mat, version = "main") {
     }, { src: "tall", at: [k], x: [0, 1] }));
     // Shelf styling as rendered: vases, books, a bowl.
     p.cyl(-1.42 + n0, 0.15 + dz0, 0.045, 1.765, 1.97, mat.linenSage, 16, 0.065); p.cyl(-0.94 + n1, 0.15 + dz0, 0.035, 1.765, 1.99, mat.linenSlate, 16, 0.06);
-    for (const [x, y] of [[-1.47 + n0, 1.325], [-0.99 + n1, 0.885], [-1.0 + n1, 1.325]]) for (let k = 0; k < 4; k++) p.box(x + k * 0.03, x + k * 0.03 + 0.025, y, y + 0.2 - (k % 2) * 0.03, 0.06 + dz0, 0.24 + dz0, k % 2 ? mat.linenBlush : mat.walnut);
+    for (const [x, y] of [[-1.47 + n0, 1.325], [-0.99 + n1, 0.885], [-1.0 + n1, 1.325]]) for (let k = 0; k < 4; k++) p.box(x + k * 0.03, x + k * 0.03 + 0.025, y, y + 0.2 - (k % 2) * 0.03, Math.max(0.06 + dz0, 0.015), 0.24 + dz0, k % 2 ? mat.linenBlush : mat.walnut);
     p.cyl(-1.42 + n0, 0.15 + dz0, 0.05, 0.445, 0.6, mat.planter, 16);
     p.box(0.95 + nl, 1.15 + nl, 0.345 + fl, 0.4 + fl, 0.08 + dz1, 0.26 + dz1, mat.whiteLacquer);
     p.cyl(0.2 + nl, 0.15 + dz1, 0.05, 0.345 + fl, 0.52 + fl, mat.clearGlass, 16);
@@ -1695,9 +1698,11 @@ export function furnish(scene, M, mat, version = "main") {
     // so left/right plaster reads ~equal on the elevated bit. Karim t331: the splay is a soft S-curve at the TV wall's slope, not a 36° chamfer: the
     // step drops to 0.18 (mass front x 15.152, panel face x 14.972) over a 0.45 run, 21.8° chord and 25° at its
     // steepest, tangent to the mass and the panel. Panel 1.56 wide (was 1.46); sideboard 0.40 deep, 0.22 proud of the mass.
+    // Main (Karim, 1 Nov 2026): buffet and niche mass both 0.50 off the wall face (x 14.7768), fronts flush at x 15.2768;
+    // the panel stays at x 14.972, so the same S-curve now steps 0.305 over its 0.45 run and the sideboard is 0.305 deep.
     const BK = ["kareems-changes", "karims-version"].includes(version);
-    const H = M.ceiling, F = BK ? 0.362 : 0.462, P = BK ? 0.182 : 0.062;  // mass front (x 15.25), wall panel face (x 14.85)
-    const B = BK ? P + 0.4 : F, dz = B - 0.462;  // sideboard front; its styling keeps its distance from the front
+    const KB = version === "kareems-changes", H = M.ceiling, F = KB ? 0.4868 : BK ? 0.362 : 0.462, P = BK ? 0.182 : 0.062;  // mass front (x 15.25), wall panel face (x 14.85)
+    const B = KB ? F : BK ? P + 0.4 : F, dz = B - 0.462;  // sideboard front; its styling keeps its distance from the front
     const S = -1.213, C = -1.013, N = 1.477;  // y 6.79, corner, 9.48
     const E = BK ? -0.533 : -0.347, K = BK ? -0.083 : 0.103;  // splay y 7.467-7.917 (Kareem's), 7.65-8.10 (45 cm)
     const niche = BK ? [-0.993, -0.653, 0.42, 2.2, 0.13] : [-0.883, -0.474, 0.45, 2.25, 0.13], deep = 0.25;
@@ -1741,7 +1746,7 @@ export function furnish(scene, M, mat, version = "main") {
     p.cyl(0.15, 0.3 + dz, 0.07, 0.83, 1.02, mat.planter, 16, 0.05); p.cyl(1.3, 0.28 + dz, 0.06, 0.83, 1.0, mat.stoneTable, 16, 0.045);
     p.cyl(1.05, 0.3 + dz, 0.045, 0.83, 0.88, mat.blackSteel, 16);
   }), "buffet wall");
-  plant(["kareems-changes", "karims-version"].includes(version) ? 15.16 : 15.04, 8.15, 0.5, 0.06, 0.83);
+  plant(version === "kareems-changes" ? 15.124 : version === "karims-version" ? 15.16 : 15.04, 8.15, 0.5, 0.06, 0.83);
   // 2.25 hp split on the buffet wall panel (x 14.852; Kareem's 14.972), centred on the pebble mirror (y 8.79; Kareem's
   // 8.697, the centre of the wider panel): 1.05 W x 0.30 H x 0.23 D, top 2.42, its underside 0.12 over the mirror top
   // (2.00) and 0.18 under the ceiling.

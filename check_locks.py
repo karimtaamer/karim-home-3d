@@ -48,7 +48,7 @@ def _tv(furnish):
     hole = b and re.search(r"tall\.map\(\(\[x0, x1\]\) => \[x0, x1, ([\d.]+), ([\d.]+), ([\d.]+)\]\)", b)
     shelves = b and re.search(r"for \(const y of \[([^\]]+)\]\)", b)
     return {"item_x": _num(b, r"item\(\s*([-\d.]+)\s*,"), "run": _num(b, r"D0 = KC \? ([\d.]+)"),
-            "tv": _num(b, r"D1 = KC \? ([\d.]+)"), "splay": _num(b, r"const splay = ([\d.]+)"),
+            "tv": _num(b, r"D1 = KC \? ([\d.]+)"), "splay": _num(b, r"const splay = (?:KC \? )?([\d.]+)"),
             "tall": [float(tall.group(i)) for i in range(1, 5)] if tall else None,
             "hole": [float(hole.group(i)) for i in range(1, 4)] if hole else None,
             "shelves": _nums(shelves.group(1)) if shelves else None,

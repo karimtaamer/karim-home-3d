@@ -73,15 +73,15 @@
     {
       "id": "kc-tv-niche-depths",
       "version": "kareems-changes",
-      "what": "Option A: keep the 8 cm step and the splayed curve; tall niches ~21 cm deep (run 0.2122), TV niche ~29 cm (TV box 0.2922), splay 0.08 out over 0.20.",
-      "run_depth": 0.2122,
+      "what": "Main (Karim, 1 Nov 2026): TV box 0.28 and recessed run 0.18 off the DWG back line (x 17.2622), i.e. run 0.1922 / TV box 0.2922 from the item at x 17.25; a straight 10 cm diagonal cut over 0.2709 between them (supersedes Option A 0.2122 / 0.2922 / 0.08 over 0.20).",
+      "run_depth": 0.1922,
       "tv_depth": 0.2922,
-      "step": 0.08,
-      "splay": 0.2,
+      "step": 0.1,
+      "splay": 0.2709,
       "tol": 0.003,
       "decided_by": "Karim",
-      "date": "2026-10-25",
-      "ref": "Option A (t306s1346)",
+      "date": "2026-11-01",
+      "ref": "pt477u (TV wall 28 / recess 18 / 10 cm diagonal); was Option A (t306s1346)",
       "names": [
         "tv wall",
         "tv library",
@@ -127,29 +127,29 @@
     {
       "id": "kc-tv-wall-centring",
       "version": "kareems-changes",
-      "what": "Reception TV wall (item at plan y 3.67, local x along the wall, +x = north toward the column; plan y = 3.67 + local): the TV 166.81 x 95.78 cm and its low niche are centred on the ELEVATED panel — the proud TV-box face from the splayed return (local -0.51, plan y 3.16) to the column seam (local 1.72, plan y 5.3914) — centre local 0.605 (plan y 4.275). Low niche [-0.285, 1.495] (0.225 clear each side). Never past the column. Run behind: splay from -0.71, two tall niches centred in -1.60..-0.71 at [-1.53,-1.19] and [-1.12,-0.78] (0.07 margins and gap).",
-      "tv_center": 0.605,
+      "what": "Reception TV wall (item at plan y 3.67, local x along the wall, +x = north toward the column; plan y = 3.67 + local): the TV 166.81 x 95.78 cm and its low niche are centred on the ELEVATED 0.28 panel, 2.20 long from the diagonal cut (local -0.4786, plan y 3.1914) to the column seam (local 1.72, plan y 5.3914): centre local 0.6207 (plan y 4.2907). Low niche [-0.2693, 1.5107] (0.2093 clear each side). Never past the column. Run behind (0.18, 0.85 long from the south wall face at local -1.5995 to the cut at -0.7495): two tall niches at [-1.5428,-1.2028] and [-1.1462,-0.8062] (0.0567 margins and gap).",
+      "tv_center": 0.6207,
       "low": [
-        -0.285,
-        1.495
+        -0.2693,
+        1.5107
       ],
-      "edge": -0.51,
+      "edge": -0.4786,
       "tall": [
         [
-          -1.53,
-          -1.19
+          -1.5428,
+          -1.2028
         ],
         [
-          -1.12,
-          -0.78
+          -1.1462,
+          -0.8062
         ]
       ],
       "column_x": 1.72,
       "tv_width": 1.668,
       "tol": 0.003,
       "decided_by": "Karim",
-      "date": "2026-10-25",
-      "ref": "t315 (TV and its niche centred within the elevated wall/panel, not the whole free wall); supersedes t311 layout",
+      "date": "2026-11-01",
+      "ref": "pt477u (1 Nov 2026, 2.20 / 0.85 lengths); centring rule from t315",
       "names": [
         "tv wall",
         "tv library",
@@ -165,7 +165,7 @@
         "elevated wall"
       ],
       "panel": [
-        -0.51,
+        -0.4786,
         1.72
       ]
     }

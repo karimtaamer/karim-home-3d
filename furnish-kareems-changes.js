@@ -1699,7 +1699,10 @@ export function furnish(scene, M, mat, version = "main") {
     // step drops to 0.18 (mass front x 15.152, panel face x 14.972) over a 0.45 run, 21.8° chord and 25° at its
     // steepest, tangent to the mass and the panel. Panel 1.56 wide (was 1.46); sideboard 0.40 deep, 0.22 proud of the mass.
     // Main (Karim, 1 Nov 2026): buffet and niche mass both 0.50 off the wall face (x 14.7768), fronts flush at x 15.2768;
-    // the panel stays at x 14.972, so the same S-curve now steps 0.305 over its 0.45 run and the sideboard is 0.305 deep.
+    // Karim (1 Nov 2026, 2D feedback): only the niche mass is built out 0.50; below the buffet top the S-curve runs
+    // from the mass front all the way back to the wall face (x 14.7768), and the buffet fills that zone, 0.50 deep, its
+    // south end closing against the curve. Above the buffet top the 0.18 panel (x 14.972) still carries the pebble
+    // mirror and the split AC exactly as before.
     const BK = ["kareems-changes", "karims-version"].includes(version);
     const KB = version === "kareems-changes", H = M.ceiling, F = KB ? 0.4868 : BK ? 0.362 : 0.462, P = BK ? 0.182 : 0.062;  // mass front (x 15.25), wall panel face (x 14.85)
     const B = KB ? F : BK ? P + 0.4 : F, dz = B - 0.462;  // sideboard front; its styling keeps its distance from the front
@@ -1716,10 +1719,19 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(S, C, 0, H, 0, F - cr, mat.limewash);
     p.cyl(C, F - cr, cr, 0, H, mat.limewash, 32);  // rounded front corner
     const a = BK ? 0.15 * (K - E) : 0;  // bezier handles along the mass and panel faces (0 = the straight splay)
+    const W0 = -0.0132, TOP = 0.83;  // Main: wall face (x 14.7768) and buffet top, where the curve below / panel above meet
     const plan = new THREE.Shape().moveTo(E, 0).lineTo(E, -F).bezierCurveTo(E + a, -F, K - a, -P, K, -P).lineTo(N, -P).lineTo(N, 0);
-    const splay = new THREE.ExtrudeGeometry(plan, { depth: H, bevelEnabled: false, curveSegments: BK ? 24 : 1 });
+    const splay = new THREE.ExtrudeGeometry(plan, { depth: KB ? H - TOP : H, bevelEnabled: false, curveSegments: BK ? 24 : 1 });
     splay.rotateX(-Math.PI / 2);  // shape v = -z, extruded up the wall
+    if (KB) splay.translate(0, TOP, 0);
     mesh(splay, mat.limewash, p.g);
+    const curveTo = (sh, z) => sh.bezierCurveTo(E + a, -F, K - a, -z, K, -z);  // the S-curve from the mass front back to depth z
+    if (KB) {  // below the buffet top: the curve back to the wall itself, no panel
+      const low = curveTo(new THREE.Shape().moveTo(E, -W0).lineTo(E, -F), W0);
+      const g = new THREE.ExtrudeGeometry(low, { depth: TOP, bevelEnabled: false, curveSegments: 24 });
+      g.rotateX(-Math.PI / 2);
+      mesh(g, mat.limewash, p.g);
+    }
     const [x0, x1, y0, y1, r] = niche;  // oak lining, back and lit shelves
     const ly = BK ? 2.1 : 2.14, sy = BK ? [0.885, 1.325, 1.765] : [0.875, 1.275, 1.675];  // top LED, styled shelf tops
     p.label("tall niche", p => {  // Move and Resize: a named part; resizing it changes the numbers in `niche`
@@ -1737,10 +1749,22 @@ export function furnish(scene, M, mat, version = "main") {
     for (let k = 0; k < 4; k++) p.box(-0.8 + dn + k * 0.03, -0.775 + dn + k * 0.03, sy[2], sy[2] + 0.185 - (k % 2) * 0.03, F - 0.2, F - 0.04, k % 2 ? mat.linenBlush : mat.walnut);
     // Walnut sideboard from the mass to the corner, front in line with the mass (DWG x 15.25; Kareem's x 15.372).
     p.label("walnut sideboard", p => {
-      p.box(E, N - 0.02, 0.12, 0.8, P, B, mat.walnut);
-      fronts(p, E, N - 0.02, 0.12, 0.8, B, 0.45);
-      p.box(E + 0.03, N - 0.05, 0, 0.12, P, B - 0.06, mat.darkTop);
-      p.box(E, N - 0.02, 0.8, 0.83, P, B + 0.01, mat.walnut);
+      if (KB) {  // Main: back on the wall face, south end cut to the curve
+        const body = (y0, y1) => {
+          const sh = curveTo(new THREE.Shape().moveTo(E, -B), W0).lineTo(N - 0.02, -W0).lineTo(N - 0.02, -B).lineTo(E, -B);
+          const g = new THREE.ExtrudeGeometry(sh, { depth: y1 - y0, bevelEnabled: false, curveSegments: 24 });
+          g.rotateX(-Math.PI / 2); g.translate(0, y0, 0);
+          mesh(g, mat.walnut, p.g);
+        };
+        body(0.12, 0.8); body(0.8, 0.83);
+        fronts(p, E, N - 0.02, 0.12, 0.8, B, 0.45);
+        p.box(K, N - 0.05, 0, 0.12, W0, B - 0.06, mat.darkTop);
+      } else {
+        p.box(E, N - 0.02, 0.12, 0.8, P, B, mat.walnut);
+        fronts(p, E, N - 0.02, 0.12, 0.8, B, 0.45);
+        p.box(E + 0.03, N - 0.05, 0, 0.12, P, B - 0.06, mat.darkTop);
+        p.box(E, N - 0.02, 0.8, 0.83, P, B + 0.01, mat.walnut);
+      }
     });
     p.pebble((K + N) / 2, 1.6, 0.92, 0.8, P + 0.012, mat.mirror, true);
     p.cyl(0.15, 0.3 + dz, 0.07, 0.83, 1.02, mat.planter, 16, 0.05); p.cyl(1.3, 0.28 + dz, 0.06, 0.83, 1.0, mat.stoneTable, 16, 0.045);

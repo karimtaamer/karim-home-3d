@@ -6,7 +6,8 @@
 //      in the bar adds see-through markers on every point, hidden ones too, in Walk and Top.
 //   2D (drawing.js): drawElectrical() draws the layer over the DWG; pickElectrical() finds the point under the pointer.
 // Point fields: type, room, x, y (plan metres), h (metres from the slab), facing (the way the plate looks: N/E/S/W),
-// label, status (plan / adapted / added / existing), note; switches add gangs (one line per rocker) and two_way.
+// label, status (plan / adapted / added / existing), note; switches add gangs (one line per rocker) and two_way;
+// flaps (outlets sunk in a furniture top) add parts and finish, their h being the top's height.
 
 const cache = new Map();
 export function loadElectrical(url) {
@@ -23,6 +24,7 @@ export const KINDS = {
   switch:       { what: "This is a light switch bank.", col: "#ff6b6b", glyph: "S" },
   acctl:        { what: "This is an AC controller (thermostat).", col: "#ff6b6b", glyph: "AC" },
   socket:       { what: "This is a socket.", col: "#5aa9ff", glyph: "socket" },
+  flap:         { what: "This is a hidden socket under a flush wood flap (socket + 2 USB-C).", col: "#5aa9ff", glyph: "FS" },
   power:        { what: "This is a dedicated power point for an appliance.", col: "#ff9f43", glyph: "P" },
   wp:           { what: "This is a weatherproof outdoor socket.", col: "#5aa9ff", glyph: "WP" },
   multi:        { what: "This is a combined media plate.", col: "#46d39a", glyph: "M" },
@@ -35,15 +37,16 @@ export const KINDS = {
   doorbell:     { what: "This is the doorbell button.", col: "#c58cff", glyph: "B" },
   chime:        { what: "This is the doorbell chime.", col: "#c58cff", glyph: "CH" },
   fan:          { what: "This is an exhaust fan.", col: "#c58cff", glyph: "F" },
+  towelheater:  { what: "This is an electric towel heater.", col: "#ff9f43", glyph: "TH" },
   db:           { what: "This is the distribution board (DB): the main breaker panel for the whole flat.", col: "#c58cff", glyph: "DB" },
   lcp:          { what: "This is the low-current panel: internet fibre, network, TV and intercom cables meet here.", col: "#c58cff", glyph: "LC" },
   router:       { what: "This is the Wi-Fi router.", col: "#c58cff", glyph: "R" },
 };
-const PARTS = { D: "data (Cat6)", H: "HDMI", TV: "TV / antenna", "2S": "double socket", S: "socket" };
+const PARTS = { D: "data (Cat6)", H: "HDMI", TV: "TV / antenna", "2S": "double socket", S: "socket", C: "USB-C" };
 const STATUS = {
-  plan: "From the Samra electrical plan.",
-  adapted: "From the Samra plan, adapted to Main's layout.",
-  added: "Added for Main (not on the Samra plan).",
+  plan: "From the electrical plan.",
+  adapted: "From the electrical plan, adapted to Main's layout.",
+  added: "Added for Main (not on the electrical plan).",
   existing: "Already in the model.",
 };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -129,6 +132,9 @@ export function buildElectrical({ THREE, scene, ceilingBits, data, ceiling = 2.6
     metal: new THREE.MeshStandardMaterial({ color: 0x9aa0a6, roughness: 0.4, metalness: 0.6 }),
     grey: new THREE.MeshStandardMaterial({ color: 0xc9c8c3, roughness: 0.6 }),
     red: new THREE.MeshStandardMaterial({ color: 0xd23b2f, emissive: 0x5a0d08, roughness: 0.5 }),
+    black: new THREE.MeshStandardMaterial({ color: 0x1c1b1a, roughness: 0.5 }),
+    walnut: new THREE.MeshStandardMaterial({ color: 0x4a3426, roughness: 0.6 }),
+    oak: new THREE.MeshStandardMaterial({ color: 0xc39a6b, roughness: 0.6 }),
     led: new THREE.MeshStandardMaterial({ color: 0xfff1d6, emissive: 0xffe2b0, emissiveIntensity: 1.2 }),
     ring: new THREE.MeshStandardMaterial({ color: 0xe9e6df, roughness: 0.35, metalness: 0.2 }),
     spot: materials.downlight || new THREE.MeshStandardMaterial({ color: 0xfff6e8, emissive: 0xfff0d8, emissiveIntensity: 1.5 }),
@@ -215,6 +221,27 @@ export function buildElectrical({ THREE, scene, ceilingBits, data, ceiling = 2.6
     return g;
   }
 
+  // Flap: a socket + USB-C strip sunk in a furniture top (local y 0 = the top), its flush lid hinged at the back
+  // (wall side, local -z) and shown standing open so the outlets read; 26 x 9 cm.
+  function flapPart(p) {
+    const g = new THREE.Group(), wood = M[p.finish] || M.oak, w = 0.13, d = 0.045;
+    box(g, -w, w, 0.0008, 0.0015, -d, d, M.black);                                        // the well, flush with the top
+    let x = -w + 0.015;
+    for (const k of p.parts || ["S"]) {
+      if (k === "S") {
+        box(g, x, x + 0.07, 0.0015, 0.012, -0.035, 0.035, M.black);
+        for (const dx of [0.024, 0.046]) { const h = new THREE.Mesh(new THREE.CylinderGeometry(0.0035, 0.0035, 0.002, 8), M.hole); h.position.set(x + dx, 0.0125, 0); g.add(h); }
+        x += 0.08;
+      } else {  // USB-C: a small module with its slot
+        box(g, x, x + 0.04, 0.0015, 0.012, -0.03, 0.03, M.black);
+        box(g, x + 0.012, x + 0.028, 0.012, 0.013, -0.004, 0.004, M.metal);
+        x += 0.05;
+      }
+    }
+    box(g, -w, w, 0, 2 * d, -d - 0.018, -d, wood);                                     // the lid, open against the back
+    return g;
+  }
+
   for (const p of data.points) {
     const world = new THREE.Vector3(p.x, p.h ?? ceiling, -p.y);
     let obj = null;
@@ -230,6 +257,11 @@ export function buildElectrical({ THREE, scene, ceilingBits, data, ceiling = 2.6
       for (let i = -3; i <= 3; i++) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.012, 0.008), M.grey); s.position.set(0, -0.001, i * 0.022); obj.add(s); }
       obj.position.set(p.x, ceiling - 0.006, -p.y);
       ceilingBits.add(obj);
+    } else if (p.type === "flap") {
+      obj = flapPart(p);
+      obj.position.set(p.x, p.h, -p.y);
+      obj.rotation.y = FACING[p.facing] ?? 0;
+      group.add(obj);
     } else if (p.status !== "existing") {  // existing ones are modelled by furnish: only their pick target and marker here
       obj = wallPart(p);
       if (obj) {
@@ -239,7 +271,7 @@ export function buildElectrical({ THREE, scene, ceilingBits, data, ceiling = 2.6
       }
     }
     // Pick target: a little larger than the part, so small plates are easy to land on.
-    const big = { db: 0.36, lcp: 0.28, router: 0.16, spot: 0.09, fan: 0.15, pendant: 0.16, walllight: 0.14, intercom_out: 0.13 }[p.type] || 0.075;
+    const big = { db: 0.36, lcp: 0.28, router: 0.16, spot: 0.09, fan: 0.15, pendant: 0.16, walllight: 0.14, intercom_out: 0.13, flap: 0.12, towelheater: 0.3 }[p.type] || 0.075;
     const pick = new THREE.Mesh(new THREE.SphereGeometry(big, 8, 6), M.pick);
     pick.position.copy(world);
     if (p.facing && !CEILING_KINDS.has(p.type)) {  // just in front of the wall

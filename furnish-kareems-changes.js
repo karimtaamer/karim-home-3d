@@ -713,15 +713,7 @@ export function furnish(scene, M, mat, version = "main") {
     for (const x of [2.95, 5.37]) item(x, 9.02, "S", p => {  // curtains either side of the 2.18 m window
       const m = mesh(curtainGeometry(0.55, 2.45), mat.curtain, p.g); m.position.set(0, 1.27, 0.12);
     });
-    if (["kareems-changes", "karims-version"].includes(version)) {
-      // Three-gang switch moved to the circled wall spot.
-      item(4.516, 5.585, "W", p => {
-        p.box(-0.043, 0.043, 1.265, 1.351, 0, 0.008, mat.whiteLacquer);
-        for (const x of [-0.025, 0, 0.025]) {
-          p.box(x - 0.011, x + 0.011, 1.276, 1.34, 0.008, 0.012, mat.whiteLacquer);
-        }
-      });
-    }
+    // (Main's bedroom-door switches are electrical.js plates since 4 Nov 2026: 3 over 3, electrical-kareems-changes.json.)
     // Kareem's Changes: white lacquer sliding doors with recessed hidden pulls (other versions keep smoked glass).
     item(6.367, 7.336, "W", wardrobe(3.36, 1.04, ["kareems-changes", "karims-version"].includes(version), ["kareems-changes", "karims-version"].includes(version)));  // DWG wardrobe on the kitchen wall
     item(1.564, 4.55, "N", wardrobe(1.895, 0.45, ["kareems-changes", "karims-version"].includes(version)));  // DWG wardrobe on the south wall, 20 cm shorter for the dresser: four ~43 cm sliding doors
@@ -2003,7 +1995,7 @@ export function furnish(scene, M, mat, version = "main") {
   for (const y of [5.0, 8.6]) sconce(T.x0, y, "E", 2.0);
 
   // --- Ceilings: downlights in every indoor room, linear AC grilles in the living spaces ---------
-  // Main (4 Nov 2026): its spots are the Samra electrical plan's (electrical-kareems-changes.json, electrical.js), not this grid.
+  // Main (4 Nov 2026): its spots are the electrical plan's (electrical-kareems-changes.json, electrical.js), not this grid.
   const rooms = {};
   if (version !== "kareems-changes") for (const f of M.floor) if (f.kind !== "outdoor") (rooms[f.room] ??= []).push(f.outer);
   for (const [name, rings] of Object.entries(rooms)) {

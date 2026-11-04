@@ -3,12 +3,12 @@
 
     python3 build_electrical.py            # writes electrical-kareems-changes.json; prints counts by type
 
-Source: SAMRA CONCEPTS "Furniture plan" + "Upper lighting with furniture" (Lotus apartment, 1st issue 20-08-2026), applied
+Source: the designer's "Furniture plan" + "Upper lighting with furniture" (Lotus apartment, 1st issue 20-08-2026), applied
 to Main's layout as it is (no wall, room or furniture moves). Each point is given a rough spot inside its room and the wall
 it sits on; the script finds that wall face in model-kareems-changes.js (a ray from the spot), so every plate sits on a
 real wall. Points with `at` instead of `wall` (ceiling spots, points inside joinery) keep their coordinates.
 Heights are the plan's (cm from the slab) unless the point is adapted to Main's furniture; `status` says which:
-  plan     - as on the Samra sheets (same room, same use; position fitted to Main's walls)
+  plan     - as on the electrical sheets (same room, same use; position fitted to Main's walls)
   adapted  - the plan's point moved or changed to fit Main (why in `note`)
   added    - not on the sheets, needed by Main (heaters, hood, fans, DB, router, doorbell ...)
   existing - already modelled in furnish-kareems-changes.js; listed so it gets a label (no new 3D part)
@@ -58,10 +58,13 @@ BANKS = {}    # switch bank id -> point
 
 
 def pt(kind, room, label, *, wall=None, at=None, x=None, y=None, h=None, status="plan", note="", **kw):
-    """wall: the wall the plate is on (N = the room's north wall, so it faces south); x / y: where along it."""
+    """wall: the wall the plate is on (N = the room's north wall, so it faces south); x / y: where along it.
+    proud: metres out from the wall face, for plates on a cladding (the kitchen's 15 mm stone splashback)."""
     if wall:
         fx, fy = face(x, y, wall)
         facing = OPP[wall]
+        if (d := kw.pop("proud", 0)):
+            fx, fy = round(fx - DIRS[wall][0] * d, 4), round(fy - DIRS[wall][1] * d, 4)
     else:
         fx, fy = at
         facing = kw.pop("facing", None)
@@ -89,9 +92,9 @@ def row(a, b, n, fixed, along="x"):
 spots("Living room", "living-A", row(0.75, 4.25, 5, 3.75, "y"), "Ceiling spot — living room, half A (sofa side)")
 spots("Living room", "living-B", row(0.65, 4.25, 6, 5.35, "y"), "Ceiling spot — living room, half B (TV side)")
 spots("Master bedroom", "master-A", [(x, y) for x in (2.95, 3.95, 4.85) for y in (7.85, 8.65)], "Ceiling spot — master bedroom, half A (window half)",
-      "adapted", "Samra's 12 bedroom spots in two halves, laid on Main's bed (headboard west) and wardrobe (east wall)")
+      "adapted", "the plan's 12 bedroom spots in two halves, laid on Main's bed (headboard west) and wardrobe (east wall)")
 spots("Master bedroom", "master-B", [(x, y) for x in (2.95, 3.95, 4.85) for y in (6.25, 7.05)], "Ceiling spot — master bedroom, half B (door half)",
-      "adapted", "Samra's 12 bedroom spots in two halves, laid on Main's bed (headboard west) and wardrobe (east wall)")
+      "adapted", "the plan's 12 bedroom spots in two halves, laid on Main's bed (headboard west) and wardrobe (east wall)")
 spots("Master bedroom", "master-entry", [(3.0, 5.25), (4.05, 5.25)], "Ceiling spot — over the dresser (bedroom entrance spots)",
       "adapted", "the plan's 2 master-lobby spots, over Main's dresser by the door")
 spots("Master bedroom", "master-wardrobe", [(1.3, 5.45), (2.0, 5.35)], "Ceiling spot — wardrobe corner (the plan's dressing-room spots)",
@@ -121,7 +124,8 @@ spots("Dining", "office", [(20.15, 9.05), (20.85, 9.05)], "Ceiling spot — over
 for x in (17.6, 18.4, 19.2):
     pt("pendant", "Dining", "Lantern pendant over the dining table", at=(x, 7.6), h=1.75, status="existing", circuit="dining-pendants")
 for y in (6.231, 8.79):
-    pt("pendant", "Master bedroom", "Bedside globe pendant", at=(2.48, y), h=1.15, status="existing", circuit="bedside-" + ("S" if y < 7 else "N"))
+    pt("pendant", "Master bedroom", "Bedside globe pendant", at=(2.48, y), h=1.15, status="existing", circuit="bedside-" + ("S" if y < 7 else "N"),
+       note="two-way: switched from the plates over both nightstands")
 pt("walllight", "Terrace", "Terrace wall light", at=(21.51, 5.775), h=2.0, facing="E", status="existing", circuit="terrace-wall")
 pt("walllight", "Terrace", "Terrace wall light", at=(21.47, 8.6), h=2.0, facing="E", status="existing", circuit="terrace-wall")
 pt("walllight", "Terrace", "Terrace wall light (party-mood height)", wall="W", x=21.8, y=2.45, h=2.2, circuit="terrace-wall",
@@ -153,18 +157,20 @@ bank("sw-lobby", "Entrance", "lobby by the bedroom and living-room doors", ["Lob
 bank("sw-living", "Living room", "living room, by the door",
      ["Spots, half A (sofa side)", "Spots, half B (TV side)", "Window cove LED, TV-wall sconces and picture lights"],
      wall="N", x=4.95, y=4.0)
-bank("sw-master-door", "Master bedroom", "bedroom door",
-     ["Dresser spots (entrance)", "Bedroom spots, half A (intermediate: door + both bedsides)", "Bedroom spots, half B (intermediate: door + both bedsides)"],
-     two_way="sw-bed-S,sw-bed-N", at=(4.516, 5.585), facing="W", status="existing",
-     note="Main's existing 3-gang plate by the door: the plan's 'master entrance' bank. Three control points need 2-way + intermediate (or smart) switches")
-bank("sw-master-dresser", "Master bedroom", "dresser, wardrobes and curtain",
+# Bedroom door wall (Karim 4 Nov 2026): the two 3-gang plates stacked 3 over 3, a little nearer the door; no thermostat
+bank("sw-master-door", "Master bedroom", "bedroom door (upper plate)",
+     ["Dresser spots (entrance)", "Bedroom spots, half A", "Bedroom spots, half B"],
+     wall="E", x=4.3, y=5.65, h=1.3, status="adapted",
+     note="the plan's 'master entrance' bank, stacked over the dresser bank (3 over 3) by the bedroom door")
+bank("sw-master-dresser", "Master bedroom", "dresser, wardrobes and curtain (lower plate)",
      ["Curtain-box LED", "Dresser mirror, shelf column and shoe lighting", "Wardrobe and wardrobe-corner spots (the plan's dressing room)"],
-     wall="E", x=4.3, y=5.35, status="adapted", note="the plan's 'dresser / wardrobes / curtain' bank plus the dressing-room 2-gang folded in (Main has no dressing room)")
-for side, y, sy in (("S", 6.231, 6.43), ("N", 8.79, 8.59)):
-    bank(f"sw-bed-{side}", "Master bedroom", f"bedside ({'door' if side == 'S' else 'window'} side)",
-         ["Bedside pendant", "Bedroom spots, half A (intermediate)", "Bedroom spots, half B (intermediate)"],
-         two_way="sw-master-door", wall="W", x=2.6, y=sy, h=0.85, status="adapted",
-         note="the plan's bed-switch bank (over the console), on each side of Main's bed on the headboard wall")
+     wall="E", x=4.3, y=5.65, h=1.2, status="adapted", note="the plan's 'dresser / wardrobes / curtain' bank plus the dressing-room 2-gang folded in (Main has no dressing room)")
+# Bedsides (Karim 4 Nov 2026): 2 switches on the wall centred over each nightstand, each side switching both pendants
+for side, y in (("S", 6.231), ("N", 8.79)):
+    bank(f"sw-bed-{side}", "Master bedroom", f"bedside ({'door' if side == 'S' else 'window'} side), over the nightstand",
+         ["Bedside pendant, door side (two-way with the other bedside)", "Bedside pendant, window side (two-way with the other bedside)"],
+         two_way=f"sw-bed-{'N' if side == 'S' else 'S'}", wall="W", x=2.6, y=y, h=0.85, status="adapted",
+         note="both bedsides switch both pendants; the sockets are in the nightstand top, under a flap")
 bank("sw-mbath", "Master bathroom", "master bathroom, outside the door",
      ["Spots over the vanity", "Spots, middle + shower", "WC spot + exhaust fan"], wall="N", x=2.22, y=5.6, status="adapted",
      note="outside the bathroom door, on the dry side (the plan draws it on the bedroom wall too)")
@@ -173,8 +179,8 @@ bank("sw-kitchen", "Kitchen", "kitchen, by the door",
 bank("sw-laundry", "Laundry", "laundry, outside the door", ["Laundry spots + exhaust fan"], wall="N", x=10.7, y=6.3,
      status="adapted", note="outside the door: inside, the full-height joinery runs to the door")
 bank("sw-gbath", "Guest bathroom", "guest bathroom, outside the door",
-     ["Spots over the vanity", "Spots, middle", "Bath / shower spots + exhaust fan"], wall="N", x=14.25, y=6.3,
-     status="adapted", note="moved outside the door, out of the wet zone (the plan draws it inside)")
+     ["Spots over the vanity", "Spots, middle", "Bath / shower spots + exhaust fan"], wall="N", x=14.13, y=6.3,
+     status="adapted", note="outside the door, out of the wet zone (the plan draws it inside), beside the frame on the handle side")
 bank("sw-dining", "Dining", "dining, by the hallway door",
      ["Lantern pendants", "Dining spots, half A", "Dining spots, half B", "Buffet spots + niche LED"], wall="S", x=15.22, y=6.2,
      status="adapted", note="the plan puts the dining and reception banks on the wall by the hallway door; in Main the buffet mass covers that wall, so they sit on the south wall just right of the door")
@@ -187,9 +193,7 @@ bank("sw-office", "Dining", "coffee corner, by the terrace door",
 
 # AC controllers (wall thermostats), 1.50
 pt("acctl", "Living room", "AC controller — living room split", wall="N", x=4.75, y=4.0, h=1.5)
-pt("acctl", "Master bedroom", "AC controller — master bedroom split", wall="E", x=4.3, y=5.47, h=1.5, status="adapted", note="by the door bank (the plan shows it by the bed wall)")
-pt("acctl", "Dining", "AC controller — dining split", wall="S", x=15.22, y=6.2, h=1.5, status="adapted", note="over the dining bank (the plan's 'reception and dining ACs' box by the door)")
-pt("acctl", "Reception", "AC controller — reception split", wall="S", x=15.58, y=6.2, h=1.5, status="adapted", note="over the reception bank")
+# (Karim 4 Nov 2026: no wall thermostats in the bedroom or by the dining door; those splits run on their remotes)
 
 # ================================================================ Power
 def sock(room, label, n=2, **kw):
@@ -210,33 +214,41 @@ sock("Living room", "Double socket 45 cm — beside the TV wall (plant / cleanin
 pt("power", "Living room", "AC power point — living-room split (dedicated circuit)", wall="W", x=3.3, y=0.68, h=2.3, appliance="split AC", status="added")
 
 # Master bedroom
-for side, y in (("door", 6.08), ("window", 8.94)):
-    sock("Master bedroom", f"Double socket 70 cm — bedside ({side} side): lamp, phone", wall="W", x=2.6, y=y, h=0.7, status="adapted",
-         note="the plan's bedside 70 points, on Main's headboard wall")
-    pt("phone", "Master bedroom", f"Phone point 70 cm — bedside ({side} side)", wall="W", x=2.6, y=y + (0.1 if y < 7 else -0.1), h=0.7, status="adapted")
-sock("Master bedroom", "Double socket 100 cm — dresser (hair dryer, mirror)", wall="S", x=2.75, y=5.0, h=1.0, status="adapted",
-     note="the plan's 'table area' socket 100, on Main's south-wall dresser")
+# Flush wood flaps (Karim 4 Nov 2026): socket + 2 USB-C sunk in the top, under a lift-up flap (shown open), in place of wall sockets
+FLAP = ["S", "C", "C"]
+for side, y in (("door", 6.231), ("window", 8.79)):
+    pt("flap", "Master bedroom", f"Flap in the nightstand top ({side} side) — socket + 2 USB-C (lamp, phones)", at=(2.41, y), h=0.55, facing="E",
+       parts=FLAP, finish="walnut", status="adapted", note="the plan's bedside 70 points, moved into the nightstand: a flush walnut flap at the back of the top, the cable down inside to a box on the headboard wall behind it")
+pt("flap", "Master bedroom", "Flap in the dresser top, under the mirror — socket + 2 USB-C (hair dryer, phone)", at=(3.37, 4.65), h=0.75, facing="N",
+   parts=FLAP, finish="oak", status="adapted", note="the plan's 'table area' socket, moved off the wall into the dresser top: a flush oak flap at the back, under the mirror")
 sock("Master bedroom", "Double socket 45 cm — by the door (vacuum)", wall="E", x=4.3, y=5.15, h=0.45)
 sock("Master bedroom", "Double socket 45 cm — window wall", wall="N", x=5.9, y=8.6, h=0.45)
 pt("power", "Master bedroom", "AC power point — master split (dedicated circuit)", wall="S", x=3.95, y=5.0, h=2.3, appliance="split AC", status="added")
 # Master bathroom
-sock("Master bathroom", "Socket 120 cm — by the vanity (shaver, hair dryer), splash-protected", n=1, wall="S", x=1.25, y=6.6, h=1.2, status="adapted")
+sock("Master bathroom", "Socket 135 cm — tiled wall left of the mirror, over the counter (shaver, hair dryer), splash-protected", n=1,
+     wall="S", x=1.0, y=6.6, h=1.35, proud=0.012, status="adapted")  # on the 1 cm tile lining
+sock("Master bathroom", "Socket inside the medicine cabinet, bottom right (toothbrush, shaver)", n=1, at=(0.591, 6.985), h=1.39, facing="E",
+     status="added", note="on the cabinet's back panel, behind the mirrored leaves")
+pt("towelheater", "Master bathroom", "Electric towel heater (towel rail)", at=(2.15, 7.6632), h=1.4, facing="W", status="existing",
+   circuit="mbath-towel", note="on its own fused spur under the rail")
+pt("power", "Master bathroom", "Electric towel heater point — switched fused spur under the rail (dedicated)", at=(2.177, 7.6632), h=0.65, facing="W",
+   appliance="electric towel heater", status="added", note="its cable runs up behind the rail's lower bracket")
 pt("power", "Master bathroom", "Instant water heater point — inside the vanity (existing socket)", at=(0.566, 6.525), h=0.66, facing="E",
    appliance="instant water heater 7.5 kW", status="existing", note="Main already models this socket on the vanity's back panel; it needs its own 3×6 mm circuit")
 pt("fan", "Master bathroom", "Exhaust fan — master bathroom (with the WC rocker)", at=(1.78, 7.95), h=CEIL, status="added")
 
 # Kitchen
-sock("Kitchen", "Double socket 130 cm — counter left of the sink", wall="N", x=6.95, y=8.5, h=1.3)
-sock("Kitchen", "Double socket 130 cm — counter right of the sink", wall="N", x=9.2, y=8.5, h=1.3)
+sock("Kitchen", "Double socket 130 cm — counter left of the sink", wall="N", x=6.95, y=8.5, h=1.3, proud=0.015)
+sock("Kitchen", "Double socket 130 cm — counter right of the sink", wall="N", x=9.2, y=8.5, h=1.3, proud=0.015)
 pt("power", "Kitchen", "Socket 60 cm — water filter, under the sink", wall="N", x=8.8, y=8.5, h=0.6, appliance="water filter", note="under the sink, just east of the window (the wall under the window is the opening)")
 pt("power", "Kitchen", "Double socket 130 cm — for the fridge", wall="E", x=9.8, y=7.05, h=1.3, appliance="fridge", note="behind the fridge, as the plan")
 pt("power", "Kitchen", "Dishwasher point — in the base under the raised dishwasher", wall="E", x=9.8, y=8.3, h=0.4, appliance="dishwasher",
    status="adapted", note="the plan has the dishwasher at the sink (60); Main's dishwasher is the raised column on the east run")
-sock("Kitchen", "Double socket 130 cm — counter by the water dispenser", wall="E", x=9.8, y=8.95, h=1.3, status="adapted", note="feeds Main's countertop water dispenser")
+sock("Kitchen", "Double socket 130 cm — counter by the water dispenser", wall="E", x=9.8, y=8.95, h=1.3, proud=0.015, status="adapted", note="feeds Main's countertop water dispenser")
 pt("power", "Kitchen", "Cooker point 60 cm — hob", wall="W", x=6.9, y=7.376, h=0.6, appliance="cooker / hob")
 pt("power", "Kitchen", "Hood point — over the hob, inside the upper", wall="W", x=6.9, y=7.376, h=2.1, appliance="cooker hood", status="added")
-sock("Kitchen", "Double socket 130 cm — counter by the hob (south)", wall="W", x=6.9, y=6.6, h=1.3)
-sock("Kitchen", "Double socket 130 cm — counter by the hob (north)", wall="W", x=6.9, y=8.15, h=1.3)
+sock("Kitchen", "Double socket 130 cm — counter by the hob (south)", wall="W", x=6.9, y=6.6, h=1.3, proud=0.015)
+sock("Kitchen", "Double socket 130 cm — counter by the hob (north)", wall="W", x=6.9, y=8.15, h=1.3, proud=0.015)
 pt("power", "Kitchen", "Oven point — behind the pan drawer under the oven", at=(8.117, 5.672), h=0.55, facing="N", appliance="built-in oven",
    status="adapted", note="plan: 130 on the south wall; in Main's tower the oven is 66.5–122.5, so the point sits under it, reachable through the drawer")
 pt("power", "Kitchen", "Microwave point — behind the microwave in the tower niche", at=(8.117, 5.672), h=1.45, facing="N", appliance="microwave",
@@ -255,6 +267,9 @@ sock("Laundry", "Double socket 120 cm — counter (iron, steamer)", wall="N", x=
 sock("Laundry", "Double socket 120 cm — passage wall", wall="E", x=11.6, y=7.6, h=1.2)
 pt("power", "Laundry", "Water-heater point — 40 L heater in the upper cabinet (dedicated 3×6 mm)", wall="N", x=11.25, y=8.5, h=2.35,
    appliance="electric water heater", status="added", note="not on the plan; the heater lives in the counter's upper cabinet")
+pt("power", "Laundry", "Socket 60 cm — robot vacuum dock, inside the joinery's bottom bay", wall="W", x=10.6, y=7.21, h=0.6,
+   appliance="robot vacuum dock (Roborock-style, 34 x 49 x 52 cm)", status="added",
+   note="on the back wall of the south bay of the tall joinery, over the dock's top (52 cm) and under the 71 cm clear needed to lift its tanks out: it plugs in behind, no cable across the floor")
 pt("fan", "Laundry", "Exhaust fan — laundry (with the laundry light)", at=(11.4, 8.85), h=CEIL, status="added")
 
 # Guest bathroom
@@ -282,8 +297,6 @@ pt("doorbell", "Entrance", "Doorbell push — outside the front door", wall="N",
 # Dining, coffee corner
 sock("Dining", "Double socket 45 cm — north wall (west)", wall="N", x=15.4, y=9.0, h=0.45)
 sock("Dining", "Double socket 45 cm — north wall (by the table)", wall="N", x=18.6, y=9.0, h=0.45)
-sock("Dining", "Double socket 100 cm — over the buffet (lamps, warming tray)", at=(14.975, 8.05), h=0.95, facing="E", status="adapted",
-     note="the plan's 130 socket on the column by the hallway door, moved onto Main's buffet panel")
 pt("power", "Dining", "AC power point — dining split (dedicated circuit)", at=(14.975, 9.4), h=2.3, facing="E", appliance="split AC", status="added")
 sock("Dining", "Double socket 115 cm — espresso machine", wall="N", x=20.0, y=9.0, h=1.15, status="adapted",
      note="the plan's office sockets 110: Main's marble top is at 1.00, so 1.15")
@@ -296,10 +309,6 @@ pt("multi", "Reception", "TV plate behind the TV — data, HDMI, TV + double soc
    note="inside the TV opening, hidden by the 166.8 cm TV")
 pt("multi", "Reception", "Niche plate 50 cm — data, HDMI, TV + double socket (soundbar, sub, box)", at=(17.27, 3.9), h=0.5, facing="E",
    parts=["D", "H", "TV", "2S"], status="adapted", note="the plan's 60 plate, at the back of Main's low lit niche (0.30–0.69); HDMI conduit to the TV plate")
-pt("sound", "Reception", "Sound system screen (audio control)", wall="S", x=17.75, y=2.5, h=1.5, status="adapted",
-   note="off the column (Karim's rule): on the south wall beside the TV run")
-pt("intercom", "Reception", "Intercom screen — answer the front door", wall="S", x=17.95, y=2.5, h=1.5, status="adapted",
-   note="off the column (Karim's rule): on the south wall beside the TV run")
 sock("Reception", "Double socket 45 cm — left of the sofa", wall="S", x=18.15, y=2.5, h=0.45)
 sock("Reception", "Double socket 45 cm — right of the sofa", wall="S", x=20.55, y=2.5, h=0.45)
 pt("phone", "Reception", "Phone point 45 cm — south-east corner", wall="E", x=20.9, y=2.4, h=0.45)
@@ -328,7 +337,7 @@ legend = {
 }
 OUT.write_text(json.dumps({
     "version": "kareems-changes",
-    "source": "SAMRA CONCEPTS, Lotus apartment: Furniture plan + Upper lighting with furniture, 1st issue 20-08-2026 (Eng. Omar Samra / Eng. Mariam Ahmed)",
+    "source": "Designer's electrical plan, Lotus apartment: Furniture plan + Upper lighting with furniture, 1st issue 20-08-2026",
     "built_by": "build_electrical.py (edit there, then rerun)",
     "heights": "metres; the plan's heights are cm from the concrete slab, used as-is until the floor build-up is confirmed",
     "legend": legend, "points": P, "lines": LINES,

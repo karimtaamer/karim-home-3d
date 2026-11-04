@@ -2003,8 +2003,9 @@ export function furnish(scene, M, mat, version = "main") {
   for (const y of [5.0, 8.6]) sconce(T.x0, y, "E", 2.0);
 
   // --- Ceilings: downlights in every indoor room, linear AC grilles in the living spaces ---------
+  // Main (4 Nov 2026): its spots are the Samra electrical plan's (electrical-kareems-changes.json, electrical.js), not this grid.
   const rooms = {};
-  for (const f of M.floor) if (f.kind !== "outdoor") (rooms[f.room] ??= []).push(f.outer);
+  if (version !== "kareems-changes") for (const f of M.floor) if (f.kind !== "outdoor") (rooms[f.room] ??= []).push(f.outer);
   for (const [name, rings] of Object.entries(rooms)) {
     for (const ring of rings) {
       const xs = ring.map(p => p[0]), ys = ring.map(p => p[1]);

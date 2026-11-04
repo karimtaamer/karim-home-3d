@@ -28,6 +28,7 @@
   :is(#bar, #drawing .dbar) button svg { width: 14px; height: 14px; vertical-align: -3px; margin-right: 6px; fill: none; stroke: currentColor; stroke-width: 1.8;
     stroke-linecap: round; stroke-linejoin: round; }
   #bar :is(#measure, #move).on, #drawing .dbar [data-tool=move].on { background: #ff8a3d; color: #fff; }
+  #bar #elec.on, #drawing .dbar [data-tool=elec].on { background: #f2b134; color: #2b2622; }
   #bar button:disabled { opacity: .45; cursor: default; transform: none; }
   /* Versions and rooms: one panel at a time, folded under its chip. */
   #bar .menu::after { content: " ▾"; }
@@ -344,6 +345,7 @@ import { createMove } from "./move.js";
 import { createRenders } from "./renders.js";
 import { createPhotoGen } from "./photogen.js";
 import { createInteract } from "./interact.js";
+import { loadElectrical, buildElectrical, createElectricalUI } from "./electrical.js";
 
 // Models and textures still loading (GLTF pieces, pictures): reveal() waits for them before showing an edit.
 const loads = { busy: false };
@@ -375,6 +377,9 @@ const live = await liveFiles(vid);
 globalThis.EDIT_AI_URL = live.url;  // pictures Edit AI saved (uploads/...) load from the live store until git has them
 const { makeMaterials } = await liveImport(live, "materials.js");
 const { furnish } = await liveImport(live, "furnish.js");
+// Electrical, lighting and low-current points (build_electrical.py -> electrical-<version>.json; Main only so far):
+// faceplates and spots in 3D, a layer in 2D, and a card naming each one on hover / tap (electrical.js).
+const electrical = await loadElectrical(live.url(`electrical-${vid}.json`));
 await new Promise((onload, onerror) => document.head.appendChild(Object.assign(document.createElement("script"), { src: live.url(version.model), onload, onerror })));
 
 // --- The flat, built from window.MODEL (all geometry comes from the DWG via build_geometry.py) ---
@@ -1293,7 +1298,7 @@ document.getElementById("measure").onclick = () => {
 };
 document.getElementById("clearMeasure").onclick = () => measure.clear();
 
-const drawing = createDrawing(document.getElementById("drawing"), live.url(version.drawing));
+const drawing = createDrawing(document.getElementById("drawing"), live.url(version.drawing), { electrical });
 
 // --- Move and Resize (move.js, move_tool.py): beside Measure in the bar, and beside the drawing's own Measure -----------
 const moveBtn = document.getElementById("move");
@@ -1420,6 +1425,18 @@ const interact = createInteract({
     && document.getElementById("photogen-box")?.hidden !== false && !(+document.getElementById("photo")?.style.opacity > 0),
 });
 if (params.has("debug")) window.__interact = interact;  // headless checks: the openables list
+
+// --- Electrical points (electrical.js): hover / look at one, or tap it, for what it is; the Electrical button shows them all ---
+const elecBuilt = electrical && buildElectrical({ THREE, scene, ceilingBits: flat.furniture.ceilingBits, data: electrical, ceiling: M.ceiling });
+const elecUI = elecBuilt && createElectricalUI({
+  THREE, camera, renderer, built: elecBuilt, occluders: flat.solids, bar: document.getElementById("move"),
+  isLocked: () => walker.isLocked, isWalk: () => mode === "walk",
+  isActive: () => showing === "model" && !tween && !glide && !measure.active && !move.active && !params.has("clean")
+    && document.getElementById("photogen-box")?.hidden !== false && !(+document.getElementById("photo")?.style.opacity > 0),
+});
+if (elecUI && params.has("clean")) elecUI.button.hidden = true;
+if (elecUI && params.get("elec") === "1") elecUI.setXray(true);
+if (params.has("debug")) window.__elec = { data: electrical, ui: elecUI, built: elecBuilt };  // headless checks
 // headless checks: where the camera is (plan x, y, eye height), the view, the screen and the room it stands in
 if (params.has("debug")) window.__view = {
   get mode() { return mode; }, get showing() { return showing; }, get busy() { return !!(tween || glide); }, version: vid,
@@ -1513,6 +1530,7 @@ const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   interact.update();
+  if (elecBuilt) { elecBuilt.group.visible = flat.furniture.root.visible; elecUI.update(); }
   move.render();
   if (showing !== "model") return;  // the drawing or the renders cover the scene; no need to keep rendering it
   if (mode === "walk" && !tween && !glide) {

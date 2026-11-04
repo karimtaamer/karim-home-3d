@@ -1,5 +1,7 @@
 // The DWG itself as a flat drawing (drawing.json, from build_drawing.py): pan, zoom and measure,
-// with AutoCAD-style object snaps (endpoint, midpoint, centre) and ortho.
+// with AutoCAD-style object snaps (endpoint, midpoint, centre) and ortho. A plan version with an electrical file
+// (opts.electrical, electrical.js) gets an Electrical layer: on by default, hover or tap a symbol for what it is.
+import { drawElectrical, pickElectrical, makeCard } from "./electrical.js";
 
 const BG = "#212830";
 const MEASURE = "#ff8a3d";
@@ -22,12 +24,13 @@ export function loadDrawing(url) {
   return drawings.get(url);
 }
 
-export function createDrawing(root, url) {
+export function createDrawing(root, url, { electrical = null } = {}) {
   root.innerHTML = `
     <canvas></canvas>
     <div class="dbar">
       <button data-tool="measure"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg>Measure</button>
       <button data-tool="clear" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>Clear</button>
+      <button data-tool="elec" hidden title="Electrical, lighting and low-current points: hover or tap one to see what it is"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>Electrical</button>
     </div>
     <div class="dstatus"><span class="xy"></span><span class="dist"></span></div>
     <div class="dhelp"></div>`;
@@ -52,6 +55,10 @@ export function createDrawing(root, url) {
   let sel = -1, hover = -1, hits = [], delBtn = null;  // the selected / hovered measurement; labels and × as drawn
   let queued = false, hold = null;  // hold: a view to open on (the view setter, before the drawing loads)
   helpText();
+  // The electrical layer: shown unless switched off (remembered), its card on hover / tap.
+  let elecOn = !!electrical && localStorage.getItem("elec2d") !== "0", elecHover = null, elecPress = null;
+  const elecCard = electrical && makeCard();
+  const elecById = electrical ? Object.fromEntries(electrical.points.map(p => [p.id, p])) : {};
 
   const toScreen = ([x, y]) => [view.tx + x * view.s, view.ty - y * view.s];
   const toWorld = (sx, sy) => [(sx - view.tx) / view.s, (view.ty - sy) / view.s];
@@ -198,6 +205,8 @@ export function createDrawing(root, url) {
       ctx.fillText(t.t, 0, 0);
       ctx.restore();
     }
+
+    if (electrical && elecOn) drawElectrical(ctx, toScreen, view.s, electrical, elecHover);
 
     hits = []; delBtn = null;
     const live = (start || edit?.end < 2) && lock;  // the line under way, or the end being dragged, locked straight
@@ -401,6 +410,7 @@ export function createDrawing(root, url) {
   canvas.addEventListener("pointerdown", e => {
     canvas.setPointerCapture(e.pointerId);
     pointers.set(e.pointerId, [e.clientX, e.clientY]);
+    elecPress = pointers.size === 1 && !measuring ? [e.clientX, e.clientY] : null;
     if (pointers.size === 1) {
       press = { x: e.clientX, y: e.clientY, button: e.button, moved: false };
       if (measuring && data && e.button === 0 && !space) {
@@ -450,10 +460,22 @@ export function createDrawing(root, url) {
       cursor = target(e.clientX, e.clientY, "mouse");
       hover = measuring && !start && !prev ? hitTest(e.clientX, e.clientY, "mouse")?.i ?? -1 : -1;
     }
+    if (electrical && elecOn && e.pointerType === "mouse" && !prev && !start) {
+      const p = pickElectrical(electrical, toScreen, e.clientX, e.clientY);
+      if (p !== elecHover) { elecHover = p; }
+      p ? elecCard.show(p, e.clientX, e.clientY, elecById) : elecCard.hide();
+    }
     status();
     redraw();
   });
   const release = e => {
+    if (electrical && elecOn && elecPress && e.type === "pointerup" && Math.hypot(e.clientX - elecPress[0], e.clientY - elecPress[1]) <= CLICK_PX) {
+      const p = pickElectrical(electrical, toScreen, e.clientX, e.clientY, e.pointerType === "mouse" ? 10 : 18);
+      elecHover = p;
+      p ? elecCard.show(p, e.clientX, e.clientY, elecById, true) : elecCard.hide(true);
+      redraw();
+    }
+    elecPress = null;
     if (!pointers.delete(e.pointerId)) return;
     if (edit?.id === e.pointerId) {
       const [a, b] = done[edit.i];
@@ -482,10 +504,11 @@ export function createDrawing(root, url) {
   };
   canvas.addEventListener("pointerup", release);
   canvas.addEventListener("pointercancel", release);
-  canvas.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") { cursor = start ? cursor : null; snap = null; hover = -1; redraw(); } });
+  canvas.addEventListener("pointerleave", e => { if (e.pointerType === "mouse") { cursor = start ? cursor : null; snap = null; hover = -1; elecHover = null; elecCard?.hide(); redraw(); } });
   canvas.addEventListener("wheel", e => {
     e.preventDefault();
     zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * (e.deltaMode ? 0.05 : 0.0015)));
+    if (elecHover && !elecCard.pinned) { elecHover = null; elecCard.hide(); }
     if (data && !edit) cursor = target(e.clientX, e.clientY, "mouse");
     redraw();
   }, { passive: false });
@@ -526,6 +549,13 @@ export function createDrawing(root, url) {
     redraw();
   }
   button("measure").onclick = () => setMeasuring(!measuring);
+  const setElec = on => {
+    elecOn = on; localStorage.setItem("elec2d", on ? "1" : "0");
+    button("elec").classList.toggle("on", on);
+    if (!on) { elecHover = null; elecCard.hide(true); }
+    redraw();
+  };
+  if (electrical) { button("elec").hidden = false; button("elec").classList.toggle("on", elecOn); button("elec").onclick = () => setElec(!elecOn); }
   clear.onclick = () => { dropGesture(); done.length = 0; start = null; sel = hover = -1; status(); redraw(); };
   addEventListener("resize", () => shown && resize());
 
@@ -537,7 +567,7 @@ export function createDrawing(root, url) {
       resize();
       if (!data) await load();
     },
-    hide() { shown = false; root.hidden = true; shift = space = false; },
+    hide() { shown = false; root.hidden = true; shift = space = false; elecCard?.hide(true); },
     frame: () => ({ toWorld, toScreen }),  // screen px <-> plan metres, for Edit AI's highlight and the Move tool
     // The pan and zoom, kept over an edit's reload (index.html reloadHere); set before the drawing loads, it wins over fit().
     get view() { return { ...view }; },

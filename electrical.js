@@ -37,55 +37,127 @@ export const KINDS = {
   doorbell:     { what: "This is the doorbell button.", col: "#c58cff", glyph: "B" },
   chime:        { what: "This is the doorbell chime.", col: "#c58cff", glyph: "CH" },
   fan:          { what: "This is an exhaust fan.", col: "#c58cff", glyph: "F" },
+  ledfeed:      { what: "This is a power point for an accent light: an LED driver or a picture-light box.", col: "#ffd166", glyph: "L" },
+  sensor:       { what: "This is a ceiling motion / presence sensor: it switches the room's lights.", col: "#2ee6d6", glyph: "MS" },
   towelheater:  { what: "This is an electric towel heater.", col: "#ff9f43", glyph: "TH" },
   db:           { what: "This is the distribution board (DB): the main breaker panel for the whole flat.", col: "#c58cff", glyph: "DB" },
   lcp:          { what: "This is the low-current panel: internet fibre, network, TV and intercom cables meet here.", col: "#c58cff", glyph: "LC" },
-  router:       { what: "This is the Wi-Fi router.", col: "#c58cff", glyph: "R" },
+  router:       { what: "This is the network hub: fibre box, router and PoE switch. Every network cable runs home here.", col: "#c58cff", glyph: "R" },
+  ap:           { what: "This is a ceiling Wi-Fi access point: one network name everywhere, powered through its Cat6 cable.", col: "#46d39a", glyph: "AP" },
 };
-const PARTS = { D: "data (Cat6)", H: "HDMI", TV: "TV / antenna", "2S": "double socket", S: "socket", C: "USB-C" };
+// The chips under the 2D plan's Electrical button (drawing.js): each shows or hides one group (remembered).
+export const CATEGORIES = [
+  { id: "light",   label: "Lighting",          col: "#f2b134", types: ["spot", "pendant", "walllight", "led"] },
+  { id: "switch",  label: "Switches",          col: "#ff6b6b", types: ["switch", "acctl"] },
+  { id: "power",   label: "Sockets & power",   col: "#5aa9ff", types: ["socket", "flap", "power", "ledfeed", "wp", "towelheater"] },
+  { id: "network", label: "Network & TV",      col: "#46d39a", types: ["multi", "data", "phone", "tv", "router", "lcp", "ap", "intercom", "intercom_out"] },
+  { id: "sensors", label: "Sensors & fans",     col: "#2ee6d6", types: ["sensor", "fan"] },
+  { id: "other",   label: "Other",              col: "#c58cff", types: ["sound", "doorbell", "chime", "db"] },
+];
+export const catOf = type => (CATEGORIES.find(c => c.types.includes(type)) || CATEGORIES[CATEGORIES.length - 1]).id;
+const PARTS = { D: "data (Cat6)", "2D": "double data (2 × Cat6)", H: "HDMI", TV: "TV / antenna", "2S": "double socket", S: "socket", C: "USB-C" };
 const STATUS = {
   plan: "From the electrical plan.",
   adapted: "From the electrical plan, adapted to Main's layout.",
   added: "Added for Main (not on the electrical plan).",
   existing: "Already in the model.",
+  optional: "Optional: not decided yet.",
 };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const cmH = h => `${Math.round(h * 100)} cm`;
 
 // The card for a point (HTML). byId: id -> point, for the two-way partners.
-export function describeHTML(p, byId = {}) {
-  const k = KINDS[p.type] || { what: "" };
-  const rows = [];
-  if (p.h != null && !["spot", "fan", "led"].includes(p.type)) rows.push(`${cmH(p.h)} from the floor slab`);
-  else if (p.type === "spot" || p.type === "fan") rows.push("In the ceiling");
-  if (p.room) rows.push(p.room);
+// Short names for the card's header (KINDS[].what, the longer sentence, is the header's tooltip).
+const NAME = {
+  spot: "Ceiling spot", pendant: "Pendant light", walllight: "Wall light", led: "LED strip", switch: "Light switches",
+  acctl: "AC controller", socket: "Socket", flap: "Hidden socket flap", power: "Power point", wp: "Outdoor socket",
+  multi: "Media plate", data: "Data point", phone: "Phone point", tv: "TV point", sound: "Sound control", intercom: "Intercom screen",
+  intercom_out: "Outdoor intercom", doorbell: "Doorbell", chime: "Doorbell chime", fan: "Exhaust fan", sensor: "Motion sensor",
+  towelheater: "Towel heater", db: "Breaker panel", lcp: "Low-current panel", router: "Wi-Fi router", ap: "Wi-Fi access point",
+  ledfeed: "Accent-light power",
+};
+const BADGE = { plan: "Plan", adapted: "Adapted", added: "Added", existing: "Existing", optional: "Optional" };
+const ON_CEILING = ["spot", "fan", "sensor", "ap", "led"];
+// What sits on a plate, as coloured chips: code -> [label, colour, count]; repeats add up (C, C -> USB-C ×2).
+const PART_CHIP = { D: ["Cat6", "#46d39a", 1], "2D": ["Cat6", "#46d39a", 2], H: ["HDMI", "#46d39a", 1], TV: ["TV aerial", "#46d39a", 1],
+  S: ["Socket", "#5aa9ff", 1], "2S": ["Double socket", "#5aa9ff", 1], C: ["USB-C", "#5aa9ff", 1] };
+const PART_TIP = { Cat6: "Wired internet (network cable)", HDMI: "HDMI cable run, e.g. to the TV box or soundbar",
+  "TV aerial": "Coax socket for the antenna / satellite cable into the TV", Socket: "Power socket", "Double socket": "Two power sockets",
+  "USB-C": "USB-C charging port" };
+const cap = t => (t ? t[0].toUpperCase() + t.slice(1) : t);
+const reEsc = t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// The label minus what the header and chips already say: the kind before " — ", the height, the room, "OPTIONAL".
+function shortTitle(p) {
+  const [head, ...rest] = p.label.split(" — ");
+  const clean = t => t.replace(/\s*\d+(\.\d+)?\s*cm\b/g, "").replace(/,?\s*OPTIONAL\b,?/g, ",")
+    .replace(/^[,\s]+|[,\s]+$/g, "").replace(/\s{2,}/g, " ");
+  const tail = rest.join(" — ");
+  // Plates: the chips list the parts, so keep the head plus what it is for ("for the flip desk", "(soundbar, sub, box)").
+  const what = p.parts?.length && (tail.match(/\bfor\b.+$/)?.[0] || tail.match(/\([^()]+\)$/)?.[0]);
+  let t = clean(p.parts?.length ? (what ? `${head} ${what}` : head) : tail || head);
+  if (p.room) t = t.replace(new RegExp(`^${reEsc(p.room)}\\b[,:]?\\s*`, "i"), "");
+  return cap(t || clean(head));
+}
+// The note, for people: without the dated "(Karim 7 Nov 2026)" asides.
+const cleanNote = n => cap(n.replace(/\s*\([^()]*\b20\d\d\b[^()]*\)/g, "").replace(/\s*\bKarim \d+ \w+ 20\d\d:?/g, "").trim().replace(/[.;,]$/, ""));
+
+// The card for a point (HTML). byId: id -> point, for the two-way partners; full: the pinned card, which adds the note.
+export function describeHTML(p, byId = {}, full = false) {
+  const k = KINDS[p.type] || { what: "", col: "#ccc" };
+  const facts = [];
+  if (ON_CEILING.includes(p.type)) facts.push("In the ceiling");
+  else if (p.h != null) facts.push(`↕ ${cmH(p.h)}`);
+  if (p.tech) facts.push(p.tech);
+  if (p.appliance) facts.push(`For ${p.appliance}`);
   let body = "";
-  if (p.gangs?.length) body += `<ol>${p.gangs.map(g => `<li>${esc(g)}</li>`).join("")}</ol>`;
-  if (p.parts?.length) body += `<div class="el-sub">On the plate: ${p.parts.map(x => PARTS[x] || x).join(" · ")}</div>`;
-  if (p.two_way) {
-    const others = String(p.two_way).split(",").map(id => byId[id]).filter(Boolean)
-      .map(o => o.label.replace(/^\d-gang switch — /, ""));
-    if (others.length) body += `<div class="el-sub">Also switched from: ${others.map(esc).join("; ")}</div>`;
+  if (p.parts?.length) {
+    const n = new Map();
+    for (const x of p.parts) {
+      const [l, c, add] = PART_CHIP[x] || [PARTS[x] || x, "#cbbfb2", 1];
+      n.set(l, { c, n: (n.get(l)?.n || 0) + add });
+    }
+    body += `<div class="el-parts">${[...n].map(([l, v]) => `<span style="--c:${v.c}" title="${esc(PART_TIP[l] || l)}">${esc(l)}${v.n > 1 ? ` ×${v.n}` : ""}</span>`).join("")}</div>`;
   }
-  if (p.appliance) body += `<div class="el-sub">For: ${esc(p.appliance)}</div>`;
-  if (p.note) body += `<div class="el-note">${esc(p.note[0].toUpperCase() + p.note.slice(1))}.</div>`;
-  return `<div class="el-what">${esc(k.what)}</div><div class="el-title">${esc(p.label)}</div>`
-    + `<div class="el-sub">${rows.map(esc).join(" · ")}</div>${body}<div class="el-status s-${p.status}">${esc(STATUS[p.status] || "")}</div>`;
+  if (p.gangs?.length) body += `<ol class="el-gangs">${p.gangs.map(g => `<li>${esc(g)}</li>`).join("")}</ol>`;
+  if (p.two_way) {
+    const others = String(p.two_way).split(",").map(id => byId[id]).filter(Boolean).map(shortTitle);
+    if (others.length) body += `<div class="el-sub">⇄ Also switched from: ${others.map(esc).join("; ")}</div>`;
+  }
+  if (p.note) body += full ? `<div class="el-note">${esc(cleanNote(p.note))}.</div>` : `<div class="el-more">Click for why it's here</div>`;
+  return `<div class="el-head" title="${esc(k.what)}"><i style="background:${k.col}"></i><b>${esc(NAME[p.type] || p.type)}</b>`
+    + (p.room ? `<span class="el-room">${esc(p.room)}</span>` : "")
+    + `<em class="el-badge s-${p.status}" title="${esc(STATUS[p.status] || "")}">${esc(BADGE[p.status] || p.status)}</em></div>`
+    + `<div class="el-title">${esc(shortTitle(p))}</div>`
+    + (facts.length ? `<div class="el-facts">${facts.map(f => `<span>${esc(f)}</span>`).join("")}</div>` : "") + body;
 }
 
 const CSS = `
-  .el-card { position: fixed; z-index: 6; max-width: 300px; padding: 10px 12px; border-radius: 10px; background: #1f1b18ee; color: #f6efe6;
-    font: 12px/1.4 Inter, sans-serif; box-shadow: 0 6px 22px #0005; pointer-events: none; }
-  .el-card.pinned { pointer-events: auto; }
-  .el-card .el-what { font-weight: 600; font-size: 12.5px; margin-bottom: 2px; }
-  .el-card .el-title { color: #f2d3a4; }
-  .el-card .el-sub { color: #cbbfb2; margin-top: 3px; }
-  .el-card ol { margin: 5px 0 2px 18px; padding: 0; }
-  .el-card .el-note { margin-top: 5px; color: #b9ada0; font-size: 11.5px; }
-  .el-card .el-status { margin-top: 6px; font-size: 10.5px; letter-spacing: .04em; color: #9d9185; text-transform: uppercase; }
-  .el-card .el-status.s-added { color: #8fd6b3; } .el-card .el-status.s-adapted { color: #f2c27a; }
+  .el-card { position: fixed; z-index: 6; width: max-content; max-width: 270px; padding: 10px 12px 11px; border-radius: 12px; background: #1f1b18f2;
+    color: #f6efe6; font: 12px/1.4 Inter, sans-serif; box-shadow: 0 6px 22px #0005; pointer-events: none; }
+  .el-card.pinned { pointer-events: auto; padding-right: 26px; }
+  .el-card .el-head { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #cbbfb2; }
+  .el-card .el-head i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .el-card .el-head b { font-weight: 600; color: #f6efe6; letter-spacing: .02em; }
+  .el-card .el-room::before { content: "· "; }
+  .el-card .el-badge { margin-left: auto; padding: 1px 6px; border-radius: 999px; font: 600 9.5px Inter, sans-serif; letter-spacing: .06em;
+    text-transform: uppercase; color: #b9ada0; box-shadow: 0 0 0 1px #b9ada055 inset; }
+  .el-card .el-badge.s-added { color: #8fd6b3; box-shadow: 0 0 0 1px #8fd6b366 inset; }
+  .el-card .el-badge.s-adapted { color: #f2c27a; box-shadow: 0 0 0 1px #f2c27a66 inset; }
+  .el-card .el-badge.s-optional { color: #c58cff; box-shadow: 0 0 0 1px #c58cff66 inset; }
+  .el-card .el-title { margin-top: 4px; font-size: 13px; font-weight: 500; color: #f2d3a4; }
+  .el-card :is(.el-facts, .el-parts) { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .el-card .el-facts span { padding: 1px 7px; border-radius: 999px; background: #ffffff14; color: #e6ddd2; font-size: 11px; }
+  .el-card .el-parts span { padding: 2px 8px; border-radius: 6px; background: var(--c); color: #1f1b18; font-size: 11px; font-weight: 500; }
+  .el-card .el-gangs { margin: 7px 0 0; padding: 0; list-style: none; counter-reset: g; }
+  .el-card .el-gangs li { counter-increment: g; display: flex; gap: 7px; align-items: baseline; margin-top: 3px; }
+  .el-card .el-gangs li::before { content: counter(g); flex: none; width: 15px; height: 15px; border-radius: 4px; background: #ff6b6b; color: #1f1b18;
+    font: 700 10px/15px Inter, sans-serif; text-align: center; }
+  .el-card .el-sub { margin-top: 6px; color: #cbbfb2; font-size: 11.5px; }
+  .el-card .el-note { margin-top: 7px; padding-top: 6px; border-top: 1px solid #ffffff1a; color: #b9ada0; font-size: 11.5px; }
+  .el-card .el-more { margin-top: 6px; color: #8a7f74; font-size: 10.5px; }
   .el-card .el-x { position: absolute; right: 6px; top: 4px; border: 0; background: none; color: #f6efe6; font-size: 16px; cursor: pointer; display: none; }
   .el-card.pinned .el-x { display: block; }`;
+
 export function makeCard() {
   if (!document.getElementById("el-css")) document.head.append(Object.assign(document.createElement("style"), { id: "el-css", textContent: CSS }));
   const el = Object.assign(document.createElement("div"), { className: "el-card" });
@@ -96,7 +168,7 @@ export function makeCard() {
     show(p, x, y, byId, pinned = false) {
       if (card.pinned && !pinned) return;
       if (p !== card.point || pinned !== card.pinned) {
-        el.innerHTML = describeHTML(p, byId) + `<button class="el-x" aria-label="Close">×</button>`;
+        el.innerHTML = describeHTML(p, byId, pinned) + `<button class="el-x" aria-label="Close">×</button>`;
         el.querySelector(".el-x").onclick = () => card.hide(true);
       }
       card.point = p; card.pinned = pinned;
@@ -116,7 +188,7 @@ export function makeCard() {
 
 // ------------------------------------------------------------------------------------------------ 3D
 const FACING = { S: 0, E: Math.PI / 2, N: Math.PI, W: -Math.PI / 2 };
-const CEILING_KINDS = new Set(["spot", "fan"]);
+const CEILING_KINDS = new Set(["spot", "fan", "sensor", "ap"]);
 const NEAR = 5;  // metres: in Walk the see-through markers show only this close
 
 export function buildElectrical({ THREE, scene, ceilingBits, data, ceiling = 2.6, materials = {} }) {
@@ -191,6 +263,7 @@ export function buildElectrical({ THREE, scene, ceilingBits, data, ceiling = 2.6
         for (let i = 0; i < n; i++) { const x = -w / 2 + 0.013 + 0.04 * (i + 0.5) + (w - 0.026 - n * 0.04) / 2; box(g, x - 0.017, x + 0.017, y - 0.03, y + 0.03, 0.009, 0.014, M.rocker); }
         break;
       }
+      case "ledfeed": plate(g, 0.086, 0.086, y); cyl(g, 0, y, 0.012, 0.009, 0.013, M.metal); break;  // blank plate, cable outlet
       case "acctl": plate(g, 0.086, 0.086, y); box(g, -0.028, 0.028, y - 0.006, y + 0.026, 0.009, 0.011, M.glass); break;
       case "sound": case "intercom": plate(g, 0.13, 0.11, y); box(g, -0.055, 0.055, y - 0.04, y + 0.045, 0.009, 0.012, M.glass); break;
       case "intercom_out": box(g, -0.055, 0.055, y - 0.11, y + 0.11, 0, 0.03, M.metal); cyl(g, 0, y + 0.07, 0.012, 0.03, 0.034, M.glass); cyl(g, 0, y - 0.06, 0.013, 0.03, 0.036, M.glass); break;
@@ -257,6 +330,18 @@ export function buildElectrical({ THREE, scene, ceilingBits, data, ceiling = 2.6
       for (let i = -3; i <= 3; i++) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.012, 0.008), M.grey); s.position.set(0, -0.001, i * 0.022); obj.add(s); }
       obj.position.set(p.x, ceiling - 0.006, -p.y);
       ceilingBits.add(obj);
+    } else if (p.type === "sensor") {  // flush round ceiling sensor, 9 cm, with a dark lens
+      obj = new THREE.Group();
+      const b = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.012, 28), M.plate); obj.add(b);
+      const l = new THREE.Mesh(new THREE.CircleGeometry(0.018, 20), M.glass); l.rotation.x = Math.PI / 2; l.position.y = -0.0065; obj.add(l);
+      obj.position.set(p.x, ceiling - 0.006, -p.y);
+      ceilingBits.add(obj);
+    } else if (p.type === "ap") {  // ceiling Wi-Fi access point: a white disc, 20 cm, with a status light
+      obj = new THREE.Group();
+      const b = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.03, 40), M.plate); obj.add(b);
+      const l = new THREE.Mesh(new THREE.CircleGeometry(0.006, 12), M.led); l.rotation.x = Math.PI / 2; l.position.y = -0.0155; obj.add(l);
+      obj.position.set(p.x, ceiling - 0.015, -p.y);
+      ceilingBits.add(obj);
     } else if (p.type === "flap") {
       obj = flapPart(p);
       obj.position.set(p.x, p.h, -p.y);
@@ -271,7 +356,7 @@ export function buildElectrical({ THREE, scene, ceilingBits, data, ceiling = 2.6
       }
     }
     // Pick target: a little larger than the part, so small plates are easy to land on.
-    const big = { db: 0.36, lcp: 0.28, router: 0.16, spot: 0.09, fan: 0.15, pendant: 0.16, walllight: 0.14, intercom_out: 0.13, flap: 0.12, towelheater: 0.3 }[p.type] || 0.075;
+    const big = { db: 0.36, lcp: 0.28, router: 0.16, ap: 0.13, spot: 0.09, fan: 0.15, sensor: 0.1, pendant: 0.16, walllight: 0.14, intercom_out: 0.13, flap: 0.12, towelheater: 0.3 }[p.type] || 0.075;
     const pick = new THREE.Mesh(new THREE.SphereGeometry(big, 8, 6), M.pick);
     pick.position.copy(world);
     if (p.facing && !CEILING_KINDS.has(p.type)) {  // just in front of the wall
@@ -377,7 +462,7 @@ export function createElectricalUI({ THREE, camera, renderer, built, occluders =
   const btn = Object.assign(document.createElement("button"), { id: "elec", className: "tool", title: "Show every electrical, lighting and low-current point (hover one to see what it is)" });
   btn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>Electrical`;
   btn.onclick = () => ui.setXray(!xray);
-  bar?.after(btn);
+  // Not added to the 3D bar (Karim 7 Nov 2026: the Electrical toggle and its chips live on the 2D plan only); ?elec=1 still shows the markers.
   const ui = {
     card, button: btn,
     get xray() { return xray; },
@@ -449,7 +534,7 @@ export function drawElectrical(ctx, toScreen, s, data, hover = null) {
       }
     }
     if (hover === p) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, rr + 4, 0, Math.PI * 2); ctx.stroke(); }
-    if (showH && p.h != null && !["spot", "fan", "pendant"].includes(p.type)) {
+    if (showH && p.h != null && !["spot", "fan", "pendant", "sensor", "ap"].includes(p.type)) {
       ctx.fillStyle = "#e8e2d8b0"; ctx.textAlign = "left";
       ctx.fillText(Math.round(p.h * 100), x + r + 2, y - r);
     }

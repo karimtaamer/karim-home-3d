@@ -1,7 +1,7 @@
 // The DWG itself as a flat drawing (drawing.json, from build_drawing.py): pan, zoom and measure,
 // with AutoCAD-style object snaps (endpoint, midpoint, centre) and ortho. A plan version with an electrical file
 // (opts.electrical, electrical.js) gets an Electrical layer: on by default, hover or tap a symbol for what it is.
-import { drawElectrical, pickElectrical, makeCard } from "./electrical.js";
+import { drawElectrical, pickElectrical, makeCard, CATEGORIES, catOf } from "./electrical.js";
 
 const BG = "#212830";
 const MEASURE = "#ff8a3d";
@@ -31,6 +31,7 @@ export function createDrawing(root, url, { electrical = null } = {}) {
       <button data-tool="measure"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2"/></svg>Measure</button>
       <button data-tool="clear" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>Clear</button>
       <button data-tool="elec" hidden title="Electrical, lighting and low-current points: hover or tap one to see what it is"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>Electrical</button>
+      <div class="dcats" hidden>${CATEGORIES.map(c => `<button data-cat="${c.id}" title="Show or hide: ${c.label.toLowerCase()}"><i style="background:${c.col}"></i>${c.label}</button>`).join("")}</div>
     </div>
     <div class="dstatus"><span class="xy"></span><span class="dist"></span></div>
     <div class="dhelp"></div>`;
@@ -58,6 +59,15 @@ export function createDrawing(root, url, { electrical = null } = {}) {
   // The electrical layer: shown unless switched off (remembered), its card on hover / tap.
   let elecOn = !!electrical && localStorage.getItem("elec2d") !== "0", elecHover = null, elecPress = null;
   const elecCard = electrical && makeCard();
+  // The category chips under the Electrical button: the layer draws and picks only the groups switched on.
+  const hiddenCats = new Set(JSON.parse(localStorage.getItem("elecCats2d") || "[]"));
+  let elecShown = electrical;
+  const filterElec = () => electrical && (elecShown = {
+    ...electrical,
+    points: electrical.points.filter(p => !hiddenCats.has(catOf(p.type))),
+    lines: hiddenCats.has(catOf("led")) ? [] : electrical.lines || [],
+  });
+  filterElec();
   const elecById = electrical ? Object.fromEntries(electrical.points.map(p => [p.id, p])) : {};
 
   const toScreen = ([x, y]) => [view.tx + x * view.s, view.ty - y * view.s];
@@ -206,7 +216,7 @@ export function createDrawing(root, url, { electrical = null } = {}) {
       ctx.restore();
     }
 
-    if (electrical && elecOn) drawElectrical(ctx, toScreen, view.s, electrical, elecHover);
+    if (electrical && elecOn) drawElectrical(ctx, toScreen, view.s, elecShown, elecHover);
 
     hits = []; delBtn = null;
     const live = (start || edit?.end < 2) && lock;  // the line under way, or the end being dragged, locked straight
@@ -461,7 +471,7 @@ export function createDrawing(root, url, { electrical = null } = {}) {
       hover = measuring && !start && !prev ? hitTest(e.clientX, e.clientY, "mouse")?.i ?? -1 : -1;
     }
     if (electrical && elecOn && e.pointerType === "mouse" && !prev && !start) {
-      const p = pickElectrical(electrical, toScreen, e.clientX, e.clientY);
+      const p = pickElectrical(elecShown, toScreen, e.clientX, e.clientY);
       if (p !== elecHover) { elecHover = p; }
       p ? elecCard.show(p, e.clientX, e.clientY, elecById) : elecCard.hide();
     }
@@ -470,7 +480,7 @@ export function createDrawing(root, url, { electrical = null } = {}) {
   });
   const release = e => {
     if (electrical && elecOn && elecPress && e.type === "pointerup" && Math.hypot(e.clientX - elecPress[0], e.clientY - elecPress[1]) <= CLICK_PX) {
-      const p = pickElectrical(electrical, toScreen, e.clientX, e.clientY, e.pointerType === "mouse" ? 10 : 18);
+      const p = pickElectrical(elecShown, toScreen, e.clientX, e.clientY, e.pointerType === "mouse" ? 10 : 18);
       elecHover = p;
       p ? elecCard.show(p, e.clientX, e.clientY, elecById, true) : elecCard.hide(true);
       redraw();
@@ -552,10 +562,22 @@ export function createDrawing(root, url, { electrical = null } = {}) {
   const setElec = on => {
     elecOn = on; localStorage.setItem("elec2d", on ? "1" : "0");
     button("elec").classList.toggle("on", on);
+    root.querySelector(".dcats").hidden = !on;
     if (!on) { elecHover = null; elecCard.hide(true); }
     redraw();
   };
   if (electrical) { button("elec").hidden = false; button("elec").classList.toggle("on", elecOn); button("elec").onclick = () => setElec(!elecOn); }
+  if (electrical) root.querySelector(".dcats").hidden = !elecOn;
+  for (const chip of root.querySelectorAll(".dcats button")) {
+    const id = chip.dataset.cat;
+    chip.classList.toggle("on", !hiddenCats.has(id));
+    chip.onclick = () => {
+      hiddenCats.has(id) ? hiddenCats.delete(id) : hiddenCats.add(id);
+      chip.classList.toggle("on", !hiddenCats.has(id));
+      localStorage.setItem("elecCats2d", JSON.stringify([...hiddenCats]));
+      filterElec(); elecHover = null; elecCard.hide(true); redraw();
+    };
+  }
   clear.onclick = () => { dropGesture(); done.length = 0; start = null; sel = hover = -1; status(); redraw(); };
   addEventListener("resize", () => shown && resize());
 

@@ -41,6 +41,19 @@ const FACING = { S: 0, E: Math.PI / 2, N: Math.PI, W: -Math.PI / 2 };
 export function furnish(scene, M, mat, version = "main") {
   const root = new THREE.Group();
   const ceilingBits = new THREE.Group();  // shown only with the ceiling (downlights, grilles)
+  // Curtain pockets (Karim 7 Nov 2026), sized to the opening below (not wall to wall), as the dining render: the slot runs
+  // past each side of the glass by the curtain's stack-back (0.35 for openings under 1.5 m, 0.40 over; the reception
+  // window 0.363 to stop at the dining boundary), 0.15 wide (double track: curtain + sheer) and 0.15 deep, a warm LED
+  // strip at its top on the room side. Curtains are 0.45 stacks that sit inside the run and overlap the glass ~0.1.
+  // index.html cuts each rect out of the plasterboard ceiling. rect [x0, y0, x1, y1], along: long axis, wall: "-"/"+".
+  const POCKET = 0.15, CT = 2.74, CH = CT - 0.01, CY = 0.01 + CH / 2, CZ = 0.10, SZ = 0.04;  // depth; curtain top/height/centre; curtain / sheer off the wall
+  const pockets = [
+    { rect: [2.945, 1.54, 3.095, 3.45], along: "y", wall: "-", depth: POCKET },     // living-room window 1.89-3.10 (+0.35 each side)
+    { rect: [3.118, 8.865, 5.078, 9.015], along: "x", wall: "+", depth: POCKET },   // bedroom window 3.468-4.728 (+0.35)
+    { rect: [21.062, 2.772, 21.212, 5.558], along: "y", wall: "+", depth: POCKET }, // reception window 3.135-5.195 (+0.363)
+    { rect: [21.062, 5.84, 21.212, 8.379], along: "y", wall: "+", depth: POCKET },  // dining slider 6.24-7.979 (+0.40)
+    { rect: [16.025, 9.338, 17.884, 9.488], along: "x", wall: "+", depth: POCKET }, // dining window 16.375-17.534 (+0.35)
+  ];
   scene.add(root, ceilingBits);
   // Karim's version (karims-version) split from Main (kareems-changes) on 26 Oct 2026 as a copy of it: it runs every
   // ["kareems-changes", "karims-version"].includes(version) branch, but not Main's 26 Oct laundry/WC partition (version === "kareems-changes" alone).
@@ -441,7 +454,7 @@ export function furnish(scene, M, mat, version = "main") {
     B(2.937, X1, 4.219, 4.442, 0, 0.55, mat.walnut, 0.02);  // DWG end table between the arm and the north wall
   });
   rug(3.75, 0.95, 5.55, 3.95, mat.rug);  // cream shaggy rug
-  item(2.94, 2.495, "E", p => p.box(-1.75, 1.75, 2.5, 2.52, 0.02, 0.2, mat.ledStrip));  // cove light over the window wall
+  // (Main: the window-wall cove bar is now the curtain pocket's LED, 7 Nov 2026.)
   item(4.645, 2.529, "S", p => {  // DWG coffee table 0.72 x 1.23: light stone top on two round walnut pedestals
     p.box(-0.36, 0.36, 0.36, 0.42, -0.617, 0.617, mat.stoneTable, 0.03);
     for (const z of [-0.33, 0.33]) p.cyl(0, z, 0.13, 0, 0.36, mat.walnut, 24);
@@ -472,7 +485,8 @@ export function furnish(scene, M, mat, version = "main") {
   art(3.62, 0.548, "N", 0.9, 1.25, 1.62, 0);  // large abstracts on both side walls, picture lights above
   art(4.35, 4.443, "S", 0.75, 1.0, 1.48, 1);
   ac(2.945, 1.2, "E", 2.38);  // split AC high on the window wall, between the south wall and the left curtain, under the cove
-  for (const y of [1.70, 3.29]) item(2.94, y, "E", p => { const m = mesh(curtainGeometry(0.5, 2.45), mat.curtain, p.g); m.position.set(0, 1.27, 0.006); });
+  for (const y of [1.765, 3.225]) item(2.94, y, "E", p => { const m = mesh(curtainGeometry(0.45, CH), mat.curtain, p.g); m.position.set(0, CY, CZ); });
+  item(2.94, 2.495, "E", p => { const m = mesh(curtainGeometry(1.41, CH - 0.01), mat.sheer, p.g); m.position.set(0, CY, SZ); });  // sheer behind, in the pocket
 
   // --- Master bedroom and bathroom: the same pieces in both plan versions, placed per version -----
   // King bed, built against its headboard wall: w wide, l long from the wall (headboard included),
@@ -663,7 +677,7 @@ export function furnish(scene, M, mat, version = "main") {
       }
     }
   };
-  const towelRail = p => {  // towel radiator with a hanging towel, clear of the vanity top
+  const towelRail = p => {  // Main: unheated towel rail with a hanging towel, clear of the vanity top
     p.model("models/mbath-towel-rail.glb", mat.brushedNickel, 0, 0.95, 0.0);
     p.model("models/mbath-towel.glb", mat.sheet, 0, 0.95, 0.0);
   };
@@ -709,11 +723,12 @@ export function furnish(scene, M, mat, version = "main") {
       item(hb, y, "E", nightstand(0.466, 0.516));
       pendant(hb + 0.181, y, 1.15);
     }
-    art(hb + 0.003, 7.511, "E", 1.6, 0.95, 1.85, 0);
-    for (const x of [2.95, 5.37]) item(x, 9.02, "S", p => {  // curtains either side of the 2.18 m window
-      const m = mesh(curtainGeometry(0.55, 2.45), mat.curtain, p.g); m.position.set(0, 1.27, 0.12);
+    if (version !== "kareems-changes") art(hb + 0.003, 7.511, "E", 1.6, 0.95, 1.85, 0);  // Main: no artwork or picture light above the bed.
+    for (const x of [3.343, 4.853]) item(x, 9.02, "S", p => {  // curtains either side of the window, up into the pocket
+      const m = mesh(curtainGeometry(0.45, CH), mat.curtain, p.g); m.position.set(0, CY, CZ);
     });
-    // (Main's bedroom-door switches are electrical.js plates since 4 Nov 2026: 3 over 3, electrical-kareems-changes.json.)
+    item(4.098, 9.02, "S", p => { const m = mesh(curtainGeometry(1.46, CH - 0.01), mat.sheer, p.g); m.position.set(0, CY, SZ); });  // sheer behind
+    // Main's bedroom-door and vanity switches are modelled from electrical-kareems-changes.json.
     // Kareem's Changes: white lacquer sliding doors with recessed hidden pulls (other versions keep smoked glass).
     item(6.367, 7.336, "W", wardrobe(3.36, 1.04, ["kareems-changes", "karims-version"].includes(version), ["kareems-changes", "karims-version"].includes(version)));  // DWG wardrobe on the kitchen wall
     item(1.564, 4.55, "N", wardrobe(1.895, 0.45, ["kareems-changes", "karims-version"].includes(version)));  // DWG wardrobe on the south wall, 20 cm shorter for the dresser: four ~43 cm sliding doors
@@ -795,9 +810,10 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(-0.01, 0.01, 0, 2.0, 0, 0.02, mat.chrome);
       p.box(-0.01, 0.01, 0, 0.01, 0, 0.69, mat.chrome);
     });
-    // Towel radiator on the east wall, 0.29 south of the pan front (DWG y -113.725..-114.175), and three
+    // Towel rail on the east wall, 0.29 south of the pan front (DWG y -113.725..-114.175), and three
     // champagne-bronze towel hooks at 1.30 on the 0.61 of plain wall between it and the open door leaf.
-    item(2.192, 7.6632, "W", towelRail);
+    if (version === "kareems-changes") named(item(2.192, 7.6632, "W", towelRail), "unheated towel rail");
+    else item(2.192, 7.6632, "W", towelRail);
     // Kareem's (Nagham call, 25 Oct): hooks raised 15 cm, to 1.45.
     const hk = ["kareems-changes", "karims-version"].includes(version) ? 0.15 : 0;
     for (const y of [-114.33, -114.48, -114.63]) item(2.192, y + 121.6132, "W", p => {
@@ -1299,8 +1315,8 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(x - 0.2, x + 0.2, 0.12, 0.42, 0.6, 0.78, mat.applianceWhite, 0.02);
     }
   });
-  // counter between the joinery and the machines (half-width): x 10.937 to 11.535; Main (26 Oct, the WC
-  // partition 0.202 west) x 10.937 to 11.375, still clear round the 0.36 water heater inside its upper
+  // Counter between the joinery and the machines (half-width): x 10.937 to 11.535; Main (26 Oct, the WC
+  // partition 0.202 west) x 10.937 to 11.375. Main's upper is storage, without a water heater.
   const cw = version === "kareems-changes" ? 0.219 : 0.299;
   item(10.937 + cw, 9.18, "S", p => {
     p.box(-cw, cw, 0.1, 0.88, 0, 0.6, mat.oakVeneer);
@@ -1311,30 +1327,34 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(-cw, cw, 1.58, 1.6, 0.05, 0.3, mat.ledStrip);
       return;
     }
-    // The water heater lives in this upper (the left one, not over the washer). The cabinet is 0.45 deep, 10 cm proud of the old 0.35 upper, for the pipes behind the heater: an oak carcass, a compact 40 x 22 x 9 cm vertical electric heater on the back, its pipes and valves under it, and one oak door
-    // hinged on the left (it opens 88 degrees, up to the tall joinery's face), marked openable (interact.js).
+    // The upper cabinet keeps its oak carcass and openable door. Main uses it for storage; Karim's version
+    // still has its original compact water heater and pipework.
     const c = new THREE.Group(), q = part(c), D = 0.45, t = 0.018, y0 = 1.6, y1 = 2.5;
     p.g.add(c);
     for (const s of [-1, 1]) q.box(s < 0 ? -cw : cw - t, s < 0 ? -cw + t : cw, y0, y1, 0, D - 0.02, mat.oakVeneer);  // sides
     for (const y of [y0, y1 - t]) q.box(-cw, cw, y, y + t, 0, D - 0.02, mat.oakVeneer);                            // bottom, top
     q.box(-cw + t, cw - t, y0 + t, y1 - t, 0, 0.01, honeyOak);                                                     // back
     q.box(-cw, cw, y0 - 0.02, y0, 0.05, D - 0.05, mat.ledStrip);                                                   // strip onto the counter
-    const hz = 0.01 + 0.03 + 0.18;  // heater centre: 3 cm of pipes behind it, its front 3 cm inside the door
-    const heaterH = 0.40, heaterW = 0.22, heaterD = 0.09;
-    q.box(-heaterW / 2, heaterW / 2, y0 + 0.2, y0 + 0.2 + heaterH, hz, hz + heaterD, mat.applianceWhite, 0.025);
-    q.box(-0.025, 0.025, y0 + 0.2 + heaterH * 0.48, y0 + 0.2 + heaterH * 0.52, hz + heaterD, hz + heaterD + 0.004, mat.grille, 0.02);  // thermostat detail
-    for (const [x, m] of [[-0.07, mat.chrome], [0.07, mat.brass]]) {  // cold in, hot out: down from its base to valves
-      q.cyl(x, hz + heaterD / 2, 0.009, y0 + t, y0 + 0.2, m, 12);
-      q.box(x - 0.02, x + 0.02, y0 + 0.08, y0 + 0.11, hz - 0.02, hz + heaterD / 2 + 0.02, mat.chrome, 0.005);
-      q.cyl(x, 0.02, 0.009, y0 + t, y0 + 0.06, m, 12);
+    if (version !== "kareems-changes") {
+      const hz = 0.01 + 0.03 + 0.18;  // heater centre: 3 cm of pipes behind it, its front 3 cm inside the door
+      const heaterH = 0.40, heaterW = 0.22, heaterD = 0.09;
+      q.box(-heaterW / 2, heaterW / 2, y0 + 0.2, y0 + 0.2 + heaterH, hz, hz + heaterD, mat.applianceWhite, 0.025);
+      q.box(-0.025, 0.025, y0 + 0.2 + heaterH * 0.48, y0 + 0.2 + heaterH * 0.52, hz + heaterD, hz + heaterD + 0.004, mat.grille, 0.02);  // thermostat detail
+      for (const [x, m] of [[-0.07, mat.chrome], [0.07, mat.brass]]) {  // cold in, hot out: down from its base to valves
+        q.cyl(x, hz + heaterD / 2, 0.009, y0 + t, y0 + 0.2, m, 12);
+        q.box(x - 0.02, x + 0.02, y0 + 0.08, y0 + 0.11, hz - 0.02, hz + heaterD / 2 + 0.02, mat.chrome, 0.005);
+        q.cyl(x, 0.02, 0.009, y0 + t, y0 + 0.06, m, 12);
+      }
+      q.cyl(0.1, 0.02, 0.006, y0 + 0.3, y0 + 0.86, mat.applianceWhite, 8);  // supply cable down the back corner
     }
-    q.cyl(0.1, 0.02, 0.006, y0 + 0.3, y0 + 0.86, mat.applianceWhite, 8);  // supply cable down the back corner
     const door = new THREE.Group(), dq = part(door);
     door.position.set(-cw, 0, D - 0.02);
     c.add(door);
     dq.box(0.0015, 2 * cw - 0.0015, y0, y1, 0, 0.02, mat.oakVeneer);
     dq.box(2 * cw - 0.04, 2 * cw - 0.025, y0 + 0.02, y0 + 0.18, 0.02, 0.035, mat.walnut, 0.004);  // finger pull, low on the free edge
-    c.userData.openable = { id: "laundry-heater", label: "Water heater cupboard", leaves: [{ obj: door, axis: "y", open: -88 * Math.PI / 180 }],  // stops short of the tall joinery's face
+    c.userData.openable = { id: version === "kareems-changes" ? "laundry-upper" : "laundry-heater",
+      label: version === "kareems-changes" ? "Laundry upper cupboard" : "Water heater cupboard",
+      leaves: [{ obj: door, axis: "y", open: -88 * Math.PI / 180 }],  // stops short of the tall joinery's face
       anchor: new THREE.Vector3(0, 2.0, D + 0.06), reach: 1.8, duration: 0.6 };
   });
   item(version === "kareems-changes" ? 11.675 : 11.835, 9.18, "S", p => {  // DWG stacked washer and dryer 0.60 x 0.60 (x 11.535 to 12.135; Main's 11.375 to 11.975 since 26 Oct)
@@ -1639,17 +1659,16 @@ export function furnish(scene, M, mat, version = "main") {
   else for (const x of [18.195, 19.525]) art(x, 2.0705, "N", 1.0, 1.25, 1.62, x < 19 ? 0 : 1);
   // Curtains either side of each slider (the sofa one 2.00 m, centred on the sofa): sheer on the track nearest
   // the glass, curtains stacked in front, both clear of the sofa back (x 21.027).
-  for (const [y0, y1] of [[3.135, 5.195], [6.34, 8.08]]) {
-    for (const y of [y0 - 0.15, y1 + 0.15]) item(21.22, y, "W", p => {
-      const m = mesh(curtainGeometry(0.45, 2.5), mat.curtain, p.g); m.position.set(0, 1.3, 0.14);
+  for (const [y0, y1, e] of [[3.135, 5.195, 0.363], [6.24, 7.979, 0.40]]) {  // Main 7 Nov 2026: stacks inside each opening's pocket
+    for (const y of [y0 - e + 0.225, y1 + e - 0.225]) item(21.22, y, "W", p => {
+      const m = mesh(curtainGeometry(0.45, CH), mat.curtain, p.g); m.position.set(0, CY, CZ);
     });
-    item(21.22, (y0 + y1) / 2, "W", p => { const m = mesh(curtainGeometry(y1 - y0, 2.45), mat.sheer, p.g); m.position.set(0, 1.25, 0.06); });
+    item(21.22, (y0 + y1) / 2, "W", p => { const m = mesh(curtainGeometry(y1 - y0 + 0.1, CH - 0.01), mat.sheer, p.g); m.position.set(0, CY, SZ); });
   }
   const NCAC = version === "naghams-changes" || ["kareems-changes", "karims-version"].includes(version);  // Nagham's Changes: wall-mounted splits, no ducted AC
   if (NCAC) {
     // Slim ceiling-fixed double track over each slider (sheer and curtain runs), as long as the curtain stacks.
-    for (const [y0, y1] of [[3.135, 5.195], [6.34, 8.08]]) item(21.222, (y0 + y1) / 2, "W", p =>
-      p.box(-(y1 - y0) / 2 - 0.375, (y1 - y0) / 2 + 0.375, M.ceiling - 0.03, M.ceiling, 0.02, 0.18, mat.applianceWhite, 0.005));
+    // (Main, 7 Nov 2026: no surface tracks; the curtains run in the ceiling pocket.)
     // 1.5 hp split on the south wall's built-out face, east of the right-hand print (frame edge x 20.05),
     // 0.20 short of the east wall and clear of the curtain stack (y 2.76): 0.85 W x 0.29 H x 0.22 D, top 2.40.
     // Kareem's: centred on the wall over the sofa and prints, top raised to 2.50 (0.10 under the ceiling).
@@ -1666,20 +1685,23 @@ export function furnish(scene, M, mat, version = "main") {
   }
 
   // --- Dining: walnut table for six, tub chairs, lantern pendants; buffet wall and coffee bar ----
-  item(18.4, 7.6, "S", p => {
+  // Karim 7 Nov 2026: the whole set (table, chairs, lantern pendants, rug) centred on the DWG table (2furni, x 16.069-18.941,
+  // y 7.282-8.409, centre 17.505 / 7.846); it sat 0.90 m east and 0.25 m south of it, so the pendants read off-centre in 2D.
+  const DTX = 17.505, DTY = 7.846;
+  item(DTX, DTY, "S", p => {
     p.box(-1.2, 1.2, 0.72, 0.76, -0.5, 0.5, mat.walnut, 0.01);
     for (const x of [-0.75, 0.75]) p.box(x - 0.05, x + 0.05, 0, 0.72, -0.3, 0.3, mat.walnut);
   });
-  for (const x of [17.6, 18.4, 19.2]) {
-    item(x, 6.55, "N", p => chair(p));
-    item(x, 8.65, "S", p => chair(p));
-    pendant(x, 7.6, 1.75, "lantern");
+  for (const x of [DTX - 0.8, DTX, DTX + 0.8]) {
+    item(x, DTY - 1.05, "N", p => chair(p));
+    item(x, DTY + 1.05, "S", p => chair(p));
+    pendant(x, DTY, 1.75, "lantern");
   }
-  item(16.95, 7.6, "E", p => chair(p)); item(19.85, 7.6, "W", p => chair(p));
-  rug(16.6, 6.3, 20.2, 8.9);
+  item(DTX - 1.45, DTY, "E", p => chair(p)); item(DTX + 1.45, DTY, "W", p => chair(p));
+  rug(DTX - 1.8, DTY - 1.3, DTX + 1.8, DTY + 1.3);
   for (const y of [9.5]) {
-    for (const x of [16.2, 17.71]) item(x, y, "S", p => { const m = mesh(curtainGeometry(0.4, 2.5), mat.curtain, p.g); m.position.set(0, 1.3, 0.1); });
-    item(16.95, y, "S", p => { const m = mesh(curtainGeometry(1.15, 2.45), mat.sheer, p.g); m.position.set(0, 1.25, 0.18); });
+    for (const x of [16.25, 17.659]) item(x, y, "S", p => { const m = mesh(curtainGeometry(0.45, CH), mat.curtain, p.g); m.position.set(0, CY, CZ); });
+    item(16.955, y, "S", p => { const m = mesh(curtainGeometry(1.26, CH - 0.01), mat.sheer, p.g); m.position.set(0, CY, SZ); });
   }
   // Buffet wall per the DWG and the dining render (15): a plaster mass with a tall lit oak niche (south),
   // splayed back into the wall like the TV wall, then a walnut sideboard under a backlit pebble mirror.
@@ -1858,7 +1880,7 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(-0.68, -0.39, 0.93, 0.95, 0.3, 0.44, mat.chrome);
     }).position.y = T - 0.92;
   });
-  item(16.95, 9.5, "S", p => p.box(-1.0, 1.0, 2.5, 2.52, 0.02, 0.22, mat.ledStrip));
+  // (Main, 7 Nov 2026: the dining window's LED bar is now the curtain pocket's LED.)
   if (["kareems-changes", "karims-version"].includes(version)) item(18.55, 9.502, "S", p => {
     const c = new THREE.Group(), q = part(c), leaves = []; p.g.add(c);
     // Shallow wall-mounted box: clear monitor cavity and bottom-hinged worktop.
@@ -1993,6 +2015,7 @@ export function furnish(scene, M, mat, version = "main") {
   });
   for (const [x, y, h] of [[21.8, 4.75, 1.9], [24.5, 5.75, 1.8], [24.45, 8.45, 1.7]]) plant(x, y, h, 0.28);
   for (const y of [5.0, 8.6]) sconce(T.x0, y, "E", 2.0);
+  if (version === "kareems-changes") sconce(21.47, 2.45, "E", 2.2);  // Wall light south of the terrace window, shown on the electrical plan.
 
   // --- Ceilings: downlights in every indoor room, linear AC grilles in the living spaces ---------
   // Main (4 Nov 2026): its spots are the electrical plan's (electrical-kareems-changes.json, electrical.js), not this grid.
@@ -2027,7 +2050,7 @@ export function furnish(scene, M, mat, version = "main") {
     for (const m of late) fade(m, t);
     for (const L of lamps) L.intensity = 1.5 * L.userData.power * t;
   }
-  return { root, ceilingBits, setReveal };
+  return { root, ceilingBits, setReveal, pockets };
 }
 
 function collect(obj) {

@@ -296,8 +296,10 @@ Kareem's Changes, Nagham call (2026-10-25):
   back over the door end (DWG y -114.413 to -113.513), south of the WC, with the rain head over it. The niche
   build-out is drawn on the north wall (`2furni`). In 3D: concealed mixer (trim plate only), rain head flush in the
   ceiling, hand spray on a wall outlet, low spout.
-- **Laundry:** the counter's upper cabinet (left, not over the washer) is 0.45 deep and holds a 40 L electric water
-  heater with its pipes and valves. One oak door, openable.
+- **Hot water, updated 7 Nov 2026:** Main uses the electric instant heater inside the master-bath vanity. The prior
+  40 L electric storage heater in the laundry is cancelled; that 0.45-deep upper cabinet is now storage with an
+  openable oak door. Main's master-bath towel rail is unheated, with no electric towel-heater connection. This
+  decision applies to Main only; Karim's version retains its earlier heater layout.
 - **Kitchen pantry:** its two doors open (interact.js, id `pantry`), hinged on the hob-run side, with shelves inside.
 - **Master en-suite:** the towel hooks are 15 cm higher (1.45).
 - **Living-room TV wall flush with the column (Karim t288).** This is the wall between the living room and the

@@ -182,6 +182,11 @@
   #drawing .dbar { position: absolute; top: 60px; left: 14px; display: flex; flex-wrap: wrap; gap: 6px; }
   #drawing .dbar button { background: #2f3742e6; color: #d8dee6; box-shadow: 0 0 0 1px #ffffff1f inset; }
   #drawing .dbar button.on { background: #f3eee5; color: #2b2622; }
+  #drawing .dbar .dcats { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
+  #drawing .dbar .dcats[hidden] { display: none; }
+  #drawing .dbar .dcats button { padding: 6px 12px; opacity: .5; }
+  #drawing .dbar .dcats button.on { background: #2f3742e6; color: #f3eee5; opacity: 1; box-shadow: 0 0 0 1.5px #f3eee5aa inset; }
+  #drawing .dbar .dcats i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
   #drawing .dstatus { position: absolute; left: 14px; bottom: 14px; display: flex; gap: 18px; font: 11.5px ui-monospace, Menlo, monospace; color: #c9d1d9;
     background: #161b22cc; padding: 7px 11px; border-radius: 8px; pointer-events: none; }
   #drawing .dstatus span:empty, #drawing .dstatus:not(:has(span:not(:empty))) { display: none; }
@@ -675,6 +680,7 @@ function buildFlat(M, scene) {
       const c = flatMesh(f.outer, [...f.holes, ...sky.map(h => [...h].reverse())], rs.ceiling ? matOf(rs.ceiling, mat.ceiling) : mat.ceiling, ch);
       scene.add(c);
       r.ceilings.push(c);
+      f._ceiling = { mesh: c, holes: [...f.holes, ...sky.map(h => [...h].reverse())], material: c.material, y: ch, room: r };
       for (const h of sky) {
         const lid = flatMesh(h, [], mat.glass, ch + 0.3);
         scene.add(lid);
@@ -787,6 +793,41 @@ function buildFlat(M, scene) {
   }
 
   const furniture = furnish(scene, M, lib, vid);
+  // Curtain pockets (furnish returns them, Main 7 Nov 2026): a slot cut in the ceiling along a window wall, `depth`
+  // up into the plasterboard ceiling, with a warm LED strip at its top on the room side washing down the curtains.
+  for (const pk of furniture.pockets || []) {
+    const [x0, y0, x1, y1] = pk.rect, ring = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
+    const f = M.floor.find(f => f._ceiling && pointInRing([(x0 + x1) / 2, (y0 + y1) / 2], f.outer));
+    if (!f) continue;
+    const cz = f._ceiling, top = cz.y + (pk.depth ?? 0.15);
+    cz.holes.push([...ring].reverse());
+    const old = cz.mesh, c = flatMesh(f.outer, cz.holes, cz.material, cz.y);
+    scene.remove(old); old.geometry.dispose();
+    cz.room.ceilings[cz.room.ceilings.indexOf(old)] = c; cz.mesh = c; scene.add(c);
+    const inner = cz.material.clone(); inner.side = THREE.DoubleSide;
+    const wash = inner.clone(); wash.emissive = new THREE.Color(0xffa860); wash.emissiveIntensity = 0.9;  // the lit inside of the slot
+    const warm = inner.clone(); warm.emissive = new THREE.Color(0xff9d55); warm.emissiveIntensity = 0.5;
+    const add = (m, w, h, d, x, y, z) => {
+      const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, -z); scene.add(b); cz.room.ceilings.push(b); return b;
+    };
+    const lid = flatMesh(ring, [], wash, top);
+    scene.add(lid); cz.room.ceilings.push(lid);
+    const H = top - cz.y, ym = (cz.y + top) / 2, t = 0.01, along = pk.along;  // along: "x" or "y" (the slot's long axis)
+    const wallSide = pk.wall;  // which long side is the wall: "-" (the low coordinate) or "+"
+    if (along === "y") {
+      add(warm, t, H, y1 - y0, x0, ym, (y0 + y1) / 2); add(warm, t, H, y1 - y0, x1, ym, (y0 + y1) / 2);
+      add(warm, x1 - x0, H, t, (x0 + x1) / 2, ym, y0); add(warm, x1 - x0, H, t, (x0 + x1) / 2, ym, y1);
+      const xr = wallSide === "-" ? x1 - 0.02 : x0 + 0.02;  // LED on the room side, near the top
+      add(lib.ledStrip || wash, 0.012, 0.02, y1 - y0 - 0.04, xr, top - 0.02, (y0 + y1) / 2);
+      add(wash, 0.004, H * 0.8, y1 - y0 - 0.02, wallSide === "-" ? x0 + 0.006 : x1 - 0.006, top - H * 0.4, (y0 + y1) / 2);
+    } else {
+      add(warm, x1 - x0, H, t, (x0 + x1) / 2, ym, y0); add(warm, x1 - x0, H, t, (x0 + x1) / 2, ym, y1);
+      add(warm, t, H, y1 - y0, x0, ym, (y0 + y1) / 2); add(warm, t, H, y1 - y0, x1, ym, (y0 + y1) / 2);
+      const yr = wallSide === "-" ? y1 - 0.02 : y0 + 0.02;
+      add(lib.ledStrip || wash, x1 - x0 - 0.04, 0.02, 0.012, (x0 + x1) / 2, top - 0.02, yr);
+      add(wash, x1 - x0 - 0.02, H * 0.8, 0.004, (x0 + x1) / 2, top - H * 0.4, wallSide === "-" ? y0 + 0.006 : y1 - 0.006);
+    }
+  }
   return { cutPlane, solids, rooms, roomAt, setReveal, materials: mat, lib, furniture, leaves };
 }
 
@@ -1426,7 +1467,7 @@ const interact = createInteract({
 });
 if (params.has("debug")) window.__interact = interact;  // headless checks: the openables list
 
-// --- Electrical points (electrical.js): hover / look at one, or tap it, for what it is; the Electrical button shows them all ---
+// --- Electrical points (electrical.js): hover / look at one, or tap it, for what it is (the Electrical toggle is on the 2D plan only) ---
 const elecBuilt = electrical && buildElectrical({ THREE, scene, ceilingBits: flat.furniture.ceilingBits, data: electrical, ceiling: M.ceiling });
 const elecUI = elecBuilt && createElectricalUI({
   THREE, camera, renderer, built: elecBuilt, occluders: flat.solids, bar: document.getElementById("move"),

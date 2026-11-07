@@ -24,8 +24,11 @@
   "fan": "Exhaust fan",
   "db": "Distribution board",
   "lcp": "Low-current panel",
-  "router": "Wi-Fi router",
-  "led": "Indirect LED strip"
+  "router": "Network hub (fibre box, router, PoE switch)",
+  "led": "Indirect LED strip",
+  "sensor": "Ceiling motion / presence sensor (mmWave or PIR)",
+  "ledfeed": "Accent-light power point (LED driver / picture-light box)",
+  "ap": "Ceiling Wi-Fi access point (Cat6 + PoE from the hub)"
  },
  "points": [
   {
@@ -37,7 +40,8 @@
    "h": 2.6,
    "facing": null,
    "label": "Ceiling spot — living room, half A (sofa side)",
-   "status": "plan",
+   "status": "adapted",
+   "note": "best-practice spot count (Karim 7 Nov 2026): about 1.3 m apart (half the 2.6 m ceiling), 89 -> 70 spots in the flat",
    "circuit": "living-A"
   },
   {
@@ -45,11 +49,12 @@
    "type": "spot",
    "room": "Living room",
    "x": 3.75,
-   "y": 1.8,
+   "y": 2.0,
    "h": 2.6,
    "facing": null,
    "label": "Ceiling spot — living room, half A (sofa side)",
-   "status": "plan",
+   "status": "adapted",
+   "note": "best-practice spot count (Karim 7 Nov 2026): about 1.3 m apart (half the 2.6 m ceiling), 89 -> 70 spots in the flat",
    "circuit": "living-A"
   },
   {
@@ -57,11 +62,12 @@
    "type": "spot",
    "room": "Living room",
    "x": 3.75,
-   "y": 2.5,
+   "y": 2.9,
    "h": 2.6,
    "facing": null,
    "label": "Ceiling spot — living room, half A (sofa side)",
-   "status": "plan",
+   "status": "adapted",
+   "note": "best-practice spot count (Karim 7 Nov 2026): about 1.3 m apart (half the 2.6 m ceiling), 89 -> 70 spots in the flat",
    "circuit": "living-A"
   },
   {
@@ -69,35 +75,38 @@
    "type": "spot",
    "room": "Living room",
    "x": 3.75,
-   "y": 3.2,
+   "y": 3.8,
    "h": 2.6,
    "facing": null,
    "label": "Ceiling spot — living room, half A (sofa side)",
-   "status": "plan",
+   "status": "adapted",
+   "note": "best-practice spot count (Karim 7 Nov 2026): about 1.3 m apart (half the 2.6 m ceiling), 89 -> 70 spots in the flat",
    "circuit": "living-A"
   },
   {
    "id": "spot-5",
    "type": "spot",
    "room": "Living room",
-   "x": 3.75,
-   "y": 3.9,
+   "x": 5.35,
+   "y": 1.1,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — living room, half A (sofa side)",
-   "status": "plan",
-   "circuit": "living-A"
+   "label": "Ceiling spot — living room, half B (TV side)",
+   "status": "adapted",
+   "note": "best-practice spot count (Karim 7 Nov 2026): about 1.3 m apart (half the 2.6 m ceiling), 89 -> 70 spots in the flat",
+   "circuit": "living-B"
   },
   {
    "id": "spot-6",
    "type": "spot",
    "room": "Living room",
    "x": 5.35,
-   "y": 0.95,
+   "y": 2.0,
    "h": 2.6,
    "facing": null,
    "label": "Ceiling spot — living room, half B (TV side)",
-   "status": "plan",
+   "status": "adapted",
+   "note": "best-practice spot count (Karim 7 Nov 2026): about 1.3 m apart (half the 2.6 m ceiling), 89 -> 70 spots in the flat",
    "circuit": "living-B"
   },
   {
@@ -105,11 +114,12 @@
    "type": "spot",
    "room": "Living room",
    "x": 5.35,
-   "y": 1.55,
+   "y": 2.9,
    "h": 2.6,
    "facing": null,
    "label": "Ceiling spot — living room, half B (TV side)",
-   "status": "plan",
+   "status": "adapted",
+   "note": "best-practice spot count (Karim 7 Nov 2026): about 1.3 m apart (half the 2.6 m ceiling), 89 -> 70 spots in the flat",
    "circuit": "living-B"
   },
   {
@@ -117,259 +127,146 @@
    "type": "spot",
    "room": "Living room",
    "x": 5.35,
-   "y": 2.15,
+   "y": 3.8,
    "h": 2.6,
    "facing": null,
    "label": "Ceiling spot — living room, half B (TV side)",
-   "status": "plan",
+   "status": "adapted",
+   "note": "best-practice spot count (Karim 7 Nov 2026): about 1.3 m apart (half the 2.6 m ceiling), 89 -> 70 spots in the flat",
    "circuit": "living-B"
   },
   {
    "id": "spot-9",
    "type": "spot",
-   "room": "Living room",
-   "x": 5.35,
-   "y": 2.75,
+   "room": "Master bedroom",
+   "x": 3.9,
+   "y": 7.45,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — living room, half B (TV side)",
-   "status": "plan",
-   "circuit": "living-B"
+   "label": "Ceiling spot — master bedroom, half A (window half)",
+   "status": "adapted",
+   "note": "6 bedroom spots in two halves (best-practice count, Karim 7 Nov 2026), off the pillow end of the bed (headboard west)",
+   "circuit": "master-A"
   },
   {
    "id": "spot-10",
    "type": "spot",
-   "room": "Living room",
-   "x": 5.35,
-   "y": 3.35,
+   "room": "Master bedroom",
+   "x": 3.9,
+   "y": 8.65,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — living room, half B (TV side)",
-   "status": "plan",
-   "circuit": "living-B"
+   "label": "Ceiling spot — master bedroom, half A (window half)",
+   "status": "adapted",
+   "note": "6 bedroom spots in two halves (best-practice count, Karim 7 Nov 2026), off the pillow end of the bed (headboard west)",
+   "circuit": "master-A"
   },
   {
    "id": "spot-11",
    "type": "spot",
-   "room": "Living room",
-   "x": 5.35,
-   "y": 3.95,
+   "room": "Master bedroom",
+   "x": 4.85,
+   "y": 7.45,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — living room, half B (TV side)",
-   "status": "plan",
-   "circuit": "living-B"
+   "label": "Ceiling spot — master bedroom, half A (window half)",
+   "status": "adapted",
+   "note": "6 bedroom spots in two halves (best-practice count, Karim 7 Nov 2026), off the pillow end of the bed (headboard west)",
+   "circuit": "master-A"
   },
   {
    "id": "spot-12",
    "type": "spot",
    "room": "Master bedroom",
-   "x": 2.95,
-   "y": 7.85,
+   "x": 4.85,
+   "y": 8.65,
    "h": 2.6,
    "facing": null,
    "label": "Ceiling spot — master bedroom, half A (window half)",
    "status": "adapted",
-   "note": "the plan's 12 bedroom spots in two halves, laid on Main's bed (headboard west) and wardrobe (east wall)",
+   "note": "6 bedroom spots in two halves (best-practice count, Karim 7 Nov 2026), off the pillow end of the bed (headboard west)",
    "circuit": "master-A"
   },
   {
    "id": "spot-13",
    "type": "spot",
    "room": "Master bedroom",
-   "x": 2.95,
-   "y": 8.65,
+   "x": 3.9,
+   "y": 6.25,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bedroom, half A (window half)",
+   "label": "Ceiling spot — master bedroom, half B (door half)",
    "status": "adapted",
-   "note": "the plan's 12 bedroom spots in two halves, laid on Main's bed (headboard west) and wardrobe (east wall)",
-   "circuit": "master-A"
+   "note": "6 bedroom spots in two halves (best-practice count, Karim 7 Nov 2026), off the pillow end of the bed (headboard west)",
+   "circuit": "master-B"
   },
   {
    "id": "spot-14",
    "type": "spot",
    "room": "Master bedroom",
-   "x": 3.95,
-   "y": 7.85,
+   "x": 4.85,
+   "y": 6.25,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bedroom, half A (window half)",
+   "label": "Ceiling spot — master bedroom, half B (door half)",
    "status": "adapted",
-   "note": "the plan's 12 bedroom spots in two halves, laid on Main's bed (headboard west) and wardrobe (east wall)",
-   "circuit": "master-A"
+   "note": "6 bedroom spots in two halves (best-practice count, Karim 7 Nov 2026), off the pillow end of the bed (headboard west)",
+   "circuit": "master-B"
   },
   {
    "id": "spot-15",
-   "type": "spot",
-   "room": "Master bedroom",
-   "x": 3.95,
-   "y": 8.65,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — master bedroom, half A (window half)",
-   "status": "adapted",
-   "note": "the plan's 12 bedroom spots in two halves, laid on Main's bed (headboard west) and wardrobe (east wall)",
-   "circuit": "master-A"
-  },
-  {
-   "id": "spot-16",
-   "type": "spot",
-   "room": "Master bedroom",
-   "x": 4.85,
-   "y": 7.85,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — master bedroom, half A (window half)",
-   "status": "adapted",
-   "note": "the plan's 12 bedroom spots in two halves, laid on Main's bed (headboard west) and wardrobe (east wall)",
-   "circuit": "master-A"
-  },
-  {
-   "id": "spot-17",
-   "type": "spot",
-   "room": "Master bedroom",
-   "x": 4.85,
-   "y": 8.65,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — master bedroom, half A (window half)",
-   "status": "adapted",
-   "note": "the plan's 12 bedroom spots in two halves, laid on Main's bed (headboard west) and wardrobe (east wall)",
-   "circuit": "master-A"
-  },
-  {
-   "id": "spot-18",
-   "type": "spot",
-   "room": "Master bedroom",
-   "x": 2.95,
-   "y": 6.25,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — master bedroom, half B (door half)",
-   "status": "adapted",
-   "note": "the plan's 12 bedroom spots in two halves, laid on Main's bed (headboard west) and wardrobe (east wall)",
-   "circuit": "master-B"
-  },
-  {
-   "id": "spot-19",
-   "type": "spot",
-   "room": "Master bedroom",
-   "x": 2.95,
-   "y": 7.05,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — master bedroom, half B (door half)",
-   "status": "adapted",
-   "note": "the plan's 12 bedroom spots in two halves, laid on Main's bed (headboard west) and wardrobe (east wall)",
-   "circuit": "master-B"
-  },
-  {
-   "id": "spot-20",
-   "type": "spot",
-   "room": "Master bedroom",
-   "x": 3.95,
-   "y": 6.25,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — master bedroom, half B (door half)",
-   "status": "adapted",
-   "note": "the plan's 12 bedroom spots in two halves, laid on Main's bed (headboard west) and wardrobe (east wall)",
-   "circuit": "master-B"
-  },
-  {
-   "id": "spot-21",
-   "type": "spot",
-   "room": "Master bedroom",
-   "x": 3.95,
-   "y": 7.05,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — master bedroom, half B (door half)",
-   "status": "adapted",
-   "note": "the plan's 12 bedroom spots in two halves, laid on Main's bed (headboard west) and wardrobe (east wall)",
-   "circuit": "master-B"
-  },
-  {
-   "id": "spot-22",
-   "type": "spot",
-   "room": "Master bedroom",
-   "x": 4.85,
-   "y": 6.25,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — master bedroom, half B (door half)",
-   "status": "adapted",
-   "note": "the plan's 12 bedroom spots in two halves, laid on Main's bed (headboard west) and wardrobe (east wall)",
-   "circuit": "master-B"
-  },
-  {
-   "id": "spot-23",
-   "type": "spot",
-   "room": "Master bedroom",
-   "x": 4.85,
-   "y": 7.05,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — master bedroom, half B (door half)",
-   "status": "adapted",
-   "note": "the plan's 12 bedroom spots in two halves, laid on Main's bed (headboard west) and wardrobe (east wall)",
-   "circuit": "master-B"
-  },
-  {
-   "id": "spot-24",
    "type": "spot",
    "room": "Master bedroom",
    "x": 3.0,
    "y": 5.25,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — over the dresser (bedroom entrance spots)",
+   "label": "Ceiling spot — over the bedroom vanity",
    "status": "adapted",
-   "note": "the plan's 2 master-lobby spots, over Main's dresser by the door",
-   "circuit": "master-entry"
+   "note": "the two spots in front of Main's bedroom vanity, controlled by the vanity switch",
+   "circuit": "master-vanity-spots"
   },
   {
-   "id": "spot-25",
+   "id": "spot-16",
    "type": "spot",
    "room": "Master bedroom",
    "x": 4.05,
    "y": 5.25,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — over the dresser (bedroom entrance spots)",
+   "label": "Ceiling spot — over the bedroom vanity",
    "status": "adapted",
-   "note": "the plan's 2 master-lobby spots, over Main's dresser by the door",
-   "circuit": "master-entry"
+   "note": "the two spots in front of Main's bedroom vanity, controlled by the vanity switch",
+   "circuit": "master-vanity-spots"
   },
   {
-   "id": "spot-26",
+   "id": "spot-17",
    "type": "spot",
    "room": "Master bedroom",
-   "x": 1.3,
-   "y": 5.45,
+   "x": 1.5,
+   "y": 5.575,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — wardrobe corner (the plan's dressing-room spots)",
+   "label": "Ceiling spot — dresser/wardrobe corner by the bathroom door",
    "status": "adapted",
-   "note": "Main has no dressing room: its spots light the south wardrobe and the cupboard by the bathroom door",
-   "circuit": "master-wardrobe"
+   "note": "the two boxed spots by the wardrobe and bathroom door, controlled by the local switch at the marked wall",
+   "circuit": "master-dresser-spots"
   },
   {
-   "id": "spot-27",
+   "id": "spot-18",
    "type": "spot",
    "room": "Master bedroom",
-   "x": 2.0,
-   "y": 5.35,
+   "x": 2.2,
+   "y": 5.575,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — wardrobe corner (the plan's dressing-room spots)",
+   "label": "Ceiling spot — dresser/wardrobe corner by the bathroom door",
    "status": "adapted",
-   "note": "Main has no dressing room: its spots light the south wardrobe and the cupboard by the bathroom door",
-   "circuit": "master-wardrobe"
+   "note": "the two boxed spots by the wardrobe and bathroom door, controlled by the local switch at the marked wall",
+   "circuit": "master-dresser-spots"
   },
   {
-   "id": "spot-28",
+   "id": "spot-19",
    "type": "spot",
    "room": "Master bathroom",
    "x": 0.95,
@@ -382,7 +279,7 @@
    "circuit": "mbath"
   },
   {
-   "id": "spot-29",
+   "id": "spot-20",
    "type": "spot",
    "room": "Master bathroom",
    "x": 1.75,
@@ -395,7 +292,7 @@
    "circuit": "mbath"
   },
   {
-   "id": "spot-30",
+   "id": "spot-21",
    "type": "spot",
    "room": "Master bathroom",
    "x": 0.95,
@@ -408,7 +305,7 @@
    "circuit": "mbath"
   },
   {
-   "id": "spot-31",
+   "id": "spot-22",
    "type": "spot",
    "room": "Master bathroom",
    "x": 1.78,
@@ -421,115 +318,115 @@
    "circuit": "mbath"
   },
   {
+   "id": "spot-23",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 7.45,
+   "y": 6.55,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen, half A",
+   "status": "plan",
+   "circuit": "kitchen-A"
+  },
+  {
+   "id": "spot-24",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 8.35,
+   "y": 6.55,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen, half A",
+   "status": "plan",
+   "circuit": "kitchen-A"
+  },
+  {
+   "id": "spot-25",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 9.25,
+   "y": 6.55,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen, half A",
+   "status": "plan",
+   "circuit": "kitchen-A"
+  },
+  {
+   "id": "spot-26",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 7.45,
+   "y": 7.4,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen, half A",
+   "status": "plan",
+   "circuit": "kitchen-A"
+  },
+  {
+   "id": "spot-27",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 9.25,
+   "y": 7.4,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen, half A",
+   "status": "plan",
+   "circuit": "kitchen-A"
+  },
+  {
+   "id": "spot-28",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 8.35,
+   "y": 7.4,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen, half B",
+   "status": "plan",
+   "circuit": "kitchen-B"
+  },
+  {
+   "id": "spot-29",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 7.45,
+   "y": 8.3,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen, half B",
+   "status": "plan",
+   "circuit": "kitchen-B"
+  },
+  {
+   "id": "spot-30",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 8.35,
+   "y": 8.3,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen, half B",
+   "status": "plan",
+   "circuit": "kitchen-B"
+  },
+  {
+   "id": "spot-31",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 9.25,
+   "y": 8.3,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen, half B",
+   "status": "plan",
+   "circuit": "kitchen-B"
+  },
+  {
    "id": "spot-32",
-   "type": "spot",
-   "room": "Kitchen",
-   "x": 7.45,
-   "y": 6.55,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — kitchen, half A",
-   "status": "plan",
-   "circuit": "kitchen-A"
-  },
-  {
-   "id": "spot-33",
-   "type": "spot",
-   "room": "Kitchen",
-   "x": 8.35,
-   "y": 6.55,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — kitchen, half A",
-   "status": "plan",
-   "circuit": "kitchen-A"
-  },
-  {
-   "id": "spot-34",
-   "type": "spot",
-   "room": "Kitchen",
-   "x": 9.25,
-   "y": 6.55,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — kitchen, half A",
-   "status": "plan",
-   "circuit": "kitchen-A"
-  },
-  {
-   "id": "spot-35",
-   "type": "spot",
-   "room": "Kitchen",
-   "x": 7.45,
-   "y": 7.4,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — kitchen, half A",
-   "status": "plan",
-   "circuit": "kitchen-A"
-  },
-  {
-   "id": "spot-36",
-   "type": "spot",
-   "room": "Kitchen",
-   "x": 9.25,
-   "y": 7.4,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — kitchen, half A",
-   "status": "plan",
-   "circuit": "kitchen-A"
-  },
-  {
-   "id": "spot-37",
-   "type": "spot",
-   "room": "Kitchen",
-   "x": 8.35,
-   "y": 7.4,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — kitchen, half B",
-   "status": "plan",
-   "circuit": "kitchen-B"
-  },
-  {
-   "id": "spot-38",
-   "type": "spot",
-   "room": "Kitchen",
-   "x": 7.45,
-   "y": 8.3,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — kitchen, half B",
-   "status": "plan",
-   "circuit": "kitchen-B"
-  },
-  {
-   "id": "spot-39",
-   "type": "spot",
-   "room": "Kitchen",
-   "x": 8.35,
-   "y": 8.3,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — kitchen, half B",
-   "status": "plan",
-   "circuit": "kitchen-B"
-  },
-  {
-   "id": "spot-40",
-   "type": "spot",
-   "room": "Kitchen",
-   "x": 9.25,
-   "y": 8.3,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — kitchen, half B",
-   "status": "plan",
-   "circuit": "kitchen-B"
-  },
-  {
-   "id": "spot-41",
    "type": "spot",
    "room": "Laundry",
    "x": 11.4,
@@ -541,7 +438,7 @@
    "circuit": "laundry"
   },
   {
-   "id": "spot-42",
+   "id": "spot-33",
    "type": "spot",
    "room": "Laundry",
    "x": 11.4,
@@ -553,7 +450,7 @@
    "circuit": "laundry"
   },
   {
-   "id": "spot-43",
+   "id": "spot-34",
    "type": "spot",
    "room": "Laundry",
    "x": 11.4,
@@ -565,259 +462,189 @@
    "circuit": "laundry"
   },
   {
-   "id": "spot-44",
+   "id": "spot-35",
    "type": "spot",
    "room": "Guest bathroom",
    "x": 14.2,
-   "y": 7.308,
+   "y": 7.487,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — guest bathroom, over the vanity",
-   "status": "plan",
-   "circuit": "gbath-basin"
+   "label": "Ceiling spot — guest bathroom, vanity / middle / shower",
+   "status": "adapted",
+   "note": "all guest-bathroom spots share one key",
+   "circuit": "gbath-spots"
   },
   {
-   "id": "spot-45",
+   "id": "spot-36",
    "type": "spot",
    "room": "Guest bathroom",
    "x": 14.2,
-   "y": 8.025,
+   "y": 8.562,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — guest bathroom, over the vanity",
-   "status": "plan",
-   "circuit": "gbath-basin"
+   "label": "Ceiling spot — guest bathroom, vanity / middle / shower",
+   "status": "adapted",
+   "note": "all guest-bathroom spots share one key",
+   "circuit": "gbath-spots"
   },
   {
-   "id": "spot-46",
-   "type": "spot",
-   "room": "Guest bathroom",
-   "x": 14.2,
-   "y": 8.742,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — guest bathroom, over the vanity",
-   "status": "plan",
-   "circuit": "gbath-basin"
-  },
-  {
-   "id": "spot-47",
+   "id": "spot-37",
    "type": "spot",
    "room": "Guest bathroom",
    "x": 13.4,
-   "y": 7.308,
+   "y": 7.487,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — guest bathroom, middle",
-   "status": "plan",
-   "circuit": "gbath-mid"
+   "label": "Ceiling spot — guest bathroom, vanity / middle / shower",
+   "status": "adapted",
+   "note": "all guest-bathroom spots share one key",
+   "circuit": "gbath-spots"
   },
   {
-   "id": "spot-48",
+   "id": "spot-38",
    "type": "spot",
    "room": "Guest bathroom",
    "x": 13.4,
-   "y": 8.025,
+   "y": 8.562,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — guest bathroom, middle",
-   "status": "plan",
-   "circuit": "gbath-mid"
+   "label": "Ceiling spot — guest bathroom, vanity / middle / shower",
+   "status": "adapted",
+   "note": "all guest-bathroom spots share one key",
+   "circuit": "gbath-spots"
   },
   {
-   "id": "spot-49",
-   "type": "spot",
-   "room": "Guest bathroom",
-   "x": 13.4,
-   "y": 8.742,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — guest bathroom, middle",
-   "status": "plan",
-   "circuit": "gbath-mid"
-  },
-  {
-   "id": "spot-50",
+   "id": "spot-39",
    "type": "spot",
    "room": "Guest bathroom",
    "x": 12.6,
    "y": 7.487,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — guest bathroom, over the bath / shower",
-   "status": "plan",
-   "circuit": "gbath-bath"
+   "label": "Ceiling spot — guest bathroom, vanity / middle / shower",
+   "status": "adapted",
+   "note": "all guest-bathroom spots share one key",
+   "circuit": "gbath-spots"
   },
   {
-   "id": "spot-51",
+   "id": "spot-40",
    "type": "spot",
    "room": "Guest bathroom",
    "x": 12.6,
    "y": 8.562,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — guest bathroom, over the bath / shower",
-   "status": "plan",
-   "circuit": "gbath-bath"
+   "label": "Ceiling spot — guest bathroom, vanity / middle / shower",
+   "status": "adapted",
+   "note": "all guest-bathroom spots share one key",
+   "circuit": "gbath-spots"
   },
   {
-   "id": "spot-52",
+   "id": "spot-41",
    "type": "spot",
    "room": "Entrance",
    "x": 6.75,
    "y": 4.6,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance corridor, circuit A (two-way)",
+   "label": "Ceiling spot — entrance corridor (one two-way key)",
    "status": "adapted",
-   "note": "the plan's corridor spots (14 on 2 two-way circuits) laid along Main's entrance and hallway",
-   "circuit": "corridor-A"
+   "note": "all corridor spots on one two-way circuit from the front door and dining end",
+   "circuit": "hallway"
   },
   {
-   "id": "spot-53",
+   "id": "spot-42",
    "type": "spot",
    "room": "Entrance",
-   "x": 8.45,
+   "x": 9.55,
    "y": 4.6,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance corridor, circuit A (two-way)",
+   "label": "Ceiling spot — entrance corridor (one two-way key)",
    "status": "adapted",
-   "note": "the plan's corridor spots (14 on 2 two-way circuits) laid along Main's entrance and hallway",
-   "circuit": "corridor-A"
+   "note": "all corridor spots on one two-way circuit from the front door and dining end",
+   "circuit": "hallway"
   },
   {
-   "id": "spot-54",
+   "id": "spot-43",
    "type": "spot",
    "room": "Entrance",
-   "x": 10.15,
-   "y": 4.6,
+   "x": 11.225,
+   "y": 5.925,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance corridor, circuit A (two-way)",
+   "label": "Ceiling spot — entrance corridor (one two-way key)",
    "status": "adapted",
-   "note": "the plan's corridor spots (14 on 2 two-way circuits) laid along Main's entrance and hallway",
-   "circuit": "corridor-A"
+   "note": "all corridor spots on one two-way circuit from the front door and dining end",
+   "circuit": "hallway"
   },
   {
-   "id": "spot-55",
+   "id": "spot-44",
    "type": "spot",
    "room": "Entrance",
-   "x": 11.6,
-   "y": 5.75,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — entrance corridor, circuit A (two-way)",
-   "status": "adapted",
-   "note": "the plan's corridor spots (14 on 2 two-way circuits) laid along Main's entrance and hallway",
-   "circuit": "corridor-A"
-  },
-  {
-   "id": "spot-56",
-   "type": "spot",
-   "room": "Entrance",
-   "x": 12.9,
+   "x": 13.225,
    "y": 6.25,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance corridor, circuit A (two-way)",
+   "label": "Ceiling spot — entrance corridor (one two-way key)",
    "status": "adapted",
-   "note": "the plan's corridor spots (14 on 2 two-way circuits) laid along Main's entrance and hallway",
-   "circuit": "corridor-A"
+   "note": "all corridor spots on one two-way circuit from the front door and dining end",
+   "circuit": "hallway"
   },
   {
-   "id": "spot-57",
+   "id": "spot-45",
    "type": "spot",
    "room": "Entrance",
-   "x": 14.2,
-   "y": 6.25,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — entrance corridor, circuit A (two-way)",
-   "status": "adapted",
-   "note": "the plan's corridor spots (14 on 2 two-way circuits) laid along Main's entrance and hallway",
-   "circuit": "corridor-A"
-  },
-  {
-   "id": "spot-58",
-   "type": "spot",
-   "room": "Entrance",
-   "x": 7.6,
+   "x": 8.15,
    "y": 4.6,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance corridor, circuit B (two-way)",
+   "label": "Ceiling spot — entrance corridor (one two-way key)",
    "status": "adapted",
-   "note": "the plan's corridor spots (14 on 2 two-way circuits) laid along Main's entrance and hallway",
-   "circuit": "corridor-B"
+   "note": "all corridor spots on one two-way circuit from the front door and dining end",
+   "circuit": "hallway"
   },
   {
-   "id": "spot-59",
-   "type": "spot",
-   "room": "Entrance",
-   "x": 9.3,
-   "y": 4.6,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — entrance corridor, circuit B (two-way)",
-   "status": "adapted",
-   "note": "the plan's corridor spots (14 on 2 two-way circuits) laid along Main's entrance and hallway",
-   "circuit": "corridor-B"
-  },
-  {
-   "id": "spot-60",
+   "id": "spot-46",
    "type": "spot",
    "room": "Entrance",
    "x": 10.95,
    "y": 4.6,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance corridor, circuit B (two-way)",
+   "label": "Ceiling spot — entrance corridor (one two-way key)",
    "status": "adapted",
-   "note": "the plan's corridor spots (14 on 2 two-way circuits) laid along Main's entrance and hallway",
-   "circuit": "corridor-B"
+   "note": "all corridor spots on one two-way circuit from the front door and dining end",
+   "circuit": "hallway"
   },
   {
-   "id": "spot-61",
-   "type": "spot",
-   "room": "Entrance",
-   "x": 10.85,
-   "y": 6.1,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — entrance corridor, circuit B (two-way)",
-   "status": "adapted",
-   "note": "the plan's corridor spots (14 on 2 two-way circuits) laid along Main's entrance and hallway",
-   "circuit": "corridor-B"
-  },
-  {
-   "id": "spot-62",
+   "id": "spot-47",
    "type": "spot",
    "room": "Entrance",
    "x": 12.25,
    "y": 6.25,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance corridor, circuit B (two-way)",
+   "label": "Ceiling spot — entrance corridor (one two-way key)",
    "status": "adapted",
-   "note": "the plan's corridor spots (14 on 2 two-way circuits) laid along Main's entrance and hallway",
-   "circuit": "corridor-B"
+   "note": "all corridor spots on one two-way circuit from the front door and dining end",
+   "circuit": "hallway"
   },
   {
-   "id": "spot-63",
+   "id": "spot-48",
    "type": "spot",
    "room": "Entrance",
-   "x": 13.55,
+   "x": 14.2,
    "y": 6.25,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance corridor, circuit B (two-way)",
+   "label": "Ceiling spot — entrance corridor (one two-way key)",
    "status": "adapted",
-   "note": "the plan's corridor spots (14 on 2 two-way circuits) laid along Main's entrance and hallway",
-   "circuit": "corridor-B"
+   "note": "all corridor spots on one two-way circuit from the front door and dining end",
+   "circuit": "hallway"
   },
   {
-   "id": "spot-64",
+   "id": "spot-49",
    "type": "spot",
    "room": "Entrance",
    "x": 5.05,
@@ -825,11 +652,12 @@
    "h": 2.6,
    "facing": null,
    "label": "Ceiling spot — lobby by the bedroom and living-room doors",
-   "status": "plan",
-   "circuit": "lobby"
+   "status": "adapted",
+   "note": "the lobby spots join the hallway circuit",
+   "circuit": "hallway"
   },
   {
-   "id": "spot-65",
+   "id": "spot-50",
    "type": "spot",
    "room": "Entrance",
    "x": 5.8,
@@ -837,305 +665,216 @@
    "h": 2.6,
    "facing": null,
    "label": "Ceiling spot — lobby by the bedroom and living-room doors",
+   "status": "adapted",
+   "note": "the lobby spots join the hallway circuit",
+   "circuit": "hallway"
+  },
+  {
+   "id": "spot-51",
+   "type": "spot",
+   "room": "Reception",
+   "x": 18.375,
+   "y": 3.0,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — reception, half A (sofa side)",
    "status": "plan",
-   "circuit": "lobby"
+   "circuit": "reception-A"
+  },
+  {
+   "id": "spot-52",
+   "type": "spot",
+   "room": "Reception",
+   "x": 19.125,
+   "y": 3.0,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — reception, half A (sofa side)",
+   "status": "plan",
+   "circuit": "reception-A"
+  },
+  {
+   "id": "spot-53",
+   "type": "spot",
+   "room": "Reception",
+   "x": 19.875,
+   "y": 3.0,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — reception, half A (sofa side)",
+   "status": "plan",
+   "circuit": "reception-A"
+  },
+  {
+   "id": "spot-54",
+   "type": "spot",
+   "room": "Reception",
+   "x": 20.625,
+   "y": 3.0,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — reception, half A (sofa side)",
+   "status": "plan",
+   "circuit": "reception-A"
+  },
+  {
+   "id": "spot-55",
+   "type": "spot",
+   "room": "Reception",
+   "x": 18.375,
+   "y": 4.6,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — reception, half B (TV side)",
+   "status": "plan",
+   "circuit": "reception-B"
+  },
+  {
+   "id": "spot-56",
+   "type": "spot",
+   "room": "Reception",
+   "x": 19.125,
+   "y": 4.6,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — reception, half B (TV side)",
+   "status": "plan",
+   "circuit": "reception-B"
+  },
+  {
+   "id": "spot-57",
+   "type": "spot",
+   "room": "Reception",
+   "x": 19.875,
+   "y": 4.6,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — reception, half B (TV side)",
+   "status": "plan",
+   "circuit": "reception-B"
+  },
+  {
+   "id": "spot-58",
+   "type": "spot",
+   "room": "Reception",
+   "x": 20.625,
+   "y": 4.6,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — reception, half B (TV side)",
+   "status": "plan",
+   "circuit": "reception-B"
+  },
+  {
+   "id": "spot-59",
+   "type": "spot",
+   "room": "Dining",
+   "x": 16.5,
+   "y": 6.65,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — dining (one key)",
+   "status": "adapted",
+   "note": "all dining ceiling spots share one switch key",
+   "circuit": "dining-spots"
+  },
+  {
+   "id": "spot-60",
+   "type": "spot",
+   "room": "Dining",
+   "x": 17.7,
+   "y": 6.65,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — dining (one key)",
+   "status": "adapted",
+   "note": "all dining ceiling spots share one switch key",
+   "circuit": "dining-spots"
+  },
+  {
+   "id": "spot-61",
+   "type": "spot",
+   "room": "Dining",
+   "x": 18.9,
+   "y": 6.65,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — dining (one key)",
+   "status": "adapted",
+   "note": "all dining ceiling spots share one switch key",
+   "circuit": "dining-spots"
+  },
+  {
+   "id": "spot-62",
+   "type": "spot",
+   "room": "Dining",
+   "x": 20.1,
+   "y": 6.65,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — dining (one key)",
+   "status": "adapted",
+   "note": "all dining ceiling spots share one switch key",
+   "circuit": "dining-spots"
+  },
+  {
+   "id": "spot-63",
+   "type": "spot",
+   "room": "Dining",
+   "x": 16.5,
+   "y": 8.55,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — dining (one key)",
+   "status": "adapted",
+   "note": "all dining ceiling spots share one switch key",
+   "circuit": "dining-spots"
+  },
+  {
+   "id": "spot-64",
+   "type": "spot",
+   "room": "Dining",
+   "x": 17.7,
+   "y": 8.55,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — dining (one key)",
+   "status": "adapted",
+   "note": "all dining ceiling spots share one switch key",
+   "circuit": "dining-spots"
+  },
+  {
+   "id": "spot-65",
+   "type": "spot",
+   "room": "Dining",
+   "x": 18.9,
+   "y": 8.55,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — dining (one key)",
+   "status": "adapted",
+   "note": "all dining ceiling spots share one switch key",
+   "circuit": "dining-spots"
   },
   {
    "id": "spot-66",
    "type": "spot",
-   "room": "Reception",
-   "x": 18.375,
-   "y": 3.0,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — reception, half A (sofa side)",
-   "status": "plan",
-   "circuit": "reception-A"
-  },
-  {
-   "id": "spot-67",
-   "type": "spot",
-   "room": "Reception",
-   "x": 19.125,
-   "y": 3.0,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — reception, half A (sofa side)",
-   "status": "plan",
-   "circuit": "reception-A"
-  },
-  {
-   "id": "spot-68",
-   "type": "spot",
-   "room": "Reception",
-   "x": 19.875,
-   "y": 3.0,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — reception, half A (sofa side)",
-   "status": "plan",
-   "circuit": "reception-A"
-  },
-  {
-   "id": "spot-69",
-   "type": "spot",
-   "room": "Reception",
-   "x": 20.625,
-   "y": 3.0,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — reception, half A (sofa side)",
-   "status": "plan",
-   "circuit": "reception-A"
-  },
-  {
-   "id": "spot-70",
-   "type": "spot",
-   "room": "Reception",
-   "x": 18.375,
-   "y": 4.6,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — reception, half B (TV side)",
-   "status": "plan",
-   "circuit": "reception-B"
-  },
-  {
-   "id": "spot-71",
-   "type": "spot",
-   "room": "Reception",
-   "x": 19.125,
-   "y": 4.6,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — reception, half B (TV side)",
-   "status": "plan",
-   "circuit": "reception-B"
-  },
-  {
-   "id": "spot-72",
-   "type": "spot",
-   "room": "Reception",
-   "x": 19.875,
-   "y": 4.6,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — reception, half B (TV side)",
-   "status": "plan",
-   "circuit": "reception-B"
-  },
-  {
-   "id": "spot-73",
-   "type": "spot",
-   "room": "Reception",
-   "x": 20.625,
-   "y": 4.6,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — reception, half B (TV side)",
-   "status": "plan",
-   "circuit": "reception-B"
-  },
-  {
-   "id": "spot-74",
-   "type": "spot",
    "room": "Dining",
-   "x": 16.3,
-   "y": 6.65,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — dining, half A",
-   "status": "plan",
-   "circuit": "dining-A"
-  },
-  {
-   "id": "spot-75",
-   "type": "spot",
-   "room": "Dining",
-   "x": 17.1,
-   "y": 6.65,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — dining, half A",
-   "status": "plan",
-   "circuit": "dining-A"
-  },
-  {
-   "id": "spot-76",
-   "type": "spot",
-   "room": "Dining",
-   "x": 17.9,
-   "y": 6.65,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — dining, half A",
-   "status": "plan",
-   "circuit": "dining-A"
-  },
-  {
-   "id": "spot-77",
-   "type": "spot",
-   "room": "Dining",
-   "x": 18.7,
-   "y": 6.65,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — dining, half A",
-   "status": "plan",
-   "circuit": "dining-A"
-  },
-  {
-   "id": "spot-78",
-   "type": "spot",
-   "room": "Dining",
-   "x": 19.5,
-   "y": 6.65,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — dining, half A",
-   "status": "plan",
-   "circuit": "dining-A"
-  },
-  {
-   "id": "spot-79",
-   "type": "spot",
-   "room": "Dining",
-   "x": 20.3,
-   "y": 6.65,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — dining, half A",
-   "status": "plan",
-   "circuit": "dining-A"
-  },
-  {
-   "id": "spot-80",
-   "type": "spot",
-   "room": "Dining",
-   "x": 16.3,
+   "x": 20.1,
    "y": 8.55,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — dining, half B",
-   "status": "plan",
-   "circuit": "dining-B"
-  },
-  {
-   "id": "spot-81",
-   "type": "spot",
-   "room": "Dining",
-   "x": 17.1,
-   "y": 8.55,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — dining, half B",
-   "status": "plan",
-   "circuit": "dining-B"
-  },
-  {
-   "id": "spot-82",
-   "type": "spot",
-   "room": "Dining",
-   "x": 17.9,
-   "y": 8.55,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — dining, half B",
-   "status": "plan",
-   "circuit": "dining-B"
-  },
-  {
-   "id": "spot-83",
-   "type": "spot",
-   "room": "Dining",
-   "x": 18.7,
-   "y": 8.55,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — dining, half B",
-   "status": "plan",
-   "circuit": "dining-B"
-  },
-  {
-   "id": "spot-84",
-   "type": "spot",
-   "room": "Dining",
-   "x": 19.5,
-   "y": 8.55,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — dining, half B",
-   "status": "plan",
-   "circuit": "dining-B"
-  },
-  {
-   "id": "spot-85",
-   "type": "spot",
-   "room": "Dining",
-   "x": 20.3,
-   "y": 8.55,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — dining, half B",
-   "status": "plan",
-   "circuit": "dining-B"
-  },
-  {
-   "id": "spot-86",
-   "type": "spot",
-   "room": "Dining",
-   "x": 15.55,
-   "y": 7.6,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — over the buffet niche",
-   "status": "plan",
-   "circuit": "buffet"
-  },
-  {
-   "id": "spot-87",
-   "type": "spot",
-   "room": "Dining",
-   "x": 15.55,
-   "y": 8.4,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — over the buffet niche",
-   "status": "plan",
-   "circuit": "buffet"
-  },
-  {
-   "id": "spot-88",
-   "type": "spot",
-   "room": "Dining",
-   "x": 20.15,
-   "y": 9.05,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — over the coffee corner / flip desk",
+   "label": "Ceiling spot — dining (one key)",
    "status": "adapted",
-   "note": "the plan's 2 office spots, over Main's coffee corner and flip desk",
-   "circuit": "office"
+   "note": "all dining ceiling spots share one switch key",
+   "circuit": "dining-spots"
   },
   {
-   "id": "spot-89",
-   "type": "spot",
-   "room": "Dining",
-   "x": 20.85,
-   "y": 9.05,
-   "h": 2.6,
-   "facing": null,
-   "label": "Ceiling spot — over the coffee corner / flip desk",
-   "status": "adapted",
-   "note": "the plan's 2 office spots, over Main's coffee corner and flip desk",
-   "circuit": "office"
-  },
-  {
-   "id": "pendant-90",
+   "id": "pendant-67",
    "type": "pendant",
    "room": "Dining",
-   "x": 17.6,
-   "y": 7.6,
+   "x": 16.705,
+   "y": 7.846,
    "h": 1.75,
    "facing": null,
    "label": "Lantern pendant over the dining table",
@@ -1143,11 +882,11 @@
    "circuit": "dining-pendants"
   },
   {
-   "id": "pendant-91",
+   "id": "pendant-68",
    "type": "pendant",
    "room": "Dining",
-   "x": 18.4,
-   "y": 7.6,
+   "x": 17.505,
+   "y": 7.846,
    "h": 1.75,
    "facing": null,
    "label": "Lantern pendant over the dining table",
@@ -1155,11 +894,11 @@
    "circuit": "dining-pendants"
   },
   {
-   "id": "pendant-92",
+   "id": "pendant-69",
    "type": "pendant",
    "room": "Dining",
-   "x": 19.2,
-   "y": 7.6,
+   "x": 18.305,
+   "y": 7.846,
    "h": 1.75,
    "facing": null,
    "label": "Lantern pendant over the dining table",
@@ -1167,7 +906,7 @@
    "circuit": "dining-pendants"
   },
   {
-   "id": "pendant-93",
+   "id": "pendant-70",
    "type": "pendant",
    "room": "Master bedroom",
    "x": 2.48,
@@ -1180,7 +919,7 @@
    "circuit": "bedside-S"
   },
   {
-   "id": "pendant-94",
+   "id": "pendant-71",
    "type": "pendant",
    "room": "Master bedroom",
    "x": 2.48,
@@ -1193,7 +932,7 @@
    "circuit": "bedside-N"
   },
   {
-   "id": "walllight-95",
+   "id": "walllight-72",
    "type": "walllight",
    "room": "Terrace",
    "x": 21.51,
@@ -1205,7 +944,7 @@
    "circuit": "terrace-wall"
   },
   {
-   "id": "walllight-96",
+   "id": "walllight-73",
    "type": "walllight",
    "room": "Terrace",
    "x": 21.47,
@@ -1217,7 +956,7 @@
    "circuit": "terrace-wall"
   },
   {
-   "id": "walllight-97",
+   "id": "walllight-74",
    "type": "walllight",
    "room": "Terrace",
    "x": 21.4753,
@@ -1225,12 +964,12 @@
    "h": 2.2,
    "facing": "E",
    "label": "Terrace wall light (party-mood height)",
-   "status": "plan",
-   "note": "the plan's wall lights along the glass wall: Main keeps its two sconces and adds this one south of the window",
+   "status": "existing",
+   "note": "the plan's wall light south of the window, now also modelled as a 3D sconce",
    "circuit": "terrace-wall"
   },
   {
-   "id": "walllight-98",
+   "id": "walllight-75",
    "type": "walllight",
    "room": "Entrance",
    "x": 7.63,
@@ -1242,7 +981,7 @@
    "circuit": "door-sconces"
   },
   {
-   "id": "walllight-99",
+   "id": "walllight-76",
    "type": "walllight",
    "room": "Entrance",
    "x": 9.33,
@@ -1261,12 +1000,13 @@
    "y": 3.6031,
    "h": 1.2,
    "facing": "N",
-   "label": "3-gang switch — inside the front door",
+   "label": "4-gang switch — inside the front door",
    "status": "plan",
    "gangs": [
     "Sconces beside the front door",
-    "Corridor spots, circuit A (two-way)",
-    "Corridor spots, circuit B (two-way)"
+    "All hallway and lobby spots (two-way)",
+    "Entrance console cove + mirror lights + pill sconce",
+    "Gallery picture lights (4)"
    ],
    "two_way": "sw-dining-end"
   },
@@ -1278,31 +1018,13 @@
    "y": 5.7314,
    "h": 1.2,
    "facing": "N",
-   "label": "3-gang switch — hallway, dining end",
+   "label": "1-gang switch — hallway, dining end",
    "status": "plan",
-   "note": "the plan's second corridor bank (Diviater) at the reception/dining end; its sconce rocker becomes the console's lights",
+   "note": "one two-way key for the full hallway including the lobby",
    "gangs": [
-    "Entrance console cove + mirror lights",
-    "Corridor spots, circuit A (two-way)",
-    "Corridor spots, circuit B (two-way)"
+    "All hallway and lobby spots (two-way)"
    ],
    "two_way": "sw-front-door"
-  },
-  {
-   "id": "sw-lobby",
-   "type": "switch",
-   "room": "Entrance",
-   "x": 6.35,
-   "y": 5.5472,
-   "h": 1.2,
-   "facing": "S",
-   "label": "1-gang switch — lobby by the bedroom and living-room doors",
-   "status": "adapted",
-   "note": "the plan's master-lobby rocker, on Main's corridor wall by the bedroom door",
-   "gangs": [
-    "Lobby spots"
-   ],
-   "two_way": null
   },
   {
    "id": "sw-living",
@@ -1317,7 +1039,7 @@
    "gangs": [
     "Spots, half A (sofa side)",
     "Spots, half B (TV side)",
-    "Window cove LED, TV-wall sconces and picture lights"
+    "Curtain-pocket LED, TV-wall sconces, TV console glow and picture lights"
    ],
    "two_way": null
   },
@@ -1327,35 +1049,64 @@
    "room": "Master bedroom",
    "x": 4.5143,
    "y": 5.65,
-   "h": 1.3,
+   "h": 1.2,
    "facing": "W",
-   "label": "3-gang switch — bedroom door (upper plate)",
+   "label": "3-gang switch — main bedroom lights by the door",
    "status": "adapted",
-   "note": "the plan's 'master entrance' bank, stacked over the dresser bank (3 over 3) by the bedroom door",
+   "note": "three keys near the bedroom entrance; the separate vanity plate is farther along the wall toward the vanity",
    "gangs": [
-    "Dresser spots (entrance)",
     "Bedroom spots, half A",
-    "Bedroom spots, half B"
+    "Bedroom spots, half B",
+    "Bedroom curtain-pocket LED"
    ],
-   "two_way": null
+   "two_way": null,
+   "gang_circuits": [
+    "master-A",
+    "master-B",
+    "master-curtain"
+   ]
   },
   {
    "id": "sw-master-dresser",
    "type": "switch",
    "room": "Master bedroom",
-   "x": 4.5143,
-   "y": 5.65,
+   "x": 4.5142,
+   "y": 5.37,
    "h": 1.2,
    "facing": "W",
-   "label": "3-gang switch — dresser, wardrobes and curtain (lower plate)",
+   "label": "3-gang switch — bedroom vanity, beside the main switch",
    "status": "adapted",
-   "note": "the plan's 'dresser / wardrobes / curtain' bank plus the dressing-room 2-gang folded in (Main has no dressing room)",
+   "note": "three vanity keys on the same wall, nearer the vanity; separated from the bedroom plate in both plan and 3D",
    "gangs": [
-    "Curtain-box LED",
-    "Dresser mirror, shelf column and shoe lighting",
-    "Wardrobe and wardrobe-corner spots (the plan's dressing room)"
+    "Two spots over the vanity",
+    "Vanity mirror glow",
+    "Vanity LEDs: shelf column and jewellery tray"
    ],
-   "two_way": null
+   "two_way": null,
+   "gang_circuits": [
+    "master-vanity-spots",
+    "master-vanity-mirror",
+    "master-vanity-led"
+   ]
+  },
+  {
+   "id": "sw-master-dresser-spots",
+   "type": "switch",
+   "room": "Master bedroom",
+   "x": 2.246,
+   "y": 5.9968,
+   "h": 1.2,
+   "facing": "S",
+   "label": "1-gang switch — dresser spots by the bathroom-door wall",
+   "status": "added",
+   "note": "one key centred on the short return wall at the arrow, for the two boxed spots only",
+   "gangs": [
+    "The two dresser/wardrobe corner spots marked on the plan"
+   ],
+   "two_way": null,
+   "gang_circuits": [
+    "master-dresser-spots"
+   ]
   },
   {
    "id": "sw-bed-S",
@@ -1372,7 +1123,11 @@
     "Bedside pendant, door side (two-way with the other bedside)",
     "Bedside pendant, window side (two-way with the other bedside)"
    ],
-   "two_way": "sw-bed-N"
+   "two_way": "sw-bed-N",
+   "gang_circuits": [
+    "bedside-S",
+    "bedside-N"
+   ]
   },
   {
    "id": "sw-bed-N",
@@ -1389,23 +1144,27 @@
     "Bedside pendant, door side (two-way with the other bedside)",
     "Bedside pendant, window side (two-way with the other bedside)"
    ],
-   "two_way": "sw-bed-S"
+   "two_way": "sw-bed-S",
+   "gang_circuits": [
+    "bedside-S",
+    "bedside-N"
+   ]
   },
   {
    "id": "sw-mbath",
    "type": "switch",
    "room": "Master bathroom",
-   "x": 2.22,
-   "y": 5.9968,
+   "x": 1.2,
+   "y": 6.1381,
    "h": 1.2,
-   "facing": "S",
-   "label": "3-gang switch — master bathroom, outside the door",
+   "facing": "N",
+   "label": "3-gang switch — inside beside the vanity socket",
    "status": "adapted",
-   "note": "outside the bathroom door, on the dry side (the plan draws it on the bedroom wall too)",
+   "note": "three keys on the short wall beside the 135 cm vanity socket; the exhaust fan has its own key",
    "gangs": [
-    "Spots over the vanity",
-    "Spots, middle + shower",
-    "WC spot + exhaust fan"
+    "All spots (vanity, middle, shower and WC)",
+    "Under-vanity LED, cabinet glow + shower-niche LED",
+    "Exhaust fan"
    ],
    "two_way": null
   },
@@ -1413,16 +1172,18 @@
    "id": "sw-kitchen",
    "type": "switch",
    "room": "Kitchen",
-   "x": 9.95,
+   "x": 9.15,
    "y": 5.6634,
    "h": 1.2,
    "facing": "N",
-   "label": "3-gang switch — kitchen, by the door",
-   "status": "plan",
+   "label": "4-gang switch — kitchen, by the door",
+   "status": "adapted",
+   "note": "light switches replace the old sound and intercom screens",
    "gangs": [
     "Spots, half A",
     "Spots, half B",
-    "Under-cabinet LED strips"
+    "Under-cabinet LED strips",
+    "Plinth LED"
    ],
    "two_way": null
   },
@@ -1430,15 +1191,16 @@
    "id": "sw-laundry",
    "type": "switch",
    "room": "Laundry",
-   "x": 10.7,
-   "y": 6.7766,
+   "x": 11.992,
+   "y": 8.02,
    "h": 1.2,
-   "facing": "S",
-   "label": "1-gang switch — laundry, outside the door",
+   "facing": "W",
+   "label": "2-gang switch — laundry, inside on the toilet partition",
    "status": "adapted",
-   "note": "outside the door: inside, the full-height joinery runs to the door",
+   "note": "on the inside partition, about one metre up the wall from the doorway, at the marked arrow tip",
    "gangs": [
-    "Laundry spots + exhaust fan"
+    "Laundry spots + exhaust fan",
+    "Under-cabinet LED"
    ],
    "two_way": null
   },
@@ -1446,17 +1208,17 @@
    "id": "sw-gbath",
    "type": "switch",
    "room": "Guest bathroom",
-   "x": 14.13,
-   "y": 6.778,
+   "x": 14.6638,
+   "y": 7.3,
    "h": 1.2,
-   "facing": "S",
-   "label": "3-gang switch — guest bathroom, outside the door",
+   "facing": "W",
+   "label": "3-gang switch — guest bathroom, inside beside the vanity socket",
    "status": "adapted",
-   "note": "outside the door, out of the wet zone (the plan draws it inside), beside the frame on the handle side",
+   "note": "three keys inside, beside the vanity socket; the fan has its own key",
    "gangs": [
-    "Spots over the vanity",
-    "Spots, middle",
-    "Bath / shower spots + exhaust fan"
+    "All vanity, middle and shower spots",
+    "Under-vanity, shelf + mirror glow + shower-niche LED",
+    "Exhaust fan"
    ],
    "two_way": null
   },
@@ -1473,11 +1235,17 @@
    "note": "the plan puts the dining and reception banks on the wall by the hallway door; in Main the buffet mass covers that wall, so they sit on the south wall just right of the door",
    "gangs": [
     "Lantern pendants",
-    "Dining spots, half A",
-    "Dining spots, half B",
-    "Buffet spots + niche LED"
+    "All dining spots",
+    "Buffet niche LED + mirror glow",
+    "North-window curtain-pocket LED"
    ],
-   "two_way": null
+   "two_way": null,
+   "gang_circuits": [
+    "dining-pendants",
+    "dining-spots",
+    "dining-accent",
+    "dining-curtain"
+   ]
   },
   {
    "id": "sw-reception",
@@ -1487,15 +1255,22 @@
    "y": 5.7241,
    "h": 1.2,
    "facing": "N",
-   "label": "3-gang switch — reception, by the hallway door",
+   "label": "4-gang switch — reception, by the hallway door",
    "status": "adapted",
    "note": "beside the dining bank, on the south wall right of the hallway door (the buffet mass covers the plan's wall)",
    "gangs": [
     "Reception spots, half A",
     "Reception spots, half B",
-    "Curtain-box LED + TV-wall niche (library) lights"
+    "Both terrace-wall curtain boxes (reception window + dining slider)",
+    "TV-wall niche (library) lights + picture lights over the sofa art"
    ],
-   "two_way": null
+   "two_way": null,
+   "gang_circuits": [
+    "reception-A",
+    "reception-B",
+    "reception-curtain",
+    "reception-accent"
+   ]
   },
   {
    "id": "sw-office",
@@ -1509,14 +1284,14 @@
    "status": "adapted",
    "note": "the plan's office bank (balcony floor / balcony wall / office), by Main's coffee corner and terrace slider",
    "gangs": [
-    "Terrace floor lighting (seat-lip LED)",
+    "Terrace floor lighting (seat-lip LED) + BBQ counter LED",
     "Terrace wall lights",
-    "Coffee corner / flip-desk spots"
+    "Coffee corner shelf LED"
    ],
    "two_way": null
   },
   {
-   "id": "acctl-115",
+   "id": "acctl-92",
    "type": "acctl",
    "room": "Living room",
    "x": 4.75,
@@ -1527,7 +1302,7 @@
    "status": "plan"
   },
   {
-   "id": "multi-116",
+   "id": "multi-93",
    "type": "multi",
    "room": "Living room",
    "x": 6.1349,
@@ -1545,7 +1320,7 @@
    ]
   },
   {
-   "id": "multi-117",
+   "id": "multi-94",
    "type": "multi",
    "room": "Living room",
    "x": 6.1349,
@@ -1563,29 +1338,7 @@
    ]
   },
   {
-   "id": "sound-118",
-   "type": "sound",
-   "room": "Living room",
-   "x": 6.1349,
-   "y": 4.12,
-   "h": 1.5,
-   "facing": "W",
-   "label": "Sound system screen (audio control)",
-   "status": "plan"
-  },
-  {
-   "id": "intercom-119",
-   "type": "intercom",
-   "room": "Living room",
-   "x": 5.9949,
-   "y": 4.3,
-   "h": 1.5,
-   "facing": "W",
-   "label": "Intercom screen — answer the front door",
-   "status": "plan"
-  },
-  {
-   "id": "socket-120",
+   "id": "socket-95",
    "type": "socket",
    "room": "Living room",
    "x": 3.45,
@@ -1597,7 +1350,7 @@
    "gang": 2
   },
   {
-   "id": "socket-121",
+   "id": "socket-96",
    "type": "socket",
    "room": "Living room",
    "x": 3.75,
@@ -1609,7 +1362,7 @@
    "gang": 2
   },
   {
-   "id": "socket-122",
+   "id": "socket-97",
    "type": "socket",
    "room": "Living room",
    "x": 4.6,
@@ -1622,7 +1375,7 @@
    "gang": 2
   },
   {
-   "id": "socket-123",
+   "id": "socket-98",
    "type": "socket",
    "room": "Living room",
    "x": 4.95,
@@ -1634,7 +1387,7 @@
    "gang": 2
   },
   {
-   "id": "socket-124",
+   "id": "socket-99",
    "type": "socket",
    "room": "Living room",
    "x": 5.85,
@@ -1646,7 +1399,7 @@
    "gang": 2
   },
   {
-   "id": "power-125",
+   "id": "power-100",
    "type": "power",
    "room": "Living room",
    "x": 2.942,
@@ -1658,7 +1411,7 @@
    "appliance": "split AC"
   },
   {
-   "id": "flap-126",
+   "id": "flap-101",
    "type": "flap",
    "room": "Master bedroom",
    "x": 2.41,
@@ -1676,7 +1429,7 @@
    "finish": "walnut"
   },
   {
-   "id": "flap-127",
+   "id": "flap-102",
    "type": "flap",
    "room": "Master bedroom",
    "x": 2.41,
@@ -1694,7 +1447,7 @@
    "finish": "walnut"
   },
   {
-   "id": "flap-128",
+   "id": "flap-103",
    "type": "flap",
    "room": "Master bedroom",
    "x": 3.37,
@@ -1712,7 +1465,7 @@
    "finish": "oak"
   },
   {
-   "id": "socket-129",
+   "id": "socket-104",
    "type": "socket",
    "room": "Master bedroom",
    "x": 4.5142,
@@ -1724,19 +1477,7 @@
    "gang": 2
   },
   {
-   "id": "socket-130",
-   "type": "socket",
-   "room": "Master bedroom",
-   "x": 5.9,
-   "y": 9.0163,
-   "h": 0.45,
-   "facing": "S",
-   "label": "Double socket 45 cm — window wall",
-   "status": "plan",
-   "gang": 2
-  },
-  {
-   "id": "power-131",
+   "id": "power-105",
    "type": "power",
    "room": "Master bedroom",
    "x": 3.95,
@@ -1748,7 +1489,7 @@
    "appliance": "split AC"
   },
   {
-   "id": "socket-132",
+   "id": "socket-106",
    "type": "socket",
    "room": "Master bathroom",
    "x": 1.0,
@@ -1760,7 +1501,7 @@
    "gang": 1
   },
   {
-   "id": "socket-133",
+   "id": "socket-107",
    "type": "socket",
    "room": "Master bathroom",
    "x": 0.591,
@@ -1773,57 +1514,32 @@
    "gang": 1
   },
   {
-   "id": "towelheater-134",
-   "type": "towelheater",
-   "room": "Master bathroom",
-   "x": 2.15,
-   "y": 7.6632,
-   "h": 1.4,
-   "facing": "W",
-   "label": "Electric towel heater (towel rail)",
-   "status": "existing",
-   "note": "on its own fused spur under the rail",
-   "circuit": "mbath-towel"
-  },
-  {
-   "id": "power-135",
-   "type": "power",
-   "room": "Master bathroom",
-   "x": 2.177,
-   "y": 7.6632,
-   "h": 0.65,
-   "facing": "W",
-   "label": "Electric towel heater point — switched fused spur under the rail (dedicated)",
-   "status": "added",
-   "note": "its cable runs up behind the rail's lower bracket",
-   "appliance": "electric towel heater"
-  },
-  {
-   "id": "power-136",
+   "id": "power-108",
    "type": "power",
    "room": "Master bathroom",
    "x": 0.566,
    "y": 6.525,
    "h": 0.66,
    "facing": "E",
-   "label": "Instant water heater point — inside the vanity (existing socket)",
+   "label": "Electric instant water heater — inside the vanity (existing connection)",
    "status": "existing",
-   "note": "Main already models this socket on the vanity's back panel; it needs its own 3×6 mm circuit",
-   "appliance": "instant water heater 7.5 kW"
+   "note": "the selected water-heating approach for Main; the 3D model depicts a 7.5 kW unit, while the final unit and its electrical supply must be specified together",
+   "appliance": "electric instant water heater"
   },
   {
-   "id": "fan-137",
+   "id": "fan-109",
    "type": "fan",
    "room": "Master bathroom",
    "x": 1.78,
    "y": 7.95,
    "h": 2.6,
    "facing": null,
-   "label": "Exhaust fan — master bathroom (with the WC rocker)",
-   "status": "added"
+   "label": "Exhaust fan — master bathroom (own switch key)",
+   "status": "added",
+   "circuit": "mbath-fan"
   },
   {
-   "id": "socket-138",
+   "id": "socket-110",
    "type": "socket",
    "room": "Kitchen",
    "x": 6.95,
@@ -1835,7 +1551,7 @@
    "gang": 2
   },
   {
-   "id": "socket-139",
+   "id": "socket-111",
    "type": "socket",
    "room": "Kitchen",
    "x": 9.2,
@@ -1847,8 +1563,8 @@
    "gang": 2
   },
   {
-   "id": "power-140",
-   "type": "power",
+   "id": "socket-112",
+   "type": "socket",
    "room": "Kitchen",
    "x": 8.8,
    "y": 9.087,
@@ -1857,11 +1573,12 @@
    "label": "Socket 60 cm — water filter, under the sink",
    "status": "plan",
    "note": "under the sink, just east of the window (the wall under the window is the opening)",
+   "gang": 1,
    "appliance": "water filter"
   },
   {
-   "id": "power-141",
-   "type": "power",
+   "id": "socket-113",
+   "type": "socket",
    "room": "Kitchen",
    "x": 10.2072,
    "y": 7.05,
@@ -1870,23 +1587,25 @@
    "label": "Double socket 130 cm — for the fridge",
    "status": "plan",
    "note": "behind the fridge, as the plan",
+   "gang": 2,
    "appliance": "fridge"
   },
   {
-   "id": "power-142",
-   "type": "power",
+   "id": "socket-114",
+   "type": "socket",
    "room": "Kitchen",
    "x": 10.2072,
    "y": 8.3,
    "h": 0.4,
    "facing": "W",
-   "label": "Dishwasher point — in the base under the raised dishwasher",
+   "label": "Dishwasher socket — in the base under the raised dishwasher",
    "status": "adapted",
    "note": "the plan has the dishwasher at the sink (60); Main's dishwasher is the raised column on the east run",
+   "gang": 1,
    "appliance": "dishwasher"
   },
   {
-   "id": "socket-143",
+   "id": "socket-115",
    "type": "socket",
    "room": "Kitchen",
    "x": 10.1922,
@@ -1899,7 +1618,7 @@
    "gang": 2
   },
   {
-   "id": "power-144",
+   "id": "power-116",
    "type": "power",
    "room": "Kitchen",
    "x": 6.4778,
@@ -1911,19 +1630,21 @@
    "appliance": "cooker / hob"
   },
   {
-   "id": "power-145",
-   "type": "power",
+   "id": "socket-117",
+   "type": "socket",
    "room": "Kitchen",
    "x": 6.4778,
    "y": 7.376,
    "h": 2.1,
    "facing": "E",
-   "label": "Hood point — over the hob, inside the upper",
+   "label": "Extractor hood socket — over the hob, inside the upper",
    "status": "added",
+   "note": "separate supply for the extractor above the hob",
+   "gang": 1,
    "appliance": "cooker hood"
   },
   {
-   "id": "socket-146",
+   "id": "socket-118",
    "type": "socket",
    "room": "Kitchen",
    "x": 6.4928,
@@ -1935,7 +1656,7 @@
    "gang": 2
   },
   {
-   "id": "socket-147",
+   "id": "socket-119",
    "type": "socket",
    "room": "Kitchen",
    "x": 6.4928,
@@ -1947,33 +1668,35 @@
    "gang": 2
   },
   {
-   "id": "power-148",
-   "type": "power",
+   "id": "socket-120",
+   "type": "socket",
    "room": "Kitchen",
    "x": 8.117,
    "y": 5.672,
    "h": 0.55,
    "facing": "N",
-   "label": "Oven point — behind the pan drawer under the oven",
+   "label": "Oven socket — behind the pan drawer under the oven",
    "status": "adapted",
-   "note": "plan: 130 on the south wall; in Main's tower the oven is 66.5–122.5, so the point sits under it, reachable through the drawer",
+   "note": "plan: 130 on the south wall; in Main's tower the oven is 66.5–122.5, so the socket sits under it, reachable through the drawer; electrician to size it for the selected oven",
+   "gang": 1,
    "appliance": "built-in oven"
   },
   {
-   "id": "power-149",
-   "type": "power",
+   "id": "socket-121",
+   "type": "socket",
    "room": "Kitchen",
    "x": 8.117,
    "y": 5.672,
    "h": 1.45,
    "facing": "N",
-   "label": "Microwave point — behind the microwave in the tower niche",
+   "label": "Microwave socket — behind the microwave in the tower niche",
    "status": "adapted",
    "note": "plan: 150; Main's microwave niche is 127–164",
+   "gang": 1,
    "appliance": "microwave"
   },
   {
-   "id": "tv-150",
+   "id": "tv-122",
    "type": "tv",
    "room": "Kitchen",
    "x": 9.35,
@@ -1985,7 +1708,7 @@
    "note": "the plan's south wall is Main's full-height pantry + tower: moved to the free wall east of the tower"
   },
   {
-   "id": "socket-151",
+   "id": "socket-123",
    "type": "socket",
    "room": "Kitchen",
    "x": 9.6,
@@ -1997,7 +1720,7 @@
    "gang": 2
   },
   {
-   "id": "phone-152",
+   "id": "phone-124",
    "type": "phone",
    "room": "Kitchen",
    "x": 8.85,
@@ -2009,44 +1732,21 @@
    "note": "moved off the pantry wall, east of the tower"
   },
   {
-   "id": "sound-153",
-   "type": "sound",
-   "room": "Kitchen",
-   "x": 9.05,
-   "y": 5.6634,
-   "h": 1.5,
-   "facing": "N",
-   "label": "Sound system screen (audio control)",
-   "status": "adapted",
-   "note": "moved off the pantry wall, east of the tower"
-  },
-  {
-   "id": "intercom-154",
-   "type": "intercom",
-   "room": "Kitchen",
-   "x": 9.25,
-   "y": 5.6634,
-   "h": 1.5,
-   "facing": "N",
-   "label": "Intercom screen — answer the front door",
-   "status": "adapted",
-   "note": "moved off the pantry wall, east of the tower"
-  },
-  {
-   "id": "power-155",
-   "type": "power",
+   "id": "socket-125",
+   "type": "socket",
    "room": "Laundry",
    "x": 11.9,
    "y": 9.1833,
    "h": 0.6,
    "facing": "S",
-   "label": "Washing-machine point 60 cm — behind the oak base",
+   "label": "Washing-machine socket 60 cm — behind the oak base",
    "status": "adapted",
    "note": "Main's washer stands on a 0.76 base: the socket is inside the base, beside the hoses. No dryer in Main, so the plan's dryer point (120) is left out",
+   "gang": 1,
    "appliance": "washing machine"
   },
   {
-   "id": "socket-156",
+   "id": "socket-126",
    "type": "socket",
    "room": "Laundry",
    "x": 11.15,
@@ -2058,7 +1758,7 @@
    "gang": 2
   },
   {
-   "id": "socket-157",
+   "id": "socket-127",
    "type": "socket",
    "room": "Laundry",
    "x": 11.992,
@@ -2070,21 +1770,8 @@
    "gang": 2
   },
   {
-   "id": "power-158",
-   "type": "power",
-   "room": "Laundry",
-   "x": 11.25,
-   "y": 9.1838,
-   "h": 2.35,
-   "facing": "S",
-   "label": "Water-heater point — 40 L heater in the upper cabinet (dedicated 3×6 mm)",
-   "status": "added",
-   "note": "not on the plan; the heater lives in the counter's upper cabinet",
-   "appliance": "electric water heater"
-  },
-  {
-   "id": "power-159",
-   "type": "power",
+   "id": "socket-128",
+   "type": "socket",
    "room": "Laundry",
    "x": 10.3232,
    "y": 7.21,
@@ -2093,10 +1780,11 @@
    "label": "Socket 60 cm — robot vacuum dock, inside the joinery's bottom bay",
    "status": "added",
    "note": "on the back wall of the south bay of the tall joinery, over the dock's top (52 cm) and under the 71 cm clear needed to lift its tanks out: it plugs in behind, no cable across the floor",
+   "gang": 1,
    "appliance": "robot vacuum dock (Roborock-style, 34 x 49 x 52 cm)"
   },
   {
-   "id": "fan-160",
+   "id": "fan-129",
    "type": "fan",
    "room": "Laundry",
    "x": 11.4,
@@ -2107,7 +1795,7 @@
    "status": "added"
   },
   {
-   "id": "socket-161",
+   "id": "socket-130",
    "type": "socket",
    "room": "Guest bathroom",
    "x": 14.6638,
@@ -2119,7 +1807,7 @@
    "gang": 1
   },
   {
-   "id": "socket-162",
+   "id": "socket-131",
    "type": "socket",
    "room": "Guest bathroom",
    "x": 14.45,
@@ -2131,18 +1819,19 @@
    "gang": 1
   },
   {
-   "id": "fan-163",
+   "id": "fan-132",
    "type": "fan",
    "room": "Guest bathroom",
    "x": 12.9,
    "y": 8.6,
    "h": 2.6,
    "facing": null,
-   "label": "Exhaust fan — guest bathroom (with the bath rocker)",
-   "status": "added"
+   "label": "Exhaust fan — guest bathroom (own switch key)",
+   "status": "added",
+   "circuit": "gbath-fan"
   },
   {
-   "id": "socket-164",
+   "id": "socket-133",
    "type": "socket",
    "room": "Entrance",
    "x": 10.0,
@@ -2155,7 +1844,7 @@
    "gang": 2
   },
   {
-   "id": "socket-165",
+   "id": "socket-134",
    "type": "socket",
    "room": "Entrance",
    "x": 4.9,
@@ -2167,7 +1856,7 @@
    "gang": 2
   },
   {
-   "id": "socket-166",
+   "id": "socket-135",
    "type": "socket",
    "room": "Hallway",
    "x": 12.6,
@@ -2179,70 +1868,69 @@
    "gang": 2
   },
   {
-   "id": "db-167",
+   "id": "db-136",
    "type": "db",
    "room": "Entrance",
-   "x": 6.75,
-   "y": 5.5472,
+   "x": 7.0,
+   "y": 3.6031,
    "h": 1.8,
-   "facing": "S",
-   "label": "Distribution board (DB) — 36-way, main breakers for the whole flat",
-   "status": "added",
-   "note": "not on the plan (quotation: 36-way DB). Near the front door, clear of the gallery art; bottom 1.50, top 2.10. Confirm wall depth with the electrician",
+   "facing": "N",
+   "label": "Distribution board (DB) — 36-way, behind the entrance artwork",
+   "status": "adapted",
+   "note": "on the opposite side of the hall from its former position, concealed behind the entrance artwork; keep the artwork removable and confirm the panel remains accessible",
    "w": 0.45,
    "hh": 0.6
   },
   {
-   "id": "lcp-168",
-   "type": "lcp",
+   "id": "intercom-137",
+   "type": "intercom",
    "room": "Entrance",
-   "x": 7.25,
-   "y": 5.5472,
-   "h": 1.78,
-   "facing": "S",
-   "label": "Low-current panel — fibre/ONT, Cat6 patch, TV splitter, intercom power",
-   "status": "added",
-   "note": "beside the DB: every data (D), TV and intercom cable runs home here",
-   "w": 0.35,
-   "hh": 0.45
+   "x": 9.2,
+   "y": 3.6031,
+   "h": 1.45,
+   "facing": "N",
+   "label": "Intercom screen — answer the front door",
+   "status": "adapted",
+   "note": "the only indoor intercom, beside the front door"
   },
   {
-   "id": "router-169",
+   "id": "hub",
    "type": "router",
-   "room": "Hallway",
-   "x": 13.05,
-   "y": 5.739,
-   "h": 2.2,
+   "room": "Entrance",
+   "x": 10.8,
+   "y": 3.6031,
+   "h": 0.3,
    "facing": "N",
-   "label": "Wi-Fi router — centre of the flat, fed by Cat6 from the low-current panel",
+   "label": "Network hub — fibre box (ONT), router and 16-port PoE switch, inside the shoe cabinet",
    "status": "added",
-   "note": "in the hallway, halfway between the bedroom and the reception, so Wi-Fi reaches both ends; a mesh point can plug into the reception/living data points"
+   "note": "a vented compartment in the shoe cabinet (joiner to confirm which); fibre, TV, intercom and every Cat6 cable run here without a separate low-current panel"
   },
   {
-   "id": "socket-170",
+   "id": "socket-139",
    "type": "socket",
-   "room": "Hallway",
-   "x": 13.3,
-   "y": 5.7375,
-   "h": 2.1,
+   "room": "Entrance",
+   "x": 11.1,
+   "y": 3.6031,
+   "h": 0.3,
    "facing": "N",
-   "label": "Socket 210 cm — router power",
+   "label": "Double socket inside the shoe cabinet — network hub power",
    "status": "added",
-   "gang": 1
+   "gang": 2
   },
   {
-   "id": "data-171",
-   "type": "data",
-   "room": "Hallway",
-   "x": 12.8,
-   "y": 5.7405,
-   "h": 2.1,
-   "facing": "N",
-   "label": "Data point (Cat6) — router uplink from the low-current panel",
-   "status": "added"
+   "id": "ap-2",
+   "type": "ap",
+   "room": "Entrance",
+   "x": 10.25,
+   "y": 4.6,
+   "h": 2.6,
+   "facing": null,
+   "label": "Wi-Fi access point AP2 (main) — entrance ceiling, above the shoe cabinet",
+   "status": "added",
+   "note": "covers the entrance, hallway, kitchen, laundry and guest bathroom; on the corridor spot line, between two spots; Cat6 + PoE from the hub"
   },
   {
-   "id": "chime-172",
+   "id": "chime-141",
    "type": "chime",
    "room": "Entrance",
    "x": 7.6,
@@ -2253,7 +1941,7 @@
    "status": "added"
   },
   {
-   "id": "intercom_out-173",
+   "id": "intercom_out-142",
    "type": "intercom_out",
    "room": "Entrance",
    "x": 9.2,
@@ -2265,7 +1953,7 @@
    "note": "the plan puts it outside the door at 120 on the 45° corner; Main's door has a flat wall, so beside the door at 1.45 (camera height)"
   },
   {
-   "id": "doorbell-174",
+   "id": "doorbell-143",
    "type": "doorbell",
    "room": "Entrance",
    "x": 7.8,
@@ -2276,7 +1964,7 @@
    "status": "added"
   },
   {
-   "id": "socket-175",
+   "id": "socket-144",
    "type": "socket",
    "room": "Dining",
    "x": 15.4,
@@ -2288,7 +1976,7 @@
    "gang": 2
   },
   {
-   "id": "socket-176",
+   "id": "socket-145",
    "type": "socket",
    "room": "Dining",
    "x": 18.6,
@@ -2300,7 +1988,7 @@
    "gang": 2
   },
   {
-   "id": "power-177",
+   "id": "power-146",
    "type": "power",
    "room": "Dining",
    "x": 14.975,
@@ -2312,7 +2000,7 @@
    "appliance": "split AC"
   },
   {
-   "id": "socket-178",
+   "id": "socket-147",
    "type": "socket",
    "room": "Dining",
    "x": 20.0,
@@ -2325,7 +2013,7 @@
    "gang": 2
   },
   {
-   "id": "socket-179",
+   "id": "socket-148",
    "type": "socket",
    "room": "Dining",
    "x": 20.45,
@@ -2337,23 +2025,23 @@
    "gang": 2
   },
   {
-   "id": "multi-180",
+   "id": "multi-149",
    "type": "multi",
    "room": "Dining",
    "x": 20.9,
    "y": 9.4974,
    "h": 1.15,
    "facing": "S",
-   "label": "Desk plate 115 cm — data + double socket for the flip desk and monitor",
+   "label": "Desk plate 115 cm — double data + double socket for the flip desk and monitor",
    "status": "adapted",
-   "note": "the plan's office D 110 + socket, at Main's flip desk",
+   "note": "the plan's office D 110 + socket, at Main's flip desk; two Cat6 (computer, printer) to the hub (Karim 7 Nov 2026)",
    "parts": [
-    "D",
+    "2D",
     "2S"
    ]
   },
   {
-   "id": "multi-181",
+   "id": "multi-150",
    "type": "multi",
    "room": "Reception",
    "x": 17.545,
@@ -2371,7 +2059,7 @@
    ]
   },
   {
-   "id": "multi-182",
+   "id": "multi-151",
    "type": "multi",
    "room": "Reception",
    "x": 17.27,
@@ -2389,7 +2077,7 @@
    ]
   },
   {
-   "id": "socket-183",
+   "id": "socket-152",
    "type": "socket",
    "room": "Reception",
    "x": 18.15,
@@ -2401,7 +2089,7 @@
    "gang": 2
   },
   {
-   "id": "socket-184",
+   "id": "socket-153",
    "type": "socket",
    "room": "Reception",
    "x": 20.55,
@@ -2413,7 +2101,20 @@
    "gang": 2
   },
   {
-   "id": "phone-185",
+   "id": "socket-154",
+   "type": "socket",
+   "room": "Reception",
+   "x": 16.05,
+   "y": 5.7214,
+   "h": 0.45,
+   "facing": "N",
+   "label": "Double socket 45 cm — marked wall by the reception entrance",
+   "status": "added",
+   "note": "two plug-in outlets on the short wall circled by the reception entrance",
+   "gang": 2
+  },
+  {
+   "id": "phone-155",
    "type": "phone",
    "room": "Reception",
    "x": 21.2192,
@@ -2424,7 +2125,7 @@
    "status": "plan"
   },
   {
-   "id": "socket-186",
+   "id": "socket-156",
    "type": "socket",
    "room": "Reception",
    "x": 21.2192,
@@ -2436,7 +2137,7 @@
    "gang": 2
   },
   {
-   "id": "socket-187",
+   "id": "socket-157",
    "type": "socket",
    "room": "Reception",
    "x": 21.2193,
@@ -2448,7 +2149,7 @@
    "gang": 2
   },
   {
-   "id": "socket-188",
+   "id": "socket-158",
    "type": "socket",
    "room": "Reception",
    "x": 17.6,
@@ -2460,7 +2161,7 @@
    "gang": 2
   },
   {
-   "id": "power-189",
+   "id": "power-159",
    "type": "power",
    "room": "Reception",
    "x": 20.0,
@@ -2472,7 +2173,7 @@
    "appliance": "split AC"
   },
   {
-   "id": "wp-190",
+   "id": "wp-160",
    "type": "wp",
    "room": "Terrace",
    "x": 23.55,
@@ -2484,7 +2185,7 @@
    "note": "the plan's WP 130 at the sink corner: Main's BBQ counter has no sink, so it powers the BBQ / grill"
   },
   {
-   "id": "wp-191",
+   "id": "wp-161",
    "type": "wp",
    "room": "Terrace",
    "x": 21.4756,
@@ -2495,7 +2196,7 @@
    "status": "plan"
   },
   {
-   "id": "tv-192",
+   "id": "tv-162",
    "type": "tv",
    "room": "Terrace",
    "x": 21.4757,
@@ -2506,7 +2207,7 @@
    "status": "plan"
   },
   {
-   "id": "wp-193",
+   "id": "wp-163",
    "type": "wp",
    "room": "Terrace",
    "x": 21.4753,
@@ -2515,6 +2216,449 @@
    "facing": "E",
    "label": "Weatherproof socket 45 cm — south pier by the L seat",
    "status": "plan"
+  },
+  {
+   "id": "sensor-164",
+   "type": "sensor",
+   "room": "Master bathroom",
+   "x": 1.35,
+   "y": 6.8,
+   "h": 2.6,
+   "facing": null,
+   "label": "Presence sensor (mmWave) — master bathroom",
+   "status": "added",
+   "note": "centred between the basin and middle spots, outside the shower and 1.2 m from the exhaust fan; sees the WC bay",
+   "tech": "mmWave"
+  },
+  {
+   "id": "sensor-165",
+   "type": "sensor",
+   "room": "Guest bathroom",
+   "x": 13.8,
+   "y": 8.025,
+   "h": 2.6,
+   "facing": null,
+   "label": "Presence sensor (mmWave) — guest bathroom",
+   "status": "added",
+   "note": "centred between four spots (middle and vanity columns), 1.1 m from the exhaust fan",
+   "tech": "mmWave"
+  },
+  {
+   "id": "sensor-166",
+   "type": "sensor",
+   "room": "Laundry",
+   "x": 11.4,
+   "y": 7.783,
+   "h": 2.6,
+   "facing": null,
+   "label": "Motion sensor (PIR) — laundry",
+   "status": "added",
+   "note": "on the spot line, centred between the door-side and middle spots, 1.1 m from the exhaust fan",
+   "tech": "PIR"
+  },
+  {
+   "id": "sensor-167",
+   "type": "sensor",
+   "room": "Kitchen",
+   "x": 8.8,
+   "y": 6.975,
+   "h": 2.6,
+   "facing": null,
+   "label": "Presence sensor (mmWave) — kitchen",
+   "status": "added",
+   "note": "centred between four spots on the east (door) side, away from the hob",
+   "tech": "mmWave"
+  },
+  {
+   "id": "sensor-168",
+   "type": "sensor",
+   "room": "Entrance",
+   "x": 8.85,
+   "y": 4.6,
+   "h": 2.6,
+   "facing": null,
+   "label": "Motion sensor (PIR) — entrance corridor",
+   "status": "added",
+   "note": "on the corridor spot line, centred between two spots, about over the front door",
+   "tech": "PIR"
+  },
+  {
+   "id": "sensor-169",
+   "type": "sensor",
+   "room": "Entrance",
+   "x": 12.7375,
+   "y": 6.25,
+   "h": 2.6,
+   "facing": null,
+   "label": "Presence sensor (mmWave) — corridor by the laundry and guest bathroom",
+   "status": "added",
+   "note": "on the corridor spot line, centred between two spots between the laundry and guest bathroom doors",
+   "tech": "mmWave"
+  },
+  {
+   "id": "sensor-170",
+   "type": "sensor",
+   "room": "Master bedroom",
+   "x": 4.375,
+   "y": 6.85,
+   "h": 2.6,
+   "facing": null,
+   "label": "Presence sensor (mmWave) — master bedroom, OPTIONAL, switch-off only",
+   "status": "optional",
+   "note": "optional: never switches the light on, only off once the room is empty; centred between four spots",
+   "tech": "mmWave"
+  },
+  {
+   "id": "sensor-171",
+   "type": "sensor",
+   "room": "Living room",
+   "x": 4.55,
+   "y": 2.45,
+   "h": 2.6,
+   "facing": null,
+   "label": "Presence sensor (mmWave) — living room, OPTIONAL, switch-off only",
+   "status": "optional",
+   "note": "optional: never switches the light on, only off once the room is empty; between the two spot rows",
+   "tech": "mmWave"
+  },
+  {
+   "id": "ap-1",
+   "type": "ap",
+   "room": "Entrance",
+   "x": 5.425,
+   "y": 5.05,
+   "h": 2.6,
+   "facing": null,
+   "label": "Wi-Fi access point AP1 — ceiling between the bedroom and living-room doors",
+   "status": "added",
+   "note": "covers the master bedroom, master bathroom and living room; between the two lobby spots; Cat6 + PoE from the hub"
+  },
+  {
+   "id": "ap-3",
+   "type": "ap",
+   "room": "Reception",
+   "x": 18.3,
+   "y": 5.625,
+   "h": 2.6,
+   "facing": null,
+   "label": "Wi-Fi access point AP3 — reception ceiling, between the dining and seating areas",
+   "status": "added",
+   "note": "covers the reception, dining and terrace (through the glass); halfway between the dining and reception spot rows; Cat6 + PoE from the hub"
+  },
+  {
+   "id": "ledfeed-174",
+   "type": "ledfeed",
+   "room": "Reception",
+   "x": 18.673,
+   "y": 2.073,
+   "h": 2.05,
+   "facing": "N",
+   "label": "Picture light over the sofa art (left) — wall box",
+   "status": "added"
+  },
+  {
+   "id": "ledfeed-175",
+   "type": "ledfeed",
+   "room": "Reception",
+   "x": 20.003,
+   "y": 2.073,
+   "h": 2.05,
+   "facing": "N",
+   "label": "Picture light over the sofa art (right) — wall box",
+   "status": "added"
+  },
+  {
+   "id": "ledfeed-176",
+   "type": "ledfeed",
+   "room": "Reception",
+   "x": 17.3,
+   "y": 3.3,
+   "h": 1.4,
+   "facing": "E",
+   "label": "LED driver in the TV box — 2 tall niches + low TV niche",
+   "status": "added",
+   "note": "reached through the TV opening"
+  },
+  {
+   "id": "ledfeed-177",
+   "type": "ledfeed",
+   "room": "Dining",
+   "x": 15.15,
+   "y": 7.18,
+   "h": 0.4,
+   "facing": "E",
+   "label": "LED driver in the buffet — tall niche",
+   "status": "added"
+  },
+  {
+   "id": "ledfeed-178",
+   "type": "ledfeed",
+   "room": "Dining",
+   "x": 14.99,
+   "y": 8.79,
+   "h": 1.6,
+   "facing": "E",
+   "label": "Buffet pebble-mirror glow — box behind the mirror",
+   "status": "added"
+  },
+  {
+   "id": "ledfeed-179",
+   "type": "ledfeed",
+   "room": "Dining",
+   "x": 20.47,
+   "y": 9.36,
+   "h": 0.9,
+   "facing": "S",
+   "label": "Coffee corner — LED under the 2 shelves (driver in the drawer bay)",
+   "status": "added"
+  },
+  {
+   "id": "ledfeed-180",
+   "type": "ledfeed",
+   "room": "Dining",
+   "x": 16.95,
+   "y": 9.4,
+   "h": 2.7,
+   "facing": "S",
+   "label": "Curtain-pocket LED, north window — driver above the plasterboard ceiling",
+   "status": "added"
+  },
+  {
+   "id": "ledfeed-181",
+   "type": "ledfeed",
+   "room": "Entrance",
+   "x": 10.6,
+   "y": 3.75,
+   "h": 0.3,
+   "facing": "N",
+   "label": "Entrance console — cove, shoe shelf, header downlight, mirror (driver in the console)",
+   "status": "added"
+  },
+  {
+   "id": "ledfeed-182",
+   "type": "ledfeed",
+   "room": "Entrance",
+   "x": 8.6,
+   "y": 5.5,
+   "h": 1.4,
+   "facing": "S",
+   "label": "Entrance pebble-mirror glow + pill sconce — box behind the mirror",
+   "status": "added"
+  },
+  {
+   "id": "ledfeed-183",
+   "type": "ledfeed",
+   "room": "Entrance",
+   "x": 7.0,
+   "y": 3.631,
+   "h": 2.075,
+   "facing": "N",
+   "label": "Gallery picture light 1 of 4 — wall box",
+   "status": "added"
+  },
+  {
+   "id": "ledfeed-184",
+   "type": "ledfeed",
+   "room": "Entrance",
+   "x": 6.541,
+   "y": 3.85,
+   "h": 2.09,
+   "facing": "E",
+   "label": "Gallery picture light 2 of 4 — wall box",
+   "status": "added"
+  },
+  {
+   "id": "ledfeed-185",
+   "type": "ledfeed",
+   "room": "Entrance",
+   "x": 6.541,
+   "y": 4.3,
+   "h": 1.73,
+   "facing": "E",
+   "label": "Gallery picture light 3 of 4 — wall box",
+   "status": "added"
+  },
+  {
+   "id": "ledfeed-186",
+   "type": "ledfeed",
+   "room": "Entrance",
+   "x": 6.541,
+   "y": 3.95,
+   "h": 1.45,
+   "facing": "E",
+   "label": "Gallery picture light 4 of 4 — wall box",
+   "status": "added"
+  },
+  {
+   "id": "ledfeed-187",
+   "type": "ledfeed",
+   "room": "Living room",
+   "x": 3.62,
+   "y": 0.579,
+   "h": 2.345,
+   "facing": "N",
+   "label": "Picture light over the window-wall art — wall box",
+   "status": "added"
+  },
+  {
+   "id": "ledfeed-188",
+   "type": "ledfeed",
+   "room": "Living room",
+   "x": 4.35,
+   "y": 4.412,
+   "h": 2.08,
+   "facing": "S",
+   "label": "Picture light over the door-wall art — wall box",
+   "status": "added"
+  },
+  {
+   "id": "ledfeed-189",
+   "type": "ledfeed",
+   "room": "Living room",
+   "x": 6.11,
+   "y": 1.1,
+   "h": 1.52,
+   "facing": "W",
+   "label": "TV-wall linear sconce, south — wall box",
+   "status": "added"
+  },
+  {
+   "id": "ledfeed-190",
+   "type": "ledfeed",
+   "room": "Living room",
+   "x": 6.11,
+   "y": 3.4,
+   "h": 1.52,
+   "facing": "W",
+   "label": "TV-wall linear sconce, north — wall box",
+   "status": "added"
+  },
+  {
+   "id": "ledfeed-191",
+   "type": "ledfeed",
+   "room": "Living room",
+   "x": 5.93,
+   "y": 2.25,
+   "h": 0.44,
+   "facing": "W",
+   "label": "TV console under-glow — driver in the console",
+   "status": "added"
+  },
+  {
+   "id": "ledfeed-192",
+   "type": "ledfeed",
+   "room": "Master bedroom",
+   "x": 3.35,
+   "y": 4.59,
+   "h": 1.35,
+   "facing": "N",
+   "label": "Bedroom vanity mirror glow — separately switched driver behind the mirror",
+   "status": "added",
+   "circuit": "master-vanity-mirror"
+  },
+  {
+   "id": "ledfeed-193",
+   "type": "ledfeed",
+   "room": "Master bedroom",
+   "x": 2.82,
+   "y": 4.59,
+   "h": 0.65,
+   "facing": "N",
+   "label": "Bedroom vanity LED — shelf column and jewellery tray driver",
+   "status": "added",
+   "circuit": "master-vanity-led"
+  },
+  {
+   "id": "ledfeed-194",
+   "type": "ledfeed",
+   "room": "Master bathroom",
+   "x": 0.84,
+   "y": 6.68,
+   "h": 0.28,
+   "facing": "E",
+   "label": "Under-vanity LED + medicine-cabinet glow — driver under the vanity",
+   "status": "added",
+   "note": "24 V strip"
+  },
+  {
+   "id": "ledfeed-195",
+   "type": "ledfeed",
+   "room": "Master bathroom",
+   "x": 0.6,
+   "y": 7.75,
+   "h": 2.0,
+   "facing": "E",
+   "label": "Shower-niche LED — driver in the cabinet over the WC (dry)",
+   "status": "added",
+   "note": "24 V IP67 strip in the niche"
+  },
+  {
+   "id": "ledfeed-196",
+   "type": "ledfeed",
+   "room": "Guest bathroom",
+   "x": 14.38,
+   "y": 8.04,
+   "h": 0.3,
+   "facing": "W",
+   "label": "Under-vanity, shelf + mirror glow — driver under the vanity",
+   "status": "added",
+   "note": "24 V strip"
+  },
+  {
+   "id": "ledfeed-197",
+   "type": "ledfeed",
+   "room": "Guest bathroom",
+   "x": 13.25,
+   "y": 6.96,
+   "h": 2.45,
+   "facing": "N",
+   "label": "Shower-niche LED (2 niches) — driver in the ceiling void outside the shower",
+   "status": "added",
+   "note": "24 V IP67 strip in the niches; box high on the south wall, outside the shower"
+  },
+  {
+   "id": "ledfeed-198",
+   "type": "ledfeed",
+   "room": "Kitchen",
+   "x": 8.1,
+   "y": 8.75,
+   "h": 0.15,
+   "facing": "S",
+   "label": "Plinth LED — driver in the sink base",
+   "status": "added"
+  },
+  {
+   "id": "ledfeed-199",
+   "type": "ledfeed",
+   "room": "Laundry",
+   "x": 11.16,
+   "y": 8.96,
+   "h": 1.7,
+   "facing": "S",
+   "label": "Under-cabinet LED — driver in the upper cabinet",
+   "status": "added"
+  },
+  {
+   "id": "ledfeed-200",
+   "type": "ledfeed",
+   "room": "Terrace",
+   "x": 24.27,
+   "y": 3.02,
+   "h": 0.2,
+   "facing": "W",
+   "label": "Seat-lip LED — IP65 driver in the seat storage",
+   "status": "added"
+  },
+  {
+   "id": "ledfeed-201",
+   "type": "ledfeed",
+   "room": "Terrace",
+   "x": 23.11,
+   "y": 9.23,
+   "h": 0.8,
+   "facing": "S",
+   "label": "BBQ counter LED — IP65",
+   "status": "added"
   }
  ],
  "lines": [
@@ -2522,40 +2666,71 @@
    "id": "led-master-curtain",
    "type": "led",
    "room": "Master bedroom",
-   "x0": 2.6,
-   "y0": 8.88,
-   "x1": 5.7,
-   "y1": 8.88,
-   "h": 2.58,
-   "label": "Indirect LED in the curtain box over the bedroom window",
+   "x0": 3.118,
+   "y0": 8.885,
+   "x1": 5.078,
+   "y1": 8.885,
+   "h": 2.73,
+   "label": "LED in the curtain pocket over the bedroom window",
    "circuit": "master-curtain",
-   "status": "plan"
+   "status": "added",
+   "note": "warm 24 V strip in a 0.15 x 0.15 plasterboard pocket, the opening plus its curtain stack-back each side; the curtain tracks are in the pocket too"
   },
   {
    "id": "led-reception-curtain",
    "type": "led",
    "room": "Reception",
-   "x0": 21.1,
-   "y0": 2.3,
-   "x1": 21.1,
-   "y1": 5.4,
-   "h": 2.58,
-   "label": "Indirect LED in the curtain box over the reception window",
+   "x0": 21.082,
+   "y0": 2.772,
+   "x1": 21.082,
+   "y1": 5.558,
+   "h": 2.73,
+   "label": "LED in the curtain pocket over the reception window",
    "circuit": "reception-curtain",
-   "status": "plan"
+   "status": "added",
+   "note": "warm 24 V strip in a 0.15 x 0.15 plasterboard pocket, the opening plus its curtain stack-back each side; the curtain tracks are in the pocket too"
+  },
+  {
+   "id": "led-slider-curtain",
+   "type": "led",
+   "room": "Dining",
+   "x0": 21.082,
+   "y0": 5.84,
+   "x1": 21.082,
+   "y1": 8.379,
+   "h": 2.73,
+   "label": "LED in the curtain pocket over the dining slider",
+   "circuit": "reception-curtain",
+   "status": "added",
+   "note": "warm 24 V strip in a 0.15 x 0.15 plasterboard pocket, the opening plus its curtain stack-back each side; the curtain tracks are in the pocket too"
   },
   {
    "id": "led-living-curtain",
    "type": "led",
    "room": "Living room",
-   "x0": 3.06,
-   "y0": 0.8,
-   "x1": 3.06,
-   "y1": 4.2,
-   "h": 2.58,
-   "label": "Indirect LED over the living-room window (Main's cove light)",
+   "x0": 3.075,
+   "y0": 1.54,
+   "x1": 3.075,
+   "y1": 3.45,
+   "h": 2.73,
+   "label": "LED in the curtain pocket over the living-room window",
    "circuit": "living-cove",
-   "status": "existing"
+   "status": "added",
+   "note": "warm 24 V strip in a 0.15 x 0.15 plasterboard pocket, the opening plus its curtain stack-back each side; the curtain tracks are in the pocket too"
+  },
+  {
+   "id": "led-dining-curtain",
+   "type": "led",
+   "room": "Dining",
+   "x0": 16.025,
+   "y0": 9.358,
+   "x1": 17.884,
+   "y1": 9.358,
+   "h": 2.73,
+   "label": "LED in the curtain pocket over the dining window",
+   "circuit": "dining-curtain",
+   "status": "added",
+   "note": "warm 24 V strip in a 0.15 x 0.15 plasterboard pocket, the opening plus its curtain stack-back each side; the curtain tracks are in the pocket too"
   }
  ]
 }

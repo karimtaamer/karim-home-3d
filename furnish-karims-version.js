@@ -1767,42 +1767,39 @@ export function furnish(scene, M, mat, version = "main") {
     item(16.95, y, "S", p => { const m = mesh(curtainGeometry(1.15, 2.45), mat.sheer, p.g); m.position.set(0, 1.25, 0.18); });
   }
   // Buffet wall per the DWG and the dining render (15): a plaster mass with a tall lit oak niche (south),
-  // splayed back into the wall like the TV wall, then a walnut sideboard under a backlit pebble mirror.
+  // then a walnut sideboard under a backlit pebble mirror.
+  // Karim's version (9 Nov 2026): exact copy of Main's 50 cm buffet + niche mass (Karim 1 Nov depths), but the
+  // S-curve return is replaced by a ~70 cm flat full-depth run (from the south tip) ending in a square (90°)
+  // cut back to the wall. Main (kareems-changes) is untouched.
   named(item(14.79, 8.0, "E", p => {  // local x = plan y - 8, z = plan x - 14.79
-    // Kareem's: the niche is the reception TV wall's tall niche (0.34 wide, 0.42-2.2 high, r 0.13, shelves 0.86 /
-    // 1.3 / 1.74, LED 2.1), so the two rooms read as one family. Karim t332: centred on the mass as it reads, not
-    // on the flat face alone: the r 0.2 corner reads as face (~0.16 in the dining view), so the niche sits 0.02 / 0.34 / 0.12 on the flat face and the corner is r 0.12 (was 0.20),
-    // so left/right plaster reads ~equal on the elevated bit. Karim t331: the splay is a soft S-curve at the TV wall's slope, not a 36° chamfer: the
-    // step drops to 0.18 (mass front x 15.152, panel face x 14.972) over a 0.45 run, 21.8° chord and 25° at its
-    // steepest, tangent to the mass and the panel. Panel 1.56 wide (was 1.46); sideboard 0.40 deep, 0.22 proud of the mass.
-    const BK = ["kareems-changes", "karims-version"].includes(version);
-    const H = M.ceiling, F = BK ? 0.362 : 0.462, P = BK ? 0.182 : 0.062;  // mass front (x 15.25), wall panel face (x 14.85)
-    const B = BK ? P + 0.4 : F, dz = B - 0.462;  // sideboard front; its styling keeps its distance from the front
-    const S = -1.213, C = -1.013, N = 1.477;  // y 6.79, corner, 9.48
-    const E = BK ? -0.533 : -0.347, K = BK ? -0.083 : 0.103;  // splay y 7.467-7.917 (Kareem's), 7.65-8.10 (45 cm)
-    const niche = BK ? [-0.993, -0.653, 0.42, 2.2, 0.13] : [-0.883, -0.474, 0.45, 2.25, 0.13], deep = 0.25;
-    const dn = (niche[0] + niche[1]) / 2 + 0.6785;  // styling follows its niche
-    const face = new THREE.Shape([new THREE.Vector2(C, 0), new THREE.Vector2(E, 0), new THREE.Vector2(E, H), new THREE.Vector2(C, H)]);
+    // Niche = reception TV wall's tall niche (0.34 / 0.42-2.2 / r 0.13, shelves 0.86 / 1.3 / 1.74).
+    // Mass front x 15.2768 (0.4868 off wall face 14.7768). Flat face for 0.70 m from S, then square cut.
+    // Above the buffet top the 0.18 panel (x 14.972) carries the pebble mirror and the 2.25 hp split.
+    const H = M.ceiling, F = 0.4868, P = 0.182, W0 = -0.0132, TOP = 0.83;
+    const B = F, dz = B - 0.462;
+    const S = -1.213, C = -1.013, N = 1.477;  // plan y 6.787, 6.987, 9.477
+    const Cut = S + 0.70;  // -0.513 → plan y 7.487; ~70 cm flat from the south tip (was ~68 cm to the curve)
+    const niche = [-0.993, -0.653, 0.42, 2.2, 0.13], deep = 0.25;
+    const dn = (niche[0] + niche[1]) / 2 + 0.6785;
+    const face = new THREE.Shape([new THREE.Vector2(C, 0), new THREE.Vector2(Cut, 0), new THREE.Vector2(Cut, H), new THREE.Vector2(C, H)]);
     face.holes.push(roundRect(new THREE.Path(), ...niche));
     mesh(new THREE.ExtrudeGeometry(face, { depth: F, bevelEnabled: false, curveSegments: 12 }), mat.limewash, p.g);
-    // Kareem's: smaller corner (r 0.12) so the niche centred on the elevated face reads even (Karim t332);
-    // other versions keep the DWG's r 0.20.
-    const cr = BK ? 0.12 : 0.2;
+    const cr = 0.12;
     p.box(S, C, 0, H, 0, F - cr, mat.limewash);
     p.cyl(C, F - cr, cr, 0, H, mat.limewash, 32);  // rounded front corner
-    const a = BK ? 0.15 * (K - E) : 0;  // bezier handles along the mass and panel faces (0 = the straight splay)
-    const plan = new THREE.Shape().moveTo(E, 0).lineTo(E, -F).bezierCurveTo(E + a, -F, K - a, -P, K, -P).lineTo(N, -P).lineTo(N, 0);
-    const splay = new THREE.ExtrudeGeometry(plan, { depth: H, bevelEnabled: false, curveSegments: BK ? 24 : 1 });
-    splay.rotateX(-Math.PI / 2);  // shape v = -z, extruded up the wall
-    mesh(splay, mat.limewash, p.g);
-    const [x0, x1, y0, y1, r] = niche;  // oak lining, back and lit shelves
-    const ly = BK ? 2.1 : 2.14, sy = BK ? [0.885, 1.325, 1.765] : [0.875, 1.275, 1.675];  // top LED, styled shelf tops
-    p.label("tall niche", p => {  // Move and Resize: a named part; resizing it changes the numbers in `niche`
+    // Square end face: full depth back to the wall below the buffet top, and F→P above it.
+    p.box(Cut - 0.002, Cut + 0.002, 0, TOP, W0, F, mat.limewash);
+    p.box(Cut - 0.002, Cut + 0.002, TOP, H, P, F, mat.limewash);
+    // Panel above the buffet top, from the cut to the north wall (same face as Main's 0.18 panel).
+    p.box(Cut, N, TOP, H, 0, P, mat.limewash);
+    const [x0, x1, y0, y1, r] = niche;
+    const ly = 2.1, sy = [0.885, 1.325, 1.765];
+    p.label("tall niche", p => {
       const ring = roundRect(new THREE.Shape(), x0, x1, y0, y1, r);
       ring.holes.push(roundRect(new THREE.Path(), x0 + 0.018, x1 - 0.018, y0 + 0.018, y1 - 0.018, r - 0.018));
       mesh(new THREE.ExtrudeGeometry(ring, { depth: F, bevelEnabled: false, curveSegments: 12 }), honeyOak, p.g);
       mesh(new THREE.ExtrudeGeometry(roundRect(new THREE.Shape(), x0, x1, y0, y1, r), { depth: F - deep, bevelEnabled: false, curveSegments: 12 }), honeyOak, p.g);
-      for (const y of BK ? [0.86, 1.3, 1.74] : [0.85, 1.25, 1.65, 1.95]) {
+      for (const y of [0.86, 1.3, 1.74]) {
         p.box(x0 + 0.015, x1 - 0.015, y, y + 0.025, F - deep, F - 0.01, honeyOak);
         p.box(x0 + 0.03, x1 - 0.03, y - 0.012, y, F - deep + 0.03, F - 0.03, mat.ledStrip);
       }
@@ -1810,14 +1807,14 @@ export function furnish(scene, M, mat, version = "main") {
     }, { src: "niche", x: [0, 1] });
     p.cyl(-0.76 + dn, F - 0.12, 0.05, sy[0], sy[0] + 0.205, mat.linenSage, 16, 0.065); p.cyl(-0.6 + dn, F - 0.12, 0.04, sy[1], sy[1] + 0.145, mat.planter, 16);
     for (let k = 0; k < 4; k++) p.box(-0.8 + dn + k * 0.03, -0.775 + dn + k * 0.03, sy[2], sy[2] + 0.185 - (k % 2) * 0.03, F - 0.2, F - 0.04, k % 2 ? mat.linenBlush : mat.walnut);
-    // Walnut sideboard from the mass to the corner, front in line with the mass (DWG x 15.25; Kareem's x 15.372).
+    // Walnut sideboard: back on the wall face, south end square against the cut (Main's curve end replaced).
     p.label("walnut sideboard", p => {
-      p.box(E, N - 0.02, 0.12, 0.8, P, B, mat.walnut);
-      fronts(p, E, N - 0.02, 0.12, 0.8, B, 0.45);
-      p.box(E + 0.03, N - 0.05, 0, 0.12, P, B - 0.06, mat.darkTop);
-      p.box(E, N - 0.02, 0.8, 0.83, P, B + 0.01, mat.walnut);
+      p.box(Cut, N - 0.02, 0.12, 0.8, W0, B, mat.walnut);
+      fronts(p, Cut, N - 0.02, 0.12, 0.8, B, 0.45);
+      p.box(Cut + 0.02, N - 0.05, 0, 0.12, W0, B - 0.06, mat.darkTop);
+      p.box(Cut, N - 0.02, 0.8, 0.83, W0, B + 0.01, mat.walnut);
     });
-    p.pebble((K + N) / 2, 1.6, 0.92, 0.8, P + 0.012, mat.mirror, true);
+    p.pebble((Cut + N) / 2, 1.6, 0.92, 0.8, P + 0.012, mat.mirror, true);
     p.cyl(0.15, 0.3 + dz, 0.07, 0.83, 1.02, mat.planter, 16, 0.05); p.cyl(1.3, 0.28 + dz, 0.06, 0.83, 1.0, mat.stoneTable, 16, 0.045);
     p.cyl(1.05, 0.3 + dz, 0.045, 0.83, 0.88, mat.blackSteel, 16);
   }), "buffet wall");

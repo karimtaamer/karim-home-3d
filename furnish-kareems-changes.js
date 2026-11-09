@@ -371,12 +371,19 @@ export function furnish(scene, M, mat, version = "main") {
     mesh(mergeGeometries(leaves), mat.leaf, p.g, false);
   }); g.position.y += base; return named(g, base > 0.3 ? "small potted plant" : "potted plant"); };
   const rug = (x0, y0, x1, y1, m = mat.rug) => named(item((x0 + x1) / 2, (y0 + y1) / 2, "S", p => p.box(-(x1 - x0) / 2, (x1 - x0) / 2, 0.003, 0.016, -(y1 - y0) / 2, (y1 - y0) / 2, m, 0.006)), "rug");
-  const art = (x, y, facing, w, h, zc, k, light = true) => named(item(x, y, facing, p => {
+  const art = (x, y, facing, w, h, zc, k, light = true, lightW = null, lightAboveFrame = null) => named(item(x, y, facing, p => {
     p.box(-w / 2 - 0.025, w / 2 + 0.025, zc - h / 2 - 0.025, zc + h / 2 + 0.025, 0, 0.03, mat.walnut);
     p.face(-w / 2, w / 2, zc - h / 2, zc + h / 2, 0.031, mat.art[k % mat.art.length]);
     if (light) {
-      p.box(-0.015, 0.015, zc + h / 2 + 0.06, zc + h / 2 + 0.14, 0, 0.1, mat.brass);
-      p.box(-w * 0.25, w * 0.25, zc + h / 2 + 0.04, zc + h / 2 + 0.08, 0.06, 0.13, mat.brass, 0.015);
+      const lw = lightW ?? (w * 0.5);
+      if (lightAboveFrame != null) {
+        const barC = zc + h / 2 + 0.025 + lightAboveFrame;
+        p.box(-0.015, 0.015, barC - 0.02, barC + 0.06, 0, 0.1, mat.brass);
+        p.box(-lw / 2, lw / 2, barC - 0.02, barC + 0.02, 0.06, 0.13, mat.brass, 0.015);
+      } else {
+        p.box(-0.015, 0.015, zc + h / 2 + 0.06, zc + h / 2 + 0.14, 0, 0.1, mat.brass);
+        p.box(-lw / 2, lw / 2, zc + h / 2 + 0.04, zc + h / 2 + 0.08, 0.06, 0.13, mat.brass, 0.015);
+      }
     }
   }), light ? "framed artwork with a picture light" : "framed artwork");
   // Wall-mounted split AC: w wide, h tall, d deep, top at `top`; `vane` adds the louvre slot along the underside front.
@@ -482,8 +489,14 @@ export function furnish(scene, M, mat, version = "main") {
   });
   if (!["kareems-changes", "karims-version"].includes(version)) plant(5.12, 0.84, 1.8, 0.24);  // tall olive by the end of the chaise (removed on Kareem's via Edit AI)
   plant(5.9, 1.08, 1.35, 0.2);   // beside the TV console
-  art(3.62, 0.548, "N", 0.9, 1.25, 1.62, 0);  // large abstracts on both side walls, picture lights above
-  art(4.35, 4.443, "S", 0.75, 1.0, 1.48, 1);
+  // Both living-room walls: identical 90×120 vertical, centre 150 AFF.
+  // Narrower clear wall is the north (door) wall, 214 cm; 2/3 ≈ 143 cm snaps to 90×120
+  // (100×150 would put the frame bottom at 75 cm, into the south-wall sofa back at 72–84).
+  // 40 cm picture light (≈ 4/9 of art width) mounted 12 cm above the walnut frame top.
+  // North piece shifted 10 cm west (4.35 → 4.25) so the 90 cm canvas sits between the
+  // 90 cm reading-lamp socket at x=3.75 and the AC controller at x=4.75.
+  art(3.62, 0.548, "N", 0.90, 1.20, 1.50, 0, true, 0.40, 0.12);
+  art(4.25, 4.443, "S", 0.90, 1.20, 1.50, 1, true, 0.40, 0.12);
   ac(2.945, 1.2, "E", 2.38);  // split AC high on the window wall, between the south wall and the left curtain, under the cove
   for (const y of [1.765, 3.225]) item(2.94, y, "E", p => { const m = mesh(curtainGeometry(0.45, CH), mat.curtain, p.g); m.position.set(0, CY, CZ); });
   item(2.94, 2.495, "E", p => { const m = mesh(curtainGeometry(1.41, CH - 0.01), mat.sheer, p.g); m.position.set(0, CY, SZ); });  // sheer behind, in the pocket

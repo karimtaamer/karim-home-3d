@@ -2508,21 +2508,21 @@
    "room": "Living room",
    "x": 3.62,
    "y": 0.579,
-   "h": 2.345,
+   "h": 2.245,
    "facing": "N",
-   "label": "Picture light over the window-wall art — wall box",
-   "status": "added"
+   "label": "Picture light outlet",
+   "status": "adapted"
   },
   {
    "id": "ledfeed-189",
    "type": "ledfeed",
    "room": "Living room",
-   "x": 4.35,
+   "x": 4.25,
    "y": 4.412,
-   "h": 2.08,
+   "h": 2.245,
    "facing": "S",
-   "label": "Picture light over the door-wall art — wall box",
-   "status": "added"
+   "label": "Picture light outlet",
+   "status": "adapted"
   },
   {
    "id": "ledfeed-190",

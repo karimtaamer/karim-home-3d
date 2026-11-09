@@ -1134,23 +1134,24 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-0.12, 0.12, 0.68, 0.84, 0, 0.015, mat.walnut, 0.005);
     p.box(-0.06, 0.06, 0.74, 0.78, 0.015, 0.025, mat.brass, 0.005);
   });
-  if (GKC) { sized(item(version === "kareems-changes" ? 12.559 : ["kareems-changes", "karims-version"].includes(version) ? 12.737 : 12.767, ["kareems-changes", "karims-version"].includes(version) ? 6.8906 : 6.8906, "N", p => {  // Karim t327: a 12 cm stone build-out on the south (door-end) wall, two wood-lined niches
-    // DWG 2furni 26BE: build-out x 202.520-203.408 (plank wall to 1.3 cm past the glass; Main since 26 Oct, Karim's version 202.722-203.562),
-    // face y -114.6026 (plan 7.0106); niches dashed 2667 / 2668, centred on it. Nothing cut into the wall (no --cut):
-    // 12 cm leaves 1.5 cm of build-out behind each niche; lined in walnut all round (back too), 9.3 cm clear inside.
+  if (GKC) { sized(item(version === "kareems-changes" ? 12.590 : ["kareems-changes", "karims-version"].includes(version) ? 12.737 : 12.767, ["kareems-changes", "karims-version"].includes(version) ? 6.8906 : 6.8906, "N", p => {  // Karim: 30 cm stone build-out on the south (door-end) wall, two wood-lined niches
+    // Face flush with the tub deck (x 12.115–13.065, 95 cm). Depth 30 cm from the south wall (y 6.8906→7.1906):
+    // 1.5 cm masonry behind each niche, walnut lining 1.2 cm, 27.3 cm clear inside. Does not cut into the wall.
     // It stands on the deck (0.55); local +x is west, z north out of the wall.
-    const H = M.ceiling, D = 0.12, R = 0.105, niches = [[-0.31, -0.06], [0.06, 0.31]];
-    const y0 = version === "kareems-changes" ? 0.6 : 0.9;
-    const y1 = version === "kareems-changes" ? 1.8 : 2.1;
-    const face = new THREE.Shape([new THREE.Vector2(-0.45, 0.55), new THREE.Vector2(0.45, 0.55), new THREE.Vector2(0.45, H), new THREE.Vector2(-0.45, H)]);
+    const H = M.ceiling, D = version === "kareems-changes" ? 0.30 : 0.12, R = version === "kareems-changes" ? 0.285 : 0.105, niches = [[-0.31, -0.06], [0.06, 0.31]];
+    const W = version === "kareems-changes" ? 0.475 : 0.45;
+    const y0 = version === "kareems-changes" ? 0.8 : 0.9;
+    const y1 = version === "kareems-changes" ? 2.0 : 2.1;
+    const face = new THREE.Shape([new THREE.Vector2(-W, 0.55), new THREE.Vector2(W, 0.55), new THREE.Vector2(W, H), new THREE.Vector2(-W, H)]);
     for (const [a, b] of niches) face.holes.push(new THREE.Path([new THREE.Vector2(a, y0), new THREE.Vector2(b, y0), new THREE.Vector2(b, y1), new THREE.Vector2(a, y1)]));
     mesh(new THREE.ExtrudeGeometry(face, { depth: D, bevelEnabled: false }), version === "kareems-changes" ? charcoal : mat.stoneWall, p.g);
     if (version === "kareems-changes") {
-      // Option B: 120×60 porcelain laid vertically. Joint at local x=0 so the two 25 cm niches
-      // sit either side of it (no grout crossing a niche). Courses: cut deck→60, full 60→180, cut 180→260.
+      // 120×60 porcelain laid vertically. Joint at local x=0 (plan 12.590) so the two 25 cm niches
+      // sit either side of it (no grout crossing a niche); each face half is a 47.5 cm cut (no sliver).
+      // Courses shift with the niches: cut deck→80, full 80→200, cut 200→ceiling.
       const gw = 0.007, z0 = D, z1 = D + 0.004;
-      const cols = [[-0.45, -gw / 2], [gw / 2, 0.45]];
-      const rows = [[0.55, 0.6 - gw / 2], [0.6 + gw / 2, 1.8 - gw / 2], [1.8 + gw / 2, H]];
+      const cols = [[-W, -gw / 2], [gw / 2, W]];
+      const rows = [[0.55, 0.8 - gw / 2], [0.8 + gw / 2, 2.0 - gw / 2], [2.0 + gw / 2, H]];
       for (const [cx0, cx1] of cols) {
         p.box(cx0, cx1, rows[0][0], rows[0][1], z0, z1, travertine);   // cut strip above the deck
         p.box(cx0, cx1, rows[2][0], rows[2][1], z0, z1, travertine);   // cut row to the ceiling
@@ -1163,6 +1164,19 @@ export function furnish(scene, M, mat, version = "main") {
           p.box(cx0, cx1, rows[1][0], rows[1][1], z0, z1, travertine);
         }
       }
+      // East and west returns: 30 cm deep = half a 60 cm tile, one cut each, same height courses.
+      const ledgeZ = 7.4612 - 6.8906;  // tub start: remaining south ledge ~27 cm in front of the build-out
+      for (const [sx0, sx1] of [[-W - 0.004, -W], [W, W + 0.004]]) {
+        p.box(sx0, sx1, rows[0][0], rows[0][1], 0, D, travertine);
+        p.box(sx0, sx1, rows[1][0], rows[1][1], 0, D, travertine);
+        p.box(sx0, sx1, rows[2][0], rows[2][1], 0, D, travertine);
+      }
+      // South-ledge top: centre joint continues the face grout; 47.5 cm cuts match the face.
+      p.box(-W, -gw / 2, 0.55, 0.554, D, ledgeZ, travertine);
+      p.box(gw / 2, W, 0.55, 0.554, D, ledgeZ, travertine);
+      // East deck front of the south ledge (under the return + remaining ledge) so the corner
+      // lines up: 0–55 on the deck is the bottom of the same 0–80 course as the east return.
+      p.box(-W - 0.004, -W, 0, 0.55, 0, ledgeZ, travertine);
     }
     for (const [a, b] of niches) {
       const t = 0.012, l = a + 0.001, r = b - 0.001, lo = y0 + 0.001, hi = y1 - 0.001, back = D - R, inner = back + t;
@@ -1171,22 +1185,22 @@ export function furnish(scene, M, mat, version = "main") {
       for (const sx of [l, r - t]) p.box(sx, sx + t, lo, hi, inner, D, mat.walnut);
       p.box(l + t, r - t, lo, lo + t, inner, D, mat.walnut); p.box(l + t, r - t, hi - t, hi, inner, D, mat.walnut);
       if (version === "kareems-changes") {
-        const shelfT = 0.012;  // 1.2 cm shelves, centres at 85 / 110 / 135 / 160 (4×25 + top 20)
-        for (const yc of [0.85, 1.10, 1.35, 1.60]) p.box(l + t, r - t, yc - shelfT / 2, yc + shelfT / 2, inner, D - 0.005, mat.walnut);
+        const shelfT = 0.012;  // 1.2 cm shelves, centres at 105 / 130 / 155 / 180 (4×25 + top 20)
+        for (const yc of [1.05, 1.30, 1.55, 1.80]) p.box(l + t, r - t, yc - shelfT / 2, yc + shelfT / 2, inner, D - 0.005, mat.walnut);
       } else {
         for (let k = 1; k < 6; k++) p.box(l + t, r - t, y0 + k * 0.2, y0 + k * 0.2 + 0.015, inner, D - 0.005, mat.walnut);  // shelves
       }
       p.box(l + t + 0.008, r - t - 0.008, hi - t - 0.01, hi - t, inner + 0.01, D - 0.01, mat.ledStrip);  // soft LED under the top
     }
-  }), version === "kareems-changes" ? 0.9867 : ["kareems-changes", "karims-version"].includes(version) ? 0.9333 : 1, 1);
+  }), version === "kareems-changes" ? 1 : ["kareems-changes", "karims-version"].includes(version) ? 0.9333 : 1, 1);
     if (version === "kareems-changes") {
-      // Same 120×60 vertical porcelain on the north (mixer) tile face, joint lined up with the niche-wall joint at x 12.559.
-      // Thin overlay on the wall; mixer / spout / head stay as their own items in front.
-      item(12.559, 9.184, "S", p => {
+      // Same 120×60 vertical porcelain on the north (mixer) tile face, joint lined up with the niche-wall joint at x 12.590.
+      // Courses match the niche wall: cut 0→80, full 80→200, cut 200→ceiling. Mixer / spout / head stay as their own items.
+      item(12.590, 9.184, "S", p => {
         const H = M.ceiling, gw = 0.007;
-        const xW = 12.115 - 12.559, xE = 13.065 - 12.559;
+        const xW = 12.115 - 12.590, xE = 13.065 - 12.590;
         const cols = [[xW, -gw / 2], [gw / 2, xE]];
-        const rows = [[0, 0.6 - gw / 2], [0.6 + gw / 2, 1.8 - gw / 2], [1.8 + gw / 2, H]];
+        const rows = [[0, 0.8 - gw / 2], [0.8 + gw / 2, 2.0 - gw / 2], [2.0 + gw / 2, H]];
         p.box(xW, xE, 0, H, 0, 0.002, charcoal);
         for (const [a, b] of cols) for (const [c, d] of rows) p.box(a, b, c, d, 0.002, 0.006, travertine);
       });

@@ -1316,7 +1316,7 @@ export function furnish(scene, M, mat, version = "main") {
     }
   });
   // Counter between the joinery and the machines (half-width): x 10.937 to 11.535; Main (26 Oct, the WC
-  // partition 0.202 west) x 10.937 to 11.375. Main's upper is storage, without a water heater.
+  // partition 0.202 west) x 10.937 to 11.375. Main's upper houses an Ariston Aures Slim Multi 9.5 kW instant heater.
   const cw = version === "kareems-changes" ? 0.219 : 0.299;
   item(10.937 + cw, 9.18, "S", p => {
     p.box(-cw, cw, 0.1, 0.88, 0, 0.6, mat.oakVeneer);
@@ -1327,8 +1327,8 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(-cw, cw, 1.58, 1.6, 0.05, 0.3, mat.ledStrip);
       return;
     }
-    // The upper cabinet keeps its oak carcass and openable door. Main uses it for storage; Karim's version
-    // still has its original compact water heater and pipework.
+    // The upper cabinet keeps its oak carcass and openable door. Main houses an Ariston instant heater in it, with
+    // storage left round it; Karim's version still has its original compact water heater and pipework.
     const c = new THREE.Group(), q = part(c), D = 0.45, t = 0.018, y0 = 1.6, y1 = 2.5;
     p.g.add(c);
     for (const s of [-1, 1]) q.box(s < 0 ? -cw : cw - t, s < 0 ? -cw + t : cw, y0, y1, 0, D - 0.02, mat.oakVeneer);  // sides
@@ -1346,6 +1346,33 @@ export function furnish(scene, M, mat, version = "main") {
         q.cyl(x, 0.02, 0.009, y0 + t, y0 + 0.06, m, 12);
       }
       q.cyl(0.1, 0.02, 0.006, y0 + 0.3, y0 + 0.86, mat.applianceWhite, 8);  // supply cable down the back corner
+    } else {
+      // Ariston Aures Slim Multi 9.5 kW instant heater (22 W x 30.4 H x 11 D cm), centred, flat on the back panel with
+      // its face to the door; bottom at 1.80 (outlet ~1.90). The cabinet's other ~78% stays storage round it.
+      const white = mat.applianceWhite.clone(); white.roughness = 0.75; white.clippingPlanes = mat.applianceWhite.clippingPlanes;
+      const hy0 = 1.8, hy1 = hy0 + 0.304, z0 = 0.01, z1 = z0 + 0.11;
+      q.box(-0.11, 0.11, hy0, hy1, z0, z1, white, 0.012);
+      q.box(-0.05, 0.05, hy0 + 0.07, hy0 + 0.15, z1, z1 + 0.004, mat.greyLacquer, 0.003);  // control panel
+      const dial = q.cyl(0, 0, 0.018, -0.006, 0.006, mat.grille, 24);                         // temperature dial on the panel
+      dial.position.set(-0.015, hy0 + 0.11, z1 + 0.01);
+      dial.rotation.x = Math.PI / 2;
+      q.box(0.025, 0.031, hy0 + 0.107, hy0 + 0.113, z1 + 0.004, z1 + 0.007, mat.downlight);  // power LED
+      if (typeof document !== "undefined") {  // "ARISTON" on its face (canvas: browser only, not check_furnish's node run)
+        const cv = document.createElement("canvas");
+        cv.width = 512; cv.height = 128;
+        const g2 = cv.getContext("2d");
+        g2.fillStyle = "#1b1d22"; g2.font = "bold 92px Helvetica, Arial, sans-serif"; g2.textAlign = "center"; g2.textBaseline = "middle";
+        g2.fillText("ARISTON", 256, 64);
+        const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+        const label = new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.6 });
+        adopt(label);
+        q.face(-0.08, 0.08, hy1 - 0.075, hy1 - 0.035, z1 + 0.001, label, false);
+      }
+      for (const [x, m] of [[-0.05, mat.chrome], [0.05, mat.brass]]) {  // cold in, hot out: down from its base to angle valves
+        q.cyl(x, 0.05, 0.008, y0 + 0.07, hy0, m, 12);
+        q.box(x - 0.018, x + 0.018, y0 + 0.04, y0 + 0.07, z0, 0.065, mat.chrome, 0.004);
+      }
+      q.cyl(0.08, 0.03, 0.007, hy1, y1 - t, white, 8);  // 10 mm² supply up off its top, out through the cabinet top
     }
     const door = new THREE.Group(), dq = part(door);
     door.position.set(-cw, 0, D - 0.02);

@@ -1770,7 +1770,20 @@
    "gang": 2
   },
   {
-   "id": "socket-128",
+   "id": "power-128",
+   "type": "power",
+   "room": "Laundry",
+   "x": 11.156,
+   "y": 9.06,
+   "h": 1.9,
+   "facing": "S",
+   "label": "Instant water heater — Ariston Aures Slim Multi 9.5 kW — dedicated 50 A breaker, 10 mm² cable, 30 mA RCD",
+   "status": "existing",
+   "note": "not on the Samra sheets (added for Main): the unit is modelled in the laundry upper cabinet, flat on its back panel, so this point only labels it",
+   "appliance": "electric instant water heater"
+  },
+  {
+   "id": "socket-129",
    "type": "socket",
    "room": "Laundry",
    "x": 10.3232,
@@ -1784,7 +1797,7 @@
    "appliance": "robot vacuum dock (Roborock-style, 34 x 49 x 52 cm)"
   },
   {
-   "id": "fan-129",
+   "id": "fan-130",
    "type": "fan",
    "room": "Laundry",
    "x": 11.4,
@@ -1795,7 +1808,7 @@
    "status": "added"
   },
   {
-   "id": "socket-130",
+   "id": "socket-131",
    "type": "socket",
    "room": "Guest bathroom",
    "x": 14.6638,
@@ -1807,7 +1820,7 @@
    "gang": 1
   },
   {
-   "id": "socket-131",
+   "id": "socket-132",
    "type": "socket",
    "room": "Guest bathroom",
    "x": 14.45,
@@ -1819,7 +1832,7 @@
    "gang": 1
   },
   {
-   "id": "fan-132",
+   "id": "fan-133",
    "type": "fan",
    "room": "Guest bathroom",
    "x": 12.9,
@@ -1831,7 +1844,7 @@
    "circuit": "gbath-fan"
   },
   {
-   "id": "socket-133",
+   "id": "socket-134",
    "type": "socket",
    "room": "Entrance",
    "x": 10.0,
@@ -1844,7 +1857,7 @@
    "gang": 2
   },
   {
-   "id": "socket-134",
+   "id": "socket-135",
    "type": "socket",
    "room": "Entrance",
    "x": 4.9,
@@ -1856,7 +1869,7 @@
    "gang": 2
   },
   {
-   "id": "socket-135",
+   "id": "socket-136",
    "type": "socket",
    "room": "Hallway",
    "x": 12.6,
@@ -1868,7 +1881,7 @@
    "gang": 2
   },
   {
-   "id": "db-136",
+   "id": "db-137",
    "type": "db",
    "room": "Entrance",
    "x": 7.0,
@@ -1882,7 +1895,7 @@
    "hh": 0.6
   },
   {
-   "id": "intercom-137",
+   "id": "intercom-138",
    "type": "intercom",
    "room": "Entrance",
    "x": 9.2,
@@ -1906,7 +1919,7 @@
    "note": "a vented compartment in the shoe cabinet (joiner to confirm which); fibre, TV, intercom and every Cat6 cable run here without a separate low-current panel"
   },
   {
-   "id": "socket-139",
+   "id": "socket-140",
    "type": "socket",
    "room": "Entrance",
    "x": 11.1,
@@ -1930,7 +1943,7 @@
    "note": "covers the entrance, hallway, kitchen, laundry and guest bathroom; on the corridor spot line, between two spots; Cat6 + PoE from the hub"
   },
   {
-   "id": "chime-141",
+   "id": "chime-142",
    "type": "chime",
    "room": "Entrance",
    "x": 7.6,
@@ -1941,7 +1954,7 @@
    "status": "added"
   },
   {
-   "id": "intercom_out-142",
+   "id": "intercom_out-143",
    "type": "intercom_out",
    "room": "Entrance",
    "x": 9.2,
@@ -1953,7 +1966,7 @@
    "note": "the plan puts it outside the door at 120 on the 45° corner; Main's door has a flat wall, so beside the door at 1.45 (camera height)"
   },
   {
-   "id": "doorbell-143",
+   "id": "doorbell-144",
    "type": "doorbell",
    "room": "Entrance",
    "x": 7.8,
@@ -1964,7 +1977,7 @@
    "status": "added"
   },
   {
-   "id": "socket-144",
+   "id": "socket-145",
    "type": "socket",
    "room": "Dining",
    "x": 15.4,
@@ -1976,7 +1989,7 @@
    "gang": 2
   },
   {
-   "id": "socket-145",
+   "id": "socket-146",
    "type": "socket",
    "room": "Dining",
    "x": 18.6,
@@ -1988,7 +2001,7 @@
    "gang": 2
   },
   {
-   "id": "power-146",
+   "id": "power-147",
    "type": "power",
    "room": "Dining",
    "x": 14.975,
@@ -2000,7 +2013,7 @@
    "appliance": "split AC"
   },
   {
-   "id": "socket-147",
+   "id": "socket-148",
    "type": "socket",
    "room": "Dining",
    "x": 20.0,
@@ -2013,7 +2026,7 @@
    "gang": 2
   },
   {
-   "id": "socket-148",
+   "id": "socket-149",
    "type": "socket",
    "room": "Dining",
    "x": 20.45,
@@ -2025,7 +2038,7 @@
    "gang": 2
   },
   {
-   "id": "multi-149",
+   "id": "multi-150",
    "type": "multi",
    "room": "Dining",
    "x": 20.9,
@@ -2041,7 +2054,7 @@
    ]
   },
   {
-   "id": "multi-150",
+   "id": "multi-151",
    "type": "multi",
    "room": "Reception",
    "x": 17.545,
@@ -2059,7 +2072,7 @@
    ]
   },
   {
-   "id": "multi-151",
+   "id": "multi-152",
    "type": "multi",
    "room": "Reception",
    "x": 17.27,
@@ -2077,7 +2090,7 @@
    ]
   },
   {
-   "id": "socket-152",
+   "id": "socket-153",
    "type": "socket",
    "room": "Reception",
    "x": 18.15,
@@ -2089,7 +2102,7 @@
    "gang": 2
   },
   {
-   "id": "socket-153",
+   "id": "socket-154",
    "type": "socket",
    "room": "Reception",
    "x": 20.55,
@@ -2101,7 +2114,7 @@
    "gang": 2
   },
   {
-   "id": "socket-154",
+   "id": "socket-155",
    "type": "socket",
    "room": "Reception",
    "x": 16.05,
@@ -2114,7 +2127,7 @@
    "gang": 2
   },
   {
-   "id": "phone-155",
+   "id": "phone-156",
    "type": "phone",
    "room": "Reception",
    "x": 21.2192,
@@ -2125,7 +2138,7 @@
    "status": "plan"
   },
   {
-   "id": "socket-156",
+   "id": "socket-157",
    "type": "socket",
    "room": "Reception",
    "x": 21.2192,
@@ -2137,7 +2150,7 @@
    "gang": 2
   },
   {
-   "id": "socket-157",
+   "id": "socket-158",
    "type": "socket",
    "room": "Reception",
    "x": 21.2193,
@@ -2149,7 +2162,7 @@
    "gang": 2
   },
   {
-   "id": "socket-158",
+   "id": "socket-159",
    "type": "socket",
    "room": "Reception",
    "x": 17.6,
@@ -2161,7 +2174,7 @@
    "gang": 2
   },
   {
-   "id": "power-159",
+   "id": "power-160",
    "type": "power",
    "room": "Reception",
    "x": 20.0,
@@ -2173,7 +2186,7 @@
    "appliance": "split AC"
   },
   {
-   "id": "wp-160",
+   "id": "wp-161",
    "type": "wp",
    "room": "Terrace",
    "x": 23.55,
@@ -2185,7 +2198,7 @@
    "note": "the plan's WP 130 at the sink corner: Main's BBQ counter has no sink, so it powers the BBQ / grill"
   },
   {
-   "id": "wp-161",
+   "id": "wp-162",
    "type": "wp",
    "room": "Terrace",
    "x": 21.4756,
@@ -2196,7 +2209,7 @@
    "status": "plan"
   },
   {
-   "id": "tv-162",
+   "id": "tv-163",
    "type": "tv",
    "room": "Terrace",
    "x": 21.4757,
@@ -2207,7 +2220,7 @@
    "status": "plan"
   },
   {
-   "id": "wp-163",
+   "id": "wp-164",
    "type": "wp",
    "room": "Terrace",
    "x": 21.4753,
@@ -2218,7 +2231,7 @@
    "status": "plan"
   },
   {
-   "id": "sensor-164",
+   "id": "sensor-165",
    "type": "sensor",
    "room": "Master bathroom",
    "x": 1.35,
@@ -2231,7 +2244,7 @@
    "tech": "mmWave"
   },
   {
-   "id": "sensor-165",
+   "id": "sensor-166",
    "type": "sensor",
    "room": "Guest bathroom",
    "x": 13.8,
@@ -2244,7 +2257,7 @@
    "tech": "mmWave"
   },
   {
-   "id": "sensor-166",
+   "id": "sensor-167",
    "type": "sensor",
    "room": "Laundry",
    "x": 11.4,
@@ -2257,7 +2270,7 @@
    "tech": "PIR"
   },
   {
-   "id": "sensor-167",
+   "id": "sensor-168",
    "type": "sensor",
    "room": "Kitchen",
    "x": 8.8,
@@ -2270,7 +2283,7 @@
    "tech": "mmWave"
   },
   {
-   "id": "sensor-168",
+   "id": "sensor-169",
    "type": "sensor",
    "room": "Entrance",
    "x": 8.85,
@@ -2283,7 +2296,7 @@
    "tech": "PIR"
   },
   {
-   "id": "sensor-169",
+   "id": "sensor-170",
    "type": "sensor",
    "room": "Entrance",
    "x": 12.7375,
@@ -2296,7 +2309,7 @@
    "tech": "mmWave"
   },
   {
-   "id": "sensor-170",
+   "id": "sensor-171",
    "type": "sensor",
    "room": "Master bedroom",
    "x": 4.375,
@@ -2309,7 +2322,7 @@
    "tech": "mmWave"
   },
   {
-   "id": "sensor-171",
+   "id": "sensor-172",
    "type": "sensor",
    "room": "Living room",
    "x": 4.55,
@@ -2346,7 +2359,7 @@
    "note": "covers the reception, dining and terrace (through the glass); halfway between the dining and reception spot rows; Cat6 + PoE from the hub"
   },
   {
-   "id": "ledfeed-174",
+   "id": "ledfeed-175",
    "type": "ledfeed",
    "room": "Reception",
    "x": 18.673,
@@ -2357,7 +2370,7 @@
    "status": "added"
   },
   {
-   "id": "ledfeed-175",
+   "id": "ledfeed-176",
    "type": "ledfeed",
    "room": "Reception",
    "x": 20.003,
@@ -2368,7 +2381,7 @@
    "status": "added"
   },
   {
-   "id": "ledfeed-176",
+   "id": "ledfeed-177",
    "type": "ledfeed",
    "room": "Reception",
    "x": 17.3,
@@ -2380,7 +2393,7 @@
    "note": "reached through the TV opening"
   },
   {
-   "id": "ledfeed-177",
+   "id": "ledfeed-178",
    "type": "ledfeed",
    "room": "Dining",
    "x": 15.15,
@@ -2391,7 +2404,7 @@
    "status": "added"
   },
   {
-   "id": "ledfeed-178",
+   "id": "ledfeed-179",
    "type": "ledfeed",
    "room": "Dining",
    "x": 14.99,
@@ -2402,7 +2415,7 @@
    "status": "added"
   },
   {
-   "id": "ledfeed-179",
+   "id": "ledfeed-180",
    "type": "ledfeed",
    "room": "Dining",
    "x": 20.47,
@@ -2413,7 +2426,7 @@
    "status": "added"
   },
   {
-   "id": "ledfeed-180",
+   "id": "ledfeed-181",
    "type": "ledfeed",
    "room": "Dining",
    "x": 16.95,
@@ -2424,7 +2437,7 @@
    "status": "added"
   },
   {
-   "id": "ledfeed-181",
+   "id": "ledfeed-182",
    "type": "ledfeed",
    "room": "Entrance",
    "x": 10.6,
@@ -2435,7 +2448,7 @@
    "status": "added"
   },
   {
-   "id": "ledfeed-182",
+   "id": "ledfeed-183",
    "type": "ledfeed",
    "room": "Entrance",
    "x": 8.6,
@@ -2446,7 +2459,7 @@
    "status": "added"
   },
   {
-   "id": "ledfeed-183",
+   "id": "ledfeed-184",
    "type": "ledfeed",
    "room": "Entrance",
    "x": 7.0,
@@ -2457,7 +2470,7 @@
    "status": "added"
   },
   {
-   "id": "ledfeed-184",
+   "id": "ledfeed-185",
    "type": "ledfeed",
    "room": "Entrance",
    "x": 6.541,
@@ -2468,7 +2481,7 @@
    "status": "added"
   },
   {
-   "id": "ledfeed-185",
+   "id": "ledfeed-186",
    "type": "ledfeed",
    "room": "Entrance",
    "x": 6.541,
@@ -2479,7 +2492,7 @@
    "status": "added"
   },
   {
-   "id": "ledfeed-186",
+   "id": "ledfeed-187",
    "type": "ledfeed",
    "room": "Entrance",
    "x": 6.541,
@@ -2490,7 +2503,7 @@
    "status": "added"
   },
   {
-   "id": "ledfeed-187",
+   "id": "ledfeed-188",
    "type": "ledfeed",
    "room": "Living room",
    "x": 3.62,
@@ -2501,7 +2514,7 @@
    "status": "added"
   },
   {
-   "id": "ledfeed-188",
+   "id": "ledfeed-189",
    "type": "ledfeed",
    "room": "Living room",
    "x": 4.35,
@@ -2512,7 +2525,7 @@
    "status": "added"
   },
   {
-   "id": "ledfeed-189",
+   "id": "ledfeed-190",
    "type": "ledfeed",
    "room": "Living room",
    "x": 6.11,
@@ -2523,7 +2536,7 @@
    "status": "added"
   },
   {
-   "id": "ledfeed-190",
+   "id": "ledfeed-191",
    "type": "ledfeed",
    "room": "Living room",
    "x": 6.11,
@@ -2534,7 +2547,7 @@
    "status": "added"
   },
   {
-   "id": "ledfeed-191",
+   "id": "ledfeed-192",
    "type": "ledfeed",
    "room": "Living room",
    "x": 5.93,
@@ -2545,7 +2558,7 @@
    "status": "added"
   },
   {
-   "id": "ledfeed-192",
+   "id": "ledfeed-193",
    "type": "ledfeed",
    "room": "Master bedroom",
    "x": 3.35,
@@ -2557,7 +2570,7 @@
    "circuit": "master-vanity-mirror"
   },
   {
-   "id": "ledfeed-193",
+   "id": "ledfeed-194",
    "type": "ledfeed",
    "room": "Master bedroom",
    "x": 2.82,
@@ -2569,7 +2582,7 @@
    "circuit": "master-vanity-led"
   },
   {
-   "id": "ledfeed-194",
+   "id": "ledfeed-195",
    "type": "ledfeed",
    "room": "Master bathroom",
    "x": 0.84,
@@ -2581,7 +2594,7 @@
    "note": "24 V strip"
   },
   {
-   "id": "ledfeed-195",
+   "id": "ledfeed-196",
    "type": "ledfeed",
    "room": "Master bathroom",
    "x": 0.6,
@@ -2593,7 +2606,7 @@
    "note": "24 V IP67 strip in the niche"
   },
   {
-   "id": "ledfeed-196",
+   "id": "ledfeed-197",
    "type": "ledfeed",
    "room": "Guest bathroom",
    "x": 14.38,
@@ -2605,7 +2618,7 @@
    "note": "24 V strip"
   },
   {
-   "id": "ledfeed-197",
+   "id": "ledfeed-198",
    "type": "ledfeed",
    "room": "Guest bathroom",
    "x": 13.25,
@@ -2617,7 +2630,7 @@
    "note": "24 V IP67 strip in the niches; box high on the south wall, outside the shower"
   },
   {
-   "id": "ledfeed-198",
+   "id": "ledfeed-199",
    "type": "ledfeed",
    "room": "Kitchen",
    "x": 8.1,
@@ -2628,7 +2641,7 @@
    "status": "added"
   },
   {
-   "id": "ledfeed-199",
+   "id": "ledfeed-200",
    "type": "ledfeed",
    "room": "Laundry",
    "x": 11.16,
@@ -2639,7 +2652,7 @@
    "status": "added"
   },
   {
-   "id": "ledfeed-200",
+   "id": "ledfeed-201",
    "type": "ledfeed",
    "room": "Terrace",
    "x": 24.27,
@@ -2650,7 +2663,7 @@
    "status": "added"
   },
   {
-   "id": "ledfeed-201",
+   "id": "ledfeed-202",
    "type": "ledfeed",
    "room": "Terrace",
    "x": 23.11,

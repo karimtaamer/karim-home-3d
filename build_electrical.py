@@ -278,7 +278,9 @@ sock("Laundry", "Washing-machine socket 60 cm — behind the oak base", n=1, wal
    status="adapted", note="Main's washer stands on a 0.76 base: the socket is inside the base, beside the hoses. No dryer in Main, so the plan's dryer point (120) is left out")
 sock("Laundry", "Double socket 120 cm — counter (iron, steamer)", wall="N", x=11.15, y=8.5, h=1.2)
 sock("Laundry", "Double socket 120 cm — passage wall", wall="E", x=11.6, y=7.6, h=1.2)
-# No storage water heater in the laundry upper cabinet; it is storage now.
+pt("power", "Laundry", "Instant water heater — Ariston Aures Slim Multi 9.5 kW — dedicated 50 A breaker, 10 mm² cable, 30 mA RCD",
+   at=(11.156, 9.06), h=1.9, facing="S", appliance="electric instant water heater", status="existing",
+   note="not on the Samra sheets (added for Main): the unit is modelled in the laundry upper cabinet, flat on its back panel, so this point only labels it")
 sock("Laundry", "Socket 60 cm — robot vacuum dock, inside the joinery's bottom bay", n=1, wall="W", x=10.6, y=7.21, h=0.6,
    appliance="robot vacuum dock (Roborock-style, 34 x 49 x 52 cm)", status="added",
    note="on the back wall of the south bay of the tall joinery, over the dock's top (52 cm) and under the 71 cm clear needed to lift its tanks out: it plugs in behind, no cable across the floor")

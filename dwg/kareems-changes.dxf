@@ -493,7 +493,7 @@ $SKPOLY
   9
 $TDCREATE
  40
-2461346.979398148
+2461354.8828703705
   9
 $TDUCREATE
  40
@@ -501,7 +501,7 @@ $TDUCREATE
   9
 $TDUPDATE
  40
-2461346.979398148
+2461354.8828703705
   9
 $TDUUPDATE
  40
@@ -553,7 +553,7 @@ $SPLINESEGS
   9
 $HANDSEED
   5
-2D1D
+2E55
   9
 $SURFTAB1
  70
@@ -929,7 +929,7 @@ $FINGERPRINTGUID
   9
 $VERSIONGUID
   2
-{D6CBC8B6-E3C5-4B13-AEE7-1751E535783D}
+{35E4DE85-8B33-47DC-B476-C53D4540007A}
   9
 $EXTNAMES
 290
@@ -2851,7 +2851,7 @@ TABLE
   2
 VIEW
   5
-2D1C
+2E41
 330
 0
 100
@@ -2865,7 +2865,7 @@ TABLE
   2
 UCS
   5
-2D1B
+2E40
 330
 0
 100
@@ -3639,7 +3639,7 @@ BLOCK_RECORD
 100
 AcDbSymbolTable
  70
-46
+48
   0
 BLOCK_RECORD
   5
@@ -4658,6 +4658,46 @@ AcDbSymbolTableRecord
 AcDbBlockTableRecord
   2
 NC_AC_15
+340
+0
+ 70
+0
+280
+1
+281
+0
+  0
+BLOCK_RECORD
+  5
+2E42
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+NC_WH_ARISTON
+340
+0
+ 70
+0
+280
+1
+281
+0
+  0
+BLOCK_RECORD
+  5
+2E4C
+330
+1
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+NC_LAUNDRY_107
 340
 0
  70
@@ -129931,6 +129971,312 @@ AcDbEntity
 100
 AcDbBlockEnd
   0
+BLOCK
+  5
+2E43
+330
+2E42
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+NC_WH_ARISTON
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+NC_WH_ARISTON
+  1
+
+  0
+LWPOLYLINE
+  5
+2E45
+330
+2E42
+100
+AcDbEntity
+  8
+0
+100
+AcDbPolyline
+ 90
+4
+ 70
+1
+ 10
+-0.11
+ 20
+-0.01
+ 10
+0.11
+ 20
+-0.01
+ 10
+0.11
+ 20
+-0.12
+ 10
+-0.11
+ 20
+-0.12
+  0
+LINE
+  5
+2E46
+330
+2E42
+100
+AcDbEntity
+  8
+0
+100
+AcDbLine
+ 10
+-0.11
+ 20
+-0.01
+ 30
+0.0
+ 11
+0.11
+ 21
+-0.12
+ 31
+0.0
+  0
+LINE
+  5
+2E47
+330
+2E42
+100
+AcDbEntity
+  8
+0
+100
+AcDbLine
+ 10
+-0.11
+ 20
+-0.12
+ 30
+0.0
+ 11
+0.11
+ 21
+-0.01
+ 31
+0.0
+  0
+TEXT
+  5
+2E48
+330
+2E42
+100
+AcDbEntity
+  8
+0
+100
+AcDbText
+ 10
+-0.2
+ 20
+-0.18
+ 30
+0.0
+ 40
+0.035
+  1
+WATER HEATER
+  7
+HELV
+100
+AcDbText
+  0
+TEXT
+  5
+2E49
+330
+2E42
+100
+AcDbEntity
+  8
+0
+100
+AcDbText
+ 10
+-0.2
+ 20
+-0.24
+ 30
+0.0
+ 40
+0.035
+  1
+9.5 kW
+  7
+HELV
+100
+AcDbText
+  0
+ENDBLK
+  5
+2E44
+330
+2E42
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
+  5
+2E4D
+330
+2E4C
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+NC_LAUNDRY_107
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+NC_LAUNDRY_107
+  1
+
+  0
+LINE
+  5
+2E4F
+330
+2E4C
+100
+AcDbEntity
+  8
+0
+100
+AcDbLine
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+ 11
+1.0579999999999998
+ 21
+0.0
+ 31
+0.0
+  0
+LINE
+  5
+2E50
+330
+2E4C
+100
+AcDbEntity
+  8
+0
+100
+AcDbLine
+ 10
+0.0
+ 20
+-0.03
+ 30
+0.0
+ 11
+0.0
+ 21
+0.03
+ 31
+0.0
+  0
+LINE
+  5
+2E51
+330
+2E4C
+100
+AcDbEntity
+  8
+0
+100
+AcDbLine
+ 10
+1.0579999999999998
+ 20
+-0.03
+ 30
+0.0
+ 11
+1.0579999999999998
+ 21
+0.03
+ 31
+0.0
+  0
+TEXT
+  5
+2E52
+330
+2E4C
+100
+AcDbEntity
+  8
+0
+100
+AcDbText
+ 10
+0.4789999999999999
+ 20
+-0.09
+ 30
+0.0
+ 40
+0.06
+  1
+107
+  7
+HELV
+100
+AcDbText
+  0
+ENDBLK
+  5
+2E4E
+330
+2E4C
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
 ENDSEC
   0
 SECTION
@@ -172523,6 +172869,46 @@ AcDbPolyline
  20
 -112.1562067325871
   0
+INSERT
+  5
+2E4A
+330
+2
+100
+AcDbEntity
+  8
+2furni
+100
+AcDbBlockReference
+  2
+NC_WH_ARISTON
+ 10
+201.5609651574427
+ 20
+-112.43320673258711
+ 30
+0.0
+  0
+INSERT
+  5
+2E53
+330
+2
+100
+AcDbEntity
+  8
+2furni
+100
+AcDbBlockReference
+  2
+NC_LAUNDRY_107
+ 10
+201.3419651574427
+ 20
+-113.1132067325871
+ 30
+0.0
+  0
 ENDSEC
   0
 SECTION
@@ -187821,7 +188207,7 @@ DictionaryVariables
 280
 0
   1
-1.4.5 @ 2026-11-01T21:30:20.249821+00:00
+1.4.5 @ 2026-11-09T19:11:20.835366+00:00
   0
 ENDSEC
   0

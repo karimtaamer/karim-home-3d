@@ -730,7 +730,7 @@ export function furnish(scene, M, mat, version = "main") {
     // its partition, the wardrobe runs along the kitchen wall and a desk sits on the south wall.
     // Nagham's Changes: the bathroom partition (the headboard wall) sits 14 cm further east, so the bed and
     // bedside tables do too (bed foot 1.40 from the wardrobe).
-    const NC = version === "naghams-changes" || ["kareems-changes", "karims-version"].includes(version), hb = NC ? 2.299 : 2.159;
+    const NC = version === "naghams-changes" || ["kareems-changes", "karims-version"].includes(version), hb = version === "kareems-changes" ? 2.349 : NC ? 2.299 : 2.159;
     item(hb, 7.511, "E", bed(2.101, 1.991, 2.101));  // DWG bed outline 2.10 wide x 1.99 long, headboard inside it
     for (const y of [6.231, 8.79]) {  // DWG bedside tables 0.47 x 0.52 deep
       item(hb, y, "E", nightstand(0.466, 0.516));
@@ -809,10 +809,11 @@ export function furnish(scene, M, mat, version = "main") {
     // out from the battens, bottom 1.32 (0.46 over the counter), three glass shelves, all centred on the bowl.
     if (["kareems-changes", "karims-version"].includes(version)) item(0.556, 6.6851, "E", vanity(1.1, true, 0.6, medCabinet(), heaterVanity));  // 1.10, south wall to the partition: centre DWG y -114.9281
     else item(0.556, 6.7435, "E", vanity(1.153, true));  // centre DWG y -114.8697, bowl, mixer and mirror on it
-    item(1.7762, 9.0201, "S", p => {  // WC bay 1.361..2.192 = 0.83 (local +x east); pan, plate and window stay where they were (o)
+    item(1.7762, 9.0201, "S", p => {  // WC bay 1.361..2.192 = 0.83; Main 9 Nov: east edge +5 cm with the partition (1.361..2.242 = 0.88). Pan, plate and window stay (o).
       const h = 0.4153, d = 0.3, top = 1.12, o = 0.0275;
-      p.box(-h, h, 0, top - 0.02, 0, d - 0.01, mat.stoneWall);                      // framed build-out, tiled
-      p.box(-h, h, top - 0.02, top, 0, d, mat.stoneWall, 0.004);                    // porcelain top ledge
+      const east = version === "kareems-changes" ? h + 0.05 : h;                   // widen only toward the moved partition
+      p.box(-h, east, 0, top - 0.02, 0, d - 0.01, mat.stoneWall);                   // framed build-out, tiled
+      p.box(-h, east, top - 0.02, top, 0, d, mat.stoneWall, 0.004);                 // porcelain top ledge
       p.box(o - 0.12, o + 0.12, 0.92, 1.08, d - 0.01, d, mat.brass, 0.005);        // flush plate on the face
       p.model("models/wc-wallhung.glb", mat.ceramic, o, 0.1, d, { size: [0.36, 0.33, 0.54] });  // pan 0.54 long, as the DWG block, under the window
       bidetMixer(p, o - 0.3, 0.55, d, mat.chrome);
@@ -825,11 +826,12 @@ export function furnish(scene, M, mat, version = "main") {
     });
     // Towel rail on the east wall, 0.29 south of the pan front (DWG y -113.725..-114.175), and three
     // champagne-bronze towel hooks at 1.30 on the 0.61 of plain wall between it and the open door leaf.
-    if (version === "kareems-changes") named(item(2.192, 7.6632, "W", towelRail), "unheated towel rail");
+    const partitionW = version === "kareems-changes" ? 2.242 : 2.192;  // west face of the bedroom partition
+    if (version === "kareems-changes") named(item(partitionW, 7.6632, "W", towelRail), "unheated towel rail");
     else item(2.192, 7.6632, "W", towelRail);
     // Kareem's (Nagham call, 25 Oct): hooks raised 15 cm, to 1.45.
     const hk = ["kareems-changes", "karims-version"].includes(version) ? 0.15 : 0;
-    for (const y of [-114.33, -114.48, -114.63]) item(2.192, y + 121.6132, "W", p => {
+    for (const y of [-114.33, -114.48, -114.63]) item(partitionW, y + 121.6132, "W", p => {
       p.cyl(0, 0.014, 0.018, 1.296 + hk, 1.304 + hk, champagne, 32).rotation.x = Math.PI / 2;  // rosette on the lining
       p.cyl(0, 0.045, 0.006, 1.27 + hk, 1.33 + hk, champagne, 16).rotation.x = Math.PI / 2;    // arm, 6 cm out
       p.cyl(0, 0.075, 0.009, 1.3 + hk, 1.325 + hk, champagne, 16);                              // upturned tip

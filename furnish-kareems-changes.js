@@ -1030,10 +1030,10 @@ export function furnish(scene, M, mat, version = "main") {
       const SZ = 0.95 / 0.812, lz = px => (px - 12.122) / SZ, lx = py => py - 8.05;
       const zW = lz(12.115), zE = lz(13.065), xS = lx(6.8906), xN = lx(9.1862);
       const tzW = lz(12.214), tzE = lz(12.966), txS = lx(7.4602), txN = lx(9.1622);
-      p.box(xS, txS, 0, 0.55, zW, zE, mat.stoneWall);     // south ledge ~57.1 cm
-      p.box(txN, xN, 0, 0.55, zW, zE, mat.stoneWall);     // north ledge ~2.5 cm
-      p.box(txS, txN, 0, 0.55, zW, tzW, mat.stoneWall);   // back (west) 10 cm
-      p.box(txS, txN, 0, 0.55, tzE, zE, mat.stoneWall);   // front (east) 10 cm
+      p.box(xS, txS, 0, 0.55, zW, zE, charcoal);     // south ledge ~57.1 cm (charcoal grout under the tiles)
+      p.box(txN, xN, 0, 0.55, zW, zE, charcoal);     // north ledge ~2.5 cm
+      p.box(txS, txN, 0, 0.55, zW, tzW, charcoal);   // back (west) 10 cm
+      p.box(txS, txN, 0, 0.55, tzE, zE, charcoal);   // front (east) 10 cm
     } else {
       p.box(GKC ? -1.167 : -0.85, GKC ? 1.12 : 0.85, 0, 0.55, 0.02, 0.75, mat.stoneWall);
       p.box(-0.78, 0.78, 0.52, 0.56, 0.08, 0.7, mat.ceramic);
@@ -1149,7 +1149,7 @@ export function furnish(scene, M, mat, version = "main") {
       // 120×60 porcelain laid vertically. Joint at local x=0 (plan 12.590) so the two 25 cm niches
       // sit either side of it (no grout crossing a niche); each face half is a 47.5 cm cut (no sliver).
       // Courses shift with the niches: cut deck→80, full 80→200, cut 200→ceiling.
-      const gw = 0.007, z0 = D, z1 = D + 0.004;
+      const gw = 0.007, th = 0.004, z0 = D, z1 = D + th;
       const cols = [[-W, -gw / 2], [gw / 2, W]];
       const rows = [[0.55, 0.8 - gw / 2], [0.8 + gw / 2, 2.0 - gw / 2], [2.0 + gw / 2, H]];
       for (const [cx0, cx1] of cols) {
@@ -1164,19 +1164,36 @@ export function furnish(scene, M, mat, version = "main") {
           p.box(cx0, cx1, rows[1][0], rows[1][1], z0, z1, travertine);
         }
       }
-      // East and west returns: 30 cm deep = half a 60 cm tile, one cut each, same height courses.
-      const ledgeZ = 7.4612 - 6.8906;  // tub start: remaining south ledge ~27 cm in front of the build-out
-      for (const [sx0, sx1] of [[-W - 0.004, -W], [W, W + 0.004]]) {
-        p.box(sx0, sx1, rows[0][0], rows[0][1], 0, D, travertine);
-        p.box(sx0, sx1, rows[1][0], rows[1][1], 0, D, travertine);
-        p.box(sx0, sx1, rows[2][0], rows[2][1], 0, D, travertine);
+      // Every exposed face of the build-out and the tub deck: same travertine, grout wrapping the corner.
+      const tubS = 7.4612 - 6.8906, tubN = 9.1612 - 6.8906, deckN = 9.1862 - 6.8906;
+      const tubEl = 12.590 - 12.965, tubWl = 12.590 - 12.215;  // local x of the tub hole (east / west)
+      // East return (next to the door): 30 cm = half a 60 cm tile, no vertical joint.
+      // 0–80 is one course from the floor (deck 0–55 + return 55–80) so grout continues around the corner.
+      p.box(-W - th, -W, 0, 0.8 - gw / 2, 0, D, travertine);
+      p.box(-W - th, -W, rows[1][0], rows[1][1], 0, D, travertine);
+      p.box(-W - th, -W, rows[2][0], rows[2][1], 0, D, travertine);
+      // West return, same courses above the deck (0–55 hides in the plank / deck).
+      p.box(W, W + th, rows[0][0], rows[0][1], 0, D, travertine);
+      p.box(W, W + th, rows[1][0], rows[1][1], 0, D, travertine);
+      p.box(W, W + th, rows[2][0], rows[2][1], 0, D, travertine);
+      // East deck front beyond the return (0–55 = bottom of the 0–80 course). 60 cm module
+      // from the south wall: the return (z 0–30) is the first half of the first tile, which
+      // wraps onto z 30–60; then joints at 60 / 120 / 180 (last cut 49.6 cm, no sliver).
+      const vJ = [0.60, 1.20, 1.80];
+      p.box(-W - th, -W, 0, 0.55, D, vJ[0] - gw / 2, travertine);
+      for (let i = 0; i < vJ.length; i++) {
+        const a = vJ[i] + gw / 2, b = i + 1 < vJ.length ? vJ[i + 1] - gw / 2 : deckN;
+        p.box(-W - th, -W, 0, 0.55, a, b, travertine);
       }
-      // South-ledge top: centre joint continues the face grout; 47.5 cm cuts match the face.
-      p.box(-W, -gw / 2, 0.55, 0.554, D, ledgeZ, travertine);
-      p.box(gw / 2, W, 0.55, 0.554, D, ledgeZ, travertine);
-      // East deck front of the south ledge (under the return + remaining ledge) so the corner
-      // lines up: 0–55 on the deck is the bottom of the same 0–80 course as the east return.
-      p.box(-W - 0.004, -W, 0, 0.55, 0, ledgeZ, travertine);
+      // Deck tops: centre joint continues the face grout; 120 cm module along the long ledges.
+      p.box(-W, -gw / 2, 0.55, 0.55 + th, D, tubS, travertine);
+      p.box(gw / 2, W, 0.55, 0.55 + th, D, tubS, travertine);
+      p.box(-W, tubEl, 0.55, 0.55 + th, tubS + gw / 2, tubS + 1.20 - gw / 2, travertine);
+      p.box(-W, tubEl, 0.55, 0.55 + th, tubS + 1.20 + gw / 2, tubN, travertine);
+      p.box(tubWl, W, 0.55, 0.55 + th, tubS + gw / 2, tubS + 1.20 - gw / 2, travertine);
+      p.box(tubWl, W, 0.55, 0.55 + th, tubS + 1.20 + gw / 2, tubN, travertine);
+      p.box(-W, -gw / 2, 0.55, 0.55 + th, tubN + gw / 2, deckN, travertine);
+      p.box(gw / 2, W, 0.55, 0.55 + th, tubN + gw / 2, deckN, travertine);
     }
     for (const [a, b] of niches) {
       const t = 0.012, l = a + 0.001, r = b - 0.001, lo = y0 + 0.001, hi = y1 - 0.001, back = D - R, inner = back + t;

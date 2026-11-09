@@ -1822,7 +1822,7 @@ export function furnish(scene, M, mat, version = "main") {
   // 2.25 hp split on the buffet wall panel (x 14.852; Kareem's 14.972), centred on the pebble mirror (y 8.79; Kareem's
   // 8.697, the centre of the wider panel): 1.05 W x 0.30 H x 0.23 D, top 2.42, its underside 0.12 over the mirror top
   // (2.00) and 0.18 under the ceiling.
-  if (["kareems-changes", "karims-version"].includes(version)) ac(14.972, 8.697, "E", 2.42, 1.05, 0.3, 0.23, true);
+  if (["kareems-changes", "karims-version"].includes(version)) ac(14.967, 8.492, "E", 2.42, 1.05, 0.3, 0.23, true);
   else if (NCAC) ac(14.852, 8.79, "E", 2.42, 1.05, 0.3, 0.23, true);
   sized(item(20.474, 9.5, "S", p => {  // coffee corner (DWG, 0.60 deep), column to wall: walnut base, white top, lit shelves
     // Two bays: left = one swinging door over a single shelf (water dispenser sits on the top above it);

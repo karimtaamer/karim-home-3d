@@ -1386,22 +1386,31 @@ export function furnish(scene, M, mat, version = "main") {
   });
   item(version === "kareems-changes" ? 11.675 : 11.835, 9.18, "S", p => {  // DWG stacked washer and dryer 0.60 x 0.60 (x 11.535 to 12.135; Main's 11.375 to 11.975 since 26 Oct)
     if (["kareems-changes", "karims-version"].includes(version)) {
-      // Batch 25 Oct (Karim t305, reference photo): the washer is built in. A taller oak base (0.76, a pull-out laundry
-      // basket shelf over a plinth drawer) lifts the 0.84 machine so its top meets the upper's underside at 1.60, no
-      // gap; oak side panels frame it (left one standing on the counter top's end, right one filling the 2 cm to the
+      // Oak side panels frame the machine (left one standing on the counter top's end, right one filling the 2 cm to the
       // east wall, plan x 11.995 in Main since 26 Oct; 6 cm to 12.197 elsewhere). The window behind it is gone from the DXF, so the wall is solid.
-      const y0 = 0.76;
+      // Main (kareems-changes): Karim 9 Nov: 35 cm base, one drawer. Karim's version keeps the taller 0.76 base.
+      const y0 = version === "kareems-changes" ? 0.35 : 0.76;
+      const machineH = version === "kareems-changes" ? 0.85 : 0.84;  // LG washer-dryer on Main (top at 1.20)
       p.box(-0.3, 0.3, 0, 0.1, 0.04, 0.58, mat.darkTop);                                  // recessed plinth
-      p.box(-0.3, 0.3, 0.1, 0.4, 0, 0.6, mat.oakVeneer);                                  // drawer box, front flush
-      p.box(-0.29, 0.29, 0.398, 0.402, 0.6, 0.603, mat.walnut);                           // shadow line under the basket shelf
-      p.box(-0.1, 0.1, 0.33, 0.345, 0.6, 0.615, mat.walnut, 0.005);                       // finger pull
-      p.box(-0.3, 0.3, 0.4, 0.42, 0, 0.6, mat.oakVeneer);                                 // basket shelf
-      p.box(-0.3, 0.3, y0 - 0.02, y0, 0, 0.6, mat.oakVeneer);                             // washer shelf
-      p.box(-0.3, 0.3, 0.42, y0 - 0.02, 0, 0.01, honeyOak);                               // back of the basket bay
-      p.box(-0.24, 0.24, 0.43, 0.7, 0.08, 0.56, mat.applianceWhite, 0.02);                // laundry basket
+      if (version === "kareems-changes") {
+        p.box(-0.3, 0.3, 0.1, 0.33, 0, 0.6, mat.oakVeneer);                               // one pull-out drawer box, front flush
+        p.box(-0.29, 0.29, 0.328, 0.332, 0.6, 0.603, mat.walnut);                         // shadow line under the washer shelf
+        p.box(-0.1, 0.1, 0.26, 0.275, 0.6, 0.615, mat.walnut, 0.005);                     // finger pull
+        p.box(-0.3, 0.3, 0.33, y0, 0, 0.6, mat.oakVeneer);                                // washer shelf (0.33–0.35)
+      } else {
+        // Batch 25 Oct (Karim t305, reference photo): taller oak base (0.76, a pull-out laundry basket shelf over a
+        // plinth drawer) lifts the 0.84 machine so its top meets the upper's underside at 1.60, no gap.
+        p.box(-0.3, 0.3, 0.1, 0.4, 0, 0.6, mat.oakVeneer);                                // drawer box, front flush
+        p.box(-0.29, 0.29, 0.398, 0.402, 0.6, 0.603, mat.walnut);                         // shadow line under the basket shelf
+        p.box(-0.1, 0.1, 0.33, 0.345, 0.6, 0.615, mat.walnut, 0.005);                     // finger pull
+        p.box(-0.3, 0.3, 0.4, 0.42, 0, 0.6, mat.oakVeneer);                               // basket shelf
+        p.box(-0.3, 0.3, y0 - 0.02, y0, 0, 0.6, mat.oakVeneer);                           // washer shelf
+        p.box(-0.3, 0.3, 0.42, y0 - 0.02, 0, 0.01, honeyOak);                             // back of the basket bay
+        p.box(-0.24, 0.24, 0.43, 0.7, 0.08, 0.56, mat.applianceWhite, 0.02);              // laundry basket
+      }
       p.box(-0.318, -0.3, 0.92, 1.6, 0, 0.6, mat.oakVeneer);                              // left frame panel, on the counter top
       p.box(0.3, version === "kareems-changes" ? 0.32 : 0.362, 0, M.ceiling - 0.1, 0, 0.6, mat.oakVeneer);  // right frame / filler to the wall
-      p.box(-0.3, 0.3, y0, y0 + 0.84, 0.02, 0.6, mat.applianceWhite, 0.02);
+      p.box(-0.3, 0.3, y0, y0 + machineH, 0.02, 0.6, mat.applianceWhite, 0.02);
       const ring = mesh(new THREE.TorusGeometry(0.17, 0.025, 10, 40), mat.chrome, p.g);
       ring.position.set(0, y0 + 0.4, 0.615);
       const door = mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.02, 32), mat.smokedGlass, p.g);

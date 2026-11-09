@@ -274,8 +274,8 @@ sock("Kitchen", "Double socket 180 cm — kitchen TV", wall="S", x=9.6, y=6.2, h
 pt("phone", "Kitchen", "Phone point 150 cm", wall="S", x=8.85, y=6.2, h=1.5, status="adapted", note="moved off the pantry wall, east of the tower")
 
 # Laundry
-sock("Laundry", "Washing-machine socket 60 cm — behind the oak base", n=1, wall="N", x=11.9, y=8.5, h=0.6, appliance="washing machine",
-   status="adapted", note="Main's washer stands on a 0.76 base: the socket is inside the base, beside the hoses. No dryer in Main, so the plan's dryer point (120) is left out")
+sock("Laundry", "Washing-machine socket — inside the oak base", n=1, wall="N", x=11.9, y=8.5, h=0.25, appliance="washing machine",
+   status="adapted", note="Main's washer stands on a 0.35 base (Karim 9 Nov, one drawer): the socket is inside the base, beside the hoses. No dryer in Main, so the plan's dryer point (120) is left out")
 sock("Laundry", "Double socket 120 cm — counter (iron, steamer)", wall="N", x=11.15, y=8.5, h=1.2)
 sock("Laundry", "Double socket 120 cm — passage wall", wall="E", x=11.6, y=7.6, h=1.2)
 pt("power", "Laundry", "Instant water heater — Ariston Aures Slim Multi 9.5 kW — dedicated 50 A breaker, 10 mm² cable, 30 mA RCD",

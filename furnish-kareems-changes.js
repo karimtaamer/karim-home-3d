@@ -1008,8 +1008,21 @@ export function furnish(scene, M, mat, version = "main") {
   const GKC = ["kareems-changes", "karims-version"].includes(version);
   const bath = item(version === "kareems-changes" ? 12.122 : 12.324, 8.05, "E", p => {  // wood-look plank wall, stone-clad bath, framed screen at the WC end
     p.box(GKC ? -1.167 : -1.08, GKC ? 1.12 : 1.08, 0, M.ceiling, 0, 0.02, mat.woodTile);
-    p.box(GKC ? -1.167 : -0.85, GKC ? 1.12 : 0.85, 0, 0.55, 0.02, 0.75, mat.stoneWall);  // Kareem's: south wall to the north wall's stone lining
-    p.box(-0.78, 0.78, 0.52, 0.56, 0.08, 0.7, mat.ceramic);
+    if (version === "kareems-changes") {
+      // Stone/tiled deck wall-to-wall, 95 cm deep (plan x 12.115–13.065), 55 cm high, with a hole
+      // for the Duravit Slim 170×75 drop-in (x 12.215–12.965, y 7.4612–9.1612). A 1 mm gap around
+      // the hole avoids z-fighting with the tub. This item is later scaled in z by 0.95/0.812.
+      const SZ = 0.95 / 0.812, lz = px => (px - 12.122) / SZ, lx = py => py - 8.05;
+      const zW = lz(12.115), zE = lz(13.065), xS = lx(6.8906), xN = lx(9.1862);
+      const tzW = lz(12.214), tzE = lz(12.966), txS = lx(7.4602), txN = lx(9.1622);
+      p.box(xS, txS, 0, 0.55, zW, zE, mat.stoneWall);     // south ledge ~57.1 cm
+      p.box(txN, xN, 0, 0.55, zW, zE, mat.stoneWall);     // north ledge ~2.5 cm
+      p.box(txS, txN, 0, 0.55, zW, tzW, mat.stoneWall);   // back (west) 10 cm
+      p.box(txS, txN, 0, 0.55, tzE, zE, mat.stoneWall);   // front (east) 10 cm
+    } else {
+      p.box(GKC ? -1.167 : -0.85, GKC ? 1.12 : 0.85, 0, 0.55, 0.02, 0.75, mat.stoneWall);
+      p.box(-0.78, 0.78, 0.52, 0.56, 0.08, 0.7, mat.ceramic);
+    }
     if (GKC) {
       const g0 = -0.072, g1 = 1.142, z = 0.73;  // fixed screen on the deck from the north (WC) wall, black frame all round
       p.box(g0, g1, 0.56, 2.3, z, z + 0.01, mat.clearGlass);
@@ -1037,6 +1050,22 @@ export function furnish(scene, M, mat, version = "main") {
     }
   });
   bath.scale.z = (version === "kareems-changes" ? 0.95 : 0.9) / 0.812;  // modelled 0.81 m deep; the DWG bath is 0.90 (Main's 0.95 since 26 Oct)
+  if (version === "kareems-changes") {
+    // Duravit Slim 170×75 acrylic drop-in, pushed north (2.5 cm tile/sealant at the mixer wall).
+    // Unscaled plan metres: x 12.215–12.965, y 7.4612–9.1612, rim 55 cm. Inner basin rounded,
+    // drain at the north (foot) end 26 cm from the rim.
+    item(12.215, 7.4612, "E", p => {
+      const L = 1.70, D = 0.75, H = 0.55, rim = 0.07, fl = 0.09, rr = 0.06;
+      const i0 = rim, i1 = L - rim, j0 = rim, j1 = D - rim;
+      p.box(0, i0, 0, H, 0, D, mat.ceramic, 0.02);            // south wall
+      p.box(i1, L, 0, H, 0, D, mat.ceramic, 0.02);            // north wall
+      p.box(i0, i1, 0, H, 0, j0, mat.ceramic, 0.02);          // west wall
+      p.box(i0, i1, 0, H, j1, D, mat.ceramic, 0.02);          // east wall
+      p.box(i0, i1, 0, fl, j0, j1, mat.ceramic, rr);          // basin floor
+      p.cyl(L - 0.26, D / 2, 0.026, fl - 0.004, fl + 0.01, mat.chrome, 24);
+      p.cyl(L - 0.26, D / 2, 0.012, fl + 0.008, fl + 0.012, mat.blackSteel, 16);
+    });
+  }
   if (GKC) item(version === "kareems-changes" ? 12.546 : 12.725, 9.1716, "S", p => {  // Karim t327: all the shower fittings on the north (WC) wall's tile face, centred between plank wall and glass
     // Local +x is east (toward the glass), z south out of the wall. Brass, as before.
     // Concealed thermostatic mixer: only its square trim plate and two knobs, at 1.05 (0.5 over the deck)

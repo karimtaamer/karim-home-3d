@@ -30,10 +30,13 @@ MODELS = {'naghams-changes': 'model-naghams-changes.js', 'kareems-changes': 'mod
 # name, versions (None = all), DWG source, axes to check, 3D materials, margin (m, or (x, y)) round the outline.
 # Source: ('block', name) or ('outline', seed x, seed y, width cm, depth cm) for a closed 2furni polyline (plan m).
 ITEMS = [
-    ('kitchen fridge', None, ('block', 'wgsfd'), 'y', {'blackSteel'}, 0.05),
+    ('kitchen fridge', None, ('block', 'wgsfd'), 'y', {'blackSteel', 'anthraciteInox'}, 0.05),  # anthraciteInox: Nagham's Beko (10 Nov 2026)
     ('kitchen dishwasher', None, ('block', 'dfs'), 'y', {'whiteLacquer'}, (0.05, -0.005)),  # its tall column's carcass
-    ('kitchen hob', None, ('block', 'yrtds'), 'y', {'blackGlass'}, 0.05),
-    ('kitchen hood', None, ('block', 'yrtds'), 'y', {'chrome'}, 0.05),
+    ('kitchen hob', None, ('block', 'yrtds'), 'y', {'blackGlass', 'matteBlackGlass'}, 0.05),  # matteBlackGlass: Nagham's Purity
+    ('kitchen hood', {'main', 'shifted-bedroom', 'kareems-changes', 'karims-version'}, ('block', 'yrtds'), 'y', {'chrome'}, 0.05),
+    # Nagham's version (10 Nov 2026): the 90 cm Ecomatic hood is wider than the 87 cm hob, so it has its own dashed
+    # 90 x 50 outline over the hob block
+    ('kitchen hood', {'naghams-changes'}, ('outline', 6.7248, 7.376, 50.0, 90.0), 'y', {'stainless'}, 0.05),
     ('kitchen sink', None, ('block', 'wrewwer'), 'x', {'blackSteel'}, 0.05),
     ('laundry joinery', None, ('outline', 10.63, 7.92, 61.9, 206.9), 'xy', {'oakVeneer'}, 0.0),
     ('laundry washer/dryer', {'main', 'shifted-bedroom', 'naghams-changes', 'karims-version'}, ('outline', 11.835, 8.888, 60.0, 60.0), 'x', {'applianceWhite'}, 0.05),  # 2 cm off the wall

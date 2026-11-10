@@ -295,8 +295,12 @@ export function makeMaterials(clip) {
     brushedNickel: std({ color: 0xc8c2b8, metalness: 1, roughness: 0.32 }),
     blackSteel: std({ color: 0x1d1c1b, metalness: 0.6, roughness: 0.35 }),
     blackGlass: std({ color: 0x0c0c0d, metalness: 0.2, roughness: 0.08 }),
-    stainless: std({ color: 0xc9cbcc, metalness: 1, roughness: 0.3 }),  // Nagham's real appliances (oven fascia), 10 Nov 2026
-    castIron: std({ color: 0x1b1b1b, metalness: 0.35, roughness: 0.7 }),  // hob grids and burner caps
+    // Nagham's real kitchen appliances (10 Nov 2026), from her store photos and the makers' colours
+    stainless: std({ color: 0xc8c8c8, metalness: 0.9, roughness: 0.35 }),       // brushed stainless: oven, hood, hob rings
+    castIron: std({ color: 0x161616, metalness: 0.3, roughness: 0.75 }),        // hob grids and burner caps
+    matteBlackGlass: std({ color: 0x111111, metalness: 0.1, roughness: 0.35 }), // Purity HPT911 MAT-BL hob top
+    anthraciteInox: std({ color: 0x3a3c3e, metalness: 0.45, roughness: 0.45 }),  // Beko RCNE590E35ZXP3 fridge (dark inox)
+    blackInox: std({ color: 0x232426, metalness: 0.6, roughness: 0.4 }),        // Beko BDFN15420B dishwasher (black)
     chairBlack: std({ color: 0x161514, metalness: 0.05, roughness: 0.42 }),
     chairBlackFabric: std({ color: 0x1e1e20, metalness: 0, roughness: 0.95 }),
     smokedGlass: std({ color: 0x3b2b22, metalness: 0.3, roughness: 0.08, transparent: true, opacity: 0.85 }),

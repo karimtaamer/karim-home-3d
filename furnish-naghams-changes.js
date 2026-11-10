@@ -1415,14 +1415,16 @@ export function furnish(scene, M, mat, version = "main") {
     }
     for (let i = 0; i < 7; i++) p.box(-0.11, 0.11, b + 0.041, b + 0.044, 0.35 + i * 0.01, 0.354 + i * 0.01, mat.chrome);
   });
-  item(K.x1, 7.378, "W", p => {
-    // Beko RCNE590E35ZXP3 (Nagham's, 10 Nov 2026): freestanding bottom freezer, 78 W x 187.7 H x 76 D,
-    // NeoFrost, HarvestFresh, finished matte black (Nagham, 10 Nov 2026). Pushed north against the dishwasher
-    // column (no filler; y 6.988 to 7.768, DWG block wgsfd moved): 1 cm to the column's 1.8 side panel, 1 cm to a
-    // 2 cm tall panel on the south (y 6.958 to 6.978), which now ends the run; the 13.2 freed south of it is open
-    // wall by the door. Surround 73 deep, so the doors (6) stand proud; hinged on the south (open side), the door
-    // opens past 90. The cupboards over it start at 1.93, 5.3 over the fridge. Local x: +x = south.
-    const fw = 0.39, fH = 1.877, fz0 = 0.03, fz1 = 0.79, dz = fz1 - 0.06, split = 0.735, S = 0.73, o = 0.40;
+  item(K.x1, 7.338, "W", p => {
+    // Beko RCNE590E35ZXP3 (Nagham's, 10 Nov 2026): freestanding bottom freezer, 78 W x 187.7 H x 76 D, NeoFrost,
+    // HarvestFresh, matte black. Bay per the Beko manual (5 cm to the sides, ceiling and back wall in an alcove):
+    // y 6.878 to 7.778 (DWG block wgsfd at y 6.948 to 7.728): 5 cm vent gap to the dishwasher column's 1.8 side
+    // panel (north), the fridge, a 5 cm vent gap, then a 2 cm tall end panel (y 6.878 to 6.898) ending the run.
+    // The gaps are lined in charcoal at the wall and a charcoal vent grille sits 4 cm back in the 5.3 cm gap over
+    // it (the cupboards start at 1.93), so they read as deliberate shadow reveals round the black fridge. 5 cm off
+    // the back wall; surround 73 deep, so the doors stand 8 proud; hinged on the south, the door swings past 90
+    // (115+) into the 5 cm gap, clear of the end panel. Local x: +x = south.
+    const fw = 0.39, fH = 1.877, fz0 = 0.05, fz1 = 0.81, dz = fz1 - 0.06, split = 0.735, S = 0.73, o = 0.44, G = 0.05;
     p.box(-fw, fw, 0.02, fH, fz0, dz, mat.anthraciteInox, 0.01);                          // cabinet
     p.box(-fw + 0.02, fw - 0.02, 0, 0.02, fz0 + 0.05, dz - 0.06, mat.darkTop);            // feet / base grille
     p.box(-fw, fw, split + 0.022, fH, dz, fz1, mat.anthraciteInox, 0.008);                // fridge door
@@ -1431,7 +1433,10 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-0.055, 0.055, 1.6, 1.66, fz1, fz1 + 0.002, mat.blackGlass);                    // touch display, top centre
     for (const x of [-0.036, -0.012, 0.012, 0.036]) p.box(x - 0.005, x + 0.005, 1.625, 1.635, fz1 + 0.002, fz1 + 0.003, mat.ledStrip);
     p.box(-0.05, 0.05, 1.78, 1.795, fz1, fz1 + 0.002, mat.stainless);                     // silver Beko logo
-    p.box(o, o + 0.02, 0, M.ceiling, 0, S, mat.whiteLacquer);                             // tall panel, south
+    p.box(o, o + 0.02, 0, M.ceiling, 0, S, mat.whiteLacquer);                             // tall end panel, south
+    for (const s of [-1, 1]) p.box(s > 0 ? fw : -fw - G, s > 0 ? fw + G : -fw, 0, 1.93, 0, 0.004, mat.grille);  // charcoal lining, vent gaps
+    p.box(-o, o, 1.93 - 0.006, 1.93, 0.04, S - 0.04, mat.grille);                         // vent grille over the fridge, 4 back
+    for (let k = 0; k < 14; k++) p.box(-o + 0.03 + k * 0.06, -o + 0.05 + k * 0.06, 1.923, 1.924, 0.06, S - 0.06, mat.darkTop);  // its slots
     p.box(-o, o, 1.93, M.ceiling, 0, S, mat.whiteLacquer);                                // cupboards over it
     p.box(-0.002, 0.002, 1.95, M.ceiling - 0.02, S, S + 0.003, shadowGap);                // between the two doors
   });

@@ -1010,6 +1010,25 @@ export function furnish(scene, M, mat, version = "main") {
   grout.color.setHex(0xc6b096);
   grout.roughness = 0.55;
   grout.clippingPlanes = mat.ceramic.clippingPlanes;
+  // stoneTileTexture is a 2.4 m sheet: 60 cm along U, 120 cm along V. metreUVs() uses
+  // centred box coords, which put a baked grout through the middle of every mesh.
+  // creamTile writes item-local metre UVs so those grouts sit on the planned joints
+  // (80 / 200 height, centre x, 60 cm along the east front, 120 cm along the long ledges).
+  const tileY0 = 0.8, tileZ0 = 7.4612 - 6.8906;
+  function creamTile(p, x0, x1, y0, y1, z0, z1) {
+    const m = p.box(x0, x1, y0, y1, z0, z1, mat.stoneWall);
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, cz = (z0 + z1) / 2;
+    const pos = m.geometry.attributes.position, nrm = m.geometry.attributes.normal, uv = [];
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i) + cx, y = pos.getY(i) + cy, z = pos.getZ(i) + cz;
+      const ax = Math.abs(nrm.getX(i)), ay = Math.abs(nrm.getY(i)), az = Math.abs(nrm.getZ(i));
+      if (ax >= ay && ax >= az) uv.push(z, y - tileY0);
+      else if (ay >= az) uv.push(x, z - tileZ0);
+      else uv.push(x, y - tileY0);
+    }
+    m.geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+    return m;
+  }
   // Local +x is north. The door is at the south end, so the opening is there (0.80) and the fixed screen covers the
   // north end by the WC. Rain shower over the screen end; the grooved plank wall and the niche end leave no clean
   // run for a hand-shower rail, so a low brass mixer with a bath spout sits mid-wall, in reach from the opening.
@@ -1158,15 +1177,15 @@ export function furnish(scene, M, mat, version = "main") {
       const cols = [[-W, -gw / 2], [gw / 2, W]];
       const rows = [[0.55, 0.8 - gw / 2], [0.8 + gw / 2, 2.0 - gw / 2], [2.0 + gw / 2, H]];
       for (const [cx0, cx1] of cols) {
-        p.box(cx0, cx1, rows[0][0], rows[0][1], z0, z1, mat.stoneWall);   // cut strip above the deck
-        p.box(cx0, cx1, rows[2][0], rows[2][1], z0, z1, mat.stoneWall);   // cut row to the ceiling
+        creamTile(p, cx0, cx1, rows[0][0], rows[0][1], z0, z1);   // cut strip above the deck
+        creamTile(p, cx0, cx1, rows[2][0], rows[2][1], z0, z1);   // cut row to the ceiling
         // Full-height course split around the niche that lives in this column
         const hole = niches.find(([a, b]) => a < cx1 && b > cx0);
         if (hole) {
-          p.box(cx0, hole[0], rows[1][0], rows[1][1], z0, z1, mat.stoneWall);
-          p.box(hole[1], cx1, rows[1][0], rows[1][1], z0, z1, mat.stoneWall);
+          creamTile(p, cx0, hole[0], rows[1][0], rows[1][1], z0, z1);
+          creamTile(p, hole[1], cx1, rows[1][0], rows[1][1], z0, z1);
         } else {
-          p.box(cx0, cx1, rows[1][0], rows[1][1], z0, z1, mat.stoneWall);
+          creamTile(p, cx0, cx1, rows[1][0], rows[1][1], z0, z1);
         }
       }
       // Every exposed face of the build-out and the tub deck: same cream stoneWall as the other guest-bath walls.
@@ -1174,31 +1193,31 @@ export function furnish(scene, M, mat, version = "main") {
       const tubEl = 12.590 - 12.965, tubWl = 12.590 - 12.215;  // local x of the tub hole (east / west)
       // East return (next to the door): 30 cm = half a 60 cm tile, no vertical joint.
       // 0–80 is one course from the floor (deck 0–55 + return 55–80) so grout continues around the corner.
-      p.box(-W - th, -W, 0, 0.8 - gw / 2, 0, D, mat.stoneWall);
-      p.box(-W - th, -W, rows[1][0], rows[1][1], 0, D, mat.stoneWall);
-      p.box(-W - th, -W, rows[2][0], rows[2][1], 0, D, mat.stoneWall);
+      creamTile(p, -W - th, -W, 0, 0.8 - gw / 2, 0, D);
+      creamTile(p, -W - th, -W, rows[1][0], rows[1][1], 0, D);
+      creamTile(p, -W - th, -W, rows[2][0], rows[2][1], 0, D);
       // West return, same courses above the deck (0–55 hides in the plank / deck).
-      p.box(W, W + th, rows[0][0], rows[0][1], 0, D, mat.stoneWall);
-      p.box(W, W + th, rows[1][0], rows[1][1], 0, D, mat.stoneWall);
-      p.box(W, W + th, rows[2][0], rows[2][1], 0, D, mat.stoneWall);
+      creamTile(p, W, W + th, rows[0][0], rows[0][1], 0, D);
+      creamTile(p, W, W + th, rows[1][0], rows[1][1], 0, D);
+      creamTile(p, W, W + th, rows[2][0], rows[2][1], 0, D);
       // East deck front beyond the return (0–55 = bottom of the 0–80 course). 60 cm module
       // from the south wall: the return (z 0–30) is the first half of the first tile, which
       // wraps onto z 30–60; then joints at 60 / 120 / 180 (last cut 49.6 cm, no sliver).
       const vJ = [0.60, 1.20, 1.80];
-      p.box(-W - th, -W, 0, 0.55, D, vJ[0] - gw / 2, mat.stoneWall);
+      creamTile(p, -W - th, -W, 0, 0.55, D, vJ[0] - gw / 2);
       for (let i = 0; i < vJ.length; i++) {
         const a = vJ[i] + gw / 2, b = i + 1 < vJ.length ? vJ[i + 1] - gw / 2 : deckN;
-        p.box(-W - th, -W, 0, 0.55, a, b, mat.stoneWall);
+        creamTile(p, -W - th, -W, 0, 0.55, a, b);
       }
       // Deck tops: centre joint continues the face grout; 120 cm module along the long ledges.
-      p.box(-W, -gw / 2, 0.55, 0.55 + th, D, tubS, mat.stoneWall);
-      p.box(gw / 2, W, 0.55, 0.55 + th, D, tubS, mat.stoneWall);
-      p.box(-W, tubEl, 0.55, 0.55 + th, tubS + gw / 2, tubS + 1.20 - gw / 2, mat.stoneWall);
-      p.box(-W, tubEl, 0.55, 0.55 + th, tubS + 1.20 + gw / 2, tubN, mat.stoneWall);
-      p.box(tubWl, W, 0.55, 0.55 + th, tubS + gw / 2, tubS + 1.20 - gw / 2, mat.stoneWall);
-      p.box(tubWl, W, 0.55, 0.55 + th, tubS + 1.20 + gw / 2, tubN, mat.stoneWall);
-      p.box(-W, -gw / 2, 0.55, 0.55 + th, tubN + gw / 2, deckN, mat.stoneWall);
-      p.box(gw / 2, W, 0.55, 0.55 + th, tubN + gw / 2, deckN, mat.stoneWall);
+      creamTile(p, -W, -gw / 2, 0.55, 0.55 + th, D, tubS);
+      creamTile(p, gw / 2, W, 0.55, 0.55 + th, D, tubS);
+      creamTile(p, -W, tubEl, 0.55, 0.55 + th, tubS + gw / 2, tubS + 1.20 - gw / 2);
+      creamTile(p, -W, tubEl, 0.55, 0.55 + th, tubS + 1.20 + gw / 2, tubN);
+      creamTile(p, tubWl, W, 0.55, 0.55 + th, tubS + gw / 2, tubS + 1.20 - gw / 2);
+      creamTile(p, tubWl, W, 0.55, 0.55 + th, tubS + 1.20 + gw / 2, tubN);
+      creamTile(p, -W, -gw / 2, 0.55, 0.55 + th, tubN + gw / 2, deckN);
+      creamTile(p, gw / 2, W, 0.55, 0.55 + th, tubN + gw / 2, deckN);
     }
     for (const [a, b] of niches) {
       const t = 0.012, l = a + 0.001, r = b - 0.001, lo = y0 + 0.001, hi = y1 - 0.001, back = D - R, inner = back + t;
@@ -1224,7 +1243,7 @@ export function furnish(scene, M, mat, version = "main") {
         const cols = [[xW, -gw / 2], [gw / 2, xE]];
         const rows = [[0, 0.8 - gw / 2], [0.8 + gw / 2, 2.0 - gw / 2], [2.0 + gw / 2, H]];
         p.box(xW, xE, 0, H, 0, 0.002, grout);
-        for (const [a, b] of cols) for (const [c, d] of rows) p.box(a, b, c, d, 0.002, 0.006, mat.stoneWall);
+        for (const [a, b] of cols) for (const [c, d] of rows) creamTile(p, a, b, c, d, 0.002, 0.006);
       });
     }
   } else item(12.767, 9.18, "S", p => {  // stone build-out at the bath end with two recessed walnut-lined niches

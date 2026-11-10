@@ -1930,15 +1930,17 @@ export function furnish(scene, M, mat, version = "main") {
       fronts(p, Cut, N - 0.02, 0.12, 0.8, B, 0.45);
       p.box(Cut + 0.02, N - 0.05, 0, 0.12, W0, B - 0.06, mat.darkTop);
     });
-    p.pebble(0.697, 1.6, 0.92, 0.8, P + 0.012, mat.mirror, true);  // kept at Main's existing centre (was (K+N)/2)
+    p.pebble(0.49575, 1.6, 0.92, 0.8, P + 0.012, mat.mirror, true);  // centred on the wall between the niche-mass cut (y 7.487) and the north wall (y 9.5045)
     p.cyl(0.15, 0.3 + dz, 0.07, 0.83, 1.02, mat.planter, 16, 0.05); p.cyl(1.3, 0.28 + dz, 0.06, 0.83, 1.0, mat.stoneTable, 16, 0.045);
     p.cyl(1.05, 0.3 + dz, 0.045, 0.83, 0.88, mat.blackSteel, 16);
   }), "buffet wall");
   plant(version === "kareems-changes" ? 15.124 : version === "karims-version" ? 15.16 : 15.04, 8.15, 0.5, 0.06, 0.83);
-  // 2.25 hp split on the buffet wall panel (x 14.852; Kareem's 14.972), centred on the pebble mirror (y 8.79; Kareem's
-  // 8.697, the centre of the wider panel): 1.05 W x 0.30 H x 0.23 D, top 2.42, its underside 0.12 over the mirror top
-  // (2.00) and 0.18 under the ceiling.
-  if (["kareems-changes", "karims-version"].includes(version)) ac(14.972, 8.697, "E", 2.42, 1.05, 0.3, 0.23, true);
+  // 2.25 hp split on the buffet wall panel (x 14.852; Kareem's 14.972), centred on the pebble mirror.
+  // Main (10 Nov 2026): mirror + AC centred on the wall from the niche-mass cut (y 7.487) to the north
+  // wall (y 9.5045), centre y 8.49575 (moved 20.13 cm south from the old panel centre 8.697).
+  // 1.05 W x 0.30 H x 0.23 D, top 2.42, underside 0.12 over the mirror top (2.00) and 0.18 under the ceiling.
+  if (version === "kareems-changes") ac(14.972, 8.49575, "E", 2.42, 1.05, 0.3, 0.23, true);
+  else if (version === "karims-version") ac(14.972, 8.697, "E", 2.42, 1.05, 0.3, 0.23, true);
   else if (NCAC) ac(14.852, 8.79, "E", 2.42, 1.05, 0.3, 0.23, true);
   item(20.474, 9.5, "S", p => {  // coffee corner (DWG 0.60 deep; 0.66 here for the flip desk), column to wall: walnut base, marble top, lit shelves
     // Two bays: left = a pair of doors (درفة) over Karim's flip desk, stowed on its casters on the floor (water

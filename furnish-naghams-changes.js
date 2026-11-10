@@ -1278,18 +1278,38 @@ export function furnish(scene, M, mat, version = "main") {
       // Trim frame: one front panel 122.5-172 with the niche cut out (rail below it, the oven clear of the
       // microwave), a lined niche to the carcass back. Nagham's FRESH FMW-42KCG-BW (55.3 W x 32.6 H x 44 D) needs
       // ~10 above / ~5 each side, so the niche is 66 W x 43 H x 56.2 D (was 59.5 x 35): 5.35 each side, 10.4 above,
-      // ~11 behind (10 Nov 2026); the lift-up flap over it is 172-225.
+      // ~10 behind (10 Nov 2026); the lift-up flap over it is 172-225.
+      // "Looks built in without being built in" (Nagham, 10 Nov 2026): the fixed frame is now one side-hinged door
+      // in the tower finish over the whole niche, 86.1 W x 45.6 H (126.2-171.8, 2 mm joints, flap above kept),
+      // with a 56.3 x 33.6 window cut out round the microwave's front (5 mm reveal); the microwave stands 2 cm
+      // behind it, so closed it reads like a built-in. Hinged on the left (east, away from the controls on the
+      // right), it opens out to 95 degrees into the open floor east of the tower, clear of the fridge and walls.
+      // Ventilation: 5.35 each side, 10.4 above, ~10 behind; the niche back is cut out behind a vent grille and the
+      // niche top stops 5 short of the back, so warm air rises into the cupboard over it (vent its back too); the
+      // cut-out and the door's joints let air in at the front. The microwave plugs in behind, at the back grille.
       const nw = 0.33;
-      p.box(-w, w, O1, N0, D - f, D, fin);                              // rail / bottom of the frame
-      for (const s of [-1, 1]) p.box(s > 0 ? nw : -w, s > 0 ? w : -nw, N0, N1, D - f, D, fin);  // frame sides
       for (const s of [-1, 1]) p.box(s > 0 ? nw : -nw - f, s > 0 ? nw + f : -nw, N0, N1, 0.02, D - f, fin);  // niche sides
       p.box(-nw, nw, N0 - f, N0, 0.02, D - f, fin);                    // niche shelf, raised 2 cm: board 127.2-129
-      p.box(-nw, nw, N1, N1 + f, 0.02, D, fin);                        // niche top
+      p.box(-nw, nw, N1, N1 + f, 0.07, D - f, fin);                    // niche top, a 5 cm vent slot behind it
+      p.box(-0.25, 0.25, N0 + 0.04, N1 - 0.04, 0.02, 0.023, mat.grille);  // vent grille in the cut-out niche back
+      {
+        const dg = new THREE.Group(), dq = part(dg), dy0 = O1 + 0.037, dy1 = N1 - 0.002, cw = 0.2815, cy0 = N0 + 0.005, cy1 = N0 + MH + 0.005;
+        dg.position.set(-w, 0, D - f);                                 // hinge line: the door's left (east) edge
+        p.g.add(dg);
+        const W2 = 2 * w;
+        dq.box(0.0015, w - cw, dy0, dy1, 0, f, fin);                   // left stile
+        dq.box(w + cw, W2 - 0.0015, dy0, dy1, 0, f, fin);              // right stile
+        dq.box(w - cw, w + cw, dy0, cy0, 0, f, fin);                   // bottom rail
+        dq.box(w - cw, w + cw, cy1, dy1, 0, f, fin);                   // top rail
+        dq.box(0.0015, W2 - 0.0015, dy0 - 0.002, dy0, f, f + 0.003, shadowGap);
+        dg.userData.openable = { id: "microwave-cabinet", label: "Microwave cabinet", leaves: [{ obj: dg, axis: "y", open: -95 * Math.PI / 180 }],
+          anchor: new THREE.Vector3(w, (dy0 + dy1) / 2, f + 0.06), reach: 1.8, duration: 0.6 };
+      }
       // FRESH FMW-42KCG-BW, 42 L, black, 1000 W microwave / 1500 W grill: 55.3 W x 32.6 H x 44 D (fresh.com.eg),
-      // countertop, on the shelf, centred, front 1.5 behind the frame face. Black body, black-glass door with a
+      // countertop, on the shelf, centred, its front 2 cm behind the cabinet door. Black body, black-glass door with a
       // tinted window and a vertical bar handle at its right edge, and a black-glass control panel on the right
       // (LED display at the top, touch buttons below). Local x: + is the viewer's right.
-      const mw = 0.2765, mz = D - 0.015, cp = mw - 0.12, b0 = N0 + 0.01, b1 = N0 + MH;
+      const mw = 0.2765, mz = D - f - 0.02, cp = mw - 0.12, b0 = N0 + 0.01, b1 = N0 + MH;
       p.label("countertop microwave", p => {  // a part of its own: Move and Resize picks it (e2e J055 / J169)
         p.box(-mw, mw, b0, b1, mz - 0.44, mz - 0.022, mat.blackSteel, 0.006);         // cabinet
         for (const x of [-mw + 0.04, mw - 0.04]) for (const z of [mz - 0.4, mz - 0.06]) p.cyl(x, z, 0.012, N0, b0, mat.blackSteel, 12);  // feet
@@ -1305,7 +1325,7 @@ export function furnish(scene, M, mat, version = "main") {
           p.box(x - 0.018, x + 0.018, y - 0.01, y + 0.01, mz, mz + 0.001, mat.stainless);
         }
       });
-      for (const y of [O0, O1, N1]) p.box(-w, w, y - 0.002, y + 0.002, D, D + 0.003, shadowGap);
+      for (const y of [O0, N1]) p.box(-w, w, y - 0.002, y + 0.002, D, D + 0.003, shadowGap);
       doors(p, -w, w, N1, 2.25, 1);                   // lift-up flaps to the ceiling,
       doors(p, -w, w, 2.25, H, 1);                    // jointed in line with the oak uppers
       for (const s of [-1, 1]) p.box(s * 0.45 - 0.003, s * 0.45 + 0.003, 0.1, H, D - 0.004, D + 0.003, shadowGap);  // the joints at its edges
@@ -1395,13 +1415,14 @@ export function furnish(scene, M, mat, version = "main") {
     }
     for (let i = 0; i < 7; i++) p.box(-0.11, 0.11, b + 0.041, b + 0.044, 0.35 + i * 0.01, 0.354 + i * 0.01, mat.chrome);
   });
-  item(K.x1, 7.2485, "W", p => {
-    // Beko RCNE590E35ZXP3 (Nagham's, 10 Nov 2026): freestanding bottom freezer, 78 W x 187.7 H x 76 D, dark
-    // anthracite brushed inox, NeoFrost, HarvestFresh. Opening tightened to 80.5 (1.25 each side, y 6.846 to
-    // 7.651; DWG block wgsfd resized) with a 12.7 white filler on the north (y 7.651 to 7.778) up to the
-    // dishwasher column; surround and filler 73 deep, so only the doors (6) stand proud and still swing clear;
-    // the cupboards over it start at 1.93, 5.3 over the fridge for ventilation. Local x: +x = south.
-    const fw = 0.39, fH = 1.877, fz0 = 0.03, fz1 = 0.79, dz = fz1 - 0.06, split = 0.735, S = 0.73, o = 0.4025;
+  item(K.x1, 7.378, "W", p => {
+    // Beko RCNE590E35ZXP3 (Nagham's, 10 Nov 2026): freestanding bottom freezer, 78 W x 187.7 H x 76 D,
+    // NeoFrost, HarvestFresh, finished matte black (Nagham, 10 Nov 2026). Pushed north against the dishwasher
+    // column (no filler; y 6.988 to 7.768, DWG block wgsfd moved): 1 cm to the column's 1.8 side panel, 1 cm to a
+    // 2 cm tall panel on the south (y 6.958 to 6.978), which now ends the run; the 13.2 freed south of it is open
+    // wall by the door. Surround 73 deep, so the doors (6) stand proud; hinged on the south (open side), the door
+    // opens past 90. The cupboards over it start at 1.93, 5.3 over the fridge. Local x: +x = south.
+    const fw = 0.39, fH = 1.877, fz0 = 0.03, fz1 = 0.79, dz = fz1 - 0.06, split = 0.735, S = 0.73, o = 0.40;
     p.box(-fw, fw, 0.02, fH, fz0, dz, mat.anthraciteInox, 0.01);                          // cabinet
     p.box(-fw + 0.02, fw - 0.02, 0, 0.02, fz0 + 0.05, dz - 0.06, mat.darkTop);            // feet / base grille
     p.box(-fw, fw, split + 0.022, fH, dz, fz1, mat.anthraciteInox, 0.008);                // fridge door
@@ -1410,9 +1431,7 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-0.055, 0.055, 1.6, 1.66, fz1, fz1 + 0.002, mat.blackGlass);                    // touch display, top centre
     for (const x of [-0.036, -0.012, 0.012, 0.036]) p.box(x - 0.005, x + 0.005, 1.625, 1.635, fz1 + 0.002, fz1 + 0.003, mat.ledStrip);
     p.box(-0.05, 0.05, 1.78, 1.795, fz1, fz1 + 0.002, mat.stainless);                     // silver Beko logo
-    p.box(o, o + 0.02, 0, M.ceiling, 0, S, mat.whiteLacquer);                             // tall surround, south
-    p.box(-o - 0.127, -o, 0, M.ceiling, 0, S, mat.whiteLacquer);                          // filler to the dishwasher column
-    for (const x of [-o - 0.127, -o]) p.box(x - 0.002, x + 0.002, 0.1, M.ceiling, S, S + 0.003, shadowGap);
+    p.box(o, o + 0.02, 0, M.ceiling, 0, S, mat.whiteLacquer);                             // tall panel, south
     p.box(-o, o, 1.93, M.ceiling, 0, S, mat.whiteLacquer);                                // cupboards over it
     p.box(-0.002, 0.002, 1.95, M.ceiling - 0.02, S, S + 0.003, shadowGap);                // between the two doors
   });

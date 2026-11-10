@@ -1161,21 +1161,20 @@ export function furnish(scene, M, mat, version = "main") {
       p.box(x - 0.003, x + 0.003, g0 + 0.03, g0 + 0.031, 0.497, 0.515, mat.stainless);
     }
   }
-  // Hood: Ecomatic H910TT, 90 cm T-shape (flat canopy + chimney), brushed stainless, black-glass touch strip,
+  // Hood: Ecomatic H910TTBK (the black H910TT), 90 cm T-shape, black finish all over (body and front), black-glass touch strip,
   // LED lights. Ecomatic publishes no depth / heights: canopy 50 D x 7 H and a 26 x 23 chimney are typical
   // T-shape sizes (assumed). Bottom 65 cm over the hob glass (the usual gas-hob minimum), 1.576, canopy top 1.646.
-  // A shortened 90 cm oak lift-up cabinet sits over it (run(), HOODCAB0, 10 Nov 2026): the chimney rises from the
-  // canopy to the cabinet's underside and the duct runs on up inside the cabinet.
-  const HOODCAB0 = 0.926 + 0.65 + 0.07 + 0.054;     // 1.70: 5.4 cm of chimney between the canopy and the cabinet
+  // A 90 cm oak lift-up cabinet sits on it (run(), HOODCAB0, 10 Nov 2026): its bottom 1 mm over the canopy top, so
+  // no chimney shows (Nagham asked); the duct runs up inside the cabinet.
+  const HOODCAB0 = 0.926 + 0.65 + 0.07 + 0.001;     // 1.647: on the canopy (top 1.646), 1 mm clear (no z-fighting)
   function realHood(p, cx) {
     const y0 = 0.926 + 0.65, y1 = y0 + 0.07, D = 0.5, hw = 0.45;
-    p.box(cx - hw, cx + hw, y0 + 0.012, y1, 0, D, mat.stainless);                            // canopy
-    p.box(cx - hw + 0.005, cx + hw - 0.005, y0, y0 + 0.012, 0.005, D - 0.005, mat.stainless);  // underside rim
+    p.box(cx - hw, cx + hw, y0 + 0.012, y1, 0, D, mat.hoodBlack);                            // canopy, black
+    p.box(cx - hw + 0.005, cx + hw - 0.005, y0, y0 + 0.012, 0.005, D - 0.005, mat.hoodBlack);  // underside rim
     for (const s of [-1, 1]) p.box(cx + s * 0.2 - 0.17, cx + s * 0.2 + 0.17, y0 - 0.001, y0, 0.06, 0.4, mat.grille);  // grease filters
     for (const x of [-0.3, 0.3]) p.cyl(cx + x, 0.44, 0.022, y0 - 0.002, y0, mat.downlight, 20);  // LED spots
     p.box(cx - 0.15, cx + 0.15, y0 + 0.015, y1 - 0.012, D, D + 0.003, mat.blackGlass);         // black-glass touch strip
     for (const x of [-0.1, -0.05, 0, 0.05, 0.1]) p.box(cx + x - 0.006, cx + x + 0.006, y0 + 0.032, y0 + 0.037, D + 0.003, D + 0.004, mat.ledStrip);
-    p.box(cx - 0.13, cx + 0.13, y1, HOODCAB0, 0, 0.23, mat.stainless);                       // chimney up to the cabinet over it
   }
   // --- Kitchen: U of white flat-panel units, oak uppers, wide black fridge ---------------------
   const K = { x0: 6.48, x1: 10.21, y0: 5.67, y1: 9.09, front: 0.6 };
@@ -1203,9 +1202,10 @@ export function furnish(scene, M, mat, version = "main") {
       // Under the hob the top front (0.62-0.88) is a fixed false front: the hob body (4.5 below the top, to 0.875)
       // and its gas pipe sit behind it; the drawers below start at 0.62. No other change to the run.
       if (uppers) {
-        // Over the hob the 90 cm of upper (the hood's width) is a shortened oak lift-up cabinet, 1.70-2.25 (55 cm),
-        // clear of the canopy (top 1.646) and the chimney under it; the duct passes up through it. Same top line and
-        // white to the ceiling as the rest; no LED strip under it (the hood has its own lights).
+        // Over the hob the 90 cm of upper (the hood's width) is an oak lift-up cabinet 1.647-2.25 (60.3 cm) sitting on
+        // the canopy (top 1.646), so canopy and cabinet read as one block: the canopy's underside (1.576) lines up with
+        // the neighbours' LED strip (1.58) under their 1.60 bottoms, and the canopy stands 15 proud of the 35 fronts.
+        // The duct passes up through the cabinet. Same top line and white to the ceiling as the rest; no LED strip.
         const cut = hob !== null ? [hob - 0.45, hob + 0.45] : null;
         const upSpans = cut ? spans.flatMap(([a, b]) => b <= cut[0] || a >= cut[1] ? [[a, b]] : [[a, cut[0]], [cut[1], b]].filter(([u, v]) => v - u > 0.001)) : spans;
         for (const sp of upSpans) {

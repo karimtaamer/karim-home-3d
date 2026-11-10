@@ -299,6 +299,7 @@ export function makeMaterials(clip) {
     stainless: std({ color: 0xc8c8c8, metalness: 0.9, roughness: 0.35 }),       // brushed stainless: oven, hood, hob rings
     castIron: std({ color: 0x161616, metalness: 0.3, roughness: 0.75 }),        // hob grids and burner caps
     matteBlackGlass: std({ color: 0x111111, metalness: 0.1, roughness: 0.35 }), // Purity HPT911 MAT-BL hob top
+    hoodBlack: std({ color: 0x141414, metalness: 0.35, roughness: 0.45 }),   // Ecomatic H910TTBK hood, black finish all over (cairocart / shahpor)
     anthraciteInox: std({ color: 0x1c1c1e, metalness: 0.1, roughness: 0.75 }),  // Beko RCNE590E35ZXP3 fridge, matte black (Nagham, 10 Nov 2026)
     blackInox: std({ color: 0x232426, metalness: 0.6, roughness: 0.4 }),        // Beko BDFN15420B dishwasher (black)
     chairBlack: std({ color: 0x161514, metalness: 0.05, roughness: 0.42 }),

@@ -295,6 +295,17 @@ export function makeMaterials(clip) {
     brushedNickel: std({ color: 0xc8c2b8, metalness: 1, roughness: 0.32 }),
     blackSteel: std({ color: 0x1d1c1b, metalness: 0.6, roughness: 0.35 }),
     blackGlass: std({ color: 0x0c0c0d, metalness: 0.2, roughness: 0.08 }),
+    // Nagham's real kitchen appliances (10 Nov 2026), from her store photos and the makers' colours
+    stainless: std({ color: 0xc8c8c8, metalness: 0.9, roughness: 0.35 }),       // brushed stainless: oven, hood, hob rings
+    castIron: std({ color: 0x161616, metalness: 0.3, roughness: 0.75 }),        // hob grids and burner caps
+    hobGreyGlass: std({ color: 0x3a3b3d, metalness: 0.1, roughness: 0.8 }),  // Purity HPT911 MAT-BL: matte charcoal glass (store photo)
+    printWhite: std({ color: 0xf2f2f0, roughness: 0.6 }),                     // printed white marks / icons / logos
+    redDigits: glow(0xff3424, 2.2),                                           // red LED digits (oven, dishwasher)
+    hoodGlass: std({ color: 0x0a0a0a, metalness: 0.1, roughness: 0.1 }),    // Ecomatic hood: glossy black-glass front (store photo)
+    aluMesh: std({ color: 0xb4b6b8, metalness: 0.8, roughness: 0.5 }),      // Ecomatic hood: aluminium mesh grease filters
+    touchIcon: glow(0xf4f4f0, 1.2),                                         // Ecomatic hood: soft white touch icons
+    anthraciteInox: std({ color: 0x1c1c1e, metalness: 0.1, roughness: 0.75 }),  // Beko RCNE590E35ZXP3 fridge, matte black (Nagham, 10 Nov 2026)
+    blackInox: std({ color: 0x232426, metalness: 0.6, roughness: 0.4 }),        // Beko BDFN15420B dishwasher (black)
     chairBlack: std({ color: 0x161514, metalness: 0.05, roughness: 0.42 }),
     chairBlackFabric: std({ color: 0x1e1e20, metalness: 0, roughness: 0.95 }),
     smokedGlass: std({ color: 0x3b2b22, metalness: 0.3, roughness: 0.08, transparent: true, opacity: 0.85 }),

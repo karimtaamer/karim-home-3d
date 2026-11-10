@@ -1261,6 +1261,64 @@ export function furnish(scene, M, mat, version = "main") {
     }
   });
 
+  // --- Nagham's real appliances (bought at Al Morshedy, 29 Oct 2026), real maker sizes ------------------
+  // Local frame of a run / item: x along the run, y up from the floor, z out from the wall (0 = wall face).
+  // Hob: Purity HPT911 MAT-BL, 87 W x 52 D x 5 H cm, cut-out 84 x 49. Per Nagham's store photo (10 Nov 2026): matte
+  // dark charcoal-grey glass, five burners (two on the left, back and front; a big wok in the middle; two on the
+  // right) each under its own black cast-iron cross support, and the five black knobs with chrome rims and white
+  // marks in a row along the front edge (Nagham, 10 Nov 2026: the photo's display had it turned round), right of
+  // centre, a small white burner icon in front of each; Purity logo front right. Local frame: x along the run (+x = the viewer's right), z out from the wall (0.04 back edge, 0.56 front).
+  function realHob(p, cx) {
+    const top = 0.92, g0 = top + 0.006, z0 = 0.04, z1 = 0.56, hw = 0.435;
+    p.box(cx - 0.42, cx + 0.42, top - 0.045, top, z0 + 0.015, z1 - 0.015, mat.blackSteel);   // body in the 84 x 49 cut-out
+    p.box(cx + 0.3, cx + 0.33, top - 0.06, top - 0.045, 0.1, 0.45, mat.brass);              // gas inlet (right) and its pipe
+    p.box(cx - hw, cx + hw, top, g0, z0, z1, mat.hobGreyGlass, 0.004);                      // 87 x 52 matte charcoal glass
+    const gT = g0 + 0.03, bar = 0.012, F = z => z0 + z1 - z;  // F: the store photo's layout turned to face the room (knobs front)
+    const burner = (x, zp, r, wok) => {
+      const z = F(zp);
+      p.cyl(cx + x, z, r + 0.01, g0, g0 + 0.005, mat.blackSteel, 28);                       // base
+      p.cyl(cx + x, z, r, g0 + 0.005, g0 + 0.016, wok ? mat.stainless : mat.blackSteel, 28);  // crown (chrome on the wok)
+      p.cyl(cx + x, z, r * 0.78, g0 + 0.016, g0 + 0.021, mat.castIron, 28);                 // enamelled cap
+      if (wok) p.cyl(cx + x, z, r * 0.4, g0 + 0.021, g0 + 0.026, mat.castIron, 24);
+      const R = r + 0.06;                                                                  // its own cast-iron cross support
+      p.box(cx + x - R, cx + x + R, gT - bar, gT, z - bar / 2, z + bar / 2, mat.castIron);
+      p.box(cx + x - bar / 2, cx + x + bar / 2, gT - bar, gT, z - R, z + R, mat.castIron);
+      for (const [dx, dz, w, d] of [[-R, 0, bar, 0.06], [R, 0, bar, 0.06], [0, -R, 0.06, bar], [0, R, 0.06, bar]]) {
+        p.box(cx + x + dx - w / 2, cx + x + dx + w / 2, g0, gT, z + dz - d / 2, z + dz + d / 2, mat.castIron);  // feet / end pads
+      }
+    };
+    burner(-0.25, 0.24, 0.045); burner(-0.23, 0.452, 0.036);                                // left: back, front
+    burner(0.02, 0.36, 0.065, true);                                                        // wok, middle
+    burner(0.27, 0.26, 0.04); burner(0.24, 0.44, 0.032);                                    // right: back, front
+    for (let k = 0; k < 5; k++) {                                                           // knobs along the back edge
+      const x = cx + 0.05 + (k - 2) * 0.065, kz = F(0.115);
+      p.cyl(x, kz, 0.021, g0, g0 + 0.008, mat.stainless, 24);                               // chrome rim
+      p.cyl(x, kz, 0.017, g0 + 0.008, g0 + 0.03, mat.blackSteel, 24);                       // black knob
+      p.box(x - 0.002, x + 0.002, g0 + 0.03, g0 + 0.031, kz - 0.016, kz - 0.004, mat.printWhite);  // white mark
+      p.box(x + 0.012, x + 0.024, g0, g0 + 0.0005, F(0.078), F(0.068), mat.printWhite);     // burner icon in front of it
+    }
+    p.box(cx + 0.35, cx + 0.4, g0, g0 + 0.0005, F(0.08), F(0.065), mat.printWhite);         // Purity logo, front right
+  }
+  // Hood: Ecomatic 90 cm T-shape (H910B per the store tag), brushed stainless, full-width black-glass front with touch icons,
+  // LED lights. Ecomatic publishes no depth / heights: canopy 50 D x 7 H and a 26 x 23 chimney are typical
+  // T-shape sizes (assumed). Bottom 65 cm over the hob glass (the usual gas-hob minimum), 1.576, canopy top 1.646.
+  // A 90 cm oak lift-up cabinet sits on it (run(), HOODCAB0, 10 Nov 2026): its bottom 1 mm over the canopy top, so
+  // no chimney shows (Nagham asked); the duct runs up inside the cabinet.
+  const HOODCAB0 = 0.926 + 0.65 + 0.07 + 0.001;     // 1.647: on the canopy (top 1.646), 1 mm clear (no z-fighting)
+  function realHood(p, cx) {
+    // Per Nagham's store photo (price tag H910B, 90 cm stainless): brushed stainless canopy, a glossy black-glass
+    // strip over the canopy's whole front face (6 of its 7 cm), 4 small white touch icons on it a little left of
+    // centre, aluminium mesh grease filters underneath. Underside 1.576, top 1.646 (the oak cabinet sits on it).
+    const y0 = 0.926 + 0.65, y1 = y0 + 0.07, D = 0.5, hw = 0.45;
+    p.box(cx - hw, cx + hw, y0 + 0.012, y1, 0, D, mat.stainless);                            // canopy body / top
+    p.box(cx - hw + 0.005, cx + hw - 0.005, y0, y0 + 0.012, 0.005, D - 0.005, mat.stainless);  // underside rim
+    for (const s of [-1, 1]) p.box(cx + s * 0.2 - 0.17, cx + s * 0.2 + 0.17, y0 - 0.001, y0, 0.06, 0.4, mat.aluMesh);  // mesh grease filters
+    for (const s of [-1, 1]) for (let k = 1; k < 8; k++) p.box(cx + s * 0.2 - 0.17 + k * 0.0425 - 0.001, cx + s * 0.2 - 0.17 + k * 0.0425 + 0.001, y0 - 0.0015, y0 - 0.001, 0.06, 0.4, mat.grille);  // their frame bars
+    for (const x of [-0.3, 0.3]) p.cyl(cx + x, 0.44, 0.022, y0 - 0.002, y0, mat.downlight, 20);  // LED spots
+    p.box(cx - hw, cx + hw, y0 + 0.005, y1 - 0.005, D, D + 0.004, mat.hoodGlass);             // black-glass front, full width
+    for (const x of [-0.16, -0.12, -0.08, -0.04]) p.box(cx + x - 0.005, cx + x + 0.005, y0 + 0.03, y0 + 0.04, D + 0.004, D + 0.0045, mat.touchIcon);  // touch icons
+  }
+
   // --- Kitchen: U of white flat-panel units, oak uppers, wide black fridge ---------------------
   const K = { x0: 6.48, x1: 10.21, y0: 5.67, y1: 9.09, front: 0.6 };
   // sink / hob: centre along the run (null = none), sinkW / hobW: their widths (the hood matches the hob).
@@ -1283,17 +1341,27 @@ export function furnish(scene, M, mat, version = "main") {
         p.box(sink - sinkW / 2, sink + sinkW / 2, 0.921, 0.925, 0.09, 0.55, mat.blackSteel);
         p.cyl(sink, 0.06, 0.015, 0.92, 1.25, mat.chrome, 8);
       }
-      if (hob !== null) {
-        p.box(hob - hobW / 2, hob + hobW / 2, 0.921, 0.93, 0.06, 0.56, mat.blackGlass);
-        p.box(hob - hobW / 2, hob + hobW / 2, 1.5, 1.62, 0, 0.5, mat.chrome);
-      }
+      if (hob !== null) { realHob(p, hob); realHood(p, hob); }  // Nagham's real Purity hob + Ecomatic hood (10 Nov 2026)
+      // Under the hob the top front (0.62-0.88) is a fixed false front: the hob body (4.5 below the top, to 0.875)
+      // and its gas pipe sit behind it; the drawers below start at 0.62. No other change to the run.
       if (uppers) {
-        for (const sp of spans) {
+        // Over the hob the 90 cm of upper (the hood's width) is an oak lift-up cabinet 1.647-2.25 (60.3 cm) sitting on
+        // the canopy (top 1.646), so canopy and cabinet read as one block: the canopy's underside (1.576) lines up with
+        // the neighbours' LED strip (1.58) under their 1.60 bottoms, and the canopy stands 15 proud of the 35 fronts.
+        // The duct passes up through the cabinet. Same top line and white to the ceiling as the rest; no LED strip.
+        const cut = hob !== null ? [hob - 0.45, hob + 0.45] : null;
+        const upSpans = cut ? spans.flatMap(([a, b]) => b <= cut[0] || a >= cut[1] ? [[a, b]] : [[a, cut[0]], [cut[1], b]].filter(([u, v]) => v - u > 0.001)) : spans;
+        for (const sp of upSpans) {
           const [a, b] = ext(sp, up);
           if (b - a < 0.05) continue;
           p.box(a, b, 1.6, 2.25, 0, 0.35, mat.oakVeneer);
           p.box(a, b + (b > len / 2 ? 0.05 : 0), 1.58, 1.6, 0.05, 0.3, mat.ledStrip);  // into a corner: on to the next run's strip
           p.box(a, b, 2.25, M.ceiling, 0, 0.35, mat.whiteLacquer);
+        }
+        if (cut) {
+          p.box(cut[0], cut[1], HOODCAB0, 2.25, 0, 0.35, mat.oakVeneer);                     // lift-up cabinet over the hood
+          for (const x of cut) p.box(x - 0.002, x + 0.002, HOODCAB0, 2.25, 0.35, 0.353, shadowGap);  // its joints
+          p.box(cut[0], cut[1], 2.25, M.ceiling, 0, 0.35, mat.whiteLacquer);
         }
       }
     });
@@ -1327,34 +1395,89 @@ export function furnish(scene, M, mat, version = "main") {
     };
     item((XT + XE) / 2, WY, "N", tall(0.45, (p, w) => {
       // Owner's stack (cm from the floor): plinth 0-10, 90 pan drawer 10-66.5, oven 66.5-122.5, trim
-      // frame 122.5-164 (4.5 rail under a 59.5 x 37 niche, 127-164) holding a countertop microwave 127-159.6
-      // (turntable ~130), lift-up flaps 164-225 and 225-260. Single full-width fronts (no centre split), so the
+      // frame 122.5-172 (rail under a 66 x 43 niche, 129-172) holding a countertop microwave 129-161.6
+      // (turntable ~132), lift-up flaps 172-225 and 225-260. Single full-width fronts (no centre split), so the
       // only vertical joints are at the tower's edges.
-      const O0 = 0.665, O1 = 1.225, N0 = 1.27, N1 = 1.64, MH = 0.326;
+      const O0 = 0.665, O1 = 1.225, N0 = 1.29, N1 = 1.72, MH = 0.326;
       doors(p, -w, w, 0.1, O0, 1);                    // 90 pan drawer under the oven
-      // Oven: Purity 90 built-in, 89.5 W x 56 H x 60 D, centred; its fascia overlaps the carcass sides.
-      const ow = 0.4475;
-      p.box(-w, w, O0, O1, 0.02, D - 0.02, mat.blackSteel);                          // body in the carcass
-      p.box(-ow, ow, O0, O1, D - 0.02, D + 0.002, mat.blackGlass);                   // fascia
-      p.box(-ow + 0.07, ow - 0.07, O0 + 0.06, O0 + 0.40, D + 0.002, D + 0.004, mat.smokedGlass);  // its window
-      p.box(-0.36, 0.36, O0 + 0.43, O0 + 0.445, D + 0.002, D + 0.035, mat.chrome);   // bar handle
-      p.box(-ow, ow, O1 - 0.075, O1 - 0.005, D + 0.002, D + 0.004, mat.blackSteel);  // control strip
-      p.box(-0.04, 0.04, O1 - 0.048, O1 - 0.033, D + 0.004, D + 0.005, mat.ledStrip);
-      // Trim frame: one front panel 122.5-164 with the 59.5 x 37 niche cut out (4.5 rail below it, the
-      // oven clear of the microwave), a lined niche to the carcass back, ~2 side / 4.4 top for ventilation.
-      const nw = 0.2975;
-      p.box(-w, w, O1, N0, D - f, D, fin);                              // rail / bottom of the frame
-      for (const s of [-1, 1]) p.box(s > 0 ? nw : -w, s > 0 ? w : -nw, N0, N1, D - f, D, fin);  // frame sides
+      // Oven: Purity OPRQG90ST gas oven, 89.5 W x 59.5 H x 54.7 D (fascia): brushed stainless control panel with
+      // two stainless knobs and a black digital display in the middle, a large smoked black-glass drop-down door in
+      // a stainless frame, a full-width stainless bar handle. Bottom kept at 66.5 (raised over the pan drawer), top
+      // 126.0; the microwave shelf is raised 2 cm (board 127.2-129) so the oven clears it by 1.2 (10 Nov 2026).
+      const ow = 0.4475, OT = O0 + 0.595, fz = D + 0.022, CP = OT - 0.095;
+      p.box(-0.43, 0.43, O0 + 0.005, OT - 0.005, D - 0.525, D, mat.blackSteel);             // body in the carcass (86.4 clear)
+      p.box(-ow, ow, CP, OT, D, fz, mat.stainless, 0.003);                                   // control panel
+      // Per the product photo (kaufenegypt.com): Purity logo on the left of the strip, the knobs about 17 cm either
+      // side of a black display with red digits, the door black glass edge to edge (no steel frame) with a long
+      // stainless bar handle near its top and a small logo low in the middle (10 Nov 2026).
+      p.box(-0.115, 0.115, CP + 0.02, CP + 0.078, fz, fz + 0.002, mat.blackGlass);            // black display
+      p.box(-0.03, 0.03, CP + 0.044, CP + 0.056, fz + 0.002, fz + 0.003, mat.redDigits);      // its red digits
+      for (const x of [-0.08, -0.04, 0.04, 0.08]) p.box(x - 0.006, x + 0.006, CP + 0.026, CP + 0.032, fz + 0.002, fz + 0.003, mat.printWhite);  // touch keys
+      p.box(-0.42, -0.34, CP + 0.035, CP + 0.06, fz, fz + 0.0015, mat.blackSteel);           // Purity logo, left
+      for (const x of [-0.17, 0.17]) {                                                       // the two stainless knobs
+        p.cyl(x, fz + 0.012, 0.024, CP + 0.0475 - 0.012, CP + 0.0475 + 0.012, mat.stainless, 28).rotation.x = Math.PI / 2;
+        p.box(x - 0.003, x + 0.003, CP + 0.05, CP + 0.068, fz + 0.024, fz + 0.025, mat.blackSteel);  // its pointer
+      }
+      p.box(-ow, ow, O0, CP - 0.003, D, fz, mat.blackGlass, 0.003);                          // door: black glass all over
+      p.box(-ow + 0.09, ow - 0.09, O0 + 0.1, CP - 0.08, fz, fz + 0.001, mat.smokedGlass);     // window
+      p.box(-0.012, 0.012, O0 + 0.04, O0 + 0.065, fz, fz + 0.0015, mat.printWhite);           // small logo, low centre
+      p.box(-0.41, 0.41, CP - 0.03, CP - 0.015, fz + 0.03, fz + 0.042, mat.stainless);        // full-width bar handle
+      for (const x of [-0.395, 0.395]) p.box(x - 0.008, x + 0.008, CP - 0.03, CP - 0.015, fz, fz + 0.03, mat.stainless);
+      // Trim frame: one front panel 122.5-172 with the niche cut out (rail below it, the oven clear of the
+      // microwave), a lined niche to the carcass back. Nagham's FRESH FMW-42KCG-BW (55.3 W x 32.6 H x 44 D) needs
+      // ~10 above / ~5 each side, so the niche is 66 W x 43 H x 56.2 D (was 59.5 x 35): 5.35 each side, 10.4 above,
+      // ~10 behind (10 Nov 2026); the lift-up flap over it is 172-225.
+      // "Looks built in without being built in" (Nagham, 10 Nov 2026): the fixed frame is now one side-hinged door
+      // in the tower finish over the whole niche, 86.1 W x 45.6 H (126.2-171.8, 2 mm joints, flap above kept),
+      // with a 56.3 x 33.6 window cut out round the microwave's front (5 mm reveal); the microwave stands 2 cm
+      // behind it, so closed it reads like a built-in. Hinged on the left (east, away from the controls on the
+      // right), it opens out to 95 degrees into the open floor east of the tower, clear of the fridge and walls.
+      // Ventilation: 5.35 each side, 10.4 above, ~10 behind; the niche back is cut out behind a vent grille and the
+      // niche top stops 5 short of the back, so warm air rises into the cupboard over it (vent its back too); the
+      // cut-out and the door's joints let air in at the front. The microwave plugs in behind, at the back grille.
+      const nw = 0.33;
       for (const s of [-1, 1]) p.box(s > 0 ? nw : -nw - f, s > 0 ? nw + f : -nw, N0, N1, 0.02, D - f, fin);  // niche sides
-      p.box(-nw, nw, N0 - f, N0, 0.02, D - f, fin);                    // niche shelf at 127
-      p.box(-nw, nw, N1, N1 + f, 0.02, D, fin);                        // niche top
-      // Countertop microwave 55.3 W x 32.6 H x 44 D on the shelf, centred, front 1.5 behind the frame face.
-      const mw = 0.2765, mz = D - 0.015;
-      p.box(-mw, mw, N0, N0 + MH, mz - 0.44, mz - 0.02, mat.blackSteel);            // cabinet
-      p.box(-mw, mw, N0, N0 + MH, mz - 0.02, mz, mat.blackGlass);                   // door
-      p.box(-mw + 0.03, mw - 0.16, N0 + 0.03, N0 + MH - 0.03, mz, mz + 0.002, mat.smokedGlass);
-      p.box(mw - 0.13, mw - 0.03, N0 + MH - 0.05, N0 + MH - 0.035, mz, mz + 0.002, mat.ledStrip);  // display
-      for (const y of [O0, O1, N1]) p.box(-w, w, y - 0.002, y + 0.002, D, D + 0.003, shadowGap);
+      p.box(-nw, nw, N0 - f, N0, 0.02, D - f, fin);                    // niche shelf, raised 2 cm: board 127.2-129
+      p.box(-nw, nw, N1, N1 + f, 0.07, D - f, fin);                    // niche top, a 5 cm vent slot behind it
+      p.box(-0.25, 0.25, N0 + 0.04, N1 - 0.04, 0.02, 0.023, mat.grille);  // vent grille in the cut-out niche back
+      {
+        const dg = new THREE.Group(), dq = part(dg), dy0 = O1 + 0.037, dy1 = N1 - 0.002, cw = 0.2815, cy0 = N0 + 0.005, cy1 = N0 + MH + 0.005;
+        dg.position.set(-w, 0, D - f);                                 // hinge line: the door's left (east) edge
+        p.g.add(dg);
+        const W2 = 2 * w;
+        dq.box(0.0015, w - cw, dy0, dy1, 0, f, fin);                   // left stile
+        dq.box(w + cw, W2 - 0.0015, dy0, dy1, 0, f, fin);              // right stile
+        dq.box(w - cw, w + cw, dy0, cy0, 0, f, fin);                   // bottom rail
+        dq.box(w - cw, w + cw, cy1, dy1, 0, f, fin);                   // top rail
+        dq.box(0.0015, W2 - 0.0015, dy0 - 0.002, dy0, f, f + 0.003, shadowGap);
+        dg.userData.openable = { id: "microwave-cabinet", label: "Microwave cabinet", leaves: [{ obj: dg, axis: "y", open: -95 * Math.PI / 180 }],
+          anchor: new THREE.Vector3(w, (dy0 + dy1) / 2, f + 0.06), reach: 1.8, duration: 0.6 };
+      }
+      // FRESH FMW-42KCG-BW, 42 L, black, 1000 W microwave / 1500 W grill: 55.3 W x 32.6 H x 44 D (fresh.com.eg),
+      // countertop, on the shelf, centred, its front 2 cm behind the cabinet door. Black body, black-glass door with a
+      // tinted window and a vertical bar handle at its right edge, and a black-glass control panel on the right
+      // (LED display at the top, touch buttons below). Local x: + is the viewer's right.
+      const mw = 0.2765, mz = D - f - 0.02, cp = mw - 0.12, b0 = N0 + 0.01, b1 = N0 + MH;
+      p.label("countertop microwave", p => {  // a part of its own: Move and Resize picks it (e2e J055 / J169)
+        p.box(-mw, mw, b0, b1, mz - 0.44, mz - 0.022, mat.blackSteel, 0.006);         // cabinet
+        for (const x of [-mw + 0.04, mw - 0.04]) for (const z of [mz - 0.4, mz - 0.06]) p.cyl(x, z, 0.012, N0, b0, mat.blackSteel, 12);  // feet
+        p.box(-mw, cp - 0.002, b0, b1, mz - 0.022, mz, mat.blackGlass, 0.004);         // door
+        // Per the product image (fresh.com.eg): a dotted black window, a black vertical bar handle the door's full
+        // height at its right edge, the white FRESH logo low on the door, and on the black panel a display at the
+        // top over 3 columns of white-printed keys (8 function, a 3 x 4 keypad, stop / 0 / start).
+        p.box(-mw + 0.04, cp - 0.07, b0 + 0.045, b1 - 0.045, mz, mz + 0.002, mat.smokedGlass);  // dotted window
+        p.box(cp - 0.04, cp - 0.022, b0 + 0.006, b1 - 0.006, mz, mz + 0.022, mat.blackSteel, 0.004);  // full-height bar handle (right)
+        p.box(cp - 0.04, cp - 0.036, b0 + 0.006, b1 - 0.006, mz + 0.022, mz + 0.023, mat.printWhite);  // its fine white edge line
+        p.box(-0.08, -0.02, b0 + 0.016, b0 + 0.026, mz, mz + 0.0025, mat.printWhite);   // FRESH logo
+        p.box(cp, mw, b0, b1, mz - 0.022, mz, mat.blackGlass, 0.004);                  // control panel
+        p.box(cp + 0.02, mw - 0.02, b1 - 0.06, b1 - 0.025, mz, mz + 0.001, mat.blackSteel);  // display window
+        p.box(cp + 0.035, mw - 0.035, b1 - 0.048, b1 - 0.037, mz + 0.001, mz + 0.002, mat.redDigits);  // its digits
+        for (let r = 0; r < 8; r++) for (let c = 0; c < 3; c++) {                      // white-printed keys, 3 across
+          const x = cp + 0.025 + c * 0.035, y = b1 - 0.085 - r * 0.026;
+          p.box(x - 0.011, x + 0.011, y - 0.005, y + 0.005, mz, mz + 0.001, mat.printWhite);
+        }
+      });
+      for (const y of [O0, N1]) p.box(-w, w, y - 0.002, y + 0.002, D, D + 0.003, shadowGap);
       doors(p, -w, w, N1, 2.25, 1);                   // lift-up flaps to the ceiling,
       doors(p, -w, w, 2.25, H, 1);                    // jointed in line with the oak uppers
       for (const s of [-1, 1]) p.box(s * 0.45 - 0.003, s * 0.45 + 0.003, 0.1, H, D - 0.004, D + 0.003, shadowGap);  // the joints at its edges
@@ -1392,26 +1515,36 @@ export function furnish(scene, M, mat, version = "main") {
   } else {
     run((K.x0 + 8.6) / 2, K.y0, "N", 8.6 - K.x0, { uppers: false });                 // south run
   }
-  // Tall column in the DWG dishwasher block (0.623 wide, y 7.815 to 8.438), floor to ceiling, as in
-  // the designer's render: recessed plinth, base front to 0.6, raised dishwasher 0.6-1.42, open
-  // dish-rack niche 1.42-1.82, flush cupboards to the ceiling. Fronts at F, flush with the fridge surround.
+  // Tall column for the dishwasher, floor to ceiling, as in the designer's render: recessed plinth, base front to
+  // 0.6, raised dishwasher 0.6-1.45, open dish-rack niche, flush cupboards to the ceiling. Nagham's, 10 Nov 2026:
+  // widened to 0.66 (y 7.778 to 8.438, DWG block dfs resized) for the freestanding Beko BDFN15420B (59.8 W x 85 H x
+  // 60 D, black, top not removable): 62.4 clear, 1.3 each side; 0.73 deep (flush with the fridge surround) so 11
+  // stays behind it for hoses; niche floor raised 4 (board 1.46-1.478), 1 over the dishwasher's top.
   const dishwasher = p => {
-    const H = M.ceiling, F = K.front + 0.02, hw = 0.3115, t = 0.018, w = hw - t;  // w: inside the carcass sides
+    const H = M.ceiling, F = 0.73, hw = 0.33, t = 0.018, w = hw - t;  // w: inside the carcass sides
     for (const s of [-1, 1]) p.box(s > 0 ? w : -hw, s > 0 ? hw : -w, 0, H, 0, F, mat.whiteLacquer);  // carcass sides
     p.box(-w, w, 0.1, H, 0, 0.02, mat.whiteLacquer);                              // back (seen in the niche)
-    p.box(-w, w, 0, 0.1, 0.06, K.front - 0.06, mat.darkTop);                       // plinth, in line with the runs'
-    p.box(-w, w, 0.02, 0.04, K.front - 0.08, K.front - 0.06, mat.ledStrip);
+    p.box(-w, w, 0, 0.1, 0.06, F - 0.06, mat.darkTop);                             // recessed plinth
+    p.box(-w, w, 0.02, 0.04, F - 0.08, F - 0.06, mat.ledStrip);
     p.box(-w, w, 0.1, 0.6, 0.02, F, mat.whiteLacquer);                             // base cupboard
-    p.box(-w, w, 0.6, 1.42, 0.02, F - 0.01, mat.blackSteel);                       // dishwasher body
-    p.box(-w + 0.002, w - 0.002, 0.602, 1.418, F - 0.01, F, mat.blackGlass);      // dark glass front
-    p.box(-w + 0.002, w - 0.002, 1.37, 1.418, F, F + 0.002, mat.blackSteel);      // control strip
-    p.box(-0.05, 0.05, 1.388, 1.4, F + 0.002, F + 0.003, mat.ledStrip);           // its display
-    p.box(-0.2, 0.2, 1.335, 1.347, F, F + 0.018, mat.chrome);                     // slim pull
-    p.box(-w, w, 1.42, 1.438, 0.02, F, mat.whiteLacquer);                          // niche floor
-    p.box(-w + 0.03, w - 0.03, 1.44, 1.45, 0.08, F - 0.06, mat.chrome);           // wire rack: tray and rails
-    for (const [y, z] of [[1.52, 0.1], [1.52, F - 0.08], [1.6, 0.1]]) p.box(-w + 0.03, w - 0.03, y, y + 0.008, z, z + 0.008, mat.chrome);
-    for (let k = 0; k < 7; k++) p.cyl(-0.18 + k * 0.035, 0.3, 0.11, 1.554, 1.566, mat.ceramic, 20).rotation.z = Math.PI / 2;  // plates on edge
-    for (const x of [0.12, 0.2]) p.cyl(x, 0.45, 0.04, 1.45, 1.55, mat.ceramic, 12);  // cups
+    const dw = 0.299, d0 = 0.6, d1 = d0 + 0.85, z1 = F - 0.002, z0 = z1 - 0.6;     // dishwasher, front 2 mm behind the face
+    p.box(-dw, dw, d0, d1 - 0.004, z0, z1 - 0.025, mat.blackInox);                  // cabinet
+    p.box(-dw, dw, d1 - 0.004, d1, z0, z1, mat.blackInox);                          // worktop lid
+    p.box(-dw, dw, d0, d0 + 0.09, z1 - 0.035, z1 - 0.025, mat.darkTop);             // toe kick on its feet
+    // Per the product image (abdulaziz-stores.com): a plain black door, a centred recessed handle panel at its top
+    // (chrome pull edge over a black-glass panel with red digits and white key labels), the small beko logo above.
+    p.box(-dw + 0.001, dw - 0.001, d0 + 0.09, d1 - 0.004, z1 - 0.025, z1, mat.blackInox, 0.003);  // door
+    p.box(-0.12, 0.12, d1 - 0.1, d1 - 0.035, z1 - 0.012, z1 + 0.0005, mat.blackGlass);  // recessed handle / control panel
+    p.box(-0.12, 0.12, d1 - 0.04, d1 - 0.035, z1 - 0.012, z1 + 0.004, mat.chrome);      // chrome pull edge along its top
+    for (const x of [-0.05, -0.025, 0]) p.box(x - 0.005, x + 0.005, d1 - 0.062, d1 - 0.054, z1 + 0.0005, z1 + 0.0015, mat.redDigits);  // red indicators
+    for (let k = 0; k < 6; k++) p.box(-0.1 + k * 0.04, -0.085 + k * 0.04, d1 - 0.082, d1 - 0.078, z1 + 0.0005, z1 + 0.0015, mat.printWhite);  // key labels
+    p.box(-0.02, 0.02, d1 - 0.03, d1 - 0.02, z1, z1 + 0.001, mat.printWhite);       // beko logo
+    const nf = 1.478;                                                              // niche floor top (was 1.438)
+    p.box(-w, w, nf - 0.018, nf, 0.02, F, mat.whiteLacquer);                       // niche floor
+    p.box(-w + 0.03, w - 0.03, nf + 0.002, nf + 0.012, 0.08, F - 0.06, mat.chrome);  // wire rack: tray and rails
+    for (const [y, z] of [[nf + 0.082, 0.1], [nf + 0.082, F - 0.08], [nf + 0.162, 0.1]]) p.box(-w + 0.03, w - 0.03, y, y + 0.008, z, z + 0.008, mat.chrome);
+    for (let k = 0; k < 7; k++) p.cyl(-0.18 + k * 0.035, 0.35, 0.11, nf + 0.116, nf + 0.128, mat.ceramic, 20).rotation.z = Math.PI / 2;  // plates on edge
+    for (const x of [0.12, 0.2]) p.cyl(x, 0.5, 0.04, nf + 0.012, nf + 0.112, mat.ceramic, 12);  // cups
     p.box(-w, w, 1.82, H, 0.02, F, mat.whiteLacquer);                              // cupboards to the ceiling
     p.box(-w, w, 2.248, 2.252, F, F + 0.003, shadowGap);                          // joint in line with the oak uppers
   };
@@ -1419,7 +1552,7 @@ export function furnish(scene, M, mat, version = "main") {
   // dishwasher column (0.623), then the counter only from the column to the corner: past the north
   // run's front (y 8.49) just a 0.05 m filler shows, closed by the column's side panel.
   run(K.x1, (8.438 + K.y1) / 2, "W", K.y1 - 8.438);
-  item(K.x1, 8.1265, "W", dishwasher);
+  item(K.x1, 8.108, "W", dishwasher);
   if (["kareems-changes", "karims-version"].includes(version)) item(9.93, 8.80, "W", p => {
     // Countertop dispenser: nominal 31.5 W x 42.5 D x 54 H cm; sits on the 92 cm counter.
     const b = 0.92;
@@ -1435,12 +1568,30 @@ export function furnish(scene, M, mat, version = "main") {
     }
     for (let i = 0; i < 7; i++) p.box(-0.11, 0.11, b + 0.041, b + 0.044, 0.35 + i * 0.01, 0.354 + i * 0.01, mat.chrome);
   });
-  item(K.x1, 7.3235, "W", p => {
-    p.box(-0.4955, 0.4955, 0, 1.9, 0.02, 0.6, mat.blackSteel, 0.01);         // fridge
-    for (const x of [-0.03, 0.01]) p.box(x, x + 0.02, 0.9, 1.4, 0.6, 0.62, mat.chrome);  // pulls of the two doors
-    p.box(0.4775, 0.4975, 0, M.ceiling, 0, K.front + 0.02, mat.whiteLacquer);  // tall surround (the column's side on the other)
-    p.box(-0.4915, 0.4775, 1.9, M.ceiling, 0, K.front + 0.02, mat.whiteLacquer);  // cupboards over it
-    p.box(-0.009, -0.005, 1.92, M.ceiling - 0.02, K.front + 0.02, K.front + 0.023, shadowGap);  // between the two doors
+  item(K.x1, 7.338, "W", p => {
+    // Beko RCNE590E35ZXP3 (Nagham's, 10 Nov 2026): freestanding bottom freezer, 78 W x 187.7 H x 76 D, NeoFrost,
+    // HarvestFresh, matte black. Bay per the Beko manual (5 cm to the sides, ceiling and back wall in an alcove):
+    // y 6.878 to 7.778 (DWG block wgsfd at y 6.948 to 7.728): 5 cm vent gap to the dishwasher column's 1.8 side
+    // panel (north), the fridge, a 5 cm vent gap, then a 2 cm tall end panel (y 6.878 to 6.898) ending the run.
+    // The gaps are lined in charcoal at the wall and a charcoal vent grille sits 4 cm back in the 5.3 cm gap over
+    // it (the cupboards start at 1.93), so they read as deliberate shadow reveals round the black fridge. 5 cm off
+    // the back wall; surround 73 deep, so the doors stand 8 proud; hinged on the south, the door swings past 90
+    // (115+) into the 5 cm gap, clear of the end panel. Local x: +x = south.
+    const fw = 0.39, fH = 1.877, fz0 = 0.05, fz1 = 0.81, dz = fz1 - 0.06, split = 0.735, S = 0.73, o = 0.44, G = 0.05;
+    p.box(-fw, fw, 0.02, fH, fz0, dz, mat.anthraciteInox, 0.01);                          // cabinet
+    p.box(-fw + 0.02, fw - 0.02, 0, 0.02, fz0 + 0.05, dz - 0.06, mat.darkTop);            // feet / base grille
+    p.box(-fw, fw, split + 0.022, fH, dz, fz1, mat.anthraciteInox, 0.008);                // fridge door
+    p.box(-fw, fw, 0.02, split - 0.022, dz, fz1, mat.anthraciteInox, 0.008);              // freezer door
+    p.box(-fw + 0.004, fw - 0.004, split - 0.022, split + 0.022, dz + 0.004, fz1 - 0.012, mat.blackSteel);  // recessed handle line at the split
+    p.box(-0.055, 0.055, 1.6, 1.66, fz1, fz1 + 0.002, mat.blackGlass);                    // touch display, top centre
+    for (const x of [-0.036, -0.012, 0.012, 0.036]) p.box(x - 0.005, x + 0.005, 1.625, 1.635, fz1 + 0.002, fz1 + 0.003, mat.ledStrip);
+    p.box(-0.05, 0.05, 1.78, 1.795, fz1, fz1 + 0.002, mat.stainless);                     // silver Beko logo
+    p.box(o, o + 0.02, 0, M.ceiling, 0, S, mat.whiteLacquer);                             // tall end panel, south
+    for (const s of [-1, 1]) p.box(s > 0 ? fw : -fw - G, s > 0 ? fw + G : -fw, 0, 1.93, 0, 0.004, mat.grille);  // charcoal lining, vent gaps
+    p.box(-o, o, 1.93 - 0.006, 1.93, 0.04, S - 0.04, mat.grille);                         // vent grille over the fridge, 4 back
+    for (let k = 0; k < 14; k++) p.box(-o + 0.03 + k * 0.06, -o + 0.05 + k * 0.06, 1.923, 1.924, 0.06, S - 0.06, mat.darkTop);  // its slots
+    p.box(-o, o, 1.93, M.ceiling, 0, S, mat.whiteLacquer);                                // cupboards over it
+    p.box(-0.002, 0.002, 1.95, M.ceiling - 0.02, S, S + 0.003, shadowGap);                // between the two doors
   });
 
   // --- Laundry: full-height oak joinery on the left, counter and stacked machines ahead ---------

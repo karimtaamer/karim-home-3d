@@ -1128,54 +1128,61 @@ export function furnish(scene, M, mat, version = "main") {
 
   // --- Nagham's real appliances (bought at Al Morshedy, 29 Oct 2026), real maker sizes ------------------
   // Local frame of a run / item: x along the run, y up from the floor, z out from the wall (0 = wall face).
-  // Hob: Purity HPT911 MAT-BL, 87 W x 52 D x 5 H cm, cut-out 84 x 49; matte black glass, 5 Sabaf burners
-  // (triple-ring wok in the middle, two each side) with stainless spill rings, three black cast-iron grids, and
-  // five black knobs with silver rims on the front right (as on the shelf model).
+  // Hob: Purity HPT911 MAT-BL, 87 W x 52 D x 5 H cm, cut-out 84 x 49. Per Nagham's store photo (10 Nov 2026): matte
+  // dark charcoal-grey glass, five burners (two on the left, back and front; a big wok in the middle; two on the
+  // right) each under its own black cast-iron cross support, and the five black knobs with chrome rims and white
+  // marks in a row along the back edge, right of centre, a small white burner icon behind each; Purity logo back
+  // right. Local frame: x along the run (+x = the viewer's right), z out from the wall (0.04 back edge, 0.56 front).
   function realHob(p, cx) {
     const top = 0.92, g0 = top + 0.006, z0 = 0.04, z1 = 0.56, hw = 0.435;
     p.box(cx - 0.42, cx + 0.42, top - 0.045, top, z0 + 0.015, z1 - 0.015, mat.blackSteel);   // body in the 84 x 49 cut-out
     p.box(cx + 0.3, cx + 0.33, top - 0.06, top - 0.045, 0.1, 0.45, mat.brass);              // gas inlet (right) and its pipe
-    p.box(cx - hw, cx + hw, top, g0, z0, z1, mat.matteBlackGlass, 0.004);                   // 87 x 52 glass top
-    const burner = (x, z, r) => {                                                           // spill ring, crown, cap
-      p.cyl(cx + x, z, r + 0.012, g0, g0 + 0.004, mat.stainless, 28);
-      p.cyl(cx + x, z, r, g0 + 0.004, g0 + 0.016, mat.stainless, 28);
-      p.cyl(cx + x, z, r * 0.8, g0 + 0.016, g0 + 0.021, mat.castIron, 28);
-    };
-    burner(0, 0.26, 0.06); p.cyl(cx, 0.26, 0.03, g0 + 0.021, g0 + 0.026, mat.castIron, 24);   // wok, its inner ring
-    burner(-0.29, 0.15, 0.035); burner(-0.29, 0.37, 0.026);                                 // left: semi-rapid back, auxiliary front
-    burner(0.29, 0.15, 0.042); burner(0.29, 0.37, 0.035);                                   // right: rapid back, semi-rapid front
+    p.box(cx - hw, cx + hw, top, g0, z0, z1, mat.hobGreyGlass, 0.004);                      // 87 x 52 matte charcoal glass
     const gT = g0 + 0.03, bar = 0.012;
-    for (const [a, b] of [[-0.43, -0.152], [-0.148, 0.148], [0.152, 0.43]]) {               // three cast-iron grids
-      const ga = cx + a, gb = cx + b, gz0 = 0.045, gz1 = 0.47;
-      p.box(ga, gb, gT - bar, gT, gz0, gz0 + bar, mat.castIron); p.box(ga, gb, gT - bar, gT, gz1 - bar, gz1, mat.castIron);
-      p.box(ga, ga + bar, gT - bar, gT, gz0, gz1, mat.castIron); p.box(gb - bar, gb, gT - bar, gT, gz0, gz1, mat.castIron);
-      const m = (ga + gb) / 2;
-      p.box(m - bar / 2, m + bar / 2, gT - bar, gT, gz0, gz1, mat.castIron);                // fingers over the burners
-      for (const z of [0.15, 0.26, 0.37]) p.box(ga, gb, gT - bar, gT, z - bar / 2, z + bar / 2, mat.castIron);
-      for (const x of [ga + 0.01, gb - 0.01]) for (const z of [gz0 + 0.01, gz1 - 0.01]) p.cyl(x, z, 0.007, g0, gT - bar, mat.castIron, 8);
+    const burner = (x, z, r, wok) => {
+      p.cyl(cx + x, z, r + 0.01, g0, g0 + 0.005, mat.blackSteel, 28);                       // base
+      p.cyl(cx + x, z, r, g0 + 0.005, g0 + 0.016, wok ? mat.stainless : mat.blackSteel, 28);  // crown (chrome on the wok)
+      p.cyl(cx + x, z, r * 0.78, g0 + 0.016, g0 + 0.021, mat.castIron, 28);                 // enamelled cap
+      if (wok) p.cyl(cx + x, z, r * 0.4, g0 + 0.021, g0 + 0.026, mat.castIron, 24);
+      const R = r + 0.06;                                                                  // its own cast-iron cross support
+      p.box(cx + x - R, cx + x + R, gT - bar, gT, z - bar / 2, z + bar / 2, mat.castIron);
+      p.box(cx + x - bar / 2, cx + x + bar / 2, gT - bar, gT, z - R, z + R, mat.castIron);
+      for (const [dx, dz, w, d] of [[-R, 0, bar, 0.06], [R, 0, bar, 0.06], [0, -R, 0.06, bar], [0, R, 0.06, bar]]) {
+        p.box(cx + x + dx - w / 2, cx + x + dx + w / 2, g0, gT, z + dz - d / 2, z + dz + d / 2, mat.castIron);  // feet / end pads
+      }
+    };
+    burner(-0.25, 0.24, 0.045); burner(-0.23, 0.452, 0.036);                                // left: back, front
+    burner(0.02, 0.36, 0.065, true);                                                        // wok, middle
+    burner(0.27, 0.26, 0.04); burner(0.24, 0.44, 0.032);                                    // right: back, front
+    for (let k = 0; k < 5; k++) {                                                           // knobs along the back edge
+      const x = cx + 0.05 + (k - 2) * 0.065, kz = 0.115;
+      p.cyl(x, kz, 0.021, g0, g0 + 0.008, mat.stainless, 24);                               // chrome rim
+      p.cyl(x, kz, 0.017, g0 + 0.008, g0 + 0.03, mat.blackSteel, 24);                       // black knob
+      p.box(x - 0.002, x + 0.002, g0 + 0.03, g0 + 0.031, kz + 0.004, kz + 0.016, mat.printWhite);  // white mark
+      p.box(x + 0.012, x + 0.024, g0, g0 + 0.0005, 0.068, 0.078, mat.printWhite);           // burner icon behind it
     }
-    for (let k = 0; k < 5; k++) {                                                           // knobs, front right
-      const x = cx + 0.1 + k * 0.075;
-      p.cyl(x, 0.515, 0.021, g0, g0 + 0.006, mat.stainless, 24);                            // silver rim
-      p.cyl(x, 0.515, 0.018, g0 + 0.006, g0 + 0.03, mat.blackSteel, 24);
-      p.box(x - 0.003, x + 0.003, g0 + 0.03, g0 + 0.031, 0.497, 0.515, mat.stainless);
-    }
+    p.box(cx + 0.35, cx + 0.4, g0, g0 + 0.0005, 0.065, 0.08, mat.printWhite);               // Purity logo, back right
   }
-  // Hood: Ecomatic H910TTBK (the black H910TT), 90 cm T-shape, black finish all over (body and front), black-glass touch strip,
+  // Hood: Ecomatic 90 cm T-shape (H910B per the store tag), brushed stainless, full-width black-glass front with touch icons,
   // LED lights. Ecomatic publishes no depth / heights: canopy 50 D x 7 H and a 26 x 23 chimney are typical
   // T-shape sizes (assumed). Bottom 65 cm over the hob glass (the usual gas-hob minimum), 1.576, canopy top 1.646.
   // A 90 cm oak lift-up cabinet sits on it (run(), HOODCAB0, 10 Nov 2026): its bottom 1 mm over the canopy top, so
   // no chimney shows (Nagham asked); the duct runs up inside the cabinet.
   const HOODCAB0 = 0.926 + 0.65 + 0.07 + 0.001;     // 1.647: on the canopy (top 1.646), 1 mm clear (no z-fighting)
   function realHood(p, cx) {
+    // Per Nagham's store photo (price tag H910B, 90 cm stainless): brushed stainless canopy, a glossy black-glass
+    // strip over the canopy's whole front face (6 of its 7 cm), 4 small white touch icons on it a little left of
+    // centre, aluminium mesh grease filters underneath. Underside 1.576, top 1.646 (the oak cabinet sits on it).
     const y0 = 0.926 + 0.65, y1 = y0 + 0.07, D = 0.5, hw = 0.45;
-    p.box(cx - hw, cx + hw, y0 + 0.012, y1, 0, D, mat.hoodBlack);                            // canopy, black
-    p.box(cx - hw + 0.005, cx + hw - 0.005, y0, y0 + 0.012, 0.005, D - 0.005, mat.hoodBlack);  // underside rim
-    for (const s of [-1, 1]) p.box(cx + s * 0.2 - 0.17, cx + s * 0.2 + 0.17, y0 - 0.001, y0, 0.06, 0.4, mat.grille);  // grease filters
+    p.box(cx - hw, cx + hw, y0 + 0.012, y1, 0, D, mat.stainless);                            // canopy body / top
+    p.box(cx - hw + 0.005, cx + hw - 0.005, y0, y0 + 0.012, 0.005, D - 0.005, mat.stainless);  // underside rim
+    for (const s of [-1, 1]) p.box(cx + s * 0.2 - 0.17, cx + s * 0.2 + 0.17, y0 - 0.001, y0, 0.06, 0.4, mat.aluMesh);  // mesh grease filters
+    for (const s of [-1, 1]) for (let k = 1; k < 8; k++) p.box(cx + s * 0.2 - 0.17 + k * 0.0425 - 0.001, cx + s * 0.2 - 0.17 + k * 0.0425 + 0.001, y0 - 0.0015, y0 - 0.001, 0.06, 0.4, mat.grille);  // their frame bars
     for (const x of [-0.3, 0.3]) p.cyl(cx + x, 0.44, 0.022, y0 - 0.002, y0, mat.downlight, 20);  // LED spots
-    p.box(cx - 0.15, cx + 0.15, y0 + 0.015, y1 - 0.012, D, D + 0.003, mat.blackGlass);         // black-glass touch strip
-    for (const x of [-0.1, -0.05, 0, 0.05, 0.1]) p.box(cx + x - 0.006, cx + x + 0.006, y0 + 0.032, y0 + 0.037, D + 0.003, D + 0.004, mat.ledStrip);
+    p.box(cx - hw, cx + hw, y0 + 0.005, y1 - 0.005, D, D + 0.004, mat.hoodGlass);             // black-glass front, full width
+    for (const x of [-0.16, -0.12, -0.08, -0.04]) p.box(cx + x - 0.005, cx + x + 0.005, y0 + 0.03, y0 + 0.04, D + 0.004, D + 0.0045, mat.touchIcon);  // touch icons
   }
+
   // --- Kitchen: U of white flat-panel units, oak uppers, wide black fridge ---------------------
   const K = { x0: 6.48, x1: 10.21, y0: 5.67, y1: 9.09, front: 0.6 };
   // sink / hob: centre along the run (null = none), sinkW / hobW: their widths (the hood matches the hob).
@@ -1264,15 +1271,20 @@ export function furnish(scene, M, mat, version = "main") {
       const ow = 0.4475, OT = O0 + 0.595, fz = D + 0.022, CP = OT - 0.095;
       p.box(-0.43, 0.43, O0 + 0.005, OT - 0.005, D - 0.525, D, mat.blackSteel);             // body in the carcass (86.4 clear)
       p.box(-ow, ow, CP, OT, D, fz, mat.stainless, 0.003);                                   // control panel
-      p.box(-0.065, 0.065, CP + 0.028, CP + 0.07, fz, fz + 0.002, mat.blackGlass);            // black display
-      p.box(-0.035, 0.035, CP + 0.044, CP + 0.054, fz + 0.002, fz + 0.003, mat.ledStrip);     // its digits
-      for (const x of [-0.31, 0.31]) {                                                       // the two stainless knobs
+      // Per the product photo (kaufenegypt.com): Purity logo on the left of the strip, the knobs about 17 cm either
+      // side of a black display with red digits, the door black glass edge to edge (no steel frame) with a long
+      // stainless bar handle near its top and a small logo low in the middle (10 Nov 2026).
+      p.box(-0.115, 0.115, CP + 0.02, CP + 0.078, fz, fz + 0.002, mat.blackGlass);            // black display
+      p.box(-0.03, 0.03, CP + 0.044, CP + 0.056, fz + 0.002, fz + 0.003, mat.redDigits);      // its red digits
+      for (const x of [-0.08, -0.04, 0.04, 0.08]) p.box(x - 0.006, x + 0.006, CP + 0.026, CP + 0.032, fz + 0.002, fz + 0.003, mat.printWhite);  // touch keys
+      p.box(-0.42, -0.34, CP + 0.035, CP + 0.06, fz, fz + 0.0015, mat.blackSteel);           // Purity logo, left
+      for (const x of [-0.17, 0.17]) {                                                       // the two stainless knobs
         p.cyl(x, fz + 0.012, 0.024, CP + 0.0475 - 0.012, CP + 0.0475 + 0.012, mat.stainless, 28).rotation.x = Math.PI / 2;
         p.box(x - 0.003, x + 0.003, CP + 0.05, CP + 0.068, fz + 0.024, fz + 0.025, mat.blackSteel);  // its pointer
       }
-      p.box(-ow, ow, O0, CP - 0.003, D, fz, mat.stainless, 0.003);                           // door: stainless frame
-      p.box(-ow + 0.03, ow - 0.03, O0 + 0.03, CP - 0.045, fz, fz + 0.002, mat.blackGlass);    // black glass
-      p.box(-ow + 0.09, ow - 0.09, O0 + 0.08, CP - 0.1, fz + 0.002, fz + 0.003, mat.smokedGlass);  // smoked window
+      p.box(-ow, ow, O0, CP - 0.003, D, fz, mat.blackGlass, 0.003);                          // door: black glass all over
+      p.box(-ow + 0.09, ow - 0.09, O0 + 0.1, CP - 0.08, fz, fz + 0.001, mat.smokedGlass);     // window
+      p.box(-0.012, 0.012, O0 + 0.04, O0 + 0.065, fz, fz + 0.0015, mat.printWhite);           // small logo, low centre
       p.box(-0.41, 0.41, CP - 0.03, CP - 0.015, fz + 0.03, fz + 0.042, mat.stainless);        // full-width bar handle
       for (const x of [-0.395, 0.395]) p.box(x - 0.008, x + 0.008, CP - 0.03, CP - 0.015, fz, fz + 0.03, mat.stainless);
       // Trim frame: one front panel 122.5-172 with the niche cut out (rail below it, the oven clear of the
@@ -1314,15 +1326,19 @@ export function furnish(scene, M, mat, version = "main") {
         p.box(-mw, mw, b0, b1, mz - 0.44, mz - 0.022, mat.blackSteel, 0.006);         // cabinet
         for (const x of [-mw + 0.04, mw - 0.04]) for (const z of [mz - 0.4, mz - 0.06]) p.cyl(x, z, 0.012, N0, b0, mat.blackSteel, 12);  // feet
         p.box(-mw, cp - 0.002, b0, b1, mz - 0.022, mz, mat.blackGlass, 0.004);         // door
-        p.box(-mw + 0.035, cp - 0.06, b0 + 0.04, b1 - 0.04, mz, mz + 0.002, mat.smokedGlass);  // tinted window
-        p.box(cp - 0.035, cp - 0.02, b0 + 0.05, b1 - 0.05, mz + 0.02, mz + 0.032, mat.blackSteel);  // bar handle (right)
-        for (const y of [b0 + 0.05, b1 - 0.065]) p.box(cp - 0.035, cp - 0.02, y, y + 0.015, mz, mz + 0.02, mat.blackSteel);
+        // Per the product image (fresh.com.eg): a dotted black window, a black vertical bar handle the door's full
+        // height at its right edge, the white FRESH logo low on the door, and on the black panel a display at the
+        // top over 3 columns of white-printed keys (8 function, a 3 x 4 keypad, stop / 0 / start).
+        p.box(-mw + 0.04, cp - 0.07, b0 + 0.045, b1 - 0.045, mz, mz + 0.002, mat.smokedGlass);  // dotted window
+        p.box(cp - 0.04, cp - 0.022, b0 + 0.006, b1 - 0.006, mz, mz + 0.022, mat.blackSteel, 0.004);  // full-height bar handle (right)
+        p.box(cp - 0.04, cp - 0.036, b0 + 0.006, b1 - 0.006, mz + 0.022, mz + 0.023, mat.printWhite);  // its fine white edge line
+        p.box(-0.08, -0.02, b0 + 0.016, b0 + 0.026, mz, mz + 0.0025, mat.printWhite);   // FRESH logo
         p.box(cp, mw, b0, b1, mz - 0.022, mz, mat.blackGlass, 0.004);                  // control panel
-        p.box(cp + 0.015, mw - 0.015, b1 - 0.06, b1 - 0.03, mz, mz + 0.001, mat.blackSteel);  // display window
-        p.box(cp + 0.03, mw - 0.03, b1 - 0.05, b1 - 0.04, mz + 0.001, mz + 0.002, mat.ledStrip);  // its digits
-        for (let r = 0; r < 5; r++) for (let c = 0; c < 2; c++) {                      // touch buttons
-          const x = cp + 0.03 + c * 0.06, y = b1 - 0.1 - r * 0.035;
-          p.box(x - 0.018, x + 0.018, y - 0.01, y + 0.01, mz, mz + 0.001, mat.stainless);
+        p.box(cp + 0.02, mw - 0.02, b1 - 0.06, b1 - 0.025, mz, mz + 0.001, mat.blackSteel);  // display window
+        p.box(cp + 0.035, mw - 0.035, b1 - 0.048, b1 - 0.037, mz + 0.001, mz + 0.002, mat.redDigits);  // its digits
+        for (let r = 0; r < 8; r++) for (let c = 0; c < 3; c++) {                      // white-printed keys, 3 across
+          const x = cp + 0.025 + c * 0.035, y = b1 - 0.085 - r * 0.026;
+          p.box(x - 0.011, x + 0.011, y - 0.005, y + 0.005, mz, mz + 0.001, mat.printWhite);
         }
       });
       for (const y of [O0, N1]) p.box(-w, w, y - 0.002, y + 0.002, D, D + 0.003, shadowGap);
@@ -1379,13 +1395,14 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-dw, dw, d0, d1 - 0.004, z0, z1 - 0.025, mat.blackInox);                  // cabinet
     p.box(-dw, dw, d1 - 0.004, d1, z0, z1, mat.blackInox);                          // worktop lid
     p.box(-dw, dw, d0, d0 + 0.09, z1 - 0.035, z1 - 0.025, mat.darkTop);             // toe kick on its feet
-    p.box(-dw + 0.001, dw - 0.001, d0 + 0.09, d1 - 0.1, z1 - 0.025, z1, mat.blackInox, 0.003);  // door
-    p.box(-dw + 0.001, dw - 0.001, d1 - 0.1, d1 - 0.004, z1 - 0.025, z1, mat.blackInox);       // control panel
-    p.box(-0.2, 0.2, d1 - 0.1, d1 - 0.112, z1 - 0.012, z1, mat.blackGlass);         // pull recess under the panel
-    for (let k = 0; k < 6; k++) p.box(-0.25 + k * 0.045, -0.235 + k * 0.045, d1 - 0.06, d1 - 0.05, z1, z1 + 0.003, mat.stainless);  // buttons
-    p.box(0.12, 0.24, d1 - 0.072, d1 - 0.038, z1, z1 + 0.002, mat.blackGlass);      // LED display
-    p.box(0.15, 0.21, d1 - 0.06, d1 - 0.05, z1 + 0.002, z1 + 0.003, mat.ledStrip);
-    p.box(-0.045, 0.045, d1 - 0.16, d1 - 0.15, z1, z1 + 0.002, mat.stainless);      // Beko logo
+    // Per the product image (abdulaziz-stores.com): a plain black door, a centred recessed handle panel at its top
+    // (chrome pull edge over a black-glass panel with red digits and white key labels), the small beko logo above.
+    p.box(-dw + 0.001, dw - 0.001, d0 + 0.09, d1 - 0.004, z1 - 0.025, z1, mat.blackInox, 0.003);  // door
+    p.box(-0.12, 0.12, d1 - 0.1, d1 - 0.035, z1 - 0.012, z1 + 0.0005, mat.blackGlass);  // recessed handle / control panel
+    p.box(-0.12, 0.12, d1 - 0.04, d1 - 0.035, z1 - 0.012, z1 + 0.004, mat.chrome);      // chrome pull edge along its top
+    for (const x of [-0.05, -0.025, 0]) p.box(x - 0.005, x + 0.005, d1 - 0.062, d1 - 0.054, z1 + 0.0005, z1 + 0.0015, mat.redDigits);  // red indicators
+    for (let k = 0; k < 6; k++) p.box(-0.1 + k * 0.04, -0.085 + k * 0.04, d1 - 0.082, d1 - 0.078, z1 + 0.0005, z1 + 0.0015, mat.printWhite);  // key labels
+    p.box(-0.02, 0.02, d1 - 0.03, d1 - 0.02, z1, z1 + 0.001, mat.printWhite);       // beko logo
     const nf = 1.478;                                                              // niche floor top (was 1.438)
     p.box(-w, w, nf - 0.018, nf, 0.02, F, mat.whiteLacquer);                       // niche floor
     p.box(-w + 0.03, w - 0.03, nf + 0.002, nf + 0.012, 0.08, F - 0.06, mat.chrome);  // wire rack: tray and rails

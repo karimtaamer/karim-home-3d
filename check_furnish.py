@@ -32,11 +32,11 @@ MODELS = {'naghams-changes': 'model-naghams-changes.js', 'kareems-changes': 'mod
 ITEMS = [
     ('kitchen fridge', None, ('block', 'wgsfd'), 'y', {'blackSteel', 'anthraciteInox'}, 0.05),  # anthraciteInox: Nagham's Beko (10 Nov 2026)
     ('kitchen dishwasher', None, ('block', 'dfs'), 'y', {'whiteLacquer'}, (0.05, -0.005)),  # its tall column's carcass
-    ('kitchen hob', None, ('block', 'yrtds'), 'y', {'blackGlass', 'matteBlackGlass'}, 0.05),  # matteBlackGlass: Nagham's Purity
+    ('kitchen hob', None, ('block', 'yrtds'), 'y', {'blackGlass', 'hobGreyGlass'}, 0.05),  # hobGreyGlass: Nagham's Purity (matte charcoal)
     ('kitchen hood', {'main', 'shifted-bedroom', 'kareems-changes', 'karims-version'}, ('block', 'yrtds'), 'y', {'chrome'}, 0.05),
     # Nagham's version (10 Nov 2026): the 90 cm Ecomatic hood is wider than the 87 cm hob, so it has its own dashed
-    # 90 x 50 outline over the hob block (hoodBlack: the black H910TTBK)
-    ('kitchen hood', {'naghams-changes'}, ('outline', 6.7248, 7.376, 50.0, 90.0), 'y', {'stainless', 'hoodBlack'}, 0.05),
+    # 90 x 50 outline over the hob block
+    ('kitchen hood', {'naghams-changes'}, ('outline', 6.7248, 7.376, 50.0, 90.0), 'y', {'stainless'}, 0.05),
     ('kitchen sink', None, ('block', 'wrewwer'), 'x', {'blackSteel'}, 0.05),
     ('laundry joinery', None, ('outline', 10.63, 7.92, 61.9, 206.9), 'xy', {'oakVeneer'}, 0.0),
     ('laundry washer/dryer', {'main', 'shifted-bedroom', 'naghams-changes', 'karims-version'}, ('outline', 11.835, 8.888, 60.0, 60.0), 'x', {'applianceWhite'}, 0.05),  # 2 cm off the wall

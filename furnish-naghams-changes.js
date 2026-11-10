@@ -1131,15 +1131,16 @@ export function furnish(scene, M, mat, version = "main") {
   // Hob: Purity HPT911 MAT-BL, 87 W x 52 D x 5 H cm, cut-out 84 x 49. Per Nagham's store photo (10 Nov 2026): matte
   // dark charcoal-grey glass, five burners (two on the left, back and front; a big wok in the middle; two on the
   // right) each under its own black cast-iron cross support, and the five black knobs with chrome rims and white
-  // marks in a row along the back edge, right of centre, a small white burner icon behind each; Purity logo back
-  // right. Local frame: x along the run (+x = the viewer's right), z out from the wall (0.04 back edge, 0.56 front).
+  // marks in a row along the front edge (Nagham, 10 Nov 2026: the photo's display had it turned round), right of
+  // centre, a small white burner icon in front of each; Purity logo front right. Local frame: x along the run (+x = the viewer's right), z out from the wall (0.04 back edge, 0.56 front).
   function realHob(p, cx) {
     const top = 0.92, g0 = top + 0.006, z0 = 0.04, z1 = 0.56, hw = 0.435;
     p.box(cx - 0.42, cx + 0.42, top - 0.045, top, z0 + 0.015, z1 - 0.015, mat.blackSteel);   // body in the 84 x 49 cut-out
     p.box(cx + 0.3, cx + 0.33, top - 0.06, top - 0.045, 0.1, 0.45, mat.brass);              // gas inlet (right) and its pipe
     p.box(cx - hw, cx + hw, top, g0, z0, z1, mat.hobGreyGlass, 0.004);                      // 87 x 52 matte charcoal glass
-    const gT = g0 + 0.03, bar = 0.012;
-    const burner = (x, z, r, wok) => {
+    const gT = g0 + 0.03, bar = 0.012, F = z => z0 + z1 - z;  // F: the store photo's layout turned to face the room (knobs front)
+    const burner = (x, zp, r, wok) => {
+      const z = F(zp);
       p.cyl(cx + x, z, r + 0.01, g0, g0 + 0.005, mat.blackSteel, 28);                       // base
       p.cyl(cx + x, z, r, g0 + 0.005, g0 + 0.016, wok ? mat.stainless : mat.blackSteel, 28);  // crown (chrome on the wok)
       p.cyl(cx + x, z, r * 0.78, g0 + 0.016, g0 + 0.021, mat.castIron, 28);                 // enamelled cap
@@ -1155,13 +1156,13 @@ export function furnish(scene, M, mat, version = "main") {
     burner(0.02, 0.36, 0.065, true);                                                        // wok, middle
     burner(0.27, 0.26, 0.04); burner(0.24, 0.44, 0.032);                                    // right: back, front
     for (let k = 0; k < 5; k++) {                                                           // knobs along the back edge
-      const x = cx + 0.05 + (k - 2) * 0.065, kz = 0.115;
+      const x = cx + 0.05 + (k - 2) * 0.065, kz = F(0.115);
       p.cyl(x, kz, 0.021, g0, g0 + 0.008, mat.stainless, 24);                               // chrome rim
       p.cyl(x, kz, 0.017, g0 + 0.008, g0 + 0.03, mat.blackSteel, 24);                       // black knob
-      p.box(x - 0.002, x + 0.002, g0 + 0.03, g0 + 0.031, kz + 0.004, kz + 0.016, mat.printWhite);  // white mark
-      p.box(x + 0.012, x + 0.024, g0, g0 + 0.0005, 0.068, 0.078, mat.printWhite);           // burner icon behind it
+      p.box(x - 0.002, x + 0.002, g0 + 0.03, g0 + 0.031, kz - 0.016, kz - 0.004, mat.printWhite);  // white mark
+      p.box(x + 0.012, x + 0.024, g0, g0 + 0.0005, F(0.078), F(0.068), mat.printWhite);     // burner icon in front of it
     }
-    p.box(cx + 0.35, cx + 0.4, g0, g0 + 0.0005, 0.065, 0.08, mat.printWhite);               // Purity logo, back right
+    p.box(cx + 0.35, cx + 0.4, g0, g0 + 0.0005, F(0.08), F(0.065), mat.printWhite);         // Purity logo, front right
   }
   // Hood: Ecomatic 90 cm T-shape (H910B per the store tag), brushed stainless, full-width black-glass front with touch icons,
   // LED lights. Ecomatic publishes no depth / heights: canopy 50 D x 7 H and a 26 x 23 chimney are typical

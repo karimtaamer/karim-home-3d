@@ -276,7 +276,8 @@
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
-  "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js"
+  "gsap": "https://cdn.jsdelivr.net/npm/gsap@3.12.5/index.js",
+  "polygon-clipping": "https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/+esm"
 } }
 </script>
 </head>
@@ -343,6 +344,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import gsap from "gsap";
+import polygonClipping from "polygon-clipping";
 import { liveFiles, liveImport, createEditAI } from "./edit-ai.js";
 import { createDrawing, loadDrawing } from "./drawing.js";
 import { createMeasure } from "./measure.js";
@@ -795,18 +797,40 @@ function buildFlat(M, scene) {
   const furniture = furnish(scene, M, lib, vid);
   // Curtain pockets (furnish returns them, Main 7 Nov 2026): a slot cut in the ceiling along a window wall, `depth`
   // up into the plasterboard ceiling, with a warm LED strip at its top on the room side washing down the curtains.
-  for (const pk of furniture.pockets || []) {
+  // Cut first, from every ceiling a slot crosses (Main 11 Nov 2026: the east wall slot runs from the reception's
+  // ceiling into the dining's, and the divider slot meets it), as one polygon subtraction, so slots that touch or
+  // cross a room line leave no ceiling strip between them.
+  const pockets = furniture.pockets || [];
+  if (pockets.length) {
+    const bb = ring => { const xs = ring.map(p => p[0]), ys = ring.map(p => p[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; };
+    const closed = ring => [...ring, ring[0]];
+    for (const f of M.floor) {
+      const cz = f._ceiling;
+      if (!cz) continue;
+      const [fx0, fy0, fx1, fy1] = bb(f.outer);
+      const cuts = pockets.filter(({ rect: [x0, y0, x1, y1] }) => x0 < fx1 && x1 > fx0 && y0 < fy1 && y1 > fy0);
+      if (!cuts.length) continue;
+      const parts = polygonClipping.difference([closed(f.outer), ...cz.holes.map(closed)],
+        ...cuts.map(({ rect: [x0, y0, x1, y1] }) => [[[x0, y0], [x1, y0], [x1, y1], [x0, y1], [x0, y0]]]));
+      const old = cz.mesh, at = cz.room.ceilings.indexOf(old);
+      scene.remove(old); old.geometry.dispose();
+      const meshes = parts.map(([outer, ...holes]) => flatMesh(outer.slice(0, -1), holes.map(h => h.slice(0, -1)), cz.material, cz.y));
+      cz.room.ceilings.splice(at, 1, ...meshes);
+      for (const m of meshes) scene.add(m);
+      cz.mesh = meshes[0];
+    }
+  }
+  // The slot itself: sides and top in shadow (a groove, not a lit cove), a slim aluminium track along it, the LED.
+  const trackMat = new THREE.MeshStandardMaterial({ color: 0xb9b6b0, metalness: 0.7, roughness: 0.35 });
+  for (const pk of pockets) {
     const [x0, y0, x1, y1] = pk.rect, ring = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]];
-    const f = M.floor.find(f => f._ceiling && pointInRing([(x0 + x1) / 2, (y0 + y1) / 2], f.outer));
+    const f = M.floor.find(f => f._ceiling && pointInRing([(x0 + x1) / 2, (y0 + y1) / 2], f.outer));  // height and room from the slot's middle
     if (!f) continue;
     const cz = f._ceiling, top = cz.y + (pk.depth ?? 0.15);
-    cz.holes.push([...ring].reverse());
-    const old = cz.mesh, c = flatMesh(f.outer, cz.holes, cz.material, cz.y);
-    scene.remove(old); old.geometry.dispose();
-    cz.room.ceilings[cz.room.ceilings.indexOf(old)] = c; cz.mesh = c; scene.add(c);
     const inner = cz.material.clone(); inner.side = THREE.DoubleSide;
-    const wash = inner.clone(); wash.emissive = new THREE.Color(0xffa860); wash.emissiveIntensity = 0.9;  // the lit inside of the slot
-    const warm = inner.clone(); warm.emissive = new THREE.Color(0xff9d55); warm.emissiveIntensity = 0.5;
+    const wash = inner.clone(); wash.color.multiplyScalar(0.42); wash.emissive = new THREE.Color(0xffa860); wash.emissiveIntensity = 0.12;  // the top of the slot, in shadow
+    const warm = inner.clone(); warm.color.multiplyScalar(0.55); warm.emissive = new THREE.Color(0xff9d55); warm.emissiveIntensity = 0.06;  // its sides
+    const glow = inner.clone(); glow.color.multiplyScalar(0.7); glow.emissive = new THREE.Color(0xffa860); glow.emissiveIntensity = 0.35;  // the face the LED washes
     const add = (m, w, h, d, x, y, z) => {
       const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, -z); scene.add(b); cz.room.ceilings.push(b); return b;
     };
@@ -814,18 +838,30 @@ function buildFlat(M, scene) {
     scene.add(lid); cz.room.ceilings.push(lid);
     const H = top - cz.y, ym = (cz.y + top) / 2, t = 0.01, along = pk.along;  // along: "x" or "y" (the slot's long axis)
     const wallSide = pk.wall;  // which long side is the wall: "-" (the low coordinate) or "+"
+    // pk.open: [{ at: "x0" | "x1" | "y0" | "y1", from, to }] leaves that stretch of the slot's side open, where two
+    // slots meet (Main 11 Nov 2026: the divider slot runs into the east window slot). The LED on that side skips it too.
+    const runs = (side, a, b) => {
+      const out = []; let s = a;
+      for (const g of (pk.open || []).filter(o => o.at === side).sort((p, q) => p.from - q.from)) {
+        if (g.from > s) out.push([s, Math.min(g.from, b)]);
+        s = Math.max(s, g.to);
+      }
+      if (s < b) out.push([s, b]);
+      return out;
+    };
+    const wallX = (side, x, m = warm, w = t, h = H, y = ym, inset = 0) => runs(side, y0 + inset, y1 - inset).forEach(([a, b]) => add(m, w, h, b - a, x, y, (a + b) / 2));
+    const wallY = (side, yy, m = warm, d = t, h = H, y = ym, inset = 0) => runs(side, x0 + inset, x1 - inset).forEach(([a, b]) => add(m, b - a, h, d, (a + b) / 2, y, yy));
+    wallX("x0", x0); wallX("x1", x1); wallY("y0", y0); wallY("y1", y1);
     if (along === "y") {
-      add(warm, t, H, y1 - y0, x0, ym, (y0 + y1) / 2); add(warm, t, H, y1 - y0, x1, ym, (y0 + y1) / 2);
-      add(warm, x1 - x0, H, t, (x0 + x1) / 2, ym, y0); add(warm, x1 - x0, H, t, (x0 + x1) / 2, ym, y1);
-      const xr = wallSide === "-" ? x1 - 0.02 : x0 + 0.02;  // LED on the room side, near the top
-      add(lib.ledStrip || wash, 0.012, 0.02, y1 - y0 - 0.04, xr, top - 0.02, (y0 + y1) / 2);
-      add(wash, 0.004, H * 0.8, y1 - y0 - 0.02, wallSide === "-" ? x0 + 0.006 : x1 - 0.006, top - H * 0.4, (y0 + y1) / 2);
+      const room = wallSide === "-" ? "x1" : "x0", xr = wallSide === "-" ? x1 - 0.02 : x0 + 0.02;  // LED on the room side, near the top
+      wallX(room, xr, lib.ledStrip || wash, 0.012, 0.02, top - 0.02, 0.02);
+      add(glow, 0.004, H * 0.8, y1 - y0 - 0.02, wallSide === "-" ? x0 + 0.006 : x1 - 0.006, top - H * 0.4, (y0 + y1) / 2);
+      wallX("track", (x0 + x1) / 2, trackMat, 0.03, 0.018, top - 0.012, 0.005);
     } else {
-      add(warm, x1 - x0, H, t, (x0 + x1) / 2, ym, y0); add(warm, x1 - x0, H, t, (x0 + x1) / 2, ym, y1);
-      add(warm, t, H, y1 - y0, x0, ym, (y0 + y1) / 2); add(warm, t, H, y1 - y0, x1, ym, (y0 + y1) / 2);
-      const yr = wallSide === "-" ? y1 - 0.02 : y0 + 0.02;
-      add(lib.ledStrip || wash, x1 - x0 - 0.04, 0.02, 0.012, (x0 + x1) / 2, top - 0.02, yr);
-      add(wash, x1 - x0 - 0.02, H * 0.8, 0.004, (x0 + x1) / 2, top - H * 0.4, wallSide === "-" ? y0 + 0.006 : y1 - 0.006);
+      const room = wallSide === "-" ? "y1" : "y0", yr = wallSide === "-" ? y1 - 0.02 : y0 + 0.02;
+      wallY(room, yr, lib.ledStrip || wash, 0.012, 0.02, top - 0.02, 0.02);
+      add(glow, x1 - x0 - 0.02, H * 0.8, 0.004, (x0 + x1) / 2, top - H * 0.4, wallSide === "-" ? y0 + 0.006 : y1 - 0.006);
+      wallY("track", (y0 + y1) / 2, trackMat, 0.018, 0.018, top - 0.012, 0.005);
     }
   }
   return { cutPlane, solids, rooms, roomAt, setReveal, materials: mat, lib, furniture, leaves };

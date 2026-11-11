@@ -50,12 +50,13 @@ export function furnish(scene, M, mat, version = "main") {
   const pockets = [
     { rect: [2.945, 1.54, 3.095, 3.45], along: "y", wall: "-", depth: POCKET },     // living-room window 1.89-3.10 (+0.35 each side)
     { rect: [3.118, 8.865, 5.078, 9.015], along: "x", wall: "+", depth: POCKET },   // bedroom window 3.468-4.728 (+0.35)
-    { rect: [21.062, 2.772, 21.212, 5.558], along: "y", wall: "+", depth: POCKET }, // reception window 3.135-5.195 (+0.363)
-    { rect: [21.062, 5.84, 21.212, 8.379], along: "y", wall: "+", depth: POCKET },  // dining slider 6.24-7.979 (+0.40)
+    // East wall (Karim 11 Nov 2026): one continuous slot from the reception window (3.135-5.195, +0.363) to the dining
+    // slider (6.24-7.979, +0.40); the ceiling block between them is gone. The divider slot opens into it (open).
+    { rect: [21.062, 2.772, 21.212, 8.379], along: "y", wall: "+", depth: POCKET, open: [{ at: "x0", from: 5.591, to: 5.711 }] },
     { rect: [16.025, 9.338, 17.884, 9.488], along: "x", wall: "+", depth: POCKET }, // dining window 16.375-17.534 (+0.35)
-    // Reception / dining divider (Karim 11 Nov 2026): column face (x 17.542) to the east wall (21.222), flush with the
-    // column's north face (y 5.711), between the east wall's reception and dining pockets. LED on the reception side.
-    { rect: [17.542, 5.561, 21.222, 5.711], along: "x", wall: "+", depth: POCKET },
+    // Reception / dining divider (Karim 11 Nov 2026): column face (x 17.542) into the east wall slot (21.062), flush with
+    // the column's north face (y 5.711). 0.12 wide x 0.12 deep: one track (the window slots hold two). LED on the reception side.
+    { rect: [17.542, 5.591, 21.062, 5.711], along: "x", wall: "+", depth: 0.12, open: [{ at: "x1", from: 5.591, to: 5.711 }] },
   ];
   scene.add(root, ceilingBits);
   // Karim's version (karims-version) split from Main (kareems-changes) on 26 Oct 2026 as a copy of it: it runs every
@@ -1993,21 +1994,20 @@ export function furnish(scene, M, mat, version = "main") {
     });
     item(21.22, (y0 + y1) / 2, "W", p => { const m = mesh(curtainGeometry(y1 - y0 + 0.1, CH - 0.01), mat.sheer, p.g); m.position.set(0, CY, SZ); });
   }
-  // Reception / dining divider curtain (Karim 11 Nov 2026), in the ceiling pocket from the column (x 17.542) to the east
-  // wall (21.222), on the pocket's centre line (y 5.636). Two panels part in the middle and stack 0.40 at each end; built
-  // drawn back (open). Walk: stand near it and tap / click / E to draw it closed, again to open it (interact.js gathers
-  // each panel about its stack end: scale, not slide).
+  // Reception / dining divider curtain (Karim 11 Nov 2026), on the divider slot's centre line (y 5.651). One wave-fold panel
+  // (~2.2x fullness, ~8 m of fabric on ~60 gliders at 6 cm, 0.12 wave pitch): drawn back it stacks 0.65 wide x ~0.09 deep
+  // at the window end, its top up in the east wall slot (x 21.212), and draws west all the way to the column face
+  // (17.542); nothing stacks at the column. Built drawn back (open). Walk: stand near it and tap / click / E to draw
+  // it closed, again to open it (interact.js gathers the panel about its stack end: scale, not slide).
   {
-    const DX = (17.542 + 21.222) / 2, half = (21.222 - 17.542) / 2 - 0.01, w = half + 0.025, stack = 0.40;  // 2.5 cm overlap at the middle
+    const DX = (17.542 + 21.222) / 2, east = 21.212 - DX, w = 21.212 - 17.552, stack = 0.65;
     const leaves = [];
-    const cg = item(DX, 5.636, "S", p => {
-      for (const s of [-1, 1]) {
-        const panel = new THREE.Group(); panel.position.set(s * half, 0, 0); p.g.add(panel);
-        const geo = curtainGeometry(w, CH); geo.translate(-s * w / 2, CY, 0);  // from its stack end toward the middle
-        mesh(geo, mat.curtain, panel);
-        panel.scale.set(stack / w, 1, 1.8);  // drawn back: gathered tight, deeper folds
-        leaves.push({ obj: panel, scale: new THREE.Vector3(1, 1, 1) });
-      }
+    const cg = item(DX, 5.651, "S", p => {
+      const panel = new THREE.Group(); panel.position.set(east, 0, 0); p.g.add(panel);
+      const geo = curtainGeometry(w, CH - 0.03); geo.translate(-w / 2, CY - 0.015, 0);  // from the window end west to the column; top 0.03 lower (0.12-deep slot)
+      mesh(geo, mat.curtain, panel);
+      panel.scale.set(stack / w, 1, 1.3);  // drawn back: gathered to the 0.65 stack, folds ~0.09 deep (fits the 0.12 slot)
+      leaves.push({ obj: panel, scale: new THREE.Vector3(1, 1, 1) });
     });
     cg.userData.openable = { id: "reception-divider-curtain", label: "Curtain", verbs: ["Close", "Open"], leaves,
       anchor: new THREE.Vector3(0, 1.3, 0), reach: 2.2, duration: 1.4 };
@@ -2241,7 +2241,7 @@ export function furnish(scene, M, mat, version = "main") {
     leaves.push({ obj: door, axis: "x", open: -105 * Math.PI / 180 });
     c.userData.openable = { id: "dining-fold-down-desk", label: "Fold-down desk", leaves, anchor: new THREE.Vector3(0, 1.38, front + 0.06), reach: 1.8, duration: 0.6 };
   });
-  plant(20.75, 6.15, 1.5, 0.25);  // in the pier between the sofa window and the slider, north of the divider curtain (Main 11 Nov 2026: was 5.77, h 1.7)
+  plant(20.75, 6.25, 1.5, 0.25);  // in the pier between the sofa window and the slider, north of the divider curtain's stack (Main 11 Nov 2026: was 5.77, h 1.7)
 
   // --- Terrace: decking, L bench, lounge set, BBQ counter ----------
   const T = { x0: 21.47, x1: 24.76, y0: 1.78, y1: 9.4 };  // no pergola, per the client
@@ -2414,8 +2414,7 @@ function roundRect(s, x0, x1, y0, y1, r) {
 }
 
 // A gathered curtain: a vertical sheet with soft folds, `w` wide and `h` tall, centred at 0.
-function curtainGeometry(w, h) {
-  const folds = Math.max(3, Math.round(w / 0.12));
+function curtainGeometry(w, h, folds = Math.max(3, Math.round(w / 0.12))) {
   const g = new THREE.PlaneGeometry(w, h, folds * 6, 1);
   const p = g.attributes.position;
   for (let i = 0; i < p.count; i++) p.setZ(i, Math.sin((p.getX(i) / w) * folds * Math.PI * 2) * 0.035);

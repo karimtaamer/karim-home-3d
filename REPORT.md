@@ -1,3 +1,12 @@
+# Reception / dining divider curtain (Main, 11 Nov 2026)
+
+- One continuous east-wall curtain slot (y 2.772-8.379); the divider slot (column face to it, 0.12 x 0.12, flush with the column's north face) opens into it. index.html now cuts slots out of every ceiling they cross with polygon-clipping (the slot crosses the reception/dining ceiling line at y 5.563), and slots read as grooves (shadowed inside, aluminium track, LED).
+- Divider curtain: one wave-fold panel, 3.66 m run, ~2.2x fullness (~8 m fabric, ~60 gliders at 6 cm); stacks 0.65 wide x ~0.09 deep at the window end, closes to the column. Openable in Walk (interact.js: gather/scale leaves, custom verbs).
+- Checks: check_locks passes (6/6). Headless shots: the "up" view (open and closed) passed; the second view (dining side) failed with a puppeteer error in the last run and was not re-run (one-attempt rule). The same dining view passed in the previous run before the 12 cm / 0.65 m stack change.
+- check_furnish.py fails on the untouched tree too (grout.color.setHex in its node stub): not from this change.
+- DXF (dwg/kareems-changes.dxf): armchair block A49 (CHAIR1) moved 0.40 south, as in 3D; one DASHED2 2furni outline for the ceiling curtain boxes (continuous east-wall box y 2.772-8.379 plus the divider box to the column face, 3206); a 2furni zigzag for the 0.65 m gathered stack at the window end (3207). Nothing else in the DXF changed (entity diff).
+- Not rebuilt in full: Main's committed model/drawing don't match its DXF elsewhere (e.g. 86ae367 moved the master toilet/bedroom partition 5 cm east in the model only; laundry and buffet footprints differ), so a full rebuild would undo those. Instead both DXFs (before/after) were built to /tmp with PYTHONHASHSEED=0 (the build is otherwise nondeterministic) and only the delta was applied: model lines -7/+9 and furniture +1; drawing green (2furni) strokes -7/+9 and snaps -13/+56. Walls, doors, windows, texts unchanged. Follow-up worth doing: bring the DXF in line with the model (partition, laundry, buffet) so plain rebuilds are safe again.
+
 # Electrical plan category chips (Main, 7 Nov 2026)
 
 - Lighting and Sockets & power remain unchanged. Switches now contains switch banks and AC controls only.

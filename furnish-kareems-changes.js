@@ -1849,7 +1849,8 @@ export function furnish(scene, M, mat, version = "main") {
   item(8.48, 3.72, "N", p => {  // front door per render 29: walnut leaf with rounded top corners, deep surround, long brass pull
     p.roundTop(-0.56, 0.56, 0, 2.25, 0.3, -0.02, 0.06, mat.walnut);
     p.roundTop(-0.46, 0.46, 0, 2.14, 0.22, 0.04, 0.02, mat.oakVeneer);
-    p.box(0.3, 0.33, 0.7, 1.5, 0.06, 0.09, mat.brass);
+    // Pull on the latch side: Main's door hinges on the west jamb since dad's review (Karim 11 Nov 2026), so the pull is east.
+    p.box(-0.33, -0.3, 0.7, 1.5, 0.06, 0.09, mat.brass);
   });
   plant(11.1, 4.72, 1.6, 0.24); plant(7.64, 5.3, 1.75, 0.2);  // olives on the side wall clear of the console seat, and left of the bench
   art(7.0, 3.6, "N", 0.75, 1.05, 1.45, 0); art(6.72, 3.62, "N", 0.5, 0.5, 1.3, 1, false);
@@ -2207,7 +2208,9 @@ export function furnish(scene, M, mat, version = "main") {
     }).position.y = T - 0.92;
   });
   // (Main, 7 Nov 2026: the dining window's LED bar is now the curtain pocket's LED.)
-  if (["kareems-changes", "karims-version"].includes(version)) item(18.55, 9.502, "S", p => {
+  // Main (dad's review, Karim 11 Nov 2026): the old fold-down monitor desk is gone (the flip desk in the coffee corner
+  // replaced it); its 45 cm socket stays. Karim's version keeps it.
+  if (version === "karims-version") item(18.55, 9.502, "S", p => {
     const c = new THREE.Group(), q = part(c), leaves = []; p.g.add(c);
     // Shallow wall-mounted box: clear monitor cavity and bottom-hinged worktop.
     q.box(-0.42, 0.42, 0.75, 1.425, 0, 0.025, mat.limewash);
@@ -2319,6 +2322,15 @@ export function furnish(scene, M, mat, version = "main") {
     for (let x = 21.75; x < PX - 0.1; x += 0.45) plant(x, PY + 0.1, 0.6, 0.06, 0.86);
     for (let y = p1y + 0.3; y < EY - 0.2; y += 0.45) plant(p1x + 0.1, y, 0.6, 0.06, 0.86);
     plant(21.62, PY + 0.1, 1.3, 0.07, 0.86);
+    // Plant spike lights (dad's review, Karim 11 Nov 2026): low-voltage uplights staked in the soil strip, washing the
+    // plants and parapet; fed from the switched outdoor socket at the planter corner (terrace plate, key 3).
+    const SOIL = 0.88;
+    for (const [x, y] of [[22.2, PY + 0.1], [23.15, PY + 0.1], [24.1, PY + 0.1], [p1x + 0.1, PY + 0.1], [p1x + 0.1, 2.85], [p1x + 0.1, 3.85], [p1x + 0.1, 4.85]])
+      named(item(x, y, "S", q => {
+        q.cyl(0, 0, 0.007, SOIL, SOIL + 0.14, mat.blackSteel, 8);           // stake
+        q.cyl(0, 0, 0.026, SOIL + 0.14, SOIL + 0.21, mat.blackSteel, 16);   // head, aimed up
+        q.cyl(0, 0, 0.02, SOIL + 0.21, SOIL + 0.215, mat.ledStrip, 16);     // lens
+      }), "plant spike light");
   }
   item(22.826, 3.998, "S", p => p.cyl(0, 0, 0.45, 0, 0.38, mat.stoneTable, 40));  // table, on the DWG table's centre
   item(T.x1, 7.1, "W", p => sofa(p, 2.1, 0.9, mat.boucle, [mat.linenSage, mat.linenBlush, mat.linenSlate]));

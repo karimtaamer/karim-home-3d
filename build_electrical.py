@@ -106,14 +106,18 @@ spots("Master bathroom", "mbath", [(0.95, 6.65), (1.75, 6.95), (0.95, 8.15), (1.
       "adapted", "4 spots as on the plan, over Main's vanity, middle, shower and WC bay")
 spots("Kitchen", "kitchen-A", [(x, 6.55) for x in (7.45, 8.35, 9.25)] + [(7.45, 7.4), (9.25, 7.4)], "Ceiling spot — kitchen, half A")
 spots("Kitchen", "kitchen-B", [(8.35, 7.4)] + [(x, 8.3) for x in (7.45, 8.35, 9.25)], "Ceiling spot — kitchen, half B")
-spots("Laundry", "laundry", row(7.25, 8.85, 3, 11.4, "y"), "Ceiling spot — laundry")
+# Laundry (Dad's review (Karim 11 Nov 2026)): the 3 spots become one 90 cm recessed linear light (LINES below); the north spot sat on the cupboard edge.
 spots("Guest bathroom", "gbath-spots", row(6.95, 9.1, 2, 14.2, "y") + row(6.95, 9.1, 2, 13.4, "y") + row(6.95, 9.1, 2, 12.6, "y"),
       "Ceiling spot — guest bathroom, vanity / middle / shower", "adapted", "all guest-bathroom spots share one key")
-spots("Entrance", "hallway", [(6.75, 4.6), (9.55, 4.6), (11.225, 5.925), (13.225, 6.25),
-                              (8.15, 4.6), (10.95, 4.6), (12.25, 6.25), (14.2, 6.25)],
-      "Ceiling spot — entrance corridor (one two-way key)", "adapted", "all corridor spots on one two-way circuit from the front door and dining end")
-spots("Entrance", "hallway", [(5.05, 5.05), (5.8, 5.05)], "Ceiling spot — lobby by the bedroom and living-room doors",
-      "adapted", "the lobby spots join the hallway circuit")
+# Corridor redistributed as dad's sheet (Dad's review (Karim 11 Nov 2026)), measured off it and snapped to even spacing: one straight line on the
+# lobby line (y 5.05) from the lobby to the bend, 1.44 apart; two spots flanking the front door; three in the upper corridor,
+# 1.715 apart, with AP2 and the corridor sensor between the first two. Same count (10), one circuit.
+spots("Entrance", "hallway", [(5.05, 5.05), (6.49, 5.05), (7.93, 5.05), (9.36, 5.05), (10.80, 5.05)],
+      "Ceiling spot — entrance corridor and lobby (one line)", "adapted", "dad's redistribution: one straight line on the lobby line, evenly spaced")
+spots("Entrance", "hallway", [(7.93, 4.03), (9.36, 4.03)], "Ceiling spot — inside the front door (either side of it)",
+      "adapted", "dad's redistribution: two spots flanking the front door, in line with the corridor spots above")
+spots("Entrance", "hallway", [(10.80, 6.25), (12.515, 6.25), (14.23, 6.25)], "Ceiling spot — upper corridor (laundry / guest bathroom)",
+      "adapted", "dad's redistribution: three evenly spaced in one straight line (the spot on the diagonal is gone)")
 spots("Reception", "reception-A", row(18.0, 21.0, 4, 3.0), "Ceiling spot — reception, half A (sofa side)")
 spots("Reception", "reception-B", row(18.0, 21.0, 4, 4.6), "Ceiling spot — reception, half B (TV side)")
 spots("Dining", "dining-spots", row(15.9, 20.7, 4, 6.65) + row(15.9, 20.7, 4, 8.55),
@@ -142,10 +146,15 @@ for lid, room, (x0, y0, x1, y1), lab, circ in [
     ("led-slider-curtain", "Dining", (21.082, 5.84, 21.082, 8.379), "LED in the curtain pocket over the dining slider", "reception-curtain"),
     ("led-living-curtain", "Living room", (3.075, 1.54, 3.075, 3.45), "LED in the curtain pocket over the living-room window", "living-cove"),
     ("led-dining-curtain", "Dining", (16.025, 9.358, 17.884, 9.358), "LED in the curtain pocket over the dining window", "dining-curtain"),
+    ("led-divider-curtain", "Reception", (17.542, 5.651, 21.062, 5.651), "LED in the reception / dining divider curtain box (reception side)", "reception-curtain"),
 ]:
     LINES.append({"id": lid, "type": "led", "room": room, "x0": x0, "y0": y0, "x1": x1, "y1": y1, "h": POCKET_TOP,
                   "label": lab, "circuit": circ, "status": "added",
                   "note": "warm 24 V strip in a 0.15 x 0.15 plasterboard pocket, the opening plus its curtain stack-back each side; the curtain tracks are in the pocket too"})
+
+LINES.append({"id": "linear-laundry", "type": "led", "room": "Laundry", "x0": 11.4, "y0": 7.25, "x1": 11.4, "y1": 8.15, "h": CEIL,
+              "label": "Linear LED ceiling light 90 cm, 4000 K — laundry", "circuit": "laundry", "status": "added",
+              "note": "Dad's review (Karim 11 Nov 2026): one recessed linear light along the room instead of spots, for even, shadow-free light; neutral white to see true colours"})
 
 # ================================================================ Switch banks (centre 1.20; bedside 0.85)
 SW = 1.20
@@ -153,13 +162,26 @@ def bank(id, room, title, gangs, *, two_way=None, **kw):
     lab = f"{len(gangs)}-gang switch — {title}"
     return pt("switch", room, lab, id=id, h=kw.pop("h", SW), gangs=gangs, two_way=two_way, **kw)
 
-bank("sw-front-door", "Entrance", "inside the front door",
-     ["Sconces beside the front door", "All hallway and lobby spots (two-way)", "Entrance console cove + mirror lights + pill sconce", "Gallery picture lights (4)"],
-     two_way="sw-dining-end", wall="S", x=7.82, y=4.2)
+# Stacked plates (Dad's review (Karim 11 Nov 2026)): a standard Egyptian box takes 3 modules at most, so 4 keys become two 2-gang boxes, one above
+# the other (main lights on top at 1.25, mood / accent below at 1.13; edges aligned, one plate range). `stack` names the
+# group: the 2D plan draws one marker for it and the card shows the wall view.
+TOP, LOW = 1.25, 1.13
+# Front door flipped to hinge on the west jamb (#19): the switches move to the latch side, east of the door.
+bank("sw-front-door", "Entrance", "inside the front door, top box",
+     ["All hallway and lobby spots (two-way + lobby)", "Sconces beside the front door"],
+     two_way="sw-dining-end,sw-lobby", wall="S", x=9.2, y=4.2, h=TOP, stack="front-door", status="adapted",
+     note="the front door now hinges on the west jamb, so the switches sit on the latch side east of it; top box of two")
+bank("sw-front-door-2", "Entrance", "inside the front door, lower box",
+     ["Entrance console cove + mirror lights + pill sconce", "Gallery picture lights (4)"],
+     wall="S", x=9.2, y=4.2, h=LOW, stack="front-door", status="adapted", note="lower box of two, under the main-light box")
 bank("sw-dining-end", "Hallway", "hallway, dining end",
      ["All hallway and lobby spots (two-way)"],
-     two_way="sw-front-door", wall="S", x=14.35, y=6.2, status="plan",
+     two_way="sw-front-door,sw-lobby", wall="S", x=14.35, y=6.2, status="plan",
      note="one two-way key for the full hallway including the lobby")
+bank("sw-lobby", "Entrance", "lobby by the master-bedroom door (intermediate)",
+     ["All hallway and lobby spots (intermediate: on / off from here too)"],
+     two_way="sw-front-door,sw-dining-end", wall="N", x=5.85, y=5.2, status="added",
+     note="Dad's review (Karim 11 Nov 2026): an intermediate switch so the corridor light can be switched when leaving the master bedroom or the living room; the corridor is then switched from three places")
 bank("sw-living", "Living room", "living room, by the door",
      ["Spots, half A (sofa side)", "Spots, half B (TV side)", "Curtain-pocket LED, TV-wall sconces, TV console glow and picture lights"],
      wall="N", x=4.95, y=4.0)
@@ -189,26 +211,39 @@ bank("sw-mbath", "Master bathroom", "inside beside the vanity socket",
      ["All spots (vanity, middle, shower and WC)", "Under-vanity LED, cabinet glow + shower-niche LED", "Exhaust fan"],
      wall="S", x=1.20, y=6.6, status="adapted",
      note="three keys on the short wall beside the 135 cm vanity socket; the exhaust fan has its own key")
-bank("sw-kitchen", "Kitchen", "kitchen, by the door",
-     ["Spots, half A", "Spots, half B", "Under-cabinet LED strips", "Plinth LED"], wall="S", x=9.15, y=6.2,
-     status="adapted", note="light switches replace the old sound and intercom screens")
-bank("sw-laundry", "Laundry", "laundry, inside on the toilet partition", ["Laundry spots + exhaust fan", "Under-cabinet LED"], wall="E", x=11.55, y=8.02,
+bank("sw-kitchen", "Kitchen", "kitchen, by the door, top box",
+     ["Spots, half A", "Spots, half B", "Ceiling exhaust fan"], wall="S", x=9.15, y=6.2, h=TOP, stack="kitchen",
+     status="adapted", note="Dad's review (Karim 11 Nov 2026): two boxes one above the other, just past the open door (the latch side is the fridge); spots and fan on top")
+bank("sw-kitchen-2", "Kitchen", "kitchen, by the door, lower box",
+     ["Under-cabinet LED strips (upper cabinets)", "Plinth LED (lower cabinets)"], wall="S", x=9.15, y=6.2, h=LOW, stack="kitchen",
+     status="adapted", note="lower box: the cabinet LEDs")
+bank("sw-laundry", "Laundry", "laundry, inside on the toilet partition", ["Laundry linear light + exhaust fan", "Under-cabinet LED"], wall="E", x=11.55, y=8.02,
      status="adapted", note="on the inside partition, about one metre up the wall from the doorway, at the marked arrow tip")
 # Guest bathroom (Karim 7 Nov 2026): inside, on the wall beside the door frame, over the vanity end, same 120 cm
-bank("sw-gbath", "Guest bathroom", "guest bathroom, inside beside the vanity socket",
-     ["All vanity, middle and shower spots", "Under-vanity, shelf + mirror glow + shower-niche LED", "Exhaust fan"], wall="E", x=14.3, y=7.30,
-     status="adapted", note="three keys inside, beside the vanity socket; the fan has its own key")
-bank("sw-dining", "Dining", "dining, by the hallway door",
-     ["Lantern pendants", "All dining spots", "Buffet niche LED + mirror glow", "North-window curtain-pocket LED"], wall="S", x=15.22, y=6.2,
-     gang_circuits=["dining-pendants", "dining-spots", "dining-accent", "dining-curtain"],
-     status="adapted", note="the plan puts the dining and reception banks on the wall by the hallway door; in Main the buffet mass covers that wall, so they sit on the south wall just right of the door")
-bank("sw-reception", "Reception", "reception, by the hallway door",
-     ["Reception spots, half A", "Reception spots, half B", "Both terrace-wall curtain boxes (reception window + dining slider)", "TV-wall niche (library) lights + picture lights over the sofa art"], wall="S", x=15.58, y=6.2,
-     gang_circuits=["reception-A", "reception-B", "reception-curtain", "reception-accent"],
-     status="adapted", note="beside the dining bank, on the south wall right of the hallway door (the buffet mass covers the plan's wall)")
-bank("sw-office", "Dining", "coffee corner, by the terrace door",
-     ["Terrace floor lighting (seat-lip LED) + BBQ counter LED", "Terrace wall lights", "Coffee corner shelf LED"], wall="E", x=20.9, y=8.25,
-     status="adapted", note="the plan's office bank (balcony floor / balcony wall / office), by Main's coffee corner and terrace slider")
+bank("sw-gbath", "Guest bathroom", "guest bathroom, inside by the door (latch side)",
+     ["All vanity, middle and shower spots", "Under-vanity, shelf + mirror glow + shower-niche LED", "Exhaust fan"], wall="S", x=14.15, y=7.3,
+     status="adapted", note="Dad's review (Karim 11 Nov 2026): on the short wall between the door frame and the vanity corner, off the mirror wall and its cladding; the fan has its own key")
+# By the hallway door: 8 keys in a 2 x 2 grid of 2-gang boxes (Dad's review (Karim 11 Nov 2026)): dining column left, reception right.
+bank("sw-dining", "Dining", "dining, by the hallway door, top box",
+     ["Lantern pendants", "All dining spots"], wall="S", x=15.22, y=6.2, h=TOP, stack="hall-dining",
+     gang_circuits=["dining-pendants", "dining-spots"],
+     status="adapted", note="the dining column of the 2 x 2 grid by the hallway door, main lights on top (the buffet mass covers the plan's wall)")
+bank("sw-dining-2", "Dining", "dining, by the hallway door, lower box",
+     ["Buffet niche LED + mirror glow", "North-window curtain-pocket LED"], wall="S", x=15.22, y=6.2, h=LOW, stack="hall-dining",
+     gang_circuits=["dining-accent", "dining-curtain"], status="adapted", note="the dining column's lower box: accent lights")
+bank("sw-reception", "Reception", "reception, by the hallway door, top box",
+     ["Reception spots, half A", "Reception spots, half B"], wall="S", x=15.58, y=6.2, h=TOP, stack="hall-reception",
+     gang_circuits=["reception-A", "reception-B"],
+     status="adapted", note="the reception column of the 2 x 2 grid by the hallway door, main lights on top")
+bank("sw-reception-2", "Reception", "reception, by the hallway door, lower box",
+     ["Curtain-box LEDs (reception window, dining slider, divider)", "TV-wall niche (library) lights + picture lights over the sofa art"],
+     wall="S", x=15.58, y=6.2, h=LOW, stack="hall-reception",
+     gang_circuits=["reception-curtain", "reception-accent"], status="adapted", note="the reception column's lower box: accent lights")
+bank("sw-office", "Dining", "coffee corner, by the terrace door (terrace lights)",
+     ["Terrace floor lighting (seat-lip LED) + BBQ counter LED", "Terrace wall lights", "Plant lighting (switched outdoor socket at the planter corner)"], wall="E", x=20.9, y=8.25,
+     status="adapted", note="Dad's review (Karim 11 Nov 2026): terrace keys only; key 3 now switches the plant-lighting socket (the shelf LED has its own switch at the coffee corner)")
+bank("sw-coffee", "Dining", "coffee corner end wall", ["Coffee corner shelf LED"], wall="E", x=20.9, y=8.72,
+     status="added", note="Dad's review (Karim 11 Nov 2026): beside the coffee corner, where you stand to use it")
 
 # AC controllers (wall thermostats), 1.50
 pt("acctl", "Living room", "AC controller — living room split", wall="N", x=4.75, y=4.0, h=1.5)
@@ -259,23 +294,37 @@ sock("Kitchen", "Double socket 130 cm — for the fridge", wall="E", x=9.8, y=7.
 sock("Kitchen", "Dishwasher socket — in the base under the raised dishwasher", n=1, wall="E", x=9.8, y=8.3, h=0.4, appliance="dishwasher",
    status="adapted", note="the plan has the dishwasher at the sink (60); Main's dishwasher is the raised column on the east run")
 sock("Kitchen", "Double socket 130 cm — counter by the water dispenser", wall="E", x=9.8, y=8.95, h=1.3, proud=0.015, status="adapted", note="feeds Main's countertop water dispenser")
+pt("water", "Kitchen", "Water outlet — filtered line for the plumbed countertop dispenser", wall="E", x=9.8, y=8.75, h=1.05, status="added",
+   note="Dad's review (Karim 11 Nov 2026): a 1/4 inch filtered line from the filter under the sink (about 2 m under the counter) to a shut-off valve behind the dispenser")
+sock("Kitchen", "Spare socket 130 cm — behind the dishwasher column (future freezer column)", n=1, wall="E", x=9.8, y=8.15, h=1.3, status="added",
+     note="Dad's review (Karim 11 Nov 2026): spare, in case the raised dishwasher column is swapped for a tall freezer later; on its own breaker, separate from the fridge")
 pt("power", "Kitchen", "Cooker point 60 cm — hob", wall="W", x=6.9, y=7.376, h=0.6, appliance="cooker / hob")
-sock("Kitchen", "Extractor hood socket — over the hob, inside the upper", n=1, wall="W", x=6.9, y=7.376, h=2.1, appliance="cooker hood", status="added",
-     note="separate supply for the extractor above the hob")
+sock("Kitchen", "Extractor hood socket — inside the lift-up cabinet over the hood", n=1, wall="W", x=6.9, y=7.376, h=1.7, appliance="cooker hood", status="added",
+     note="Dad's review (Karim 11 Nov 2026): 170, just above the canopy inside the lift-up cabinet (1.65–2.25), beside the duct, easy to reach")
 sock("Kitchen", "Double socket 130 cm — counter by the hob (south)", wall="W", x=6.9, y=6.6, h=1.3, proud=0.015)
 sock("Kitchen", "Double socket 130 cm — counter by the hob (north)", wall="W", x=6.9, y=8.15, h=1.3, proud=0.015)
 sock("Kitchen", "Oven socket — behind the pan drawer under the oven", n=1, at=(8.117, 5.672), h=0.55, facing="N", appliance="built-in oven",
      status="adapted", note="plan: 130 on the south wall; in Main's tower the oven is 66.5–122.5, so the socket sits under it, reachable through the drawer; electrician to size it for the selected oven")
-sock("Kitchen", "Microwave socket — behind the microwave in the tower niche", n=1, at=(8.117, 5.672), h=1.45, facing="N", appliance="microwave",
-   status="adapted", note="plan: 150; Main's microwave niche is 127–164")
-pt("tv", "Kitchen", "TV point 180 cm (kitchen TV)", wall="S", x=9.35, y=6.2, h=1.8, status="adapted",
-   note="the plan's south wall is Main's full-height pantry + tower: moved to the free wall east of the tower")
-sock("Kitchen", "Double socket 180 cm — kitchen TV", wall="S", x=9.6, y=6.2, h=1.8, status="adapted")
-pt("phone", "Kitchen", "Phone point 150 cm", wall="S", x=8.85, y=6.2, h=1.5, status="adapted", note="moved off the pantry wall, east of the tower")
+sock("Kitchen", "Microwave socket — behind the microwave in the tower niche", n=1, at=(8.117, 5.672), h=1.5, facing="N", appliance="microwave",
+   status="adapted", note="plan and dad: 150, at the back of Main's microwave niche (127–164)")
+pt("ledfeed", "Kitchen", "Plinth LED (lower cabinets) — driver behind the tower plinth, entrance end", at=(8.117, 5.672), h=0.15, facing="N", status="added",
+   note="Dad's review (Karim 11 Nov 2026): moved out of the sink base (wet) to the entrance end, by the switches; reached by taking off the plinth panel")
+pt("ledfeed", "Kitchen", "Under-cabinet LED (upper cabinets) — driver in the tower cupboard above the microwave", at=(8.117, 5.672), h=1.70, facing="N", status="added",
+   note="Dad's review (Karim 11 Nov 2026): the upper-cabinet strips had a key but no power point; 170, above the plinth feed, inside the tower cupboard; low-voltage cable along the uppers")
+pt("tv", "Kitchen", "TV point 180 cm (kitchen TV)", wall="S", x=8.75, y=6.2, h=1.8, status="adapted",
+   note="Dad's review (Karim 11 Nov 2026): moved west, clear of the door: the open door leaf lies along this wall from x 9.3 to 10.2")
+sock("Kitchen", "Double socket 180 cm — kitchen TV (recessed)", wall="S", x=8.95, y=6.2, h=1.8, status="adapted", note="recessed box so the TV hangs flat; clear of the door")
+sock("Kitchen", "Socket 45 cm — possible floor-standing water cooler", n=1, wall="S", x=8.55, y=6.2, h=0.45, status="added",
+     note="Dad's review (Karim 11 Nov 2026): for a water cooler that may stand here, at the entrance end")
+pt("water", "Kitchen", "Water outlet 45 cm — possible floor-standing water cooler", wall="S", x=8.42, y=6.2, h=0.45, status="added",
+   note="Dad's review (Karim 11 Nov 2026): filtered water with a shut-off valve, beside the cooler socket")
+pt("phone", "Kitchen", "Phone point 150 cm", wall="S", x=8.75, y=6.2, h=1.5, status="adapted", note="moved off the pantry wall, east of the tower; under the TV point")
+pt("fan", "Kitchen", "Ceiling exhaust fan — kitchen (own switch key)", at=(8.35, 7.85), h=CEIL, status="added", circuit="kitchen-fan",
+   note="Dad's review (Karim 11 Nov 2026): general extract for heat, steam and smells beyond the hood; ducted out to the north wall by the window")
 
 # Laundry
-sock("Laundry", "Washing-machine socket — inside the oak base", n=1, wall="N", x=11.9, y=8.5, h=0.25, appliance="washing machine",
-   status="adapted", note="Main's washer stands on a 0.35 base (Karim 9 Nov, one drawer): the socket is inside the base, beside the hoses. No dryer in Main, so the plan's dryer point (120) is left out")
+sock("Laundry", "Washer-dryer socket — inside the oak base", n=1, wall="N", x=11.9, y=8.5, h=0.25, appliance="washer-dryer (one machine)",
+   status="adapted", note="Main's LG washer-dryer stands on a 0.35 base (Karim 9 Nov, one drawer): the socket is inside the base, beside the hoses. It washes and dries, so no separate stacked dryer or dryer point")
 sock("Laundry", "Double socket 120 cm — counter (iron, steamer)", wall="N", x=11.15, y=8.5, h=1.2)
 sock("Laundry", "Double socket 120 cm — passage wall", wall="E", x=11.6, y=7.6, h=1.2)
 pt("power", "Laundry", "Instant water heater — Ariston Aures Slim Multi 9.5 kW — dedicated 50 A breaker, 10 mm² cable, 30 mA RCD",
@@ -284,11 +333,13 @@ pt("power", "Laundry", "Instant water heater — Ariston Aures Slim Multi 9.5 kW
 sock("Laundry", "Socket 60 cm — robot vacuum dock, inside the joinery's bottom bay", n=1, wall="W", x=10.6, y=7.21, h=0.6,
    appliance="robot vacuum dock (Roborock-style, 34 x 49 x 52 cm)", status="added",
    note="on the back wall of the south bay of the tall joinery, over the dock's top (52 cm) and under the 71 cm clear needed to lift its tanks out: it plugs in behind, no cable across the floor")
-pt("fan", "Laundry", "Exhaust fan — laundry (with the laundry light)", at=(11.4, 8.85), h=CEIL, status="added")
+pt("fan", "Laundry", "Exhaust fan — laundry (with the laundry light)", at=(11.4, 8.3), h=CEIL, status="added",
+   note="Dad's review (Karim 11 Nov 2026): moved off the cupboard zone into the open ceiling in front of it, on the light's line")
 
 # Guest bathroom
-sock("Guest bathroom", "Socket 130 cm — by the vanity mirror (shaver, hair dryer)", n=1, wall="E", x=14.3, y=7.05, h=1.3)
-sock("Guest bathroom", "Socket 130 cm — by the WC (bidet / smart seat)", n=1, wall="N", x=14.45, y=8.8, h=1.3)
+sock("Guest bathroom", "Socket 130 cm — by the door, near the vanity (shaver, hair dryer), splash-protected", n=1, wall="S", x=14.45, y=7.3, h=1.3,
+     status="adapted", note="Dad's review (Karim 11 Nov 2026): off the mirror wall, on the short wall by the door; IP44 on an RCD")
+# (the plan's 130 socket 'by the WC (bidet / smart seat)' is deleted: no smart seat, and it sat over the column by the basin)
 pt("fan", "Guest bathroom", "Exhaust fan — guest bathroom (own switch key)", at=(12.9, 8.6), h=CEIL, status="added", circuit="gbath-fan")
 
 # Entrance, hallway
@@ -297,18 +348,17 @@ sock("Entrance", "Double socket 45 cm — lobby by the bedroom door", wall="S", 
 sock("Hallway", "Double socket 45 cm — hallway", wall="N", x=12.6, y=6.2, h=0.45)
 pt("db", "Entrance", "Distribution board (DB) — 36-way, behind the entrance artwork", wall="S", x=7.0, y=4.2, h=1.8, w=0.45, hh=0.6,
    status="adapted", note="on the opposite side of the hall from its former position, concealed behind the entrance artwork; keep the artwork removable and confirm the panel remains accessible")
-pt("intercom", "Entrance", "Intercom screen — answer the front door", wall="S", x=9.20, y=4.2, h=1.45, status="adapted",
-   note="the only indoor intercom, beside the front door")
+pt("intercom", "Entrance", "Building intercom handset — answers the street gate", wall="S", x=7.75, y=4.2, h=1.45, status="adapted",
+   note="Dad's review (Karim 11 Nov 2026): the building's own intercom (one system for the whole building); there is no indoor screen for the flat's door. West of the door, since the door now hinges there and the switches moved east")
 # Network (Karim 7 Nov 2026): the hub in the shoe cabinet, Cat6 from it to three ceiling access points (PoE) and the TV / desk plates.
-pt("router", "Entrance", "Network hub — fibre box (ONT), router and 16-port PoE switch, inside the shoe cabinet", wall="S", x=10.8, y=4.2, h=0.3,
-   status="added", id="hub", note="a vented compartment in the shoe cabinet (joiner to confirm which); fibre, TV, intercom and every Cat6 cable run here without a separate low-current panel")
-sock("Entrance", "Double socket inside the shoe cabinet — network hub power", wall="S", x=11.1, y=4.2, h=0.3, status="added")
-pt("ap", "Entrance", "Wi-Fi access point AP2 (main) — entrance ceiling, above the shoe cabinet", at=(10.25, 4.6), h=CEIL, status="added", id="ap-2",
-   note="covers the entrance, hallway, kitchen, laundry and guest bathroom; on the corridor spot line, between two spots; Cat6 + PoE from the hub")
-pt("chime", "Entrance", "Doorbell chime", wall="N", x=7.6, y=5.0, h=2.1, status="added")
-pt("intercom_out", "Entrance", "Outdoor intercom unit — outside the front door (camera + call button)", wall="N", x=9.2, y=3.0, h=1.45,
-   status="plan", note="the plan puts it outside the door at 120 on the 45° corner; Main's door has a flat wall, so beside the door at 1.45 (camera height)")
-pt("doorbell", "Entrance", "Doorbell push — outside the front door", wall="N", x=7.8, y=3.0, h=1.3, status="added")
+pt("router", "Entrance", "Network hub — fibre box (ONT), router and 16-port PoE switch, in the space above the shoe cabinet", wall="S", x=10.8, y=4.2, h=2.35,
+   status="added", id="hub", note="Dad's review (Karim 11 Nov 2026): kept at the entrance, in the void between the shoe cabinet top and the ceiling, behind a vented openable front; fibre, TV and every Cat6 cable run here")
+sock("Entrance", "Double socket above the shoe cabinet — network hub power", wall="S", x=11.1, y=4.2, h=2.35, status="added")
+pt("ap", "Entrance", "Wi-Fi access point AP2 (main) — upper corridor ceiling, by the kitchen and laundry", at=(11.46, 6.25), h=CEIL, status="added", id="ap-2",
+   note="Dad's review (Karim 11 Nov 2026): moved from above the shoe cabinet into the middle of the upper corridor (central to the kitchen, laundry, guest bathroom and dining); between the first two corridor spots, beside the corridor sensor; Cat6 + PoE from the hub")
+# (no indoor doorbell chime: the smart doorbell rings the phones and its own plug-in chime)
+pt("intercom_out", "Entrance", "Smart video doorbell — outside the front door (camera + button, on your phones)", wall="N", x=9.2, y=3.0, h=1.35,
+   status="adapted", note="Dad's review (Karim 11 Nov 2026): one smart doorbell outside, no indoor screen; a wired low-voltage feed so it is not battery-only; on the latch side of the flipped door")
 
 # Dining, coffee corner
 sock("Dining", "Double socket 45 cm — north wall (west)", wall="N", x=15.4, y=9.0, h=0.45)
@@ -317,14 +367,16 @@ pt("power", "Dining", "AC power point — dining split (dedicated circuit)", at=
 sock("Dining", "Double socket 115 cm — espresso machine", wall="N", x=20.0, y=9.0, h=1.15, status="adapted",
      note="the plan's office sockets 110: Main's marble top is at 1.00, so 1.15")
 sock("Dining", "Double socket 115 cm — water dispenser", wall="N", x=20.45, y=9.0, h=1.15, status="adapted")
-pt("multi", "Dining", "Desk plate 115 cm — double data + double socket for the flip desk and monitor", wall="N", x=20.9, y=9.0, h=1.15, parts=["2D", "2S"],
-   status="adapted", note="the plan's office D 110 + socket, at Main's flip desk; two Cat6 (computer, printer) to the hub (Karim 7 Nov 2026)")
+pt("multi", "Dining", "Desk plate 45 cm — double data + double socket for the flip desk and monitor", wall="N", x=20.9, y=9.0, h=0.45, parts=["2D", "2S"],
+   status="adapted", note="Dad's review (Karim 11 Nov 2026): at 45 inside the flip desk's bay, so the computer cables stay hidden under the top; slack for the 0.80 roll-out; two Cat6 to the hub")
+pt("water", "Dining", "Water outlet — line for the plumbed countertop dispenser (coffee corner)", wall="N", x=20.3, y=9.0, h=1.08, status="added",
+   note="Dad's review (Karim 11 Nov 2026): a cold-water line with a shut-off valve behind the dispenser; the plumber takes the shortest route (dad suggests from the kitchen-sink filter)")
 
 # Reception
-pt("multi", "Reception", "TV plate behind the TV — data, HDMI, TV + double socket", at=(17.545, 4.29), h=1.2, facing="E", parts=["D", "H", "TV", "2S"],
-   note="inside the TV opening, hidden by the 166.8 cm TV")
-pt("multi", "Reception", "Niche plate 50 cm — data, HDMI, TV + double socket (soundbar, sub, box)", at=(17.27, 3.9), h=0.5, facing="E",
-   parts=["D", "H", "TV", "2S"], status="adapted", note="the plan's 60 plate, at the back of Main's low lit niche (0.30–0.69); HDMI conduit to the TV plate")
+pt("multi", "Reception", "TV plate behind the TV — data, HDMI, TV + double socket (recessed)", at=(17.545, 4.875), h=1.2, facing="E", parts=["D", "H", "TV", "2S"],
+   status="adapted", note="Dad's review (Karim 11 Nov 2026): on the TV's power side, not the middle: the Hisense 75Q7N has its power and ports on the right seen from the front (the north end), about 25 cm in from the edge; still hidden by the 166.8 cm TV")
+pt("multi", "Reception", "Niche plate 50 cm — data, HDMI, TV + double socket (soundbar, sub, box)", at=(17.27, 4.875), h=0.5, facing="E",
+   parts=["D", "H", "TV", "2S"], status="adapted", note="Dad's review (Karim 11 Nov 2026): lined up under the TV plate, at the back of Main's low lit niche (0.30–0.69); HDMI conduit straight down")
 sock("Reception", "Double socket 45 cm — left of the sofa", wall="S", x=18.15, y=2.5, h=0.45)
 sock("Reception", "Double socket 45 cm — right of the sofa", wall="S", x=20.55, y=2.5, h=0.45)
 sock("Reception", "Double socket 45 cm — marked wall by the reception entrance", wall="S", x=16.05, y=6.2, h=0.45,
@@ -341,6 +393,10 @@ pt("wp", "Terrace", "Weatherproof socket — BBQ counter", at=(23.55, 9.248), h=
 pt("wp", "Terrace", "Weatherproof socket 45 cm — on the pier between the window and the slider (outdoor TV)", wall="W", x=21.8, y=5.55, h=0.45)
 pt("tv", "Terrace", "TV point 45 cm — outdoor TV", wall="W", x=21.8, y=5.9, h=0.45)
 pt("wp", "Terrace", "Weatherproof socket 45 cm — south pier by the L seat", wall="W", x=21.8, y=2.15, h=0.45)
+pt("wp", "Terrace", "Weatherproof socket, switched — plant lighting at the planter corner", wall="W", x=21.8, y=1.93, h=0.3, status="added",
+   circuit="terrace-plants", note="Dad's review (Karim 11 Nov 2026): for the plant spike lights (12 V transformer plugs in here); switched from the terrace plate, key 3; IP66 on a 30 mA RCD")
+pt("wp", "Terrace", "Weatherproof socket 45 cm — east parapet, general use", wall="E", x=24.3, y=5.7, h=0.45, status="added",
+   note="Dad's review (Karim 11 Nov 2026): the far side of the terrace (heater, fan, string lights, cleaning); always on, IP66 on a 30 mA RCD; conduit in the parapet or under the deck")
 
 # ================================================================ Motion / presence sensors (Karim 7 Nov 2026)
 # Ceiling sensors that switch the lights, each centred between ceiling spots so it lines up with them. mmWave (Tuya
@@ -351,16 +407,18 @@ def sensor(room, label, xy, tech, status="added", note=""):
 
 sensor("Master bathroom", "Presence sensor (mmWave) — master bathroom", (1.35, 6.80), "mmWave",
        note="centred between the basin and middle spots, outside the shower and 1.2 m from the exhaust fan; sees the WC bay")
-sensor("Guest bathroom", "Presence sensor (mmWave) — guest bathroom", (13.80, 8.025), "mmWave",
-       note="centred between four spots (middle and vanity columns), 1.1 m from the exhaust fan")
-sensor("Laundry", "Motion sensor (PIR) — laundry", (11.40, 7.783), "PIR",
-       note="on the spot line, centred between the door-side and middle spots, 1.1 m from the exhaust fan")
-sensor("Kitchen", "Presence sensor (mmWave) — kitchen", (8.80, 6.975), "mmWave",
-       note="centred between four spots on the east (door) side, away from the hob")
-sensor("Entrance", "Motion sensor (PIR) — entrance corridor", (8.85, 4.60), "PIR",
-       note="on the corridor spot line, centred between two spots, about over the front door")
-sensor("Entrance", "Presence sensor (mmWave) — corridor by the laundry and guest bathroom", (12.7375, 6.25), "mmWave",
-       note="on the corridor spot line, centred between two spots between the laundry and guest bathroom doors")
+sensor("Guest bathroom", "Presence sensor (mmWave) — guest bathroom", (13.40, 8.025), "mmWave",
+       note="Dad's review (Karim 11 Nov 2026): in line with the spots, on the middle column between its two spots; 0.75 m from the exhaust fan")
+sensor("Laundry", "Motion sensor (PIR) — laundry, at the door end", (11.40, 7.05), "PIR",
+       note="Dad's review (Karim 11 Nov 2026): at the door end of the linear light's line, so it catches you as you step in")
+sensor("Kitchen", "Presence sensor (mmWave) — kitchen", (8.35, 6.975), "mmWave",
+       note="Dad's review (Karim 11 Nov 2026): on the middle spot column, between its two southern spots; 0.88 m from the ceiling fan (PIR if the fan ever false-triggers it)")
+sensor("Entrance", "Motion sensor (PIR) — entrance corridor", (7.21, 5.05), "PIR",
+       note="Dad's review (Karim 11 Nov 2026): on the corridor line, between two spots, toward the lobby")
+sensor("Entrance", "Presence sensor (mmWave) — upper corridor by the laundry and guest bathroom", (11.86, 6.25), "mmWave",
+       note="Dad's review (Karim 11 Nov 2026): beside AP2, between the first two upper-corridor spots")
+sensor("Dining", "Presence + light-level sensor — dining / reception, switch-off only", (16.50, 6.18), "mmWave", "added",
+       note="Dad's review (Karim 11 Nov 2026): never switches the lights on; switches them off once the dining and reception are empty, and ignores daylight; in line with the dining spots, halfway to the wall")
 sensor("Master bedroom", "Presence sensor (mmWave) — master bedroom, OPTIONAL, switch-off only", (4.375, 6.85), "mmWave", "optional",
        note="optional: never switches the light on, only off once the room is empty; centred between four spots")
 sensor("Living room", "Presence sensor (mmWave) — living room, OPTIONAL, switch-off only", (4.55, 2.45), "mmWave", "optional",
@@ -400,12 +458,30 @@ feed("Master bedroom", "Bedroom vanity mirror glow — separately switched drive
 feed("Master bedroom", "Bedroom vanity LED — shelf column and jewellery tray driver", (2.82, 4.59), 0.65, "N", circuit="master-vanity-led")
 feed("Master bathroom", "Under-vanity LED + medicine-cabinet glow — driver under the vanity", (0.84, 6.68), 0.28, "E", "24 V strip")
 feed("Master bathroom", "Shower-niche LED — driver in the cabinet over the WC (dry)", (0.60, 7.75), 2.00, "E", "24 V IP67 strip in the niche")
-feed("Guest bathroom", "Under-vanity, shelf + mirror glow — driver under the vanity", (14.38, 8.04), 0.30, "W", "24 V strip")
-feed("Guest bathroom", "Shower-niche LED (2 niches) — driver in the ceiling void outside the shower", (13.25, 6.96), 2.45, "N", "24 V IP67 strip in the niches; box high on the south wall, outside the shower")
-feed("Kitchen", "Plinth LED — driver in the sink base", (8.10, 8.75), 0.15, "S")
+pt("ledfeed", "Guest bathroom", "Under-vanity, shelf + mirror glow — wall box behind the vanity", wall="E", x=14.3, y=8.04, h=0.30, status="added",
+   note="Dad's review (Karim 11 Nov 2026): on the east wall behind the vanity, reached through the cabinet; 24 V strip")
+feed("Guest bathroom", "Shower-niche LED (2 niches) — wall box high on the south wall", (13.25, 6.907), 2.45, "N",
+     "Dad's review (Karim 11 Nov 2026): on the south wall face over the door head, above the wet zones; 24 V IP67 strip in the niches")
 feed("Laundry", "Under-cabinet LED — driver in the upper cabinet", (11.16, 8.96), 1.70, "S")
-feed("Terrace", "Seat-lip LED — IP65 driver in the seat storage", (24.27, 3.02), 0.20, "W")
-feed("Terrace", "BBQ counter LED — IP65", (23.11, 9.23), 0.80, "S")
+# Terrace LED feeds on the house wall (Dad's review (Karim 11 Nov 2026)): not out in the furniture; the low-voltage cable runs from here to the seat / counter.
+pt("ledfeed", "Terrace", "Seat-lip LED — IP65 box on the house wall", wall="W", x=21.8, y=2.65, h=0.3, status="added",
+   note="Dad's review (Karim 11 Nov 2026): moved from inside the seat storage to the house wall; cable under the deck to the seat")
+pt("ledfeed", "Terrace", "BBQ counter LED — IP65 box on the house wall", wall="W", x=21.8, y=8.95, h=0.3, status="added",
+   note="Dad's review (Karim 11 Nov 2026): moved from inside the BBQ counter to the house wall; cable under the deck to the counter")
+
+# ================================================================ Curtain motor power (Dad's review (Karim 11 Nov 2026))
+# An always-on point in every curtain box at the motor end of the track, for motorised curtains or outside shutters later.
+# No wall switches: the motors run on their remote, app or voice.
+for room, lab, xy in [
+    ("Living room", "living-room window box, north end", (3.02, 3.40)),
+    ("Master bedroom", "bedroom window box, east end", (5.03, 8.94)),
+    ("Reception", "east-wall box, reception window (south end)", (21.137, 2.82)),
+    ("Dining", "east-wall box, dining slider (north end)", (21.137, 8.33)),
+    ("Dining", "dining window box, east end", (17.83, 9.413)),
+    ("Reception", "divider curtain box, column end", (17.60, 5.651)),
+]:
+    pt("power", room, f"Curtain motor power — {lab}", at=xy, h=CEIL + 0.08, appliance="curtain motor (future)", status="added",
+       note="Dad's review (Karim 11 Nov 2026): always-on point in the curtain box at the motor end; remote / app / smart control, no wall switch")
 
 # ================================================================ write
 counts = Counter(p["type"] for p in P)
@@ -418,6 +494,7 @@ legend = {
     "pendant": "Pendant light", "walllight": "Wall light", "fan": "Exhaust fan", "db": "Distribution board", "lcp": "Low-current panel",
     "router": "Network hub (fibre box, router, PoE switch)", "led": "Indirect LED strip", "sensor": "Ceiling motion / presence sensor (mmWave or PIR)", "ledfeed": "Accent-light power point (LED driver / picture-light box)",
     "ap": "Ceiling Wi-Fi access point (Cat6 + PoE from the hub)",
+    "water": "Water outlet (filtered line + shut-off valve) for a plumbed appliance",
 }
 OUT.write_text(json.dumps({
     "version": "kareems-changes",
@@ -430,3 +507,29 @@ print(f"{OUT.name}: {len(P)} points, {len(LINES)} LED lines")
 for k, v in sorted(counts.items()):
     print(f"  {k:13s} {v}")
 print("  by status:", dict(Counter(p['status'] for p in P)))
+
+# ================================================================ stack check (dad's review, Karim 11 Nov 2026)
+# The 2D plan looks down, so points at the same spot on a wall hide each other. drawing.js draws each group within
+# STACK_R as one marker with a count and the heights; this lists the groups, and stops the build if two points in a group
+# are at (almost) the same height too, which is a real clash, not a stack.
+STACK_R, CLASH_H = 0.12, 0.06
+CEILING_TYPES = {"spot", "fan", "sensor", "ap"}
+wallish = [q for q in P if q["type"] not in CEILING_TYPES and q["h"] is not None]
+seen, stacks, clashes = set(), [], []
+for i, a in enumerate(wallish):
+    if i in seen:
+        continue
+    grp = [a]
+    for j in range(i + 1, len(wallish)):
+        b = wallish[j]
+        if j not in seen and any(math.hypot(b["x"] - g["x"], b["y"] - g["y"]) < STACK_R for g in grp):
+            grp.append(b); seen.add(j)
+    if len(grp) > 1:
+        stacks.append(grp)
+        hs = sorted(g["h"] for g in grp)
+        clashes += [grp for k in range(len(hs) - 1) if hs[k + 1] - hs[k] < CLASH_H][:1]
+print(f"  stacks (same plan spot, drawn as one marker): {len(stacks)}")
+for g in stacks:
+    print("   ", " / ".join(f"{q['id']}@{round(q['h'] * 100)}" for q in sorted(g, key=lambda q: -q["h"])))
+if clashes:
+    raise SystemExit("CLASH: points at the same spot and height: " + "; ".join(", ".join(q["id"] for q in g) for g in clashes))

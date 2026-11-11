@@ -32,8 +32,8 @@ export const KINDS = {
   phone:        { what: "This is a phone point.", col: "#46d39a", glyph: "T" },
   tv:           { what: "This is a TV / antenna point.", col: "#46d39a", glyph: "TV" },
   sound:        { what: "This is the sound-system control screen.", col: "#c58cff", glyph: "SO" },
-  intercom:     { what: "This is an intercom screen: see and answer whoever is at the front door.", col: "#c58cff", glyph: "IN" },
-  intercom_out: { what: "This is the outdoor intercom unit (camera and call button).", col: "#c58cff", glyph: "IN" },
+  intercom:     { what: "This is the building intercom handset: answer whoever is at the street gate.", col: "#c58cff", glyph: "IN" },
+  intercom_out: { what: "This is the smart video doorbell outside the front door: camera and button, it rings your phones.", col: "#c58cff", glyph: "B" },
   doorbell:     { what: "This is the doorbell button.", col: "#c58cff", glyph: "B" },
   chime:        { what: "This is the doorbell chime.", col: "#c58cff", glyph: "CH" },
   fan:          { what: "This is an exhaust fan.", col: "#c58cff", glyph: "F" },
@@ -44,6 +44,7 @@ export const KINDS = {
   lcp:          { what: "This is the low-current panel: internet fibre, network, TV and intercom cables meet here.", col: "#c58cff", glyph: "LC" },
   router:       { what: "This is the network hub: fibre box, router and PoE switch. Every network cable runs home here.", col: "#c58cff", glyph: "R" },
   ap:           { what: "This is a ceiling Wi-Fi access point: one network name everywhere, powered through its Cat6 cable.", col: "#46d39a", glyph: "AP" },
+  water:        { what: "This is a water outlet: a filtered line with a shut-off valve for a plumbed appliance.", col: "#4fc3f7", glyph: "W" },
 };
 // The chips under the 2D plan's Electrical button (drawing.js): each shows or hides one group (remembered).
 export const CATEGORIES = [
@@ -52,7 +53,7 @@ export const CATEGORIES = [
   { id: "power",   label: "Sockets & power",   col: "#5aa9ff", types: ["socket", "flap", "power", "ledfeed", "wp", "towelheater"] },
   { id: "network", label: "Network & TV",      col: "#46d39a", types: ["multi", "data", "phone", "tv", "router", "lcp", "ap", "intercom", "intercom_out"] },
   { id: "sensors", label: "Sensors & fans",     col: "#2ee6d6", types: ["sensor", "fan"] },
-  { id: "other",   label: "Other",              col: "#c58cff", types: ["sound", "doorbell", "chime", "db"] },
+  { id: "other",   label: "Other",              col: "#c58cff", types: ["sound", "doorbell", "chime", "db", "water"] },
 ];
 export const catOf = type => (CATEGORIES.find(c => c.types.includes(type)) || CATEGORIES[CATEGORIES.length - 1]).id;
 const PARTS = { D: "data (Cat6)", "2D": "double data (2 × Cat6)", H: "HDMI", TV: "TV / antenna", "2S": "double socket", S: "socket", C: "USB-C" };
@@ -72,9 +73,9 @@ const NAME = {
   spot: "Ceiling spot", pendant: "Pendant light", walllight: "Wall light", led: "LED strip", switch: "Light switches",
   acctl: "AC controller", socket: "Socket", flap: "Hidden socket flap", power: "Power point", wp: "Outdoor socket",
   multi: "Media plate", data: "Data point", phone: "Phone point", tv: "TV point", sound: "Sound control", intercom: "Intercom screen",
-  intercom_out: "Outdoor intercom", doorbell: "Doorbell", chime: "Doorbell chime", fan: "Exhaust fan", sensor: "Motion sensor",
+  intercom_out: "Video doorbell", doorbell: "Doorbell", chime: "Doorbell chime", fan: "Exhaust fan", sensor: "Motion sensor",
   towelheater: "Towel heater", db: "Breaker panel", lcp: "Low-current panel", router: "Wi-Fi router", ap: "Wi-Fi access point",
-  ledfeed: "Accent-light power",
+  ledfeed: "Accent-light power", water: "Water outlet",
 };
 const BADGE = { plan: "Plan", adapted: "Adapted", added: "Added", existing: "Existing", optional: "Optional" };
 const ON_CEILING = ["spot", "fan", "sensor", "ap", "led"];
@@ -101,8 +102,55 @@ function shortTitle(p) {
 // The note, for people: without the dated "(Karim 7 Nov 2026)" asides.
 const cleanNote = n => cap(n.replace(/\s*\([^()]*\b20\d\d\b[^()]*\)/g, "").replace(/\s*\bKarim \d+ \w+ 20\d\d:?/g, "").trim().replace(/[.;,]$/, ""));
 
+// Stacks (dad's review, Karim 11 Nov 2026): the 2D plan looks down, so points at the same spot on a wall (stacked switch
+// boxes, oven + microwave, a feed above a socket) hide each other. Each group within STACK_R is drawn as one marker with a
+// count and its heights; its card is a little wall view, top to bottom. build_electrical.py lists the same groups.
+const STACK_R = 0.12, CEIL_T = new Set(["spot", "fan", "sensor", "ap"]);
+const stackCache = new WeakMap();
+export function stacksOf(data) {
+  if (stackCache.has(data)) return stackCache.get(data);
+  const pts = data.points, out = [], used = new Set();
+  for (let i = 0; i < pts.length; i++) {
+    if (used.has(i)) continue;
+    const a = pts[i];
+    if (CEIL_T.has(a.type) || a.h == null) { out.push(a); continue; }
+    const g = [a];
+    for (let j = i + 1; j < pts.length; j++) {
+      const b = pts[j];
+      if (used.has(j) || CEIL_T.has(b.type) || b.h == null) continue;
+      if (g.some(q => Math.hypot(q.x - b.x, q.y - b.y) < STACK_R)) { g.push(b); used.add(j); }
+    }
+    if (g.length < 2) { out.push(a); continue; }
+    g.sort((p, q) => q.h - p.h);
+    out.push({ type: g[0].type, stack: g, room: g[0].room, x: g.reduce((t, q) => t + q.x, 0) / g.length,
+      y: g.reduce((t, q) => t + q.y, 0) / g.length, h: null, id: "stack:" + g.map(q => q.id).join("+") });
+  }
+  stackCache.set(data, out);
+  return out;
+}
+// The stack's card: a wall elevation (floor to ceiling, each item at its height) beside the list, top to bottom.
+function describeStackHTML(st, byId = {}, full = false) {
+  const g = st.stack, H = 2.7, W = 64, PX = 150, yOf = h => PX - (h / H) * PX;
+  const svg = `<svg class="el-elev" viewBox="0 0 ${W} ${PX + 2}" width="${W}" height="${PX + 2}">`
+    + `<line x1="2" y1="${PX}" x2="${W - 2}" y2="${PX}" stroke="#b9ada0" stroke-width="1.5"/>`
+    + `<line x1="2" y1="1" x2="2" y2="${PX}" stroke="#ffffff22"/>`
+    + g.map(p => { const k = KINDS[p.type] || KINDS.socket, y = yOf(p.h), w = p.type === "switch" ? 10 + 8 * (p.gangs?.length || 1) : 16;
+      return `<rect x="${(W - w) / 2}" y="${y - 3.5}" width="${w}" height="7" rx="1.5" fill="${k.col}"/>`; }).join("")
+    + `</svg>`;
+  const rows = g.map(p => {
+    const k = KINDS[p.type] || KINDS.socket;
+    const what = p.gangs?.length ? p.gangs.join(" · ") : shortTitle(p);
+    return `<li><i style="background:${k.col}"></i><b>${esc(cmH(p.h))}</b> ${esc(NAME[p.type] || p.type)}<span>${esc(what)}</span></li>`;
+  }).join("");
+  const notes = full ? g.filter(p => p.note).map(p => `<div class="el-note"><b>${esc(cmH(p.h))}:</b> ${esc(cleanNote(p.note))}.</div>`).join("") : `<div class="el-more">Click for why each one is here</div>`;
+  return `<div class="el-head"><i style="background:#f6efe6"></i><b>${g.length} on one wall spot</b>`
+    + (st.room ? `<span class="el-room">${esc(st.room)}</span>` : "") + `<em class="el-badge">Stacked</em></div>`
+    + `<div class="el-stack">${svg}<ol>${rows}</ol></div>` + notes;
+}
+
 // The card for a point (HTML). byId: id -> point, for the two-way partners; full: the pinned card, which adds the note.
 export function describeHTML(p, byId = {}, full = false) {
+  if (p.stack) return describeStackHTML(p, byId, full);
   const k = KINDS[p.type] || { what: "", col: "#ccc" };
   const facts = [];
   if (ON_CEILING.includes(p.type)) facts.push("In the ceiling");
@@ -156,7 +204,14 @@ const CSS = `
   .el-card .el-note { margin-top: 7px; padding-top: 6px; border-top: 1px solid #ffffff1a; color: #b9ada0; font-size: 11.5px; }
   .el-card .el-more { margin-top: 6px; color: #8a7f74; font-size: 10.5px; }
   .el-card .el-x { position: absolute; right: 6px; top: 4px; border: 0; background: none; color: #f6efe6; font-size: 16px; cursor: pointer; display: none; }
-  .el-card.pinned .el-x { display: block; }`;
+  .el-card.pinned .el-x { display: block; }
+  .el-card .el-stack { display: flex; gap: 10px; margin-top: 7px; align-items: flex-start; }
+  .el-card .el-stack ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; }
+  .el-card .el-stack li { display: grid; grid-template-columns: 9px auto; column-gap: 6px; font-size: 11.5px; }
+  .el-card .el-stack li i { width: 9px; height: 9px; border-radius: 2px; margin-top: 3px; grid-row: span 2; }
+  .el-card .el-stack li b { font-weight: 600; color: #f2d3a4; margin-right: 4px; }
+  .el-card .el-stack li span { grid-column: 2; color: #cbbfb2; font-size: 11px; }
+  .el-card { max-width: 330px; }`;
 
 export function makeCard() {
   if (!document.getElementById("el-css")) document.head.append(Object.assign(document.createElement("style"), { id: "el-css", textContent: CSS }));
@@ -505,7 +560,7 @@ export function drawElectrical(ctx, toScreen, s, data, hover = null) {
   const showH = s > 70;
   ctx.font = `${Math.max(8, Math.min(11, s * 0.1))}px Inter, sans-serif`;
   ctx.textBaseline = "middle";
-  for (const p of data.points) {
+  for (const p of stacksOf(data)) {
     const k = KINDS[p.type] || KINDS.socket, [x, y] = toScreen([p.x, p.y]);
     const rr = p.type === "spot" ? r * 0.75 : r;
     ctx.strokeStyle = k.col; ctx.fillStyle = k.col; ctx.lineWidth = 1.4;
@@ -529,14 +584,23 @@ export function drawElectrical(ctx, toScreen, s, data, hover = null) {
         ctx.fillStyle = k.col; ctx.textAlign = "center";
         const f = Math.max(7, Math.min(11, sq * (k.glyph.length > 1 ? 0.95 : 1.3)));
         ctx.font = `600 ${f}px Inter, sans-serif`;
-        ctx.fillText(p.type === "switch" ? String(p.gangs?.length || 1) : k.glyph, x, y + 0.5);
+        ctx.fillText(p.stack ? (p.stack.every(q => q.type === "switch") ? p.stack.map(q => q.gangs?.length || 1).join("+") : k.glyph)
+          : p.type === "switch" ? String(p.gangs?.length || 1) : k.glyph, x, y + 0.5);
         ctx.font = `${Math.max(8, Math.min(11, s * 0.1))}px Inter, sans-serif`;
       }
     }
+    if (p.stack) {  // count badge on the marker's top-right corner
+      const bx = x + r * 1.1, by = y - r * 1.1, br = Math.max(4.5, r * 0.62);
+      ctx.fillStyle = "#f6efe6"; ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#1f1b18"; ctx.textAlign = "center"; ctx.font = `700 ${Math.max(7, br * 1.3)}px Inter, sans-serif`;
+      ctx.fillText(String(p.stack.length), bx, by + 0.5);
+      ctx.font = `${Math.max(8, Math.min(11, s * 0.1))}px Inter, sans-serif`;
+    }
     if (hover === p) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, rr + 4, 0, Math.PI * 2); ctx.stroke(); }
-    if (showH && p.h != null && !["spot", "fan", "pendant", "sensor", "ap"].includes(p.type)) {
+    const hs = p.stack ? p.stack.map(q => Math.round(q.h * 100)).join("/") : p.h != null && !["spot", "fan", "pendant", "sensor", "ap"].includes(p.type) ? Math.round(p.h * 100) : null;
+    if (showH && hs != null) {
       ctx.fillStyle = "#e8e2d8b0"; ctx.textAlign = "left";
-      ctx.fillText(Math.round(p.h * 100), x + r + 2, y - r);
+      ctx.fillText(hs, x + r * (p.stack ? 1.9 : 1) + 2, y - r);
     }
   }
   ctx.restore();
@@ -544,7 +608,7 @@ export function drawElectrical(ctx, toScreen, s, data, hover = null) {
 
 export function pickElectrical(data, toScreen, sx, sy, reach = 10) {
   let best = null, bd = reach;
-  for (const p of data.points) {
+  for (const p of stacksOf(data)) {
     const [x, y] = toScreen([p.x, p.y]), d = Math.hypot(x - sx, y - sy);
     if (d < bd) { bd = d; best = p; }
   }

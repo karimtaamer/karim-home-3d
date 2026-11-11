@@ -370,8 +370,8 @@ sensor("Living room", "Presence sensor (mmWave) — living room, OPTIONAL, switc
 # Ceiling access points, one network name, each on its own Cat6 from the hub (PoE: no socket). AP2 is with the hub above.
 pt("ap", "Entrance", "Wi-Fi access point AP1 — ceiling between the bedroom and living-room doors", at=(5.425, 5.05), h=CEIL, status="added", id="ap-1",
    note="covers the master bedroom, master bathroom and living room; between the two lobby spots; Cat6 + PoE from the hub")
-pt("ap", "Reception", "Wi-Fi access point AP3 — reception ceiling, between the dining and seating areas", at=(18.3, 5.625), h=CEIL, status="added", id="ap-3",
-   note="covers the reception, dining and terrace (through the glass); halfway between the dining and reception spot rows; Cat6 + PoE from the hub")
+pt("ap", "Reception", "Wi-Fi access point AP3 — dining-side ceiling, just north of the divider curtain box", at=(18.3, 6.15), h=CEIL, status="added", id="ap-3",
+   note="covers the reception, dining and terrace (through the glass); Karim 11 Nov 2026: moved 0.525 north (was y 5.625, on the curtain line) to 0.44 m north of the divider curtain pocket and 0.50 m short of the dining spot row; Cat6 + PoE from the hub")
 
 # ================================================================ Accent-light power points (Karim 7 Nov 2026)
 # Every light the 3D model and the renders show that had no feed: picture lights, lit niches and shelves, mirror glows,

@@ -2351,12 +2351,12 @@
    "type": "ap",
    "room": "Reception",
    "x": 18.3,
-   "y": 5.625,
+   "y": 6.15,
    "h": 2.6,
    "facing": null,
-   "label": "Wi-Fi access point AP3 — reception ceiling, between the dining and seating areas",
+   "label": "Wi-Fi access point AP3 — dining-side ceiling, just north of the divider curtain box",
    "status": "added",
-   "note": "covers the reception, dining and terrace (through the glass); halfway between the dining and reception spot rows; Cat6 + PoE from the hub"
+   "note": "covers the reception, dining and terrace (through the glass); Karim 11 Nov 2026: moved 0.525 north (was y 5.625, on the curtain line) to 0.44 m north of the divider curtain pocket and 0.50 m short of the dining spot row; Cat6 + PoE from the hub"
   },
   {
    "id": "ledfeed-175",

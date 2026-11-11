@@ -6,7 +6,9 @@
 //   g.userData.openable = {
 //     id, label,                                        // label: shown on hover ("Medicine cabinet")
 //     leaves: [{ obj, axis: "y", open: rad }            // a hinged leaf: obj turns `open` radians about its own axis
-//            | { obj, slide: Vector3 }],                //   or a sliding one: obj moves by `slide` (its parent's frame)
+//            | { obj, slide: Vector3 }                 //   or a sliding one: obj moves by `slide` (its parent's frame)
+//            | { obj, slide?, scale: Vector3 }],        //   or a gathering one (a curtain): obj's scale goes to `scale`
+//     verbs: ["Close", "Open"],                         // optional: label words for opening / closing (default Open / Close)
 //     anchor: Vector3,                                  // where the cue sits, in g's frame (the doors' centre, a little out)
 //     reach: 1.8, duration: 0.6,                        // plan metres from the anchor it opens from; seconds to open
 //     follow: true,                                     // optional: the cue moves with g (a lid that lifts, a desk that rolls)
@@ -62,7 +64,7 @@ export function createInteract({ THREE, camera, scene, renderer, isActive, isLoc
       list.push({
         ...d, root: g, reach: d.reach ?? REACH, duration: d.duration ?? 0.6, t: 0, to: 0,
         at: g.localToWorld(d.anchor.clone()), look: g.localToWorld((d.peekAt || d.anchor).clone()),
-        leaves: d.leaves.map(l => ({ ...l, axis: l.axis || "y", rot: l.obj.rotation[l.axis || "y"], pos: l.obj.position.clone() })),
+        leaves: d.leaves.map(l => ({ ...l, axis: l.axis || "y", rot: l.obj.rotation[l.axis || "y"], pos: l.obj.position.clone(), size: l.obj.scale.clone() })),
       });
     });
   }
@@ -73,7 +75,8 @@ export function createInteract({ THREE, camera, scene, renderer, isActive, isLoc
     const e = ease(o.t);
     for (const l of o.leaves) {
       if (l.slide) l.obj.position.copy(l.pos).addScaledVector(l.slide, e);
-      else l.obj.rotation[l.axis] = l.rot + l.open * e;
+      if (l.scale) l.obj.scale.copy(l.size).lerp(l.scale, e);
+      if (!l.slide && !l.scale) l.obj.rotation[l.axis] = l.rot + l.open * e;
     }
   }
   function toggle(o = target) {
@@ -103,9 +106,10 @@ export function createInteract({ THREE, camera, scene, renderer, isActive, isLoc
     if (crouch.aim0) camera.lookAt(crouch.aim0.clone().lerp(crouch.aim1, e));
     if (crouch.t >= 1 && crouch.y1 === crouch.stand) crouch = null;
   }
+  const verb = o => (o.verbs || ["Open", "Close"])[o.to ? 1 : 0];
   const label = () => target && (cue.dataset.label = far
-    ? `Come closer · ${target.to ? "Close" : "Open"} ${target.label.toLowerCase()}`
-    : `${target.to ? "Close" : "Open"} ${target.label.toLowerCase()} · E`);
+    ? `Come closer · ${verb(target)} ${target.label.toLowerCase()}`
+    : `${verb(target)} ${target.label.toLowerCase()} · E`);
   // Out of reach a tap / E / click opens nothing: the label shows for a moment instead.
   let hintTimer = 0;
   function act() {
@@ -134,18 +138,23 @@ export function createInteract({ THREE, camera, scene, renderer, isActive, isLoc
     ray.set(eye, dir);
     ray.far = LOOK + 2;
     const hit = ray.intersectObjects(seen.map(o => o.root), true)[0];
+    let hitO = null;
     if (hit) {
       let o = null;
       for (let p = hit.object; p && !o; p = p.parent) o = seen.find(n => n.root === p);
-      if (o && clear(dir, hit.distance)) return o;
+      if (o && clear(dir, hit.distance)) hitO = o;
     }
+    // A hit within reach wins; a far one only if nothing within reach is in the cone (looking through an open
+    // curtain's gap at a cabinet across the room still shows the curtain you stand at).
+    if (hitO && plan(hitO) <= hitO.reach) return hitO;
     let best = null, bestAngle = Infinity;
     for (const o of seen) {
+      if (hitO && plan(o) > o.reach) continue;
       const d = to.subVectors(o.at, eye).length(), a = dir.angleTo(to);
       const cone = plan(o) <= o.reach ? THREE.MathUtils.degToRad(CONE) : Math.min(THREE.MathUtils.degToRad(CONE), Math.atan(SPREAD / d));
       if (a < cone && a < bestAngle && clear(to.clone().normalize(), d - 0.05)) { best = o; bestAngle = a; }
     }
-    return best;
+    return best || hitO;
   }
 
   let target = null, far = false, wait = 0, last = performance.now();

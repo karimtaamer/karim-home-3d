@@ -53,6 +53,9 @@ export function furnish(scene, M, mat, version = "main") {
     { rect: [21.062, 2.772, 21.212, 5.558], along: "y", wall: "+", depth: POCKET }, // reception window 3.135-5.195 (+0.363)
     { rect: [21.062, 5.84, 21.212, 8.379], along: "y", wall: "+", depth: POCKET },  // dining slider 6.24-7.979 (+0.40)
     { rect: [16.025, 9.338, 17.884, 9.488], along: "x", wall: "+", depth: POCKET }, // dining window 16.375-17.534 (+0.35)
+    // Reception / dining divider (Karim 11 Nov 2026): column face (x 17.542) to the east wall (21.222), flush with the
+    // column's north face (y 5.711), between the east wall's reception and dining pockets. LED on the reception side.
+    { rect: [17.542, 5.561, 21.222, 5.711], along: "x", wall: "+", depth: POCKET },
   ];
   scene.add(root, ceilingBits);
   // Karim's version (karims-version) split from Main (kareems-changes) on 26 Oct 2026 as a copy of it: it runs every
@@ -1953,7 +1956,8 @@ export function furnish(scene, M, mat, version = "main") {
   const KC = ["kareems-changes", "karims-version"].includes(version), SC = version === "kareems-changes" ? 19.338 : 19.342, SO = 1.4525;
   item(KC ? SC : 18.86, 2.103, "N", p => sofa(p, 2.05, 1.02, mat.boucle, [mat.linenSlate, mat.linenBlush, mat.linenSlate]));  // DWG, clear of the pier
   item(21.027, 4.165, "W", p => sofa(p, 2.0, 0.92, mat.boucle, [mat.linenSlate, mat.linenBlush]));  // centred on the DWG sofa, back on its back line, clear of the curtains
-  item(version === "karims-version" ? 18.33 : 19.1, version === "karims-version" ? 4.59 : 5.95, "S", p => {  // DWG armchair, as rendered: open walnut lounge frame, slate cushions, blush pillow
+  // Main 11 Nov 2026: slid 0.40 south (was y 5.95) so its back (y 5.56) clears the divider curtain; its front is ~4 cm off the coffee table.
+  item(version === "karims-version" ? 18.33 : 19.1, version === "karims-version" ? 4.59 : 5.55, "S", p => {  // DWG armchair, as rendered: open walnut lounge frame, slate cushions, blush pillow
     const cw = mat.walnut, cf = mat.linenSlate;  // frame, upholstery (the black in e9f8dba undone, 26 Oct)
     for (const s of [-1, 1]) {
       const x = s * 0.36;
@@ -1988,6 +1992,25 @@ export function furnish(scene, M, mat, version = "main") {
       const m = mesh(curtainGeometry(0.45, CH), mat.curtain, p.g); m.position.set(0, CY, CZ);
     });
     item(21.22, (y0 + y1) / 2, "W", p => { const m = mesh(curtainGeometry(y1 - y0 + 0.1, CH - 0.01), mat.sheer, p.g); m.position.set(0, CY, SZ); });
+  }
+  // Reception / dining divider curtain (Karim 11 Nov 2026), in the ceiling pocket from the column (x 17.542) to the east
+  // wall (21.222), on the pocket's centre line (y 5.636). Two panels part in the middle and stack 0.40 at each end; built
+  // drawn back (open). Walk: stand near it and tap / click / E to draw it closed, again to open it (interact.js gathers
+  // each panel about its stack end: scale, not slide).
+  {
+    const DX = (17.542 + 21.222) / 2, half = (21.222 - 17.542) / 2 - 0.01, w = half + 0.025, stack = 0.40;  // 2.5 cm overlap at the middle
+    const leaves = [];
+    const cg = item(DX, 5.636, "S", p => {
+      for (const s of [-1, 1]) {
+        const panel = new THREE.Group(); panel.position.set(s * half, 0, 0); p.g.add(panel);
+        const geo = curtainGeometry(w, CH); geo.translate(-s * w / 2, CY, 0);  // from its stack end toward the middle
+        mesh(geo, mat.curtain, panel);
+        panel.scale.set(stack / w, 1, 1.8);  // drawn back: gathered tight, deeper folds
+        leaves.push({ obj: panel, scale: new THREE.Vector3(1, 1, 1) });
+      }
+    });
+    cg.userData.openable = { id: "reception-divider-curtain", label: "Curtain", verbs: ["Close", "Open"], leaves,
+      anchor: new THREE.Vector3(0, 1.3, 0), reach: 2.2, duration: 1.4 };
   }
   const NCAC = version === "naghams-changes" || ["kareems-changes", "karims-version"].includes(version);  // Nagham's Changes: wall-mounted splits, no ducted AC
   if (NCAC) {
@@ -2218,7 +2241,7 @@ export function furnish(scene, M, mat, version = "main") {
     leaves.push({ obj: door, axis: "x", open: -105 * Math.PI / 180 });
     c.userData.openable = { id: "dining-fold-down-desk", label: "Fold-down desk", leaves, anchor: new THREE.Vector3(0, 1.38, front + 0.06), reach: 1.8, duration: 0.6 };
   });
-  plant(20.75, 5.77, 1.7, 0.25);  // in the pier between the sofa window and the slider, between their curtain stacks
+  plant(20.75, 6.15, 1.5, 0.25);  // in the pier between the sofa window and the slider, north of the divider curtain (Main 11 Nov 2026: was 5.77, h 1.7)
 
   // --- Terrace: decking, L bench, lounge set, BBQ counter ----------
   const T = { x0: 21.47, x1: 24.76, y0: 1.78, y1: 9.4 };  // no pergola, per the client

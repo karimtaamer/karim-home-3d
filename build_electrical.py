@@ -245,13 +245,13 @@ bank("sw-reception-2", "Reception", "reception, by the hallway door, lower box",
      gang_circuits=["reception-curtain", "reception-accent"], status="adapted", note="the reception column's lower box: accent lights")
 # Karim's review (Karim 12 Nov 2026): the terrace plate was hidden by the slider curtain's stack (the curtain pocket runs to
 # y 8.379), so it slides 0.35 north to y 8.60, just past the curtain, on the same wall line; the coffee-corner switch
-# leaves that wall for the coffee corner's back wall, centred on the corner (x 20.474) between the shelves and the top.
+# stays on that wall too, now over the coffee corner's east end (Karim 12 Nov 2026, second pass: his arrow to that end).
 bank("sw-office", "Dining", "by the terrace door, just past the curtain (terrace lights)",
      ["Terrace floor lighting (seat-lip LED) + BBQ counter LED", "Terrace wall lights", "Spotlights above the L-seat"], wall="E", x=20.9, y=8.60,
      status="adapted",
      note="Karim's review (Karim 12 Nov 2026): moved 0.35 m north (was y 8.25, behind the curtain's stack) to just past the curtain, so it shows; same 120 cm. Key 3 now switches the light outlet for the spotlights above the L-seat (no socket)")
-bank("sw-coffee", "Dining", "coffee corner, centred over the counter", ["Coffee corner shelf LED"], wall="N", x=20.474, y=9.0,
-     status="added", note="Karim's review (Karim 12 Nov 2026): on the coffee corner's back wall, centred on it, where you stand to use it; 120 = 20 cm over the marble, under the shelves (1.63)")
+bank("sw-coffee", "Dining", "coffee corner, east end (over the counter, at the corner)", ["Coffee corner shelf LED"], wall="E", x=20.9, y=8.95,
+     status="added", note="Karim's review (Karim 12 Nov 2026): on the end wall at the coffee corner's east end, 11 cm in from the counter's front corner, facing the room; 120 = 20 cm over the marble; 0.35 m north of the terrace switch on the same wall")
 
 # AC controllers (wall thermostats), 1.50
 pt("acctl", "Living room", "AC controller — living room split", wall="N", x=4.75, y=4.0, h=1.5)
@@ -374,8 +374,8 @@ sock("Dining", "Double socket 45 cm — north wall (by the table)", wall="N", x=
 pt("power", "Dining", "AC power point — dining split (dedicated circuit)", at=(14.975, 9.4), h=2.3, facing="E", appliance="split AC", status="added")
 sock("Dining", "Double socket 115 cm — water dispenser", wall="N", x=20.0, y=9.0, h=1.15, status="adapted",
      note="the plan's office sockets 110: Main's marble top is at 1.00, so 1.15; behind the dispenser (west end)")
-sock("Dining", "Double socket 115 cm — espresso machine", wall="N", x=20.75, y=9.0, h=1.15, status="adapted",
-     note="Karim's review (Karim 12 Nov 2026): moved 0.30 m east (was x 20.45, mid-corner) behind the espresso machine, to make room for the centred coffee-corner switch")
+sock("Dining", "Double socket 115 cm — espresso machine", wall="N", x=20.45, y=9.0, h=1.15, status="adapted",
+     note="mid-corner, beside the espresso machine")
 pt("multi", "Dining", "Desk plate 45 cm — double data + double socket for the flip desk and monitor", wall="N", x=20.9, y=9.0, h=0.45, parts=["2D", "2S"],
    status="adapted", note="Dad's review (Karim 11 Nov 2026): at 45 inside the flip desk's bay, so the computer cables stay hidden under the top; slack for the 0.80 roll-out; two Cat6 to the hub")
 pt("water", "Dining", "Water outlet — line for the plumbed countertop dispenser (coffee corner)", wall="N", x=20.3, y=9.0, h=1.08, status="added",

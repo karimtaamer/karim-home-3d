@@ -1,0 +1,126 @@
+# Facts the finishing package needs that Main's model / drawing / electrical files don't hold.
+# Coordinates are plan metres in the model.js frame (x east, y north). Edit here, then rerun build_package.py.
+meta:
+  project: "Karim Tamer apartment - Al Lotus, New Cairo (5th floor)"
+  client: "Karim Tamer"
+  engineer: "Eng. Asmaa (site engineer, finishing)"
+  rev: "R0"
+  date: "12 Nov 2026"
+  drawn: "Grok Bot / K.T."
+  title: "Finishing Package - Main"
+
+rooms:   # model floor name -> English, Arabic, label point (optional)
+  LIVING ROOM: {en: "Living room", ar: "غرفة المعيشة"}
+  RECEPTION: {en: "Reception", ar: "الريسبشن", at: [19.4, 3.9]}
+  DINING: {en: "Dining", ar: "السفرة", at: [17.6, 6.55]}
+  TOILET 2: {en: "Guest bathroom", ar: "حمام الضيوف", at: [13.5, 7.6]}
+  KITCHEN: {en: "Kitchen", ar: "المطبخ", at: [8.2, 7.6]}
+  MASTER BEDROOM: {en: "Master bedroom", ar: "غرفة النوم الرئيسية", at: [3.9, 6.9]}
+  TOILET 1: {en: "Master bathroom", ar: "حمام الماستر", at: [1.4, 7.0]}
+  ENTRANCE: {en: "Entrance / corridor", ar: "المدخل والطرقة", at: [8.3, 4.5], nodims: true}
+  HALLWAY: {en: "Hallway", ar: "الممر", at: [12.9, 6.2]}
+  LAUNDRY: {en: "Laundry", ar: "غرفة الغسيل", at: [10.75, 7.6]}
+  TERRACE: {en: "Terrace", ar: "التراس", at: [23.3, 5.0]}
+
+# Switch keys whose circuits Main's electrical file gives only as text (gang_circuits missing):
+# inferred from the key's text; shown on the lighting sheet as "inferred".
+switch_circuits:
+  sw-front-door: [hallway, door-sconces]
+  sw-dining-end: [hallway]
+  sw-lobby: [hallway]
+  sw-living: [living-A, living-B, living-cove]
+  sw-mbath: [mbath, null, mbath-fan]
+  sw-kitchen: [kitchen-A, kitchen-B, kitchen-fan]
+  sw-laundry: [laundry]
+  sw-gbath: [gbath-spots, null, gbath-fan]
+  sw-office: [null, terrace-wall, terrace-seat-spots]
+
+# Furniture labels: size read from the DWG furniture outline that contains the point (W x D cm), else `size`.
+furniture:
+  - {name: "Corner sofa", at: [3.45, 2.9]}
+  - {name: "Coffee table", at: [4.645, 2.53]}
+  - {name: "TV console 174x40 (floating)", at: [5.93, 2.25], size: "174 x 40"}
+  - {name: "Bed", at: [3.2, 7.5]}
+  - {name: "Nightstand", at: [2.55, 6.23]}
+  - {name: "Nightstand", at: [2.55, 8.79]}
+  - {name: "Dresser", at: [3.0, 4.75]}
+  - {name: "Wardrobe", at: [1.5, 4.86]}
+  - {name: "Cupboard", at: [0.86, 5.56]}
+  - {name: "Wardrobe (bedroom-kitchen wall)", at: [6.06, 7.3]}
+  - {name: "Vanity 110x60", at: [0.86, 6.69], size: "110 x 60"}
+  - {name: "WC bay (box 30 deep)", at: [1.8, 8.87]}
+  - {name: "Pantry", at: [7.07, 5.96]}
+  - {name: "Appliance tower", at: [8.12, 5.96]}
+  - {name: "Hob", at: [6.78, 7.38]}
+  - {name: "Sink", at: [8.19, 8.77]}
+  - {name: "Fridge", at: [9.87, 7.46]}
+  - {name: "Laundry joinery", at: [10.63, 7.92]}
+  - {name: "Washer/dryer stack", at: [11.68, 8.89]}
+  - {name: "Bath (built-in)", at: [12.5, 8.2]}
+  - {name: "Vanity counter", at: [14.37, 8.03]}
+  - {name: "Entrance bench", at: [8.6, 5.33]}
+  - {name: "Entrance console (L)", at: [10.58, 3.81]}
+  - {name: "Dining table", at: [17.5, 7.85]}
+  - {name: "Buffet (50 deep)", at: [15.03, 8.1], size: "50 x 267"}
+  - {name: "Coffee counter", at: [20.47, 9.2]}
+  - {name: "TV library wall (see D501)", at: [17.38, 3.67], size: "see D501"}
+  - {name: "Sofa", at: [19.34, 2.6]}
+  - {name: "Sofa (east)", at: [20.3, 4.2]}
+  - {name: "Armchair", at: [18.45, 8.95]}
+  - {name: "Terrace L-seat (60 deep)", at: [22.5, 2.3]}
+  - {name: "BBQ counter", at: [23.7, 9.0]}
+
+# Plumbing / wet points. Positions and heights from furnish-kareems-changes.js (fixture centres).
+plumbing:
+  - {id: P01, room: "Master bathroom", what: "Basin (vanity 110, top ~0.86): H+C, waste", x: 0.83, y: 6.69, h: "0.55 feed / 0.86 top", src: "vanity item 0.556,6.685"}
+  - {id: P02, room: "Master bathroom", what: "Electric instant heater 7.5 kW inside vanity (Purity/Cemsan SPEED)", x: 0.62, y: 6.45, h: "0.37-0.74", src: "power-111, heaterVanity"}
+  - {id: P03, room: "Master bathroom", what: "Wall-hung WC, concealed cistern in 30 cm box (top 1.12), flush plate 0.92-1.08, bidet mixer 0.55", x: 1.80, y: 8.85, h: "box 1.12", src: "item 1.7762,9.0201"}
+  - {id: P04, room: "Master bathroom", what: "Shower: thermostatic mixer 1.00, diverter 1.20, hand shower 0.91-1.09, rain arm 2.10", x: 0.95, y: 8.78, h: "1.00 / 1.20 / 2.10", src: "item 0.9485,8.8101"}
+  - {id: P05, room: "Master bathroom", what: "Shower floor drain - position TO CONFIRM", x: 0.95, y: 8.15, h: "floor", src: "not in Main", confirm: true}
+  - {id: P06, room: "Guest bathroom", what: "Built-in bath (rim 0.55), waste at north end", x: 12.59, y: 8.90, h: "floor / 0.55 rim", src: "bath basin note in furnish"}
+  - {id: P07, room: "Guest bathroom", what: "Bath/shower set on north wall: mixer, spout, hand spray, wall-arm head 2.25", x: 12.55, y: 9.12, h: "mixer ~1.00 / head 2.25", src: "item 12.546,9.1716"}
+  - {id: P08, room: "Guest bathroom", what: "Wall-hung WC under window, bidet mixer", x: 13.57, y: 9.0, h: "flush panel under 0.90 sill", src: "item 13.572,9.18"}
+  - {id: P09, room: "Guest bathroom", what: "Vessel basin on 60 deep counter (top 0.85), wall spout 1.02", x: 14.36, y: 7.75, h: "spout 1.02", src: "item 14.66,7.75"}
+  - {id: P10, room: "Guest bathroom", what: "Floor drain - position TO CONFIRM", x: 13.4, y: 7.35, h: "floor", src: "not in Main", confirm: true}
+  - {id: P11, room: "Kitchen", what: "Sink 87.7 (counter 0.92): H+C, waste; water filter under sink", x: 8.19, y: 8.80, h: "0.55 feed", src: "sink block wrewwer"}
+  - {id: P12, room: "Kitchen", what: "Dishwasher (raised, in tall unit): cold + waste", x: 9.78, y: 8.11, h: "0.60", src: "furnish blackInox box"}
+  - {id: P13, room: "Kitchen", what: "Countertop dispenser water outlet + valve", x: 10.12, y: 8.75, h: "1.05", src: "water-119"}
+  - {id: P14, room: "Laundry", what: "Washer/dryer stack: cold + waste (standpipe)", x: 11.68, y: 8.89, h: "~0.80", src: "furnish washer box"}
+  - {id: P15, room: "Laundry", what: "Ariston Aures Slim Multi 9.5 kW instant heater in upper cabinet (22x30.4x11)", x: 11.16, y: 9.10, h: "1.80-2.10", src: "furnish laundry upper"}
+  - {id: P16, room: "Laundry", what: "Floor drain - position TO CONFIRM", x: 10.8, y: 7.2, h: "floor", src: "not in Main", confirm: true}
+  - {id: P17, room: "Dining (coffee corner)", what: "Water line + valve for plumbed countertop dispenser", x: 20.3, y: 9.40, h: "1.08", src: "water-158"}
+  - {id: P18, room: "Terrace", what: "Terrace floor drains / slope - TO CONFIRM (not modelled)", x: 23.3, y: 6.0, h: "floor", src: "not in Main", confirm: true}
+
+plumbing_notes:
+  - "Supply (PPR, hot + cold) runs horizontally in the gypsum ceiling with access panels at joints, dropping in the wall only at each fixture; avoid burying pipes in the floor (Karim, 2 Nov 2026)."
+  - "Drain falls, pipe sizes and stack connections are NOT in the Main model: to be set by the plumbing engineer and confirmed on site."
+  - "Which fixtures the laundry Ariston 9.5 kW heater feeds (kitchen sink / guest bathroom) is TO CONFIRM; the master bathroom has its own 7.5 kW heater in the vanity."
+  - "Water pump: separate setup (ground-floor pump to roof tank + booster after the tank); see the water-pump review sent separately."
+  - "AC condensate: each wall split (living, master, dining, reception) needs a drain route; TO CONFIRM with the AC installer."
+  - "WCs have a plain wall-mounted bidet mixer, no spray-gun hose (Karim, 24 Oct 2026)."
+
+specs:   # [area, item, spec, status]
+  - [General, "Ceiling height (finished)", "2.60 m flat plasterboard ceiling (model)", "to confirm against floor build-up"]
+  - [General, "Electrical heights", "Heights on the E sheets are from the concrete slab, as the designer's plan gives them", "to confirm once floor build-up is fixed"]
+  - [General, "Door head", "2.10 m; flush honey-oak leaves, slim oak frames, brushed-steel levers", "finish to confirm"]
+  - [General, "Windows", "Sill 0.90 / head 2.10 unless the schedule says otherwise; slider head 2.40", "existing"]
+  - [General, "Walls", "Warm cream-beige limewash plaster (hand-troweled), not flat white paint", "product / colour code to confirm"]
+  - [General, "Ceilings", "Flat warm off-white paint", "product to confirm"]
+  - [General, "Skirting", "Slim oak skirting, ~8 cm (as modelled on the TV walls)", "height to confirm"]
+  - [Dry rooms, "Floor", "Honey natural oak boards (living, bedroom, reception, dining, corridors)", "product / thickness to confirm"]
+  - [Wet rooms, "Floor", "Large-format pale beige stone-look porcelain (bathrooms, kitchen, laundry)", "size / product to confirm"]
+  - [Guest bathroom, "Wall tiles", "120 x 60 cm vertical from 80 cm; 80 cm strip below, 60 cm strip above 2.00; travertine-look", "decided 9 Nov 2026"]
+  - [Guest bathroom, "Niches", "Two niches either side of one joint, 0.80-2.00, shelves 1.05 / 1.30 / 1.55 / 1.80; build-out 30 deep in line with the tub deck", "decided 9 Nov 2026"]
+  - [Guest bathroom, "Counter", "Grey travertine slab 60 deep, top 0.85, white vessel basin, wall spout 1.02, brushed-bronze fittings", "product to confirm"]
+  - [Master bathroom, "Walls", "Honey-oak slatted cladding (vanity wall) + pale beige large stone-look tiles", "product to confirm"]
+  - [Master bathroom, "Shower", "1.35 deep x 0.785 clear, partition 22.5; niche 67 x 13.5 with shelves 0.895 / 1.19 / 1.485, top 1.74; glass 2.00 high", "decided 31 Oct 2026"]
+  - [Master bathroom, "WC", "Wall-hung, concealed cistern box 30 deep to 1.12, bay 0.88; frosted window sill 1.50", "decided 9 Nov 2026"]
+  - [Kitchen, "Counter", "Worktop 0.92; sink 87.7 wide; hob 92.4; Ecomatic hood 90", "worktop material to confirm"]
+  - [Kitchen, "Sockets", "Counter sockets at 1.30; fridge 1.30; dishwasher 0.40 in the base; filter 0.60 under sink", "from Main"]
+  - [Coffee corner, "Counter", "Marble top at 1.00 with dispenser and espresso machine; sockets 1.15", "from Main"]
+  - [Reception, "TV wall", "Plaster TV box 29.2 deep flush with column face; run 19.2 deep; 10 cm diagonal; see D501", "locked 1 Nov 2026"]
+  - [Living room, "TV wall", "Limewash taupe panel; TV 160 x 85 at 1.10-1.95; floating console 0.45-0.75; see D502", "from Main"]
+  - [Terrace, "L-seat / BBQ counter", "WPC wraps down to a return lip; brick set back 6 cm; LED under the lip ~6 cm off the floor, light on the floor", "decided 12 Nov 2026"]
+  - [Terrace, "Seat", "Depth 60, back 50, planter 20 behind, hollow storage with lift-up seat", "from Main"]
+  - [All, "Switches / sockets", "Switches 1.20 (stacked 1.25 + 1.13); general sockets 0.45; bedside 0.85", "faceplate range to confirm"]
+  - [All, "Lighting", "Ceiling spots 6 W warm 2700 K at about 1.3 m spacing; LED strips warm 24 V", "product to confirm"]

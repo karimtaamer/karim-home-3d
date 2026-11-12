@@ -29,7 +29,8 @@
   "sensor": "Ceiling motion / presence sensor (mmWave or PIR)",
   "ledfeed": "Accent-light power point (LED driver / picture-light box)",
   "ap": "Ceiling Wi-Fi access point (Cat6 + PoE from the hub)",
-  "water": "Water outlet (filtered line + shut-off valve) for a plumbed appliance"
+  "water": "Water outlet (filtered line + shut-off valve) for a plumbed appliance",
+  "lightout": "Lighting outlet (switched light feed, no socket)"
  },
  "points": [
   {
@@ -1171,13 +1172,13 @@
    "id": "sw-kitchen",
    "type": "switch",
    "room": "Kitchen",
-   "x": 9.15,
-   "y": 5.6634,
+   "x": 10.08,
+   "y": 6.875,
    "h": 1.25,
-   "facing": "N",
-   "label": "3-gang switch — kitchen, by the door, top box",
+   "facing": "S",
+   "label": "3-gang switch — kitchen, beside the fridge as you come in, top box",
    "status": "adapted",
-   "note": "Dad's review (Karim 11 Nov 2026): two boxes one above the other, just past the open door (the latch side is the fridge); spots and fan on top",
+   "note": "Karim's review (Karim 12 Nov 2026): moved from the south wall (x 9.15) to beside the fridge, on your right as you open the door; same 125 / 113 heights; on the tall end panel, so the back box needs a stud lining or a box set in the panel (the fridge's 5 cm vent gap is behind it)",
    "gangs": [
     "Spots, half A",
     "Spots, half B",
@@ -1190,13 +1191,13 @@
    "id": "sw-kitchen-2",
    "type": "switch",
    "room": "Kitchen",
-   "x": 9.15,
-   "y": 5.6634,
+   "x": 10.08,
+   "y": 6.875,
    "h": 1.13,
-   "facing": "N",
-   "label": "2-gang switch — kitchen, by the door, lower box",
+   "facing": "S",
+   "label": "2-gang switch — kitchen, beside the fridge as you come in, lower box",
    "status": "adapted",
-   "note": "lower box: the cabinet LEDs",
+   "note": "Karim's review (Karim 12 Nov 2026): lower box: the cabinet LEDs, under the top box beside the fridge",
    "gangs": [
     "Under-cabinet LED strips (upper cabinets)",
     "Plinth LED (lower cabinets)"
@@ -1331,17 +1332,17 @@
    "id": "sw-office",
    "type": "switch",
    "room": "Dining",
-   "x": 21.22,
-   "y": 8.25,
+   "x": 21.2203,
+   "y": 8.6,
    "h": 1.2,
    "facing": "W",
-   "label": "3-gang switch — coffee corner, by the terrace door (terrace lights)",
+   "label": "3-gang switch — by the terrace door, just past the curtain (terrace lights)",
    "status": "adapted",
-   "note": "Dad's review (Karim 11 Nov 2026): terrace keys only; key 3 now switches the plant-lighting socket (the shelf LED has its own switch at the coffee corner)",
+   "note": "Karim's review (Karim 12 Nov 2026): moved 0.35 m north (was y 8.25, behind the curtain's stack) to just past the curtain, so it shows; same 120 cm. Key 3 now switches the light outlet for the spotlights above the L-seat (no socket)",
    "gangs": [
     "Terrace floor lighting (seat-lip LED) + BBQ counter LED",
     "Terrace wall lights",
-    "Plant lighting (switched outdoor socket at the planter corner)"
+    "Spotlights above the L-seat"
    ],
    "two_way": null
   },
@@ -1349,13 +1350,13 @@
    "id": "sw-coffee",
    "type": "switch",
    "room": "Dining",
-   "x": 21.2204,
-   "y": 8.72,
+   "x": 20.474,
+   "y": 9.4977,
    "h": 1.2,
-   "facing": "W",
-   "label": "1-gang switch — coffee corner end wall",
+   "facing": "S",
+   "label": "1-gang switch — coffee corner, centred over the counter",
    "status": "added",
-   "note": "Dad's review (Karim 11 Nov 2026): beside the coffee corner, where you stand to use it",
+   "note": "Karim's review (Karim 12 Nov 2026): on the coffee corner's back wall, centred on it, where you stand to use it; 120 = 20 cm over the marble, under the shelves (1.63)",
    "gangs": [
     "Coffee corner shelf LED"
    ],
@@ -2147,21 +2148,22 @@
    "y": 9.498,
    "h": 1.15,
    "facing": "S",
-   "label": "Double socket 115 cm — espresso machine",
+   "label": "Double socket 115 cm — water dispenser",
    "status": "adapted",
-   "note": "the plan's office sockets 110: Main's marble top is at 1.00, so 1.15",
+   "note": "the plan's office sockets 110: Main's marble top is at 1.00, so 1.15; behind the dispenser (west end)",
    "gang": 2
   },
   {
    "id": "socket-156",
    "type": "socket",
    "room": "Dining",
-   "x": 20.45,
-   "y": 9.4977,
+   "x": 20.75,
+   "y": 9.4975,
    "h": 1.15,
    "facing": "S",
-   "label": "Double socket 115 cm — water dispenser",
+   "label": "Double socket 115 cm — espresso machine",
    "status": "adapted",
+   "note": "Karim's review (Karim 12 Nov 2026): moved 0.30 m east (was x 20.45, mid-corner) behind the espresso machine, to make room for the centred coffee-corner switch",
    "gang": 2
   },
   {
@@ -2370,17 +2372,17 @@
    "status": "plan"
   },
   {
-   "id": "wp-173",
-   "type": "wp",
+   "id": "lightout-173",
+   "type": "lightout",
    "room": "Terrace",
    "x": 21.4753,
    "y": 1.93,
    "h": 0.3,
    "facing": "E",
-   "label": "Weatherproof socket, switched — plant lighting at the planter corner",
+   "label": "Light outlet (no socket) — spotlights above the L-seat, at the planter corner",
    "status": "added",
-   "note": "Dad's review (Karim 11 Nov 2026): for the plant spike lights (12 V transformer plugs in here); switched from the terrace plate, key 3; IP66 on a 30 mA RCD",
-   "circuit": "terrace-plants"
+   "note": "Karim's review (Karim 12 Nov 2026): no longer a socket: a switched lighting outlet (IP66 box, cable gland) hard-wired to the spotlights above the L-seat (the spike lights in the planter strip behind it); terrace plate key 3; on a 30 mA RCD",
+   "circuit": "terrace-seat-spots"
   },
   {
    "id": "wp-174",
@@ -2918,6 +2920,32 @@
    "status": "added",
    "note": "Dad's review (Karim 11 Nov 2026): always-on point in the curtain box at the motor end; remote / app / smart control, no wall switch",
    "appliance": "curtain motor (future)"
+  },
+  {
+   "id": "socket-lobby-30",
+   "type": "socket",
+   "room": "Entrance",
+   "x": 5.85,
+   "y": 5.5472,
+   "h": 0.3,
+   "facing": "S",
+   "label": "Double socket 30 cm — lobby, just past the master-bedroom door",
+   "status": "added",
+   "note": "Karim's review (Karim 12 Nov 2026): at the red mark on the corridor wall east of the bedroom door, under the corridor switch",
+   "gang": 2
+  },
+  {
+   "id": "socket-front-door-30",
+   "type": "socket",
+   "room": "Entrance",
+   "x": 7.75,
+   "y": 3.6031,
+   "h": 0.3,
+   "facing": "N",
+   "label": "Double socket 30 cm — entrance, beside the front door",
+   "status": "added",
+   "note": "Karim's review (Karim 12 Nov 2026): at the red mark on the entrance wall just west of the front door, under the intercom handset",
+   "gang": 2
   }
  ],
  "lines": [

@@ -21,6 +21,7 @@ export const KINDS = {
   pendant:      { what: "This is a pendant light.", col: "#f2b134", glyph: "pendant" },
   walllight:    { what: "This is a wall light.", col: "#f2b134", glyph: "wall" },
   led:          { what: "This is an indirect LED strip.", col: "#f2b134", glyph: "led" },
+  lightout:     { what: "This is a lighting outlet: a switched light feed hard-wired to the lights (no socket).", col: "#f2b134", glyph: "LO" },
   switch:       { what: "This is a light switch bank.", col: "#ff6b6b", glyph: "S" },
   acctl:        { what: "This is an AC controller (thermostat).", col: "#ff6b6b", glyph: "AC" },
   socket:       { what: "This is a socket.", col: "#5aa9ff", glyph: "socket" },
@@ -48,7 +49,7 @@ export const KINDS = {
 };
 // The chips under the 2D plan's Electrical button (drawing.js): each shows or hides one group (remembered).
 export const CATEGORIES = [
-  { id: "light",   label: "Lighting",          col: "#f2b134", types: ["spot", "pendant", "walllight", "led"] },
+  { id: "light",   label: "Lighting",          col: "#f2b134", types: ["spot", "pendant", "walllight", "led", "lightout"] },
   { id: "switch",  label: "Switches",          col: "#ff6b6b", types: ["switch", "acctl"] },
   { id: "power",   label: "Sockets & power",   col: "#5aa9ff", types: ["socket", "flap", "power", "ledfeed", "wp", "towelheater"] },
   { id: "network", label: "Network & TV",      col: "#46d39a", types: ["multi", "data", "phone", "tv", "router", "lcp", "ap", "intercom", "intercom_out"] },
@@ -75,7 +76,7 @@ const NAME = {
   multi: "Media plate", data: "Data point", phone: "Phone point", tv: "TV point", sound: "Sound control", intercom: "Intercom screen",
   intercom_out: "Video doorbell", doorbell: "Doorbell", chime: "Doorbell chime", fan: "Exhaust fan", sensor: "Motion sensor",
   towelheater: "Towel heater", db: "Breaker panel", lcp: "Low-current panel", router: "Wi-Fi router", ap: "Wi-Fi access point",
-  ledfeed: "Accent-light power", water: "Water outlet",
+  ledfeed: "Accent-light power", water: "Water outlet", lightout: "Lighting outlet",
 };
 const BADGE = { plan: "Plan", adapted: "Adapted", added: "Added", existing: "Existing", optional: "Optional" };
 const ON_CEILING = ["spot", "fan", "sensor", "ap", "led"];
@@ -318,6 +319,10 @@ export function buildElectrical({ THREE, scene, ceilingBits, data, ceiling = 2.6
         for (let i = 0; i < n; i++) { const x = -w / 2 + 0.013 + 0.04 * (i + 0.5) + (w - 0.026 - n * 0.04) / 2; box(g, x - 0.017, x + 0.017, y - 0.03, y + 0.03, 0.009, 0.014, M.rocker); }
         break;
       }
+      case "lightout":  // outdoor lighting outlet: a grey IP66 box with a cable gland underneath, no socket
+        box(g, -0.045, 0.045, y - 0.045, y + 0.045, 0, 0.04, M.grey);
+        box(g, -0.01, 0.01, y - 0.06, y - 0.045, 0.01, 0.03, M.grey);
+        break;
       case "ledfeed": plate(g, 0.086, 0.086, y); cyl(g, 0, y, 0.012, 0.009, 0.013, M.metal); break;  // blank plate, cable outlet
       case "acctl": plate(g, 0.086, 0.086, y); box(g, -0.028, 0.028, y - 0.006, y + 0.026, 0.009, 0.011, M.glass); break;
       case "sound": case "intercom": plate(g, 0.13, 0.11, y); box(g, -0.055, 0.055, y - 0.04, y + 0.045, 0.009, 0.012, M.glass); break;

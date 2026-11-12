@@ -211,12 +211,16 @@ bank("sw-mbath", "Master bathroom", "inside beside the vanity socket",
      ["All spots (vanity, middle, shower and WC)", "Under-vanity LED, cabinet glow + shower-niche LED", "Exhaust fan"],
      wall="S", x=1.20, y=6.6, status="adapted",
      note="three keys on the short wall beside the 135 cm vanity socket; the exhaust fan has its own key")
-bank("sw-kitchen", "Kitchen", "kitchen, by the door, top box",
-     ["Spots, half A", "Spots, half B", "Ceiling exhaust fan"], wall="S", x=9.15, y=6.2, h=TOP, stack="kitchen",
-     status="adapted", note="Dad's review (Karim 11 Nov 2026): two boxes one above the other, just past the open door (the latch side is the fridge); spots and fan on top")
-bank("sw-kitchen-2", "Kitchen", "kitchen, by the door, lower box",
-     ["Under-cabinet LED strips (upper cabinets)", "Plinth LED (lower cabinets)"], wall="S", x=9.15, y=6.2, h=LOW, stack="kitchen",
-     status="adapted", note="lower box: the cabinet LEDs")
+# Karim's review (Karim 12 Nov 2026): the two boxes move beside the fridge, onto the south face of the fridge run's tall
+# end panel (y 6.878, x 9.466-10.196), 0.12 in from the door wall: on your right as you open the door and step in.
+# The door hinges on the south jamb and its leaf opens onto the south wall, so it never covers them.
+KSW = (10.08, 6.875)
+bank("sw-kitchen", "Kitchen", "kitchen, beside the fridge as you come in, top box",
+     ["Spots, half A", "Spots, half B", "Ceiling exhaust fan"], at=KSW, facing="S", h=TOP, stack="kitchen",
+     status="adapted", note="Karim's review (Karim 12 Nov 2026): moved from the south wall (x 9.15) to beside the fridge, on your right as you open the door; same 125 / 113 heights; on the tall end panel, so the back box needs a stud lining or a box set in the panel (the fridge's 5 cm vent gap is behind it)")
+bank("sw-kitchen-2", "Kitchen", "kitchen, beside the fridge as you come in, lower box",
+     ["Under-cabinet LED strips (upper cabinets)", "Plinth LED (lower cabinets)"], at=KSW, facing="S", h=LOW, stack="kitchen",
+     status="adapted", note="Karim's review (Karim 12 Nov 2026): lower box: the cabinet LEDs, under the top box beside the fridge")
 bank("sw-laundry", "Laundry", "laundry, inside on the toilet partition", ["Laundry linear light + exhaust fan", "Under-cabinet LED"], wall="E", x=11.55, y=8.02,
      status="adapted", note="on the inside partition, about one metre up the wall from the doorway, at the marked arrow tip")
 # Guest bathroom (Karim 7 Nov 2026): inside, on the wall beside the door frame, over the vanity end, same 120 cm
@@ -239,11 +243,15 @@ bank("sw-reception-2", "Reception", "reception, by the hallway door, lower box",
      ["Curtain-box LEDs (reception window, dining slider, divider)", "TV-wall niche (library) lights + picture lights over the sofa art"],
      wall="S", x=15.58, y=6.2, h=LOW, stack="hall-reception",
      gang_circuits=["reception-curtain", "reception-accent"], status="adapted", note="the reception column's lower box: accent lights")
-bank("sw-office", "Dining", "coffee corner, by the terrace door (terrace lights)",
-     ["Terrace floor lighting (seat-lip LED) + BBQ counter LED", "Terrace wall lights", "Plant lighting (switched outdoor socket at the planter corner)"], wall="E", x=20.9, y=8.25,
-     status="adapted", note="Dad's review (Karim 11 Nov 2026): terrace keys only; key 3 now switches the plant-lighting socket (the shelf LED has its own switch at the coffee corner)")
-bank("sw-coffee", "Dining", "coffee corner end wall", ["Coffee corner shelf LED"], wall="E", x=20.9, y=8.72,
-     status="added", note="Dad's review (Karim 11 Nov 2026): beside the coffee corner, where you stand to use it")
+# Karim's review (Karim 12 Nov 2026): the terrace plate was hidden by the slider curtain's stack (the curtain pocket runs to
+# y 8.379), so it slides 0.35 north to y 8.60, just past the curtain, on the same wall line; the coffee-corner switch
+# leaves that wall for the coffee corner's back wall, centred on the corner (x 20.474) between the shelves and the top.
+bank("sw-office", "Dining", "by the terrace door, just past the curtain (terrace lights)",
+     ["Terrace floor lighting (seat-lip LED) + BBQ counter LED", "Terrace wall lights", "Spotlights above the L-seat"], wall="E", x=20.9, y=8.60,
+     status="adapted",
+     note="Karim's review (Karim 12 Nov 2026): moved 0.35 m north (was y 8.25, behind the curtain's stack) to just past the curtain, so it shows; same 120 cm. Key 3 now switches the light outlet for the spotlights above the L-seat (no socket)")
+bank("sw-coffee", "Dining", "coffee corner, centred over the counter", ["Coffee corner shelf LED"], wall="N", x=20.474, y=9.0,
+     status="added", note="Karim's review (Karim 12 Nov 2026): on the coffee corner's back wall, centred on it, where you stand to use it; 120 = 20 cm over the marble, under the shelves (1.63)")
 
 # AC controllers (wall thermostats), 1.50
 pt("acctl", "Living room", "AC controller — living room split", wall="N", x=4.75, y=4.0, h=1.5)
@@ -364,9 +372,10 @@ pt("intercom_out", "Entrance", "Smart video doorbell — outside the front door 
 sock("Dining", "Double socket 45 cm — north wall (west)", wall="N", x=15.4, y=9.0, h=0.45)
 sock("Dining", "Double socket 45 cm — north wall (by the table)", wall="N", x=18.6, y=9.0, h=0.45)
 pt("power", "Dining", "AC power point — dining split (dedicated circuit)", at=(14.975, 9.4), h=2.3, facing="E", appliance="split AC", status="added")
-sock("Dining", "Double socket 115 cm — espresso machine", wall="N", x=20.0, y=9.0, h=1.15, status="adapted",
-     note="the plan's office sockets 110: Main's marble top is at 1.00, so 1.15")
-sock("Dining", "Double socket 115 cm — water dispenser", wall="N", x=20.45, y=9.0, h=1.15, status="adapted")
+sock("Dining", "Double socket 115 cm — water dispenser", wall="N", x=20.0, y=9.0, h=1.15, status="adapted",
+     note="the plan's office sockets 110: Main's marble top is at 1.00, so 1.15; behind the dispenser (west end)")
+sock("Dining", "Double socket 115 cm — espresso machine", wall="N", x=20.75, y=9.0, h=1.15, status="adapted",
+     note="Karim's review (Karim 12 Nov 2026): moved 0.30 m east (was x 20.45, mid-corner) behind the espresso machine, to make room for the centred coffee-corner switch")
 pt("multi", "Dining", "Desk plate 45 cm — double data + double socket for the flip desk and monitor", wall="N", x=20.9, y=9.0, h=0.45, parts=["2D", "2S"],
    status="adapted", note="Dad's review (Karim 11 Nov 2026): at 45 inside the flip desk's bay, so the computer cables stay hidden under the top; slack for the 0.80 roll-out; two Cat6 to the hub")
 pt("water", "Dining", "Water outlet — line for the plumbed countertop dispenser (coffee corner)", wall="N", x=20.3, y=9.0, h=1.08, status="added",
@@ -393,8 +402,8 @@ pt("wp", "Terrace", "Weatherproof socket — BBQ counter", at=(23.55, 9.248), h=
 pt("wp", "Terrace", "Weatherproof socket 45 cm — on the pier between the window and the slider (outdoor TV)", wall="W", x=21.8, y=5.55, h=0.45)
 pt("tv", "Terrace", "TV point 45 cm — outdoor TV", wall="W", x=21.8, y=5.9, h=0.45)
 pt("wp", "Terrace", "Weatherproof socket 45 cm — south pier by the L seat", wall="W", x=21.8, y=2.15, h=0.45)
-pt("wp", "Terrace", "Weatherproof socket, switched — plant lighting at the planter corner", wall="W", x=21.8, y=1.93, h=0.3, status="added",
-   circuit="terrace-plants", note="Dad's review (Karim 11 Nov 2026): for the plant spike lights (12 V transformer plugs in here); switched from the terrace plate, key 3; IP66 on a 30 mA RCD")
+pt("lightout", "Terrace", "Light outlet (no socket) — spotlights above the L-seat, at the planter corner", wall="W", x=21.8, y=1.93, h=0.3, status="added",
+   circuit="terrace-seat-spots", note="Karim's review (Karim 12 Nov 2026): no longer a socket: a switched lighting outlet (IP66 box, cable gland) hard-wired to the spotlights above the L-seat (the spike lights in the planter strip behind it); terrace plate key 3; on a 30 mA RCD")
 pt("wp", "Terrace", "Weatherproof socket 45 cm — east parapet, general use", wall="E", x=24.3, y=5.7, h=0.45, status="added",
    note="Dad's review (Karim 11 Nov 2026): the far side of the terrace (heater, fan, string lights, cleaning); always on, IP66 on a 30 mA RCD; conduit in the parapet or under the deck")
 
@@ -483,6 +492,14 @@ for room, lab, xy in [
     pt("power", room, f"Curtain motor power — {lab}", at=xy, h=CEIL + 0.08, appliance="curtain motor (future)", status="added",
        note="Dad's review (Karim 11 Nov 2026): always-on point in the curtain box at the motor end; remote / app / smart control, no wall switch")
 
+# ================================================================ Late additions (ids fixed, so the numbered ids above stay put)
+# Karim's review (Karim 12 Nov 2026): two more double sockets at 30 cm, at his red marks: one in the lobby just east of
+# the master-bedroom door (under the corridor switch), one in the entrance just west of the front door (under the intercom).
+sock("Entrance", "Double socket 30 cm — lobby, just past the master-bedroom door", wall="N", x=5.85, y=5.2, h=0.30, status="added", id="socket-lobby-30",
+     note="Karim's review (Karim 12 Nov 2026): at the red mark on the corridor wall east of the bedroom door, under the corridor switch")
+sock("Entrance", "Double socket 30 cm — entrance, beside the front door", wall="S", x=7.75, y=4.2, h=0.30, status="added", id="socket-front-door-30",
+     note="Karim's review (Karim 12 Nov 2026): at the red mark on the entrance wall just west of the front door, under the intercom handset")
+
 # ================================================================ write
 counts = Counter(p["type"] for p in P)
 sockets = sum(1 for p in P if p["type"] in ("socket",))
@@ -495,6 +512,7 @@ legend = {
     "router": "Network hub (fibre box, router, PoE switch)", "led": "Indirect LED strip", "sensor": "Ceiling motion / presence sensor (mmWave or PIR)", "ledfeed": "Accent-light power point (LED driver / picture-light box)",
     "ap": "Ceiling Wi-Fi access point (Cat6 + PoE from the hub)",
     "water": "Water outlet (filtered line + shut-off valve) for a plumbed appliance",
+    "lightout": "Lighting outlet (switched light feed, no socket)",
 }
 OUT.write_text(json.dumps({
     "version": "kareems-changes",

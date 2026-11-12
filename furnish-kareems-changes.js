@@ -2259,14 +2259,42 @@ export function furnish(scene, M, mat, version = "main") {
   });
   // L built-in seat on the east and south parapets (Main, 31 Oct 2026, Karim; DWG 2furni L): from the parapet face a
   // 0.20 planter soil strip (not on the parapet top), a 0.10 masonry back rising 0.50 above the seat (top 0.95), then
-  // a 0.60 seat: hollow storage under hinged teak lids (top 0.40, 5 cm cushion to 0.45) on a 10 cm front wall set 5 cm
-  // back, so the lid's 5 cm lip hides a warm LED strip that washes the floor. 0.90 from the parapet in all. The south leg
-  // runs from the west wall (x 21.489) to the east leg, the east leg to y 5.443, as drawn; a fixed seat in the corner.
+  // a 0.60 seat: hollow storage under hinged teak lids (top 0.40, 5 cm cushion to 0.45). 0.90 from the parapet in all.
+  // The south leg runs from the west wall (x 21.489) to the east leg, the east leg to y 5.443, as drawn; a fixed seat
+  // in the corner. Front (Karim's section, 12 Nov 2026): the WPC cladding over the brick front comes down flush with the
+  // lid and turns back under itself as a 6 cm lip, 6 cm off the floor; the brick under it is recessed 6 cm; the LED
+  // strip sits under that lip and washes the floor (no strip up at the lid any more).
+  // A soft warm glow on the floor in front of a toe-kick LED (browser only: check_furnish's node run has no canvas).
+  // Plan rectangle [X0, X1] x [Y0, Y1] at floor level; `bright` names the edge under the LED ("N", "S", "E" or "W" side).
+  let glowTex = null;
+  const floorGlow = (X0, X1, Y0, Y1, bright) => {
+    if (typeof document === "undefined") return;
+    if (!glowTex) {
+      const cv = document.createElement("canvas"); cv.width = 4; cv.height = 128;
+      const g2 = cv.getContext("2d"), gr = g2.createLinearGradient(0, 0, 0, 128);
+      gr.addColorStop(0, "rgba(255,179,97,1)"); gr.addColorStop(0.25, "rgba(255,170,90,0.55)"); gr.addColorStop(1, "rgba(255,160,80,0)");
+      g2.fillStyle = gr; g2.fillRect(0, 0, 4, 128);
+      glowTex = new THREE.CanvasTexture(cv); glowTex.colorSpace = THREE.SRGBColorSpace;
+    }
+    const m = new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false });
+    adopt(m);
+    const W = X1 - X0, H = Y1 - Y0, g = mesh(new THREE.PlaneGeometry(1, 1), m, root, false);
+    g.castShadow = g.receiveShadow = false;
+    g.rotation.order = "YXZ";
+    g.rotation.x = -Math.PI / 2;  // lie flat; texture v=1 (top of the canvas, brightest) points to plan +y
+    g.rotation.y = { N: 0, S: Math.PI, E: -Math.PI / 2, W: Math.PI / 2 }[bright];
+    const across = bright === "N" || bright === "S";
+    g.scale.set(across ? W : H, across ? H : W, 1);
+    const cx = (X0 + X1) / 2, cy = (Y0 + Y1) / 2;
+    g.position.set(cx, levelAt(cx, cy) + 0.003, -cy);
+    g.renderOrder = 2;
+  };
   {
     const PX = 25.143, PY = 1.78, WX = 21.489, EY = 5.443;                      // parapet faces, ends of the L (DWG)
     const p1x = PX - 0.2, p1y = PY + 0.2, b1x = p1x - 0.1, b1y = p1y + 0.1;      // planter strip, back wall
     const s1x = b1x - 0.6, s1y = b1y + 0.6;                                      // seat front
-    const IX = 23.3, IY = 3.0, SEAT = 0.36, LID = 0.04, CUSH = 0.05, BACK = 0.95, LIP = 0.05;
+    const IX = 23.3, IY = 3.0, SEAT = 0.36, LID = 0.04, CUSH = 0.05, BACK = 0.95;
+    const CL = 0.02, RC = 0.06, FW = 0.12;  // WPC cladding, the toe recess (6 deep, 6 high), front wall depth (brick + WPC)
     item(IX, IY, "S", p => {
       // a plan rectangle [X0, X1] x [Y0, Y1] from height y0 to y1 (this item faces S: local x = plan x, z = -plan y)
       const pb = (q, X0, X1, Y0, Y1, y0, y1, m, r = 0) => q.box(X0 - IX, X1 - IX, y0, y1, IY - Y1, IY - Y0, m, r);
@@ -2279,22 +2307,30 @@ export function furnish(scene, M, mat, version = "main") {
       pb(p, b1x, p1x, b1y, EY, 0, BACK - 0.02, mat.render);
       pb(p, WX, p1x, p1y, b1y, BACK - 0.02, BACK, mat.stoneTable, 0.004);
       pb(p, b1x, p1x, b1y, EY, BACK - 0.02, BACK, mat.stoneTable, 0.004);
-      // storage boxes: floor, front wall 5 cm behind the lid edge, end walls and module dividers
-      pb(p, WX, s1x, b1y, s1y - LIP - 0.1, 0, 0.05, mat.concrete);
-      pb(p, s1x + LIP + 0.1, b1x, s1y, EY, 0, 0.05, mat.concrete);
-      pb(p, WX, s1x + LIP, s1y - LIP - 0.1, s1y - LIP, 0, SEAT, mat.render);       // south front wall
-      pb(p, s1x + LIP, s1x + LIP + 0.1, s1y - LIP - 0.1, EY, 0, SEAT, mat.render); // east front wall
-      pb(p, s1x + LIP + 0.1, b1x, b1y, s1y - LIP - 0.1, 0, SEAT, mat.render);      // corner: solid, fixed top
-      pb(p, WX, WX + 0.05, b1y, s1y - LIP, 0, SEAT, mat.render);                   // west end
-      pb(p, s1x + LIP, b1x, EY - 0.05, EY, 0, SEAT, mat.render);                   // north end
+      // storage boxes: floor, the front (brick + WPC, toe recess + LED), end walls and module dividers
+      pb(p, WX, s1x, b1y, s1y - FW, 0, 0.05, mat.concrete);
+      pb(p, s1x + FW, b1x, s1y, EY, 0, 0.05, mat.concrete);
+      pb(p, WX, s1x + FW, s1y - FW, s1y - CL, RC + CL, SEAT, mat.render);           // south front: brick above the lip
+      pb(p, s1x + CL, s1x + FW, s1y - FW, EY, RC + CL, SEAT, mat.render);           // east front: brick above the lip
+      pb(p, WX, s1x + FW, s1y - FW, s1y - RC, 0, RC, mat.render);                   // south brick base, recessed 6 cm
+      pb(p, s1x + RC, s1x + FW, s1y - FW, EY, 0, RC, mat.render);                   // east brick base, recessed 6 cm
+      pb(p, WX, s1x + CL, s1y - CL, s1y, RC, SEAT, mat.walnut);                     // south WPC cladding, flush with the lid
+      pb(p, s1x, s1x + CL, s1y - CL, EY, RC, SEAT, mat.walnut);                     // east WPC cladding
+      pb(p, WX, s1x + RC, s1y - RC, s1y - CL, RC, RC + CL, mat.walnut);             // south WPC lip, turned back under
+      pb(p, s1x + CL, s1x + RC, s1y - RC, EY, RC, RC + CL, mat.walnut);             // east WPC lip
+      pb(p, WX + 0.02, s1x + 0.0375, s1y - 0.045, s1y - 0.03, RC - 0.008, RC, mat.ledStrip);  // LED under the south lip
+      pb(p, s1x + 0.03, s1x + 0.045, s1y - 0.0375, EY - 0.02, RC - 0.008, RC, mat.ledStrip);  // LED under the east lip
+      pb(p, s1x + FW, b1x, b1y, s1y - FW, 0, SEAT, mat.render);                     // corner: solid, fixed top
+      pb(p, WX, WX + 0.05, b1y, s1y - FW, 0, SEAT, mat.render);                     // west end
+      pb(p, s1x + FW, b1x, EY - 0.05, EY, 0, SEAT, mat.render);                     // north end
       pb(p, s1x, b1x, b1y, s1y, SEAT, SEAT + LID, mat.walnut, 0.005);              // corner top
       pb(p, s1x + 0.02, b1x - 0.02, b1y + 0.02, s1y - 0.02, SEAT + LID, SEAT + LID + CUSH, mat.boucle, 0.025);
       const sx = (s1x - WX) / 4, sy = (EY - s1y) / 4;
       for (let k = 1; k < 4; k++) {                                                // dividers under the lid joints
-        pb(p, WX + k * sx - 0.025, WX + k * sx + 0.025, b1y, s1y - LIP - 0.1, 0.05, SEAT, mat.render);
-        pb(p, s1x + LIP + 0.1, b1x, s1y + k * sy - 0.025, s1y + k * sy + 0.025, 0.05, SEAT, mat.render);
+        pb(p, WX + k * sx - 0.025, WX + k * sx + 0.025, b1y, s1y - FW, 0.05, SEAT, mat.render);
+        pb(p, s1x + FW, b1x, s1y + k * sy - 0.025, s1y + k * sy + 0.025, 0.05, SEAT, mat.render);
       }
-      // hinged lids, one openable each: teak boards, cushion, and the LED strip under the 5 cm lip
+      // hinged lids, one openable each: teak boards and cushion (the LED is down at the floor now)
       const lid = (k, south) => {
         const c = new THREE.Group(), b = new THREE.Group(), h = new THREE.Group(), q = part(h);
         p.g.add(c); c.add(b); b.add(h);
@@ -2304,7 +2340,6 @@ export function furnish(scene, M, mat, version = "main") {
         else { b.position.set(b1x - IX, SEAT, IY - (s1y + (k + 0.5) * sy)); b.rotation.y = Math.PI / 2; }
         q.box(-w, w, 0, LID, -0.6, -0.004, mat.walnut, 0.005);                                  // teak lid, 0.60 to the lip
         q.box(-w + 0.02, w - 0.02, LID, LID + CUSH, -0.58, -0.03, mat.boucle, 0.025);           // seat cushion
-        q.box(-w + 0.01, w - 0.01, -0.01, 0, -0.6 + 0.01, -0.6 + LIP - 0.01, mat.ledStrip);     // LED under the 5 cm lip
         const ax = b.position.x - (south ? 0 : 0.3), az = b.position.z + (south ? 0.3 : 0) * -1;
         c.userData.openable = { id: `terrace-seat-${south ? "s" : "e"}${k + 1}`, label: "Seat storage", leaves: [{ obj: h, axis: "x", open: 78 * Math.PI / 180 }],
           anchor: new THREE.Vector3(ax, SEAT + 0.12, az), reach: 1.8, duration: 0.7 };
@@ -2318,12 +2353,15 @@ export function furnish(scene, M, mat, version = "main") {
         const c = pb(p, b1x - 0.18, b1x - 0.04, s1y + 0.15 + k * 0.68, s1y + 0.59 + k * 0.68, SEAT + LID + CUSH, 0.85, m, 0.06); c.rotation.z = -0.15;
       });
     });
+    floorGlow(WX, s1x, s1y - RC, s1y + 0.35, "S");                                 // the LED's wash on the deck
+    floorGlow(s1x - 0.35, s1x + RC, s1y, EY, "E");
     // planting in the soil strip (not on the parapet top): grasses along both legs, a taller one at the west end
     for (let x = 21.75; x < PX - 0.1; x += 0.45) plant(x, PY + 0.1, 0.6, 0.06, 0.86);
     for (let y = p1y + 0.3; y < EY - 0.2; y += 0.45) plant(p1x + 0.1, y, 0.6, 0.06, 0.86);
     plant(21.62, PY + 0.1, 1.3, 0.07, 0.86);
     // Plant spike lights (dad's review, Karim 11 Nov 2026): low-voltage uplights staked in the soil strip, washing the
-    // plants and parapet; fed from the switched outdoor socket at the planter corner (terrace plate, key 3).
+    // plants and parapet: the spotlights above the L-seat, hard-wired from the lighting outlet at the planter corner
+    // (Karim 12 Nov 2026: no socket any more; terrace plate, key 3).
     const SOIL = 0.88;
     for (const [x, y] of [[22.2, PY + 0.1], [23.15, PY + 0.1], [24.1, PY + 0.1], [p1x + 0.1, PY + 0.1], [p1x + 0.1, 2.85], [p1x + 0.1, 3.85], [p1x + 0.1, 4.85]])
       named(item(x, y, "S", q => {
@@ -2341,16 +2379,21 @@ export function furnish(scene, M, mat, version = "main") {
   });
   item(23.35, 7.1, "S", p => p.box(-0.35, 0.35, 0, 0.4, -0.45, 0.45, mat.walnut, 0.02));
   item((T.x0 + T.x1) / 2, 9.27, "S", p => {  // DWG BBQ counter, front at y 8.80 (no sink, per the client)
-    const len = T.x1 - T.x0;
-    p.box(-len / 2, len / 2, 0.08, 0.9, 0, 0.47, mat.walnut);
-    p.box(-len / 2, len / 2, 0, 0.08, 0.04, 0.43, mat.darkTop);
-    fronts(p, -len / 2, len / 2, 0.08, 0.9, 0.47, 0.55);
+    // Base as the L-seat (Karim 12 Nov 2026): the front comes down to 6 cm and turns back under as a 6 cm lip, the
+    // brick base under it is recessed 6 cm, and the LED strip under the lip washes the floor (the strip along the top
+    // of the splashback is gone).
+    const len = T.x1 - T.x0, RC = 0.06, CL = 0.02;
+    p.box(-len / 2, len / 2, RC + CL, 0.9, 0, 0.47, mat.walnut);
+    p.box(-len / 2, len / 2, RC, RC + CL, 0.47 - RC, 0.47, mat.walnut);                 // the lip, turned back under
+    p.box(-len / 2, len / 2, 0, RC, 0, 0.47 - RC, mat.render);                          // brick base, recessed 6 cm
+    p.box(-len / 2 + 0.03, len / 2 - 0.03, RC - 0.008, RC, 0.47 - 0.045, 0.47 - 0.03, mat.ledStrip);  // LED under the lip
+    fronts(p, -len / 2, len / 2, RC, 0.9, 0.47, 0.55);
     p.box(-len / 2, len / 2, 0.9, 0.94, 0, 0.49, mat.stoneTable);
     p.box(-len / 2, len / 2, 0.94, 1.3, 0, 0.02, mat.stoneTable);
-    p.box(-len / 2 + 0.05, len / 2 - 0.05, 1.28, 1.3, 0.02, 0.05, mat.ledStrip);
     p.box(-0.9, -0.1, 0.94, 1.12, 0.05, 0.45, mat.chrome, 0.02);
     p.box(-0.9, -0.1, 1.12, 1.18, 0.05, 0.4, mat.blackSteel, 0.02);
   });
+  floorGlow(T.x0, T.x1, 9.27 - 0.47 - 0.35, 9.27 - 0.47 + 0.06, "N");                // the BBQ counter LED's wash on the deck
   for (const [x, y, h] of [[21.8, 4.75, 1.9], [24.5, 5.75, 1.8], [24.45, 8.45, 1.7]]) plant(x, y, h, 0.28);
   for (const y of [5.0, 8.6]) sconce(T.x0, y, "E", 2.0);
   if (version === "kareems-changes") sconce(21.47, 2.45, "E", 2.2);  // Wall light south of the terrace window, shown on the electrical plan.

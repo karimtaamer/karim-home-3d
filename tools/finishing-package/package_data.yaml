@@ -4,10 +4,15 @@ meta:
   project: "Karim Tamer apartment - Al Lotus, New Cairo (5th floor)"
   client: "Karim Tamer"
   engineer: "Eng. Asmaa (site engineer, finishing)"
-  rev: "R0"
-  date: "12 Nov 2026"
+  rev: "R1"
+  date: "13 Nov 2026"
   drawn: "Grok Bot / K.T."
   title: "Finishing Package - Main"
+  changes:   # shown on the cover
+    - "Bathrooms redrawn with real fixtures, tile joints and heights: master D602.1-.5, guest D603.1-.5 (plan + fixture schedule, four walls, sections for shower floor, WC frame and bath deck)."
+    - "New front-on views: dining buffet wall D503, terrace doors from inside and from the terrace D504-D505 (with head + threshold sections), terrace L-seat and BBQ counter D506-D508, living TV wall D502 redrawn."
+    - "Gypsum-board ceilings: RCP west/east C401-C402 (board type, Main 260 vs Lotus TP levels, curtain pockets, access panels) and details C403-C404."
+    - "Lotus technical package (Samra Concepts, 20-08-2026) used to fill gaps; conflicts with Main are noted on the sheets. Main governs. Separate implementation notes issued with this revision."
 
 rooms:   # model floor name -> English, Arabic, label point (optional)
   LIVING ROOM: {en: "Living room", ar: "غرفة المعيشة"}
@@ -81,7 +86,7 @@ plumbing:
   - {id: P07, room: "Guest bathroom", what: "Bath/shower set on north wall: mixer, spout, hand spray, wall-arm head 2.25", x: 12.55, y: 9.12, h: "mixer ~1.00 / head 2.25", src: "item 12.546,9.1716"}
   - {id: P08, room: "Guest bathroom", what: "Wall-hung WC under window, bidet mixer", x: 13.57, y: 9.0, h: "flush panel under 0.90 sill", src: "item 13.572,9.18"}
   - {id: P09, room: "Guest bathroom", what: "Vessel basin on 60 deep counter (top 0.85), wall spout 1.02", x: 14.36, y: 7.75, h: "spout 1.02", src: "item 14.66,7.75"}
-  - {id: P10, room: "Guest bathroom", what: "Floor drain - position TO CONFIRM", x: 13.4, y: 7.35, h: "floor", src: "not in Main", confirm: true}
+  - {id: P10, room: "Guest bathroom", what: "Floor drain 50 mm - position TO CONFIRM (D603.1)", x: 13.4, y: 7.35, h: "floor", src: "not in Main or Lotus TP", confirm: true}
   - {id: P11, room: "Kitchen", what: "Sink 87.7 (counter 0.92): H+C, waste; water filter under sink", x: 8.19, y: 8.80, h: "0.55 feed", src: "sink block wrewwer"}
   - {id: P12, room: "Kitchen", what: "Dishwasher (raised, in tall unit): cold + waste", x: 9.78, y: 8.11, h: "0.60", src: "furnish blackInox box"}
   - {id: P13, room: "Kitchen", what: "Countertop dispenser water outlet + valve", x: 10.12, y: 8.75, h: "1.05", src: "water-119"}
@@ -93,7 +98,10 @@ plumbing:
 
 plumbing_notes:
   - "Supply (PPR, hot + cold) runs horizontally in the gypsum ceiling with access panels at joints, dropping in the wall only at each fixture; avoid burying pipes in the floor (Karim, 2 Nov 2026)."
-  - "Drain falls, pipe sizes and stack connections are NOT in the Main model: to be set by the plumbing engineer and confirmed on site."
+  - "Drain falls, pipe sizes and stack connections are NOT in the Main model, and the Lotus TP sanitary plan (p.6) gives supply setting-out only: to be set by the plumbing engineer and confirmed on site."
+  - "Recommended (TO CONFIRM): uPVC 110 for WCs, 50 for floor drains / shower / washer / kitchen sink, 40 for basins, 32 for the bidet mixer area; falls 1-2 % to the stack; PPR supply pressure-tested at 1.5 x working pressure (10-15 bar) before closing walls."
+  - "Master shower: linear drain ~70 cm along the build-out (D602.2 S1); guest bath: floor drain near the door + bath waste with an access panel in the deck (D603.4 S3)."
+  - "Lotus TP p.6 still shows a terrace basin which Karim removed; Main governs."
   - "Which fixtures the laundry Ariston 9.5 kW heater feeds (kitchen sink / guest bathroom) is TO CONFIRM; the master bathroom has its own 7.5 kW heater in the vanity."
   - "Water pump: separate setup (ground-floor pump to roof tank + booster after the tank); see the water-pump review sent separately."
   - "AC condensate: each wall split (living, master, dining, reception) needs a drain route; TO CONFIRM with the AC installer."
@@ -105,7 +113,9 @@ specs:   # [area, item, spec, status]
   - [General, "Door head", "2.10 m; flush honey-oak leaves, slim oak frames, brushed-steel levers", "finish to confirm"]
   - [General, "Windows", "Sill 0.90 / head 2.10 unless the schedule says otherwise; slider head 2.40", "existing"]
   - [General, "Walls", "Warm cream-beige limewash plaster (hand-troweled), not flat white paint", "product / colour code to confirm"]
-  - [General, "Ceilings", "Flat warm off-white paint", "product to confirm"]
+  - [General, "Ceilings", "Flat warm off-white paint on 12.5 board; green board in wet rooms; Lotus TP stepped levels vs Main 2.60 on C402", "level per room to confirm"]
+  - [General, "Curtain pockets", "15 x 15 at windows, 12 x 12 divider; double motorised track, LED lip, plywood backing (C403)", "from Main"]
+  - [General, "Access panels", "60 x 60 push-latch panels AP1-AP7 under valves, heaters, pipe joints (C401-C402)", "positions to suit pipes"]
   - [General, "Skirting", "Slim oak skirting, ~8 cm (as modelled on the TV walls)", "height to confirm"]
   - [Dry rooms, "Floor", "Honey natural oak boards (living, bedroom, reception, dining, corridors)", "product / thickness to confirm"]
   - [Wet rooms, "Floor", "Large-format pale beige stone-look porcelain (bathrooms, kitchen, laundry)", "size / product to confirm"]

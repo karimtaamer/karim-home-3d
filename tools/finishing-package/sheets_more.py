@@ -451,6 +451,19 @@ def export_dxf(P, path):
     for a in P.m.acs():
         pts = [(a["x0"] + ox, a["y0"] + oy), (a["x1"] + ox, a["y0"] + oy), (a["x1"] + ox, a["y1"] + oy), (a["x0"] + ox, a["y1"] + oy)]
         msp.add_lwpolyline(pts, close=True, dxfattribs={"layer": "C-CEILING"})
+    import sheets_r1 as R1
+    for tag, xx, yy, why in R1.APANELS:      # R1: proposed 60 x 60 ceiling access panels
+        x, y = xx + ox, yy + oy
+        msp.add_lwpolyline([(x - 0.3, y - 0.3), (x + 0.3, y - 0.3), (x + 0.3, y + 0.3), (x - 0.3, y + 0.3)], close=True,
+                           dxfattribs={"layer": "C-CEILING"})
+        msp.add_text(f"{tag} access panel 60x60 - {why}", height=0.06, dxfattribs={"layer": "C-CEILING"}).set_placement((x - 0.3, y - 0.42))
+    for key, poly, kind in P.m.floors:          # R1: ceiling tag per room (board, Main CH, Lotus TP level)
+        if kind == "outdoor":
+            continue
+        board, fcl, note = R1.CEIL.get(key, ("C01", None, ""))
+        pt = P.m.data["rooms"].get(key, {}).get("at") or (poly.representative_point().x, poly.representative_point().y)
+        msp.add_text(f"{board} CH {P.m.ceiling * 100:.0f} (TP -{fcl})", height=0.08,
+                     dxfattribs={"layer": "C-CEILING"}).set_placement((pt[0] + ox, pt[1] + oy - 0.55))
     for key, poly, kind in P.m.floors:
         en, _ = P.room_name(key)
         pt = P.m.data["rooms"].get(key, {}).get("at") or (poly.representative_point().x, poly.representative_point().y)
@@ -491,11 +504,17 @@ def build_all(P, args):
     pages.append(SE.elec_sheet(P, D, "low", "E207", B.FULL, 100, "F"))
     pages += SE.schedule(P, D, "E209")
     pages.append(plumbing(P))
-    pages.append(ceilings(P))
+    import sheets_r1 as R1
+    pages += R1.sheet_ceilings(P)                 # C401-C404 gypsum-board ceilings (R1)
     pages.append(tv_reception(P))
-    pages.append(tv_living(P))
-    for no in ("D601", "D602", "D603", "D604"):
-        pages.append(elev_sheet(P, no))
+    pages += R1.sheet_living_tv(P)                # D502 (R1 redraw)
+    pages += R1.sheet_buffet(P)                   # D503.1-.2
+    pages += R1.sheet_terrace_doors(P)            # D504, D505.1-.3
+    pages += R1.sheet_terrace(P)                  # D506.1-.2, D507, D508
+    pages.append(elev_sheet(P, "D601"))
+    pages += R1.sheet_master(P)                   # D602.1-.5
+    pages += R1.sheet_guest(P)                    # D603.1-.5
+    pages.append(elev_sheet(P, "D604"))
     pages += specs(P)
     P.fill_cover()
     md = P.m.data["meta"]

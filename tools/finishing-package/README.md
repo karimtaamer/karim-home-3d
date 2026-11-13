@@ -16,4 +16,19 @@ What comes from where
 - Not in Main (edit `package_data.yaml`): Arabic/English room names, furniture labels, plumbing wet points,
   switch keys without circuit ids, finishes/spec table, title-block text and revision.
 
-New revision: change `rev` and `date` in `package_data.yaml`, rerun. Nothing here is loaded by the site.
+Implementation notes (A4 PDF, plain language with Arabic site terms, printed with headless Chrome):
+
+```sh
+~/.dwg-tools/bin/python tools/finishing-package/impl_notes.py --out /tmp/package
+```
+
+Files
+- `build_package.py`: cover, layout, furniture sheets, entry point. `sheets_elec.py`: E201-E209. `sheets_more.py`: plumbing,
+  reception TV wall, kitchen / laundry elevations, specs, DXF/DWG export, page order (`build_all`).
+- `sheets_r1.py` (R1): bathrooms D602 / D603 drawn with real fixtures, buffet wall D503, terrace doors D504-D505, terrace
+  L-seat and BBQ D506-D508, living TV wall D502, gypsum ceilings C401-C404. `elevkit.py`: the elevation drawing kit
+  (tiles, slats, sanitaryware, doors, windows, dimension chains, callout column).
+- Lotus technical package (Samra Concepts, 20-08-2026) values used on the sheets are constants in `sheets_r1.py`
+  (`CEIL`, `SOFFIT`); Main governs where they differ.
+
+New revision: change `rev`, `date` and `changes` in `package_data.yaml`, rerun both scripts. Nothing here is loaded by the site.

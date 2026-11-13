@@ -192,8 +192,12 @@ class Pkg:
         y = s.H - 116
         s.text(s.m + 10, y, "SHEET INDEX", size=9, weight="bold")
         rows = [[no, t, p, sc] for no, t, p, sc in SHEETS]
-        s.table(s.m + 10, y - 3, [("No.", 18, "left"), ("Sheet", 120, "left"), ("Paper", 16, "center"), ("Scale", 22, "center")],
-                rows, size=5.6, row_h=3.7)
+        cols = [("No.", 14, "left"), ("Sheet", 84, "left"), ("Paper", 10, "center"), ("Scale", 19, "center")]
+        half = (len(rows) + 1) // 2
+        yb = s.table(s.m + 10, y - 3, cols, rows[:half], size=4.6, row_h=3.15)
+        s.table(s.m + 141, y - 3, cols, rows[half:], size=4.6, row_h=3.15)
+        if md.get("changes"):
+            s.notes(s.m + 10, yb - 6, f"WHAT IS NEW IN {md['rev']}", md["changes"], width_chars=96, size=5.0, gap=2.2)
         notes = [
             "All dimensions in centimetres (cm) unless marked m. Plan dimensions are clear (finished-wall to finished-wall in the model); verify on site before any work and report differences before starting.",
             "Print each sheet at 100 % (no 'fit to page') on the paper size in its title block; the scale bar checks the print.",
@@ -203,7 +207,7 @@ class Pkg:
             "One highlight colour (orange) marks the subject of each sheet and key dimensions; everything prints legibly in black and white.",
             "Electrical heights are from the concrete slab, as given by the designer's electrical plan, until the floor build-up is confirmed.",
         ]
-        s.notes(275 - 0, s.H - 116, "GENERAL NOTES", notes, width_chars=40, size=5.6, gap=2.7)
+        s.notes(282, s.H - 116, "GENERAL NOTES", notes, width_chars=36, size=5.0, gap=2.3)
         # key plan
         ax, w, h = s.plan_axes(s.side_x - 132, s.m + 8, FULL[0], FULL[1], 200)
         draw_base(ax, self.m, "arch")
@@ -300,7 +304,7 @@ class Pkg:
         y = s.table(x, y - 2.5, [("#", 6, "center"), ("Item", 50, "left"), ("Size", 22, "center")], rows, size=4.5, row_h=2.75)
         s.notes(x, y - 3, "NOTES", [
             "Sizes are the plan outline in the Main drawing (x by y, not width by depth when rotated).",
-            "Joinery heights: see the elevation sheets D501-D604.",
+            "Joinery heights: see the detail sheets D501-D604 (bathrooms D602 / D603, buffet D503, terrace D504-D508).",
             "Loose furniture is for clearance only; fixed joinery dimensions to be confirmed with the joinery shop drawings.",
         ], width_chars=46, size=4.5, gap=2.2)
         return s
@@ -317,6 +321,9 @@ def main():
     a = ap.parse_args()
     m = Main(a.repo, a.data)
     P = Pkg(m, a.out)
+    # Run as a script this file is "__main__"; the sheet modules import it as "build_package". Register this module under
+    # that name so they share one SHEETS list (otherwise the sheet index came out empty).
+    sys.modules.setdefault("build_package", sys.modules[__name__])
     import sheets_more  # noqa: the electrical, plumbing, ceiling, detail and spec sheets
     sheets_more.build_all(P, a)
 

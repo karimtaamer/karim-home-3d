@@ -401,9 +401,10 @@ pt("wp", "Terrace", "Weatherproof socket — BBQ counter", at=(23.55, 9.248), h=
    note="the plan's WP 130 at the sink corner: Main's BBQ counter has no sink, so it powers the BBQ / grill")
 pt("wp", "Terrace", "Weatherproof socket 45 cm — on the pier between the window and the slider (outdoor TV)", wall="W", x=21.8, y=5.55, h=0.45)
 pt("tv", "Terrace", "TV point 45 cm — outdoor TV", wall="W", x=21.8, y=5.9, h=0.45)
-pt("wp", "Terrace", "Weatherproof socket 45 cm — south pier by the L seat", wall="W", x=21.8, y=2.15, h=0.45)
-pt("lightout", "Terrace", "Light outlet (no socket) — spotlights above the L-seat, at the planter corner", wall="W", x=21.8, y=1.93, h=0.3, status="added",
-   circuit="terrace-seat-spots", note="Karim's review (Karim 12 Nov 2026): no longer a socket: a switched lighting outlet (IP66 box, cable gland) hard-wired to the spotlights above the L-seat (the spike lights in the planter strip behind it); terrace plate key 3; on a 30 mA RCD")
+pt("wp", "Terrace", "Weatherproof socket 45 cm — south pier by the L seat", wall="W", x=21.8, y=2.23, h=0.45,
+   note="Planter 28 cm (Karim 15 Nov 2026): moved 8 cm north with the seat (was y 2.15, now behind the seat back's masonry)")
+pt("lightout", "Terrace", "Light outlet (no socket) — spotlights above the L-seat, at the planter end, above the soil", wall="W", x=21.8, y=1.92, h=1.0, status="added",
+   circuit="terrace-seat-spots", note="Karim's review (Karim 12 Nov 2026): no longer a socket: a switched lighting outlet (IP66 box, cable gland) hard-wired to the spotlights above the L-seat (the spike lights in the planter strip behind it); terrace plate key 3; on a 30 mA RCD. Planter 28 cm (Karim 15 Nov 2026): raised from 30 to 100 cm (centre of the box) so it is on the house wall above the soil (soil top 88, back coping 95), not buried in the planter; centred on the 28 cm bed")
 pt("wp", "Terrace", "Weatherproof socket 45 cm — east parapet, general use", wall="E", x=24.3, y=5.7, h=0.45, status="added",
    note="Dad's review (Karim 11 Nov 2026): the far side of the terrace (heater, fan, string lights, cleaning); always on, IP66 on a 30 mA RCD; conduit in the parapet or under the deck")
 
@@ -473,8 +474,8 @@ feed("Guest bathroom", "Shower-niche LED (2 niches) — wall box high on the sou
      "Dad's review (Karim 11 Nov 2026): on the south wall face over the door head, above the wet zones; 24 V IP67 strip in the niches")
 feed("Laundry", "Under-cabinet LED — driver in the upper cabinet", (11.16, 8.96), 1.70, "S")
 # Terrace LED feeds on the house wall (Dad's review (Karim 11 Nov 2026)): not out in the furniture; the low-voltage cable runs from here to the seat / counter.
-pt("ledfeed", "Terrace", "Seat-lip LED — IP65 box on the house wall", wall="W", x=21.8, y=2.65, h=0.3, status="added",
-   note="Dad's review (Karim 11 Nov 2026): moved from inside the seat storage to the house wall; cable under the deck to the seat")
+pt("ledfeed", "Terrace", "Seat-lip LED — IP65 box on the house wall", wall="W", x=21.8, y=2.73, h=0.3, status="added",
+   note="Dad's review (Karim 11 Nov 2026): moved from inside the seat storage to the house wall; cable under the deck to the seat. Planter 28 cm (Karim 15 Nov 2026): 8 cm north with the seat front (was y 2.65)")
 pt("ledfeed", "Terrace", "BBQ counter LED — IP65 box on the house wall", wall="W", x=21.8, y=8.95, h=0.3, status="added",
    note="Dad's review (Karim 11 Nov 2026): moved from inside the BBQ counter to the house wall; cable under the deck to the counter")
 

@@ -2365,23 +2365,24 @@
    "type": "wp",
    "room": "Terrace",
    "x": 21.4753,
-   "y": 2.15,
+   "y": 2.23,
    "h": 0.45,
    "facing": "E",
    "label": "Weatherproof socket 45 cm — south pier by the L seat",
-   "status": "plan"
+   "status": "plan",
+   "note": "Planter 28 cm (Karim 15 Nov 2026): moved 8 cm north with the seat (was y 2.15, now behind the seat back's masonry)"
   },
   {
    "id": "lightout-173",
    "type": "lightout",
    "room": "Terrace",
    "x": 21.4753,
-   "y": 1.93,
-   "h": 0.3,
+   "y": 1.92,
+   "h": 1.0,
    "facing": "E",
-   "label": "Light outlet (no socket) — spotlights above the L-seat, at the planter corner",
+   "label": "Light outlet (no socket) — spotlights above the L-seat, at the planter end, above the soil",
    "status": "added",
-   "note": "Karim's review (Karim 12 Nov 2026): no longer a socket: a switched lighting outlet (IP66 box, cable gland) hard-wired to the spotlights above the L-seat (the spike lights in the planter strip behind it); terrace plate key 3; on a 30 mA RCD",
+   "note": "Karim's review (Karim 12 Nov 2026): no longer a socket: a switched lighting outlet (IP66 box, cable gland) hard-wired to the spotlights above the L-seat (the spike lights in the planter strip behind it); terrace plate key 3; on a 30 mA RCD. Planter 28 cm (Karim 15 Nov 2026): raised from 30 to 100 cm (centre of the box) so it is on the house wall above the soil (soil top 88, back coping 95), not buried in the planter; centred on the 28 cm bed",
    "circuit": "terrace-seat-spots"
   },
   {
@@ -2824,12 +2825,12 @@
    "type": "ledfeed",
    "room": "Terrace",
    "x": 21.4753,
-   "y": 2.65,
+   "y": 2.73,
    "h": 0.3,
    "facing": "E",
    "label": "Seat-lip LED — IP65 box on the house wall",
    "status": "added",
-   "note": "Dad's review (Karim 11 Nov 2026): moved from inside the seat storage to the house wall; cable under the deck to the seat"
+   "note": "Dad's review (Karim 11 Nov 2026): moved from inside the seat storage to the house wall; cable under the deck to the seat. Planter 28 cm (Karim 15 Nov 2026): 8 cm north with the seat front (was y 2.65)"
   },
   {
    "id": "ledfeed-212",

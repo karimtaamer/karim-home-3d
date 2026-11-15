@@ -2258,10 +2258,13 @@ export function furnish(scene, M, mat, version = "main") {
     for (let y = b0 + 0.045; y < b1 - 0.04; y += 0.05) p.box(-w + 0.025, w - 0.025, y, y + 0.03, D - 0.04, D - 0.005, mat.limewash).rotation.x = -0.5;
   });
   // L built-in seat on the east and south parapets (Main, 31 Oct 2026, Karim; DWG 2furni L): from the parapet face a
-  // 0.20 planter soil strip (not on the parapet top), a 0.10 masonry back rising 0.50 above the seat (top 0.95), then
-  // a 0.60 seat: hollow storage under hinged teak lids (top 0.40, 5 cm cushion to 0.45). 0.90 from the parapet in all.
-  // The south leg runs from the west wall (x 21.489) to the east leg, the east leg to y 5.443, as drawn; a fixed seat
-  // in the corner. Front (Karim's section, 12 Nov 2026): the WPC cladding over the brick front comes down flush with the
+  // planter soil strip (not on the parapet top), a 0.10 masonry back rising 0.50 above the seat (top 0.95), then
+  // a 0.60 seat: hollow storage under hinged teak lids (top 0.40, 5 cm cushion to 0.45).
+  // Planter 0.28 (Karim 15 Nov 2026, was 0.20): wide enough that the back's seat face lines up with the east pier's
+  // face (x 24.7634, 0.38 from the parapet), so the east leg runs on to the pier (y 5.5, was 5.443) and the pier closes
+  // the planter: no return, no step. 0.98 from the parapet in all; the seat moved 8 cm out on both legs. The south leg
+  // starts on the house wall face (x 21.4723, was 21.489). A fixed seat in the corner.
+  // Front (Karim's section, 12 Nov 2026): the WPC cladding over the brick front comes down flush with the
   // lid and turns back under itself as a 6 cm lip, 6 cm off the floor; the brick under it is recessed 6 cm; the LED
   // strip sits under that lip and washes the floor (no strip up at the lid any more).
   // A soft warm glow on the floor in front of a toe-kick LED (browser only: check_furnish's node run has no canvas).
@@ -2290,18 +2293,18 @@ export function furnish(scene, M, mat, version = "main") {
     g.renderOrder = 2;
   };
   {
-    const PX = 25.143, PY = 1.78, WX = 21.489, EY = 5.443;                      // parapet faces, ends of the L (DWG)
-    const p1x = PX - 0.2, p1y = PY + 0.2, b1x = p1x - 0.1, b1y = p1y + 0.1;      // planter strip, back wall
+    const PX = 25.143, PY = 1.78, WX = 21.4723, EY = 5.5;                       // parapet faces, house wall, pier face (DWG)
+    const PIER = 24.7634, PW = PX - 0.1 - PIER;                                  // the east pier's face; planter 0.2796
+    const p1x = PX - PW, p1y = PY + PW, b1x = p1x - 0.1, b1y = p1y + 0.1;        // planter strip, back wall (b1x = PIER)
     const s1x = b1x - 0.6, s1y = b1y + 0.6;                                      // seat front
     const IX = 23.3, IY = 3.0, SEAT = 0.36, LID = 0.04, CUSH = 0.05, BACK = 0.95;
     const CL = 0.02, RC = 0.06, FW = 0.12;  // WPC cladding, the toe recess (6 deep, 6 high), front wall depth (brick + WPC)
     item(IX, IY, "S", p => {
       // a plan rectangle [X0, X1] x [Y0, Y1] from height y0 to y1 (this item faces S: local x = plan x, z = -plan y)
       const pb = (q, X0, X1, Y0, Y1, y0, y1, m, r = 0) => q.box(X0 - IX, X1 - IX, y0, y1, IY - Y1, IY - Y0, m, r);
-      // planter: soil strip 0.20 against the parapets, its far end closed by a return of the back wall
+      // planter: soil strip 0.28 against the parapets, run on to the house wall and the east pier (they close its ends)
       pb(p, WX, PX, PY, p1y, 0.52, 0.88, mat.darkTop);
-      pb(p, p1x, PX, p1y, EY - 0.1, 0.52, 0.88, mat.darkTop);
-      pb(p, p1x, PX, EY - 0.1, EY, 0, BACK, mat.render);
+      pb(p, p1x, PX, p1y, EY, 0.52, 0.88, mat.darkTop);
       // masonry back, rendered, with a stone coping
       pb(p, WX, p1x, p1y, b1y, 0, BACK - 0.02, mat.render);
       pb(p, b1x, p1x, b1y, EY, 0, BACK - 0.02, mat.render);
@@ -2356,14 +2359,16 @@ export function furnish(scene, M, mat, version = "main") {
     floorGlow(WX, s1x, s1y - RC, s1y + 0.35, "S");                                 // the LED's wash on the deck
     floorGlow(s1x - 0.35, s1x + RC, s1y, EY, "E");
     // planting in the soil strip (not on the parapet top): grasses along both legs, a taller one at the west end
-    for (let x = 21.75; x < PX - 0.1; x += 0.45) plant(x, PY + 0.1, 0.6, 0.06, 0.86);
-    for (let y = p1y + 0.3; y < EY - 0.2; y += 0.45) plant(p1x + 0.1, y, 0.6, 0.06, 0.86);
-    plant(21.62, PY + 0.1, 1.3, 0.07, 0.86);
+    // (plants on the parapet side of the 0.28 bed, the spike lights in front of them on the seat side)
+    for (let x = 21.75; x < PX - 0.1; x += 0.45) plant(x, PY + 0.11, 0.6, 0.06, 0.86);
+    for (let y = p1y + 0.3; y < EY - 0.2; y += 0.45) plant(PX - 0.11, y, 0.6, 0.06, 0.86);
+    plant(21.62, PY + 0.11, 1.3, 0.07, 0.86);
     // Plant spike lights (dad's review, Karim 11 Nov 2026): low-voltage uplights staked in the soil strip, washing the
     // plants and parapet: the spotlights above the L-seat, hard-wired from the lighting outlet at the planter corner
     // (Karim 12 Nov 2026: no socket any more; terrace plate, key 3).
     const SOIL = 0.88;
-    for (const [x, y] of [[22.2, PY + 0.1], [23.15, PY + 0.1], [24.1, PY + 0.1], [p1x + 0.1, PY + 0.1], [p1x + 0.1, 2.85], [p1x + 0.1, 3.85], [p1x + 0.1, 4.85]])
+    const LS = p1y - 0.07, LE = p1x + 0.07;                                         // light line, 7 cm off the back
+    for (const [x, y] of [[22.2, LS], [23.15, LS], [24.1, LS], [LE, LS], [LE, 2.95], [LE, 3.95], [LE, 4.95]])
       named(item(x, y, "S", q => {
         q.cyl(0, 0, 0.007, SOIL, SOIL + 0.14, mat.blackSteel, 8);           // stake
         q.cyl(0, 0, 0.026, SOIL + 0.14, SOIL + 0.21, mat.blackSteel, 16);   // head, aimed up
@@ -2394,7 +2399,7 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-0.9, -0.1, 1.12, 1.18, 0.05, 0.4, mat.blackSteel, 0.02);
   });
   floorGlow(T.x0, T.x1, 9.27 - 0.47 - 0.35, 9.27 - 0.47 + 0.06, "N");                // the BBQ counter LED's wash on the deck
-  for (const [x, y, h] of [[21.8, 4.75, 1.9], [24.5, 5.75, 1.8], [24.45, 8.45, 1.7]]) plant(x, y, h, 0.28);
+  for (const [x, y, h] of [[21.8, 4.75, 1.9], [24.48, 5.81, 1.8], [24.45, 8.45, 1.7]]) plant(x, y, h, 0.28);
   for (const y of [5.0, 8.6]) sconce(T.x0, y, "E", 2.0);
   if (version === "kareems-changes") sconce(21.47, 2.45, "E", 2.2);  // Wall light south of the terrace window, shown on the electrical plan.
 

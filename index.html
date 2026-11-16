@@ -371,6 +371,9 @@ const VERSIONS = [
   { id: "main", name: "Main", data: "kareems-changes", model: "model-kareems-changes.js", drawing: "drawing-kareems-changes.json",
     spots: "spots-kareems-changes.json" },
   { id: "as-built", name: "As-built", model: "model-as-built.js", drawing: "drawing-as-built.json", spots: "spots-as-built.json" },
+  // New As-built (16 Nov 2026): a copy of Main for recording site measurements (sitemeasure.js, this version only).
+  { id: "new-asbuilt", name: "New As-built", model: "model-new-asbuilt.js", drawing: "drawing-new-asbuilt.json",
+    spots: "spots-new-asbuilt.json" },
   { id: "kareems-changes", name: "Karim's version", data: "karims-version", model: "model-karims-version.js",
     drawing: "drawing-karims-version.json", spots: "spots-karims-version.json", sep: true },
   { id: "naghams-changes", name: "Nagham's version", model: "model-naghams-changes.js", drawing: "drawing-naghams-changes.json",
@@ -1376,6 +1379,10 @@ document.getElementById("measure").onclick = () => {
 document.getElementById("clearMeasure").onclick = () => measure.clear();
 
 const drawing = createDrawing(document.getElementById("drawing"), live.url(version.drawing), { electrical });
+
+// New As-built only: Site measurements (sitemeasure.js), its own screen over the plan; ?measure opens it.
+if (version.id === "new-asbuilt") import("./sitemeasure.js").then(({ createSiteMeasure }) => (window.siteMeasure = createSiteMeasure(
+  { M, loadDrawing, drawingUrl: live.url(version.drawing), version: vid, open: params.has("measure") })));
 
 // --- Move and Resize (move.js, move_tool.py): beside Measure in the bar, and beside the drawing's own Measure -----------
 const moveBtn = document.getElementById("move");

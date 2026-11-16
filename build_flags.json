@@ -15,6 +15,11 @@
     "flags": ["--wall", "190.9609,-112.8031,190.9609,-112.3428", "--cut", "191.0309,-114.2431,191.7309,-114.0731",
               "--window", "192.2087,-112.47,1.5,2.1,frosted", "--cut", "207.9471,-116.2418,208.2871,-115.8818"]
   },
+  "new-asbuilt": {
+    "dxf": "dwg/new-asbuilt.dxf", "model": "model-new-asbuilt.js", "drawing": "drawing-new-asbuilt.json", "tour": "tour-new-asbuilt.json",
+    "flags": ["--wall", "190.9609,-112.8031,190.9609,-112.3428", "--cut", "191.0034,-114.3031,191.7034,-114.1331",
+              "--window", "192.2087,-112.47,1.5,2.1,frosted", "--cut", "207.9471,-116.2418,208.2871,-115.8818"]
+  },
   "as-built": {
     "dxf": "dwg/as-built.dxf", "model": "model-as-built.js", "drawing": "drawing-as-built.json", "tour": "tour-as-built.json",
     "flags": []

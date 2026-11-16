@@ -24,6 +24,7 @@ in-viewer **Generate a render** button that turns a Walk view into a photoreal r
 | `photogen-brief.json` | Finishes text and material-board swatches for Generate Photo Spot | Yes |
 | `spots.js`, `renders.js` | Photo-spot UI in Walk; the Renders gallery screen | Yes |
 | `drawing.js`, `measure.js` | 2D drawing view with object snaps; 3D tape measure | Yes |
+| `sitemeasure.js`, `site_measurements.py`, `api/measurements.py` | New As-built only: Site measurements (tap a wall piece, record the tape), its `/api/measurements` store in Blob (§4) | Yes |
 | `interact.js` | Openable cabinets in Walk: the soft "tap me" cue and the door animation (§5) | Yes |
 | `photogen.js` | Generate Photo Spot UI (framing preview, screenshot, comment, approve) | Yes |
 | `spotnames.js` | Auto-names for new photo spots: furniture word per `furnish.js` piece, by its plan point | Yes (when a piece moves) |
@@ -67,6 +68,7 @@ python3 photogen.py 8765         # another port
 | `?cam=x,y,h,lookX,lookY,lookH[,fov]` | Stand at an exact camera (plan metres), e.g. to match a render |
 | `?clean` | Hide all UI (for screenshots) |
 | `?show=drawing` / `?show=renders` | Open the drawing or Renders screen |
+| `?v=new-asbuilt&measure` | Open Site measurements (New As-built only, §4) |
 
 ---
 
@@ -205,7 +207,7 @@ bath end wall, which used to push 37 cm of wall into the doorway.
 
 ## 4. Plan versions
 
-**Version menu (2026-10-25, confirmed by Karim):** Main · As-built · ┄ · Karim's version · Nagham's version. In
+**Version menu (2026-10-25, confirmed by Karim; New As-built added 16 Nov 2026):** Main · As-built · New As-built · ┄ · Karim's version · Nagham's version. In
 `index.html`, `VERSIONS` entries carry `data`: the plan version whose files (its own `furnish-<v>.js` and
 `materials-<v>.js` too) and Edit AI live edits they load. **Main** (the default) loads the `kareems-changes` plan, and Edit AI treats `main` as `kareems-changes`
 (`ALIASES` in `edit_ai.py`). **Karim's version** (`?v=kareems-changes`) was an alias to it until 26 Oct 2026; it now
@@ -220,6 +222,7 @@ and `dwg/main.dxf` are the retired pre-25-Oct Main layout. Nothing on the page l
 |---|---|---|---|
 | Main | *(none)* / `main` | `dwg/kareems-changes.dxf` | the Kareem's Changes files below |
 | As-built | `as-built` | `dwg/as-built.dxf` (the surveyor's `as-built-original.dwg`, Sep 2026) | `model-as-built.js`, `drawing-as-built.json`, `tour-as-built.json`, `spots-as-built.json` (empty) |
+| New As-built | `new-asbuilt` | `dwg/new-asbuilt.dxf` (a byte copy of Main's `dwg/kareems-changes.dxf`, 2026-11-16) | `*-new-asbuilt.*` (byte copies of Main's; its furnish runs Main's branches), plus Site measurements |
 | Karim's version | `kareems-changes` | `dwg/karims-version.dxf` (a copy of Main's `dwg/kareems-changes.dxf`, 2026-10-26, before Main's laundry/WC change) | `model-karims-version.js`, `drawing-karims-version.json`, `tour-karims-version.json`, `spots-karims-version.json` |
 | Nagham's version | `naghams-changes` | `dwg/naghams-changes.dxf` (a copy of the retired Shifted Bedroom drawing, 2026-10-24) | `model-naghams-changes.js`, `drawing-naghams-changes.json`, `tour-naghams-changes.json`, `spots-naghams-changes.json` |
 
@@ -381,6 +384,26 @@ N=dwg/naghams-changes.dxf
     --window 192.2087,-112.47,1.5,2.1,frosted
 ~/.dwg-tools/bin/python build_drawing.py $N --model model-naghams-changes.js --out drawing-naghams-changes.json
 ```
+
+**New As-built (16 Nov 2026)** starts as an exact copy of Main for checking the plan against the flat on site: DXF,
+model, drawing, electrical, spots and move-origins are byte copies of Main's, the tour only has its comment changed, and
+`furnish-new-asbuilt.js` starts with `version = "kareems-changes"`, so it renders as Main did that day. It has the same
+`build_flags.json` flags (`build_version.py new-asbuilt`), its own column-face lock (`na-column-face`) and is in
+`edit_ai_pull.py`, `check_furnish.py` (checked as Main) and `spotnames.js`.
+
+**Site measurements** (`sitemeasure.js`, New As-built only: the 📏 button, or `?v=new-asbuilt&measure`). Its own
+full-screen plan: tap a wall and type what the tape says (cm), with an optional note. `segmentWalls()` walks every room's
+floor outline in the model and looks 2-7 cm behind each face for a wall or an opening polygon, so the faces split at
+every window / door / slider jamb, column or nib edge and corner (splits snapped onto the drawn corner within 1.5 cm).
+Each piece is a wall, opening width, pier, column face, reveal or nib; openings also have sill / height / above (from
+the model's sill and head) and each room a ceiling height. Ids are kind + room + end points in cm, so they survive a
+reload (but not a rebuild that moves that wall). Measured pieces turn green, or orange / red with the difference when
+more than 3 cm off. The List groups them by room (filters: missing, done, off); ⋯ exports CSV / JSON and imports JSON.
+Saved in `localStorage` at once, then `POST /api/measurements?version=new-asbuilt` (`site_measurements.py`): last write
+wins per piece by its time; Blob revisions `site-measurements/<version>/<ms>-<hash>.json`, each written once (no stale
+CDN reads), a read merges the newest 5 and keeps 30. Locally `python3 site_measurements.py [port]` serves the site with
+the API (files in `site-measurements/`, git-ignored); under any other server it says "On this device". Tests:
+`python3 tests/test_site_measurements.py`.
 
 As-built is the flat as it stands today, empty: the surveyor's "AS BUILT PLAN" (2026-10-24). It is a record, not a
 design, so the master-suite rule below doesn't apply to it and `suite_merge.py --check` skips `dwg/as-built*.dxf`.
@@ -560,6 +583,7 @@ that view replaces the model.
 - **`vercel.json`:**
   - `/renders/*` → the public Blob store `karim-home-3d-photospots`. The live site never serves `renders/` from git.
   - `/api/photospot/<action>` → `api/photospot.py`. Max duration 300 s; `models/`, `textures/`, `notes/`, `dist/` and `renders/` are excluded from the function bundle.
+  - `/api/measurements` → `api/measurements.py` (New As-built's Site measurements, Blob `site-measurements/`; no rewrite, 30 s).
 - **Live approved spots** are saved to Blob as `renders/ai-spots/<spots file>/<id>.json`. The page merges them into the spots file it loads.
   - To make one permanent in git, copy its entry into `spots*.json` and its image into `renders/`.
 - **Vercel env vars:**

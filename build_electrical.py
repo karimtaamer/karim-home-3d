@@ -128,8 +128,8 @@ spots("Dining", "dining-spots", row(15.9, 20.7, 4, 6.65) + row(15.9, 20.7, 4, 8.
 # Existing decorative fittings (furnish-kareems-changes.js), listed for their labels and switch.
 for x in (16.705, 17.505, 18.305):  # centred on the DWG dining table (17.505, 7.846), as furnish-kareems-changes.js (7 Nov 2026)
     pt("pendant", "Dining", "Lantern pendant over the dining table", at=(x, 7.846), h=1.75, status="existing", circuit="dining-pendants")
-for y in (6.231, 8.79):
-    pt("pendant", "Master bedroom", "Bedside globe pendant", at=(2.48, y), h=1.15, status="existing", circuit="bedside-" + ("S" if y < 7 else "N"),
+for y in (6.231, 8.79):  # x: Main 16 Nov, +5 cm with the headboard wall (x 2.2415-2.3515, Karim 9 Nov)
+    pt("pendant", "Master bedroom", "Bedside globe pendant", at=(2.53, y), h=1.15, status="existing", circuit="bedside-" + ("S" if y < 7 else "N"),
        note="two-way: switched from the plates over both nightstands")
 pt("walllight", "Terrace", "Terrace wall light", at=(21.51, 5.775), h=2.0, facing="E", status="existing", circuit="terrace-wall")
 pt("walllight", "Terrace", "Terrace wall light", at=(21.47, 8.6), h=2.0, facing="E", status="existing", circuit="terrace-wall")
@@ -198,7 +198,7 @@ bank("sw-master-dresser", "Master bedroom", "bedroom vanity, beside the main swi
      note="three vanity keys on the same wall, nearer the vanity; separated from the bedroom plate in both plan and 3D")
 bank("sw-master-dresser-spots", "Master bedroom", "dresser spots by the bathroom-door wall",
      ["The two dresser/wardrobe corner spots marked on the plan"],
-     wall="N", x=2.246, y=5.8, h=1.2, status="added", gang_circuits=["master-dresser-spots"],
+     wall="N", x=2.296, y=5.8, h=1.2, status="added", gang_circuits=["master-dresser-spots"],
      note="one key centred on the short return wall at the arrow, for the two boxed spots only")
 # Bedsides: each of the two keys controls one pendant from either bedside.
 for side, y in (("S", 6.231), ("N", 8.79)):
@@ -277,7 +277,7 @@ pt("power", "Living room", "AC power point — living-room split (dedicated circ
 # Flush wood flaps (Karim 4 Nov 2026): socket + 2 USB-C sunk in the top, under a lift-up flap (shown open), in place of wall sockets
 FLAP = ["S", "C", "C"]
 for side, y in (("door", 6.231), ("window", 8.79)):
-    pt("flap", "Master bedroom", f"Flap in the nightstand top ({side} side) — socket + 2 USB-C (lamp, phones)", at=(2.41, y), h=0.55, facing="E",
+    pt("flap", "Master bedroom", f"Flap in the nightstand top ({side} side) — socket + 2 USB-C (lamp, phones)", at=(2.46, y), h=0.55, facing="E",
        parts=FLAP, finish="walnut", status="adapted", note="the plan's bedside 70 points, moved into the nightstand: a flush walnut flap at the back of the top, the cable down inside to a box on the headboard wall behind it")
 pt("flap", "Master bedroom", "Flap in the dresser top, under the mirror — socket + 2 USB-C (hair dryer, phone)", at=(3.37, 4.65), h=0.75, facing="N",
    parts=FLAP, finish="oak", status="adapted", note="the plan's 'table area' socket, moved off the wall into the dresser top: a flush oak flap at the back, under the mirror")

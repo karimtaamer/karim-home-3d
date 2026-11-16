@@ -813,9 +813,11 @@ export function furnish(scene, M, mat, version = "main") {
     // out from the battens, bottom 1.32 (0.46 over the counter), three glass shelves, all centred on the bowl.
     if (["kareems-changes", "karims-version"].includes(version)) item(0.556, 6.6851, "E", vanity(1.1, true, 0.6, medCabinet(), heaterVanity));  // 1.10, south wall to the partition: centre DWG y -114.9281
     else item(0.556, 6.7435, "E", vanity(1.153, true));  // centre DWG y -114.8697, bowl, mixer and mirror on it
-    item(1.7762, 9.0201, "S", p => {  // WC bay 1.361..2.192 = 0.83; Main 9 Nov: east edge +5 cm with the partition (1.361..2.242 = 0.88). Pan, plate and window stay (o).
+    item(1.7762, 9.0201, "S", p => {  // WC bay 1.3615..2.1915 = 0.83. Pan, plate and window stay (o).
+      // Main 9 Nov widened this to 2.242 with the partition; the 11 Nov plan rebuild put the partition back at x 2.1915-2.3015,
+      // so (16 Nov, Nagham) the concealed-cistern ledge ends on the partition's west face again, nothing inside the wall.
       const h = 0.4153, d = 0.3, top = 1.12, o = 0.0275;
-      const east = version === "kareems-changes" ? h + 0.05 : h;                   // widen only toward the moved partition
+      const east = h;                                                              // to the partition face (x 2.1915)
       p.box(-h, east, 0, top - 0.02, 0, d - 0.01, mat.stoneWall);                   // framed build-out, tiled
       p.box(-h, east, top - 0.02, top, 0, d, mat.stoneWall, 0.004);                 // porcelain top ledge
       p.box(o - 0.12, o + 0.12, 0.92, 1.08, d - 0.01, d, mat.brass, 0.005);        // flush plate on the face
@@ -830,7 +832,8 @@ export function furnish(scene, M, mat, version = "main") {
     });
     // Towel rail on the east wall, 0.29 south of the pan front (DWG y -113.725..-114.175), and three
     // champagne-bronze towel hooks at 1.30 on the 0.61 of plain wall between it and the open door leaf.
-    const partitionW = version === "kareems-changes" ? 2.242 : 2.192;  // west face of the bedroom partition
+    // Main 16 Nov (Nagham): back on the partition's west face, x 2.1915 (model wall 2.1915-2.3015); at 2.242 they sat 5 cm inside it.
+    const partitionW = version === "kareems-changes" ? 2.1915 : 2.192;  // west face of the bedroom partition
     if (version === "kareems-changes") named(item(partitionW, 7.6632, "W", towelRail), "unheated towel rail");
     else item(2.192, 7.6632, "W", towelRail);
     // Kareem's (Nagham call, 25 Oct): hooks raised 15 cm, to 1.45.

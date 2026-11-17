@@ -403,7 +403,20 @@ Saved in `localStorage` at once, then `POST /api/measurements?version=new-asbuil
 wins per piece by its time; Blob revisions `site-measurements/<version>/<ms>-<hash>.json`, each written once (no stale
 CDN reads), a read merges the newest 5 and keeps 30. Locally `python3 site_measurements.py [port]` serves the site with
 the API (files in `site-measurements/`, git-ignored); under any other server it says "On this device". Tests:
-`python3 tests/test_site_measurements.py`.
+`python3 tests/test_site_measurements.py`, `node tests/test_sitemeasure_brick.mjs`.
+
+**Raw brick (17 Nov 2026).** The site has no frames or plaster yet, so every window, door and slider width runs brick
+face to brick face (`brickOpenings()`), measured along the room's face:
+- **Doors:** the brick jamb is the outer edge of the frame's lines across the wall in the drawing. The model's wall
+  polygons hold the frame as wall, so they can't be used.
+- **Windows and the slider:** the DWG draws no brick jamb (the frame box sits inside wall lines that run on), so the
+  width is the gap between the model's wall polygons. Toilet 1's window is 66.8 drawn; Karim taped 75.
+- **Frame steps:** the nibs and architrave notches round an opening are folded into it, and the wall either side runs
+  to the brick edge.
+- **Heights** read "to brick", and the sheet says "Measure brick to brick: no frame, no plaster".
+- **Old ids:** pieces measured under the older frame-line ids (`aliasOf`, read from the id's kind, room and end points)
+  show on their new piece until it gets a newer value. Saving posts the new id. Old entries stay in the store and the
+  JSON export, and the CSV lists them as `legacy → <id>` or `legacy/unmapped`.
 
 As-built is the flat as it stands today, empty: the surveyor's "AS BUILT PLAN" (2026-10-24). It is a record, not a
 design, so the master-suite rule below doesn't apply to it and `suite_merge.py --check` skips `dwg/as-built*.dxf`.

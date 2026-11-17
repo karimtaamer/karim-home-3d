@@ -1,7 +1,9 @@
 // Site measurements (New As-built only, 16 Nov 2026): tap a wall piece on the plan and type what the tape says on
 // site. segmentWalls() splits every room's wall faces (the model's floor outlines) at each window / door / slider
-// jamb, column or nib edge and corner, so a tap picks the smallest piece: corner → jamb, window width, pier, column
-// face... Openings also offer their heights (sill, opening, above) and each room its ceiling height.
+// opening, column or nib edge and corner, so a tap picks the smallest piece: corner → opening, window width, pier,
+// column face... Openings also offer their heights (sill, opening, above) and each room its ceiling height.
+// The site is raw red brick (17 Nov 2026): every opening runs brick face to brick face (brickOpenings), and the door
+// frames' steps and architraves drawn round it are folded into the opening, so nothing frame-based is left to measure.
 // Saved on the device at once (localStorage) and synced to /api/measurements (site_measurements.py, Vercel Blob), so
 // the phone on site and the laptop see the same numbers. index.html loads this for ?v=new-asbuilt only.
 
@@ -11,6 +13,8 @@ const MIN_PIECE = 0.03;  // pieces shorter than this (m) are drafting noise, fol
 const SNAP = 0.015;  // a split within this of a wall / opening corner moves onto it
 const FLAG_CM = 3;  // |measured − drawn| above this is flagged
 const OPEN_NAME = { window: "Window", door: "Door", slider: "Slider" };
+const FURNITURE_INK = "#00ff00";  // the drawing's furniture layer; every other line may be a wall's or a frame's
+const FRAME_T = 0.12, FRAME_N = 0.09;  // how far past the brick edge (along / off the wall) a frame or architrave reaches
 
 const inRing = ([x, y], ring) => {
   let hit = false;
@@ -118,6 +122,112 @@ function ringPieces(M, ring, roomLeft) {
   return pieces.filter(p => len(p.a, p.b) >= MIN_PIECE);
 }
 
+// The raw masonry opening of each window / door / slider, on each face of its wall: brick end to brick end. The model's
+// wall polygons hold the door frames as wall, so a door's brick ends come from the drawing's lines (data: the version's
+// drawing). Per opening { c, u (along), v (across), n0, n1, faces: [{ n, t0, t1, how }] }, t and n measured from c
+// along u and v.
+export function brickOpenings(M, data) {
+  const ink = [];
+  for (const [col, lines] of Object.entries(data?.strokes || {})) if (col !== FURNITURE_INK)
+    for (const l of lines) for (let i = 2; i < l.length; i += 2) ink.push({ a: [l[i - 2], l[i - 1]], b: [l[i], l[i + 1]] });
+  return M.openings.map(o => {
+    const r = o.outer, u = unit(len(r[0], r[1]) >= len(r[1], r[2]) ? { a: r[0], b: r[1] } : { a: r[1], b: r[2] }), v = [-u[1], u[0]];
+    const c = [r.reduce((s, p) => s + p[0], 0) / r.length, r.reduce((s, p) => s + p[1], 0) / r.length];
+    const T = p => dot([p[0] - c[0], p[1] - c[1]], u), N = p => dot([p[0] - c[0], p[1] - c[1]], v);
+    const half = (Math.max(...r.map(T)) - Math.min(...r.map(T))) / 2, n0 = Math.min(...r.map(N)), n1 = Math.max(...r.map(N));
+    const P = (t, n) => [c[0] + u[0] * t + v[0] * n, c[1] + u[1] * t + v[1] * n];
+    const solid = p => M.walls.some(w => inPoly(p, w));
+    // Walking from t (depth n) in steps of d, the last point before solid wall turns to not (or back), to 1 mm.
+    const edge = (t, n, d, into = true) => {
+      const at = k => (d[0] ? solid(P(t + k * d[0], n)) : solid(P(t, n + k * d[1]))) === into;
+      let k = 0;
+      while (k < 200 && !at(k + 1)) k++;
+      if (k >= 200) return null;
+      let f = 0;
+      for (let h = 0.5; h > 0.1; h /= 2) if (!at(k + f + h)) f += h;
+      return d[0] ? t + (k + f) * d[0] : n + (k + f) * d[1];
+    };
+    // Doors: the frame's lines across the wall (liner, stop, the brick's own end), contiguous out from the frame-line
+    // jamb; the outermost is the brick jamb. Windows and the slider have no brick jamb in the DWG (their frame box is
+    // drawn inside brick lines that run on): there, and where a door has none, the wall polygon's end.
+    const across = o.kind !== "door" ? [] : ink.filter(l => Math.abs(dot(unit(l), u)) < 0.05
+      && [l.a, l.b].every(p => N(p) > n0 - 0.03 && N(p) < n1 + 0.03) && Math.abs(N(l.a) - N(l.b)) >= 0.6 * (n1 - n0))
+      .map(l => (T(l.a) + T(l.b)) / 2);
+    const jamb = s => {
+      const ts = across.map(t => s * t).filter(t => t > half - 0.2).sort((a, b) => a - b);
+      let at = null;
+      for (const t of ts) if (at == null ? t < half + 0.08 : t - at < 0.06) at = t; else break;
+      return at == null ? null : s * at;
+    };
+    const lo = jamb(-1), hi = jamb(1);
+    const faces = [[n0, -1], [n1, 1]].map(([nf, side]) => {
+      // The face: where the wall beside the opening ends, looking out from its middle (else the opening's own side).
+      const ns = [lo ?? -half, hi ?? half].map((t, k) => t + (k ? 0.05 : -0.05))
+        .map(t => solid(P(t, 0)) ? edge(t, 0, [0, side * 0.005], false) : null).filter(n => n != null && Math.abs(n - nf) < 0.03);
+      const n = ns.length ? ns.reduce((s, x) => s + x, 0) / ns.length : nf;
+      const inside = n - side * 0.015;  // just inside the face
+      const t0 = lo ?? edge(0, inside, [-0.005, 0]) ?? -half, t1 = hi ?? edge(0, inside, [0.005, 0]) ?? half;
+      const how = lo != null && hi != null ? "frame edge" : lo == null && hi == null ? "wall ends" : "frame edge + wall end";
+      return { n, t0, t1, how };
+    });
+    return { c, u, v, n0, n1, faces };
+  });
+}
+
+// One ring's pieces with each opening folded in: the run of pieces inside its frame zone (the frame-line opening, the
+// frame's nibs and steps, an architrave notch) becomes one piece from brick edge to brick edge on the room's face line,
+// and the wall pieces either side are trimmed or run on to the brick edge. Kept: the brick face either side, and a
+// return square to the wall at a brick edge (a reveal: the brick's own end).
+function foldOpenings(ps, B) {
+  for (const [i, b] of B.entries()) {
+    const T = p => dot([p[0] - b.c[0], p[1] - b.c[1]], b.u), N = p => dot([p[0] - b.c[0], p[1] - b.c[1]], b.v);
+    const at = (t, n) => [b.c[0] + b.u[0] * t + b.v[0] * n, b.c[1] + b.u[1] * t + b.v[1] * n];
+    const ns = b.faces.map(f => f.n), lo = Math.min(...b.faces.map(f => f.t0)), hi = Math.max(...b.faces.map(f => f.t1));
+    const nlo = Math.min(b.n0, ...ns) - FRAME_N, nhi = Math.max(b.n1, ...ns) + FRAME_N;
+    const inZone = p => T(p) > lo - FRAME_T && T(p) < hi + FRAME_T && N(p) > nlo && N(p) < nhi;
+    const along = p => Math.abs(dot(unit(p), b.u)) > 0.98;
+    const onFace = p => along(p) && b.faces.some(f => Math.abs(N(p.a) - f.n) < 0.015 && Math.abs(N(p.b) - f.n) < 0.015
+      && (Math.max(T(p.a), T(p.b)) <= f.t0 + 0.005 || Math.min(T(p.a), T(p.b)) >= f.t1 - 0.005));
+    const reveal = p => !along(p) && len(p.a, p.b) >= 0.6 * (b.n1 - b.n0) && [p.a, p.b].every(q => N(q) > nlo && N(q) < nhi) && b.faces.some(f => [f.t0, f.t1].some(e => Math.abs(T(p.a) - e) < 0.015 && Math.abs(T(p.b) - e) < 0.015));
+    const local = ps.map(p => p.cls === i || (inZone(p.a) && inZone(p.b) && !onFace(p) && !reveal(p)));
+    const start = local.indexOf(false);
+    if (start < 0 || !local.includes(true)) continue;
+    const order = ps.map((_, k) => (start + k) % ps.length), out = [];
+    for (let k = 0; k < order.length;) {
+      if (!local[order[k]]) { out.push(ps[order[k++]]); continue; }
+      const run = [];
+      while (k < order.length && local[order[k]]) run.push(ps[order[k++]]);
+      const mids = run.map(p => T([(p.a[0] + p.b[0]) / 2, (p.a[1] + p.b[1]) / 2]));
+      if (!run.some(p => p.cls === i) && !mids.some(t => t > lo && t < hi)) { out.push(...run); continue; }
+      const P = out[out.length - 1] || ps[order[order.length - 1]], Q = ps[order[k % order.length]];
+      const flat = q => q && along(q) && N(q.a) > nlo && N(q.a) < nhi;
+      const fwd = T(run[run.length - 1].b) >= T(run[0].a);
+      // A wall square to this one that stops short of the brick edge (a room corner beside the opening): a short
+      // stretch of brick face runs from it to the edge.
+      const short = (q, end, t) => q && !flat(q) && !reveal(q) && (t < 0 ? T(q[end]) < t - 0.01 : T(q[end]) > t + 0.01);
+      const tA = fwd ? lo : hi, tZ = fwd ? hi : lo;
+      // The room's face: its wall piece either side, else the brick face nearest the run.
+      const nRun = run.reduce((s, p) => s + N(p.a) + N(p.b), 0) / (2 * run.length);
+      const nLine = flat(P) ? N(P.b) : flat(Q) ? N(Q.a) : short(P, "b", tA) ? N(P.b) : short(Q, "a", tZ) ? N(Q.a) : nRun;
+      const f = b.faces.reduce((g, h) => Math.abs(h.n - nLine) < Math.abs(g.n - nLine) ? h : g);
+      const t0 = fwd ? f.t0 : f.t1, t1 = fwd ? f.t1 : f.t0, outward = f.n > 0 ? [-b.v[0], -b.v[1]] : b.v;
+      let a, z, after = null;
+      if (flat(P)) a = P.b = at(t0, N(P.b));
+      else if (reveal(P)) a = P.b;
+      else if (short(P, "b", t0)) { a = at(t0, N(P.b)); out.push({ cls: "wall", a: P.b, b: a, n: outward }); }
+      else a = P.b = at(t0, nLine);  // a return off a frame step: it now meets the brick edge
+      if (flat(Q)) z = Q.a = at(t1, N(Q.a));
+      else if (reveal(Q)) z = Q.a;
+      else if (short(Q, "a", t1)) { z = at(t1, N(Q.a)); after = { cls: "wall", a: z, b: Q.a, n: outward }; }
+      else z = Q.a = at(t1, nLine);
+      out.push({ cls: i, a, b: z, n: run.find(p => along(p))?.n || outward, face: f });
+      if (after) out.push(after);
+    }
+    ps = out.filter(p => len(p.a, p.b) >= 0.005);
+  }
+  return ps;
+}
+
 // Turn at the joint p→q, for a ring with the room on its left: > 0 turns into the room (an inside corner), < 0 turns
 // out (a column, nib or reveal edge standing into the room).
 const turn = (p, q, roomLeft) => {
@@ -126,8 +236,10 @@ const turn = (p, q, roomLeft) => {
 };
 
 // All the measurable pieces of the version's model: wall faces, openings (width and heights) and ceiling heights.
-export function segmentWalls(M) {
-  const segs = [], ids = new Set(), seenOpening = new Map();
+// data: the version's drawing (its brick lines place the openings' brick ends; without it, the wall polygons' ends).
+// rings (tests): each ring's pieces, in order, are pushed onto it.
+export function segmentWalls(M, data = null, rings = null) {
+  const segs = [], ids = new Set(), seenOpening = new Map(), B = brickOpenings(M, data);
   const add = s => {
     let id = s.id;
     for (let k = 2; ids.has(id); k++) id = `${s.id}~${k}`;
@@ -142,7 +254,8 @@ export function segmentWalls(M) {
     const room = f.room || "Room";
     for (const [ri, ring] of [f.outer, ...(f.holes || [])].entries()) {
       const roomLeft = (area(ring) > 0) === (ri === 0);
-      const ps = ringPieces(M, ring, roomLeft);
+      const ps = foldOpenings(ringPieces(M, ring, roomLeft), B);
+      if (rings) rings.push({ room, pieces: ps });
       ps.forEach((p, i) => {
         p.prev = ps[(i - 1 + ps.length) % ps.length];
         p.next = ps[(i + 1) % ps.length];
@@ -167,8 +280,11 @@ export function segmentWalls(M) {
         if (typeof p.cls === "number") {
           const o = M.openings[p.cls], kind = o.kind || "door";
           if (seenOpening.has(p.cls)) continue;  // its width once, from the first room that sees it
-          const s = add({ id: keyOf(kind, room, p.a, p.b), room, kind, label: `${OPEN_NAME[kind] || "Opening"} width`,
-            a: p.a, b: p.b, n: inward, drawn: L * 100, from: `${kind} jamb`, to: `${kind} jamb`, opening: p.cls });
+          // The other face's brick gap, when it differs (the room's face is the one measured).
+          const other = B[p.cls].faces.find(f => f !== p.face), w = f => (f.t1 - f.t0) * 100;
+          const note = p.face && Math.abs(w(other) - w(p.face)) >= 0.5 ? `Other face of the wall: ${fmt(w(other))} cm brick to brick` : "";
+          const s = add({ id: keyOf(kind, room, p.a, p.b), room, kind, label: `${OPEN_NAME[kind] || "Opening"} width (brick to brick)`,
+            a: p.a, b: p.b, n: inward, drawn: L * 100, from: "brick jamb", to: "brick jamb", opening: p.cls, brick: true, note });
           seenOpening.set(p.cls, s);
           continue;
         }
@@ -189,11 +305,11 @@ export function segmentWalls(M) {
     const head = o.head ?? (kind === "window" ? M.winHead : kind === "slider" ? M.sliderHead : M.doorHead);
     const sill = kind === "window" ? o.sill ?? M.sill : 0;
     const v = (part, label, cmv, from, to) => add({ id: `${s.id}#${part}`, room: s.room, kind: part, label, a: s.a, b: s.b,
-      n: s.n, drawn: cmv * 100, from, to, parent: s.id, vertical: true });
+      n: s.n, drawn: cmv * 100, from, to, parent: s.id, vertical: true, brick: true });
     s.parts = [];
-    if (sill > 0) s.parts.push(v("sill", `${OPEN_NAME[kind]} sill height`, sill, "floor", "sill").id);
-    s.parts.push(v("height", `${OPEN_NAME[kind] || "Opening"} height`, head - sill, sill > 0 ? "sill" : "floor", "head").id);
-    s.parts.push(v("above", `Wall above ${kind}`, M.ceiling - head, "head", "ceiling").id);
+    if (sill > 0) s.parts.push(v("sill", `${OPEN_NAME[kind]} sill (to brick)`, sill, "floor", "brick sill").id);
+    s.parts.push(v("height", `${OPEN_NAME[kind] || "Opening"} opening height (brick)`, head - sill, sill > 0 ? "brick sill" : "floor", "brick head").id);
+    s.parts.push(v("above", `Wall above ${kind} (brick)`, M.ceiling - head, "brick head", "ceiling").id);
   }
   for (const f of floors) {
     if (f.kind === "outdoor" || segs.some(s => s.kind === "ceiling" && s.room === f.room)) continue;
@@ -255,6 +371,7 @@ const CSS = `
 #sm .sheet .room { font-size: 12px; letter-spacing: .06em; color: #c9d1d9; }
 #sm .sheet .kind { font-size: 17px; font-weight: 700; }
 #sm .sheet .desc { font-size: 13px; color: #c9d1d9; }
+#sm .sheet .tip { font-size: 12.5px; color: #ffc98a; margin-top: 3px; }
 #sm .chips { display: flex; gap: 6px; flex-wrap: wrap; }
 #sm .chip { min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid #ffffff2a; background: none; font-size: 13px; }
 #sm .chip.on { background: #f3eee5; color: #161b21; border-color: #f3eee5; font-weight: 600; }
@@ -283,11 +400,36 @@ const CSS = `
 #sm .item .n small { display: block; color: #aab3bd; font-size: 11.5px; }
 `;
 
+// A piece id from an earlier segmenting (before 17 Nov 2026 openings ran frame to frame and frame steps were pieces of
+// their own): the id that piece has now, read from the old id's kind, room and end points. An opening (and its heights)
+// → the same kind of opening on that line; a wall piece → the piece in the same room on the same line that covers most
+// of it. null: nothing now matches (e.g. a frame nib folded into its opening).
+export function aliasOf(id, segs) {
+  const [base, part] = id.split("#");
+  const m = /^([a-z]+):([A-Z0-9-]+):(-?\d+),(-?\d+)-(-?\d+),(-?\d+)(?:~\d+)?$/.exec(base);
+  if (!m) return null;
+  const kind = m[1], room = m[2], a = [m[3] / 100, m[4] / 100], b = [m[5] / 100, m[6] / 100], L = len(a, b);
+  const opening = kind in OPEN_NAME;
+  if (L < 0.01) return null;
+  let best = null, score = opening ? 0.5 : 0.6;
+  for (const s of segs) {
+    if (s.vertical || (opening ? s.kind !== kind : s.kind in OPEN_NAME || slug(s.room) !== room)) continue;
+    const u = unit(s), sl = len(s.a, s.b), off = p => Math.abs((p[0] - s.a[0]) * u[1] - (p[1] - s.a[1]) * u[0]);
+    if (Math.abs(dot(unit({ a, b }), u)) < 0.98 || off(a) > (opening ? 0.3 : 0.02) || off(b) > (opening ? 0.3 : 0.02)) continue;
+    const ta = dot([a[0] - s.a[0], a[1] - s.a[1]], u), tb = dot([b[0] - s.a[0], b[1] - s.a[1]], u);
+    const overlap = Math.min(sl, Math.max(ta, tb)) - Math.max(0, Math.min(ta, tb)), k = overlap / Math.max(sl, L);
+    if (k > score) { score = k; best = s; }
+  }
+  return best ? best.id + (part ? `#${part}` : "") : null;
+}
+
 // The measuring screen. M: the version's model; loadDrawing / drawingUrl: the 2D linework (drawing.js); version: the
-// plan version whose measurements these are.
-export function createSiteMeasure({ M, loadDrawing, drawingUrl, version, open: openNow = false }) {
+// plan version whose measurements these are. Resolves once the drawing is in (its lines place the brick openings).
+export async function createSiteMeasure({ M, loadDrawing, drawingUrl, version, open: openNow = false }) {
   const KEY = `sitemeasure:${version}`, API = `/api/measurements?version=${encodeURIComponent(version)}`;
-  const segs = segmentWalls(M), byId = Object.fromEntries(segs.map(s => [s.id, s]));
+  let data = null;
+  try { data = await loadDrawing(drawingUrl); } catch { /* no drawing: openings run between the wall polygons' ends */ }
+  const segs = segmentWalls(M, data), byId = Object.fromEntries(segs.map(s => [s.id, s]));
   const plan = segs.filter(s => !s.vertical), ceilings = segs.filter(s => s.kind === "ceiling");
   // List order: room by room (as the model lists them), each opening's heights straight after its width.
   const rooms = [...new Set(segs.map(s => s.room))];
@@ -298,6 +440,19 @@ export function createSiteMeasure({ M, loadDrawing, drawingUrl, version, open: o
   try { saved = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { /* a broken store starts empty */ }
   let entries = saved.entries || {};
   const dirty = new Set(saved.dirty || []);
+  // What each piece shows: its own entry, or a newer one saved under its earlier id (aliasOf). The store keeps both.
+  let E = {};
+  const legacy = new Map();  // earlier id -> its piece now (null: none)
+  function relink() {
+    E = { ...entries };
+    for (const [old, e] of Object.entries(entries)) {
+      if (byId[old]) continue;
+      if (!legacy.has(old)) legacy.set(old, aliasOf(old, segs));
+      const id = legacy.get(old);
+      if (id && byId[id] && e?.value != null && (!E[id] || (E[id].updated || 0) < (e.updated || 0))) E[id] = { ...e, legacy: old };
+    }
+  }
+  relink();
   const persist = () => { try { localStorage.setItem(KEY, JSON.stringify({ entries, dirty: [...dirty] })); } catch { /* full: the sync still has it */ } };
 
   document.head.append(Object.assign(document.createElement("style"), { textContent: CSS }));
@@ -323,7 +478,7 @@ export function createSiteMeasure({ M, loadDrawing, drawingUrl, version, open: o
     </div>
     <div class="help">Tap a wall · pinch to zoom · zoom in for ceilings</div>
     <div class="sheet" hidden>
-      <div class="hd"><div><div class="room"></div><div class="kind"></div><div class="desc"></div></div>
+      <div class="hd"><div><div class="room"></div><div class="kind"></div><div class="desc"></div><div class="tip" hidden></div></div>
         <button class="btn" data-a="deselect" aria-label="Close">✕</button></div>
       <div class="chips parts"></div>
       <div class="val"><input class="num" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="cm" aria-label="Measured, cm">
@@ -352,7 +507,7 @@ export function createSiteMeasure({ M, loadDrawing, drawingUrl, version, open: o
   });
   root.addEventListener("keyup", e => e.stopPropagation());
 
-  let data = null, shown = false, queued = false, W = 0, H = 0, dpr = 1, sel = null, filter = "all";
+  let shown = false, queued = false, W = 0, H = 0, dpr = 1, sel = null, filter = "all";
   const view = { s: 40, tx: 0, ty: 0 };  // screen = (tx + x·s, ty − y·s)
   const toScreen = ([x, y]) => [view.tx + x * view.s, view.ty - y * view.s];
   const toWorld = (sx, sy) => [(sx - view.tx) / view.s, (view.ty - sy) / view.s];
@@ -427,7 +582,7 @@ export function createSiteMeasure({ M, loadDrawing, drawingUrl, version, open: o
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     if (markers() || ceilings.includes(sel)) for (const c of ceilings) {
       if (!markers() && c !== sel) continue;
-      const [x, y] = toScreen(c.a), e = entries[c.id], on = sel === c;
+      const [x, y] = toScreen(c.a), e = E[c.id], on = sel === c;
       ctx.fillStyle = "#f3eee5b0";
       ctx.fillText(c.room, x, y - 22);
       ctx.beginPath(); ctx.arc(x, y, on ? 15 : 12, 0, Math.PI * 2);
@@ -441,7 +596,7 @@ export function createSiteMeasure({ M, loadDrawing, drawingUrl, version, open: o
         ctx.strokeStyle = COL.sel + "55"; ctx.lineWidth = 14; ctx.lineCap = "round";
         ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke();
       }
-      const parts = (s.parts || []).map(id => entries[id]).filter(e => e?.value != null).length;
+      const parts = (s.parts || []).map(id => E[id]).filter(e => e?.value != null).length;
       ctx.strokeStyle = s === hi ? COL.sel : colourOf(s, e);
       ctx.lineWidth = s === hi ? 5 : e?.value != null || parts ? 4 : 2.5;
       ctx.lineCap = "butt";
@@ -497,14 +652,18 @@ export function createSiteMeasure({ M, loadDrawing, drawingUrl, version, open: o
     sheet.hidden = !s;
     $(".help").hidden = !!s;
     if (s) {
-      const p = s.parent ? byId[s.parent] : s, e = entries[s.id];
+      const p = s.parent ? byId[s.parent] : s, e = E[s.id];
       $(".room").textContent = s.room;
       $(".kind").textContent = s.label;
       $(".desc").textContent = `${s.from} → ${s.to} · drawn ${fmt(s.drawn)} cm`;
+      const tip = [s.brick ? "Measure brick to brick: no frame, no plaster." : "", byId[s.parent || s.id].note || "",
+        e?.legacy ? `Saved on the earlier piece ${e.legacy}; Save keeps it on this one.` : ""].filter(Boolean).join(" ");
+      $(".tip").textContent = tip;
+      $(".tip").hidden = !tip;
       const parts = p.parts ? [p.id, ...p.parts] : [];
       const name = { sill: "Sill", height: "Height", above: "Above" };
       $(".parts").innerHTML = parts.map(id => {
-        const q = byId[id], st = stateOf(q, entries[id]);
+        const q = byId[id], st = stateOf(q, E[id]);
         return `<button class="chip${id === s.id ? " on" : ""}" data-part="${id}">${q.parent ? name[q.kind] : "Width"}<i>${st === "todo" ? "" : st === "ok" ? "✓" : "!"}</i></button>`;
       }).join("");
       $(".parts").hidden = !parts.length;
@@ -531,6 +690,7 @@ export function createSiteMeasure({ M, loadDrawing, drawingUrl, version, open: o
   function record(id, value, text) {
     const s = byId[id];
     entries[id] = { value, note: text || "", updated: Date.now(), room: s.room, kind: s.kind, drawn: Math.round(s.drawn * 10) / 10 };
+    relink();
     dirty.add(id);
     persist();
     sync();
@@ -542,41 +702,41 @@ export function createSiteMeasure({ M, loadDrawing, drawingUrl, version, open: o
     record(sel.id, v, note.value.trim());
     // Straight on to this opening's next height, else stay (the value now shows on the plan).
     const p = sel.parent ? byId[sel.parent] : sel, parts = p.parts ? [p.id, ...p.parts] : [];
-    const nextPart = parts.slice(parts.indexOf(sel.id) + 1).find(id => entries[id]?.value == null);
+    const nextPart = parts.slice(parts.indexOf(sel.id) + 1).find(id => E[id]?.value == null);
     select(nextPart ? byId[nextPart] : sel);
     if (!nextPart && touchy) num.blur();
     renderList();
   }
   function clear() {
-    if (!sel || entries[sel.id]?.value == null) { num.value = ""; note.value = ""; showDiff(); return; }
+    if (!sel || E[sel.id]?.value == null) { num.value = ""; note.value = ""; showDiff(); return; }
     record(sel.id, null, "");
     select(sel);
     renderList();
   }
   function nextMissing() {
     const from = sel ? order.indexOf(sel) : -1;
-    const n = [...order.slice(from + 1), ...order.slice(0, from + 1)].find(s => entries[s.id]?.value == null);
+    const n = [...order.slice(from + 1), ...order.slice(0, from + 1)].find(s => E[s.id]?.value == null);
     if (n) select(n, { zoom: true });
   }
 
   // --- The list: progress, room by room, filtered ---------------------------------------------------------------
-  const done = () => order.filter(s => entries[s.id]?.value != null).length;
+  const done = () => order.filter(s => E[s.id]?.value != null).length;
   function renderList() {
     if (list.hidden) return;
     const n = done();
     $(".lcount").textContent = `${n} of ${measurable} measured`;
     $(".bar i").style.width = `${(100 * n / measurable).toFixed(1)}%`;
     const keep = s => {
-      const st = stateOf(s, entries[s.id]);
+      const st = stateOf(s, E[s.id]);
       return filter === "all" || (filter === "todo" ? st === "todo" : filter === "done" ? st !== "todo" : st === "off");
     };
     const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
     $(".list .body").innerHTML = rooms.map(r => {
       const all = order.filter(s => s.room === r), rows = all.filter(keep);
       if (!rows.length) return "";
-      const m = all.filter(s => entries[s.id]?.value != null).length;
+      const m = all.filter(s => E[s.id]?.value != null).length;
       return `<h4><span>${esc(r)}</span><span>${m} / ${all.length}</span></h4>` + rows.map(s => {
-        const e = entries[s.id], d = diffOf(s, e);
+        const e = E[s.id], d = diffOf(s, e);
         return `<button class="item${s === sel ? " sel" : ""}" data-id="${esc(s.id)}"><span class="dot" style="background:${colourOf(s, e)}"></span>
           <span class="t"><b>${esc(s.label)}</b><small>${esc(s.from)} → ${esc(s.to)}${e?.note ? ` · ${esc(e.note)}` : ""}</small></span>
           <span class="n">${e?.value != null ? `${fmt(e.value)} <span style="color:${colourOf(s, e)}">${signed(d)}</span>` : "—"}<small>drawn ${fmt(s.drawn)}</small></span></button>`;
@@ -603,10 +763,17 @@ export function createSiteMeasure({ M, loadDrawing, drawingUrl, version, open: o
 
   // --- Export / import ---------------------------------------------------------------------------------------------
   const rowsOut = () => order.map(s => {
-    const e = entries[s.id], d = diffOf(s, e);
+    const e = E[s.id], d = diffOf(s, e);
     return { id: s.id, room: s.room, kind: s.kind, label: s.label, from: s.from, to: s.to, drawn_cm: Math.round(s.drawn * 10) / 10,
       measured_cm: e?.value ?? null, diff_cm: d == null ? null : Math.round(d * 10) / 10, note: e?.note || "",
-      updated: e?.updated ? new Date(e.updated).toISOString() : "" };
+      updated: e?.updated ? new Date(e.updated).toISOString() : "", legacy_id: e?.legacy || "" };
+  });
+  // Entries under ids no piece has now: kept as they are, and where they show now (or "legacy/unmapped").
+  const legacyRows = () => Object.entries(entries).filter(([id]) => !byId[id]).map(([id, e]) => {
+    const now = legacy.get(id);
+    return { id, room: e.room || "", kind: "legacy", label: now ? `legacy → ${now}` : "legacy/unmapped", from: "", to: "",
+      drawn_cm: e.drawn ?? null, measured_cm: e.value ?? null, diff_cm: null, note: e.note || "",
+      updated: e.updated ? new Date(e.updated).toISOString() : "", legacy_id: "" };
   });
   const download = (name, text, type) => {
     const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([text], { type })), download: name });
@@ -615,13 +782,14 @@ export function createSiteMeasure({ M, loadDrawing, drawingUrl, version, open: o
   };
   const stamp = () => new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
   function exportCSV() {
-    const rows = rowsOut(), cols = ["id", "room", "kind", "label", "from", "to", "drawn_cm", "measured_cm", "diff_cm", "note", "updated"];
+    const rows = [...rowsOut(), ...legacyRows()];
+    const cols = ["id", "room", "kind", "label", "from", "to", "drawn_cm", "measured_cm", "diff_cm", "note", "updated", "legacy_id"];
     const cell = v => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
     download(`site-measurements-${version}-${stamp()}.csv`, [cols.join(","), ...rows.map(r => cols.map(c => cell(r[c])).join(","))].join("\n"), "text/csv");
   }
   function exportJSON() {
     download(`site-measurements-${version}-${stamp()}.json`,
-      JSON.stringify({ version, exported: new Date().toISOString(), total: measurable, measured: done(), segments: rowsOut(), entries }, null, 1), "application/json");
+      JSON.stringify({ version, exported: new Date().toISOString(), total: measurable, measured: done(), segments: rowsOut(), legacy: legacyRows(), entries }, null, 1), "application/json");
   }
   // A file from Export JSON (its entries) or any { entries } / { segments: [{ id, measured_cm, note, updated }] }.
   function importJSON(text) {
@@ -632,6 +800,7 @@ export function createSiteMeasure({ M, loadDrawing, drawingUrl, version, open: o
     if (!inc || typeof inc !== "object") throw new Error("no measurements in that file");
     const before = entries;
     entries = mergeEntries(entries, inc);
+    relink();
     for (const id of Object.keys(inc)) if (entries[id] !== before[id]) dirty.add(id);
     persist(); sync(); redraw(); renderList();
     return Object.keys(inc).filter(id => byId[id]).length;
@@ -669,11 +838,12 @@ export function createSiteMeasure({ M, loadDrawing, drawingUrl, version, open: o
       else {
         const doc = await r.json();
         entries = mergeEntries(entries, doc.entries || {});
+        relink();
         for (const [id, e] of Object.entries(sent)) if ((entries[id]?.updated || 0) >= e.updated) dirty.delete(id);
         persist();
         setSync(dirty.size ? "busy" : "ok");
         redraw(); renderList();
-        if (sel) { const v = entries[sel.id]; if (document.activeElement !== num && document.activeElement !== note) { num.value = v?.value != null ? fmt(v.value) : ""; showDiff(); } }
+        if (sel) { const v = E[sel.id]; if (document.activeElement !== num && document.activeElement !== note) { num.value = v?.value != null ? fmt(v.value) : ""; showDiff(); } }
       }
     } catch { setSync("off"); }
     syncing = false;
@@ -746,7 +916,7 @@ export function createSiteMeasure({ M, loadDrawing, drawingUrl, version, open: o
     root.hidden = false;
     openBtn.hidden = true;
     resize();
-    if (!data) { data = await loadDrawing(drawingUrl); buildPaths(); fit(); }
+    if (!paths) { data = data || await loadDrawing(drawingUrl); buildPaths(); fit(); }
     redraw();
     sync();
   }
@@ -759,6 +929,6 @@ export function createSiteMeasure({ M, loadDrawing, drawingUrl, version, open: o
   openBtn.onclick = show;
   setSync(dirty.size ? "off" : "busy");
   if (openNow) show();
-  return { show, hide, segments: segs, get entries() { return entries; }, select: id => select(byId[id] || null, { zoom: true }), importJSON,
+  return { show, hide, segments: segs, get entries() { return E; }, get stored() { return entries; }, aliasOf: id => aliasOf(id, segs), select: id => select(byId[id] || null, { zoom: true }), importJSON,
     frame: () => ({ toScreen, toWorld }) };  // screen px <-> plan metres (tests)
 }

@@ -1381,8 +1381,8 @@ document.getElementById("clearMeasure").onclick = () => measure.clear();
 const drawing = createDrawing(document.getElementById("drawing"), live.url(version.drawing), { electrical });
 
 // New As-built only: Site measurements (sitemeasure.js), its own screen over the plan; ?measure opens it.
-if (version.id === "new-asbuilt") import("./sitemeasure.js").then(({ createSiteMeasure }) => (window.siteMeasure = createSiteMeasure(
-  { M, loadDrawing, drawingUrl: live.url(version.drawing), version: vid, open: params.has("measure") })));
+if (version.id === "new-asbuilt") import("./sitemeasure.js").then(({ createSiteMeasure }) => createSiteMeasure(
+  { M, loadDrawing, drawingUrl: live.url(version.drawing), version: vid, open: params.has("measure") })).then(sm => (window.siteMeasure = sm));
 
 // --- Move and Resize (move.js, move_tool.py): beside Measure in the bar, and beside the drawing's own Measure -----------
 const moveBtn = document.getElementById("move");

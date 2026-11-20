@@ -834,7 +834,7 @@ export function furnish(scene, M, mat, version = "main") {
     // champagne-bronze towel hooks at 1.30 on the 0.61 of plain wall between it and the open door leaf.
     // Main 16 Nov (Nagham): on the partition's west face, x 2.2415 (wall 2.2415-2.3515, Karim's 9 Nov position, restored in the DXF).
     const partitionW = version === "kareems-changes" ? 2.2415 : 2.192;  // west face of the bedroom partition
-    if (version === "kareems-changes") named(item(partitionW, 7.6632, "W", towelRail), "unheated towel rail");
+    if (version === "kareems-changes") named(item(partitionW, 7.6632, "W", towelRail), "electric heated towel rail")  // Karim 17 Nov 2026: heated; power-towel-rail behind it;
     else item(2.192, 7.6632, "W", towelRail);
     // Kareem's (Nagham call, 25 Oct): hooks raised 15 cm, to 1.45.
     const hk = ["kareems-changes", "karims-version"].includes(version) ? 0.15 : 0;
@@ -1848,7 +1848,7 @@ export function furnish(scene, M, mat, version = "main") {
     p.cyl(0, 0.07, 0.034, 1.51, 1.57, mat.brass, 24);
     mesh(new THREE.CapsuleGeometry(0.042, 0.2, 8, 20), mat.lampShade, p.g, false).position.set(0, 1.71, 0.07);
   });
-  sconce(7.63, 3.6, "N", 1.75); sconce(9.33, 3.6, "N", 1.75);
+  sconce(9.33, 3.6, "N", 1.75);  // Karim 17 Nov 2026: the west sconce (7.63) is gone; the breaker panel takes that wall
   item(8.48, 3.72, "N", p => {  // front door per render 29: walnut leaf with rounded top corners, deep surround, long brass pull
     p.roundTop(-0.56, 0.56, 0, 2.25, 0.3, -0.02, 0.06, mat.walnut);
     p.roundTop(-0.46, 0.46, 0, 2.14, 0.22, 0.04, 0.02, mat.oakVeneer);

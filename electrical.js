@@ -42,7 +42,7 @@ export const KINDS = {
   sensor:       { what: "This is a ceiling motion / presence sensor: it switches the room's lights.", col: "#2ee6d6", glyph: "MS" },
   towelheater:  { what: "This is an electric towel heater.", col: "#ff9f43", glyph: "TH" },
   db:           { what: "This is the distribution board (DB): the main breaker panel for the whole flat.", col: "#c58cff", glyph: "DB" },
-  lcp:          { what: "This is the low-current panel: internet fibre, network, TV and intercom cables meet here.", col: "#c58cff", glyph: "LC" },
+  lcp:          { what: "This is the low-current box: internet fibre, router, network switch, TV splitter and the smart-home hub. Every network and TV cable runs home here.", col: "#c58cff", glyph: "LC" },
   router:       { what: "This is the network hub: fibre box, router and PoE switch. Every network cable runs home here.", col: "#c58cff", glyph: "R" },
   ap:           { what: "This is a ceiling Wi-Fi access point: one network name everywhere, powered through its Cat6 cable.", col: "#46d39a", glyph: "AP" },
   water:        { what: "This is a water outlet: a filtered line with a shut-off valve for a plumbed appliance.", col: "#4fc3f7", glyph: "W" },
@@ -73,9 +73,9 @@ const cmH = h => `${Math.round(h * 100)} cm`;
 const NAME = {
   spot: "Ceiling spot", pendant: "Pendant light", walllight: "Wall light", led: "LED strip", switch: "Light switches",
   acctl: "AC controller", socket: "Socket", flap: "Hidden socket flap", power: "Power point", wp: "Outdoor socket",
-  multi: "Media plate", data: "Data point", phone: "Phone point", tv: "TV point", sound: "Sound control", intercom: "Intercom screen",
+  multi: "Media plate", data: "Data point", phone: "Phone point", tv: "TV point", sound: "Sound control", intercom: "Building intercom",
   intercom_out: "Video doorbell", doorbell: "Doorbell", chime: "Doorbell chime", fan: "Exhaust fan", sensor: "Motion sensor",
-  towelheater: "Towel heater", db: "Breaker panel", lcp: "Low-current panel", router: "Wi-Fi router", ap: "Wi-Fi access point",
+  towelheater: "Towel heater", db: "Breaker panel", lcp: "Low-current box", router: "Wi-Fi router", ap: "Wi-Fi access point",
   ledfeed: "Accent-light power", water: "Water outlet", lightout: "Lighting outlet",
 };
 const BADGE = { plan: "Plan", adapted: "Adapted", added: "Added", existing: "Existing", optional: "Optional" };
@@ -167,6 +167,7 @@ export function describeHTML(p, byId = {}, full = false) {
     }
     body += `<div class="el-parts">${[...n].map(([l, v]) => `<span style="--c:${v.c}" title="${esc(PART_TIP[l] || l)}">${esc(l)}${v.n > 1 ? ` ×${v.n}` : ""}</span>`).join("")}</div>`;
   }
+  if (p.contents?.length) body += `<ol class="el-gangs">${p.contents.map(c => `<li>${esc(c)}</li>`).join("")}</ol>`;
   if (p.gangs?.length) body += `<ol class="el-gangs">${p.gangs.map(g => `<li>${esc(g)}</li>`).join("")}</ol>`;
   if (p.two_way) {
     const others = String(p.two_way).split(",").map(id => byId[id]).filter(Boolean).map(shortTitle);
@@ -338,6 +339,7 @@ export function buildElectrical({ THREE, scene, ceilingBits, data, ceiling = 2.6
       }
       case "lcp": {
         const w = p.w || 0.35, hh = p.hh || 0.45;
+        if (p.depth) { lowCurrentBox(g, p, y, w, hh); break; }
         box(g, -w / 2, w / 2, y - hh / 2, y + hh / 2, -0.004, 0.016, M.plate);
         box(g, -w / 2 + 0.03, w / 2 - 0.03, y + hh / 2 - 0.07, y + hh / 2 - 0.04, 0.016, 0.019, M.grey);
         box(g, w / 2 - 0.05, w / 2 - 0.035, y - 0.03, y + 0.03, 0.016, 0.024, M.metal);
@@ -353,6 +355,58 @@ export function buildElectrical({ THREE, scene, ceilingBits, data, ceiling = 2.6
     }
     return g;
   }
+
+  // Low-current box (Main, Karim 17 Nov 2026): a cabinet `depth` deep, `recess` of it in the wall and the rest proud in a
+  // painted frame, with a vented flush door hinged on its left that swings open as you walk up to it (doors[], update()).
+  // Inside, top to bottom: the Zigbee hub by the top vents, the fibre box (ONT) and the router, the PoE switch, the
+  // patch panel with its leads, the TV splitter, the UPS on the floor of the box, and the double socket.
+  function lowCurrentBox(g, p, y, w, hh) {
+    const out = p.depth - (p.recess || 0), t = 0.018, y0 = y - hh / 2, y1 = y + hh / 2, inner = M.plate;
+    box(g, -w / 2, w / 2, y0, y1, 0, 0.004, M.grey);                                   // back (the recess's floor, seen)
+    for (const s of [-1, 1]) box(g, s < 0 ? -w / 2 : w / 2 - t, s < 0 ? -w / 2 + t : w / 2, y0, y1, 0, out, inner);  // sides
+    box(g, -w / 2, w / 2, y1 - t, y1, 0, out, inner); box(g, -w / 2, w / 2, y0, y0 + t, 0, out, inner);           // top, bottom
+    const L = -w / 2 + t + 0.01, R = w / 2 - t - 0.01, D = out - 0.012;
+    const kit = (h0, h1, d, m) => box(g, L, R, h0, h1, 0.004, Math.min(d, D), m);
+    // Zigbee hub (MZHUB, 9 x 9 x 2.2) and its USB-C supply, at the top by the vents
+    box(g, L, L + 0.09, y1 - t - 0.1, y1 - t - 0.01, 0.004, 0.026, inner);
+    cyl(g, L + 0.045, y1 - t - 0.055, 0.004, 0.026, 0.028, M.led, 8);
+    box(g, L + 0.11, L + 0.15, y1 - t - 0.07, y1 - t - 0.03, 0.004, 0.03, inner);
+    // ONT and router side by side on a shelf
+    let h = y1 - t - 0.13;
+    box(g, L, R, h - 0.006, h, 0.004, D, M.grey);
+    box(g, L, L + 0.13, h, h + 0.1, 0.004, 0.03, inner); cyl(g, L + 0.03, h + 0.08, 0.0035, 0.03, 0.032, M.led, 8);
+    box(g, L + 0.15, R, h, h + 0.04, 0.004, Math.min(0.14, D), M.black);
+    for (const x of [L + 0.17, R - 0.02]) { const a = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.005, 0.1, 8), M.black); a.position.set(x, h + 0.09, 0.02); g.add(a); }
+    // PoE switch: a black 1U box with its port row and lights
+    h -= 0.1;
+    kit(h, h + 0.044, 0.08, M.black);
+    for (let i = 0; i < 16; i++) { const x = L + 0.02 + i * (R - L - 0.04) / 15; box(g, x - 0.005, x + 0.005, h + 0.012, h + 0.024, 0.08, 0.081, M.hole); cyl(g, x, h + 0.034, 0.0015, 0.08, 0.082, M.led, 6); }
+    // patch panel with short leads looping down to the switch
+    h -= 0.08;
+    kit(h, h + 0.044, 0.03, M.metal);
+    for (let i = 0; i < 12; i++) { const x = L + 0.02 + i * (R - L - 0.04) / 11; box(g, x - 0.005, x + 0.005, h + 0.014, h + 0.03, 0.03, 0.031, M.hole);
+      const c = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.0022, 6, 12, Math.PI), i % 3 ? M.rocker : M.led); c.rotation.z = Math.PI / 2; c.rotation.y = Math.PI / 2; c.position.set(x, h + 0.045, 0.045); g.add(c); }
+    // TV splitter (a small metal block with its F-connectors)
+    h -= 0.07;
+    box(g, L, L + 0.14, h, h + 0.04, 0.004, 0.03, M.metal);
+    for (let i = 0; i < 6; i++) cyl(g, L + 0.015 + i * 0.022, h + 0.02, 0.004, 0.03, 0.04, M.metal, 8);
+    // double socket on the side panel's level, right of the splitter
+    box(g, R - 0.146, R, h - 0.003, h + 0.083, 0.004, 0.012, M.plate);
+    for (const dx of [0.037, 0.11]) socketFace(g, R - 0.146 + dx, h + 0.04);
+    // UPS on the floor of the box
+    box(g, L, L + 0.24, y0 + t, y0 + t + 0.09, 0.004, Math.min(0.13, D), M.black);
+    cyl(g, L + 0.2, y0 + t + 0.06, 0.006, Math.min(0.13, D), Math.min(0.13, D) + 0.002, M.led, 10);
+    // the door, hinged on its left edge: a white flush leaf with vent slots top and bottom and a push latch
+    const door = new THREE.Group();
+    door.position.set(-w / 2, 0, out);
+    const leaf = box(door, 0, w, y0, y1, 0, t, M.plate);
+    leaf.material = leaf.material.clone(); leaf.material.color.set(0xf3efe6);
+    for (const yy of [y0 + 0.03, y1 - 0.05]) for (let i = 0; i < 6; i++) box(door, 0.05 + i * (w - 0.1) / 6, 0.05 + i * (w - 0.1) / 6 + (w - 0.1) / 9, yy, yy + 0.02, t, t + 0.001, M.hole);
+    box(door, w - 0.035, w - 0.025, y - 0.03, y + 0.03, t, t + 0.004, M.metal);
+    g.add(door);
+    doors.push({ door, open: 0, at: null, p });
+  }
+  const doors = [];
 
   // Flap: a socket + USB-C strip sunk in a furniture top (local y 0 = the top), its flush lid hinged at the back
   // (wall side, local -z) and shown standing open so the outlets read; 26 x 9 cm.
@@ -444,6 +498,15 @@ export function buildElectrical({ THREE, scene, ceilingBits, data, ceiling = 2.6
     markers.add(marker(THREE, p, mid));
   }
   built.setXray = on => (markers.visible = on);
+  // Doors that open as you come near (the low-current box): eased towards open within 1.6 m of the box, plan distance.
+  for (const d of doors) d.at = new THREE.Vector3(d.p.x, d.p.h, -d.p.y);
+  built.update = (camera, dt = 1 / 60) => {
+    for (const d of doors) {
+      const near = Math.hypot(camera.position.x - d.at.x, camera.position.z - d.at.z) < 1.6 ? 1 : 0;
+      d.open += (near - d.open) * Math.min(1, dt * 4);
+      d.door.rotation.y = -1.75 * d.open;
+    }
+  };
   return built;
 }
 

@@ -702,6 +702,24 @@ function buildFlat(M, scene) {
       }
     }
   }
+  // Fixture lighting (an electrical plan with "lighting": "fixtures", Main 17 Nov 2026): no generic light in the middle
+  // of each room (it lit a bright patch on the ceiling where there is no fitting); each room is lit from its own ceiling
+  // spots and linear lights on the plan, one downward spotlight per switched group of them (long runs cut into ~3 m
+  // pieces), so the ceiling reads as it will once built. A room with no fitting on the plan gets no light of its own.
+  const fixtureLit = electrical?.lighting === "fixtures";
+  const fixtures = fixtureLit ? [
+    ...electrical.points.filter(q => q.type === "spot").map(q => ({ x: q.x, y: q.y, c: q.circuit || q.id })),
+    ...(electrical.lines || []).filter(l => String(l.id).startsWith("linear")).map(l => ({ x: (l.x0 + l.x1) / 2, y: (l.y0 + l.y1) / 2, c: l.id, n: 3 })),
+  ] : [];
+  const pieces = group => {  // a group of fittings, cut along its long axis into pieces no longer than ~3 m
+    const xs = group.map(f => f.x), ys = group.map(f => f.y);
+    const ex = Math.max(...xs) - Math.min(...xs), ey = Math.max(...ys) - Math.min(...ys), span = Math.max(ex, ey);
+    if (span <= 3.2) return [group];
+    const k = ex >= ey ? "x" : "y", n = Math.ceil(span / 3), s = [...group].sort((a, b) => a[k] - b[k]), lo = s[0][k];
+    const out = Array.from({ length: n }, () => []);
+    for (const f of s) out[Math.min(n - 1, Math.floor(((f[k] - lo) / span) * n))].push(f);
+    return out.filter(g => g.length);
+  };
   for (const r of Object.values(rooms)) {
     const [cx, cy] = ringCentroid(r.rings.reduce((a, b) => (ringArea(b) > ringArea(a) ? b : a)));
     r.centre.set(cx, 0, -cy);
@@ -709,10 +727,33 @@ function buildFlat(M, scene) {
       // A room's light: warmth ("warm" / "neutral" / "cool" or a colour) and brightness (x the default) from its spec.
       const ls = roomSpec(r.name).light || {};
       const col = { warm: 0xffc68a, neutral: 0xfff0dc, cool: 0xe6efff }[ls.warmth] ?? (ls.warmth ? new THREE.Color(ls.warmth) : 0xffc68a);
-      r.light = new THREE.PointLight(col, 0, 7, 1.4);
-      r.light.userData.brightness = Math.max(0, Math.min(4, ls.brightness ?? 1));
-      r.light.position.set(cx, (roomSpec(r.name).ceilingHeight ?? M.ceiling) - 0.35, -cy);
-      scene.add(r.light);
+      const brightness = Math.max(0, Math.min(4, ls.brightness ?? 1)), H = roomSpec(r.name).ceilingHeight ?? M.ceiling;
+      r.lights = [];
+      if (fixtureLit) {
+        const byCircuit = new Map();
+        for (const f of fixtures) if (r.rings.some(ring => pointInRing([f.x, f.y], ring))) {
+          if (!byCircuit.has(f.c)) byCircuit.set(f.c, []);
+          byCircuit.get(f.c).push(f);
+        }
+        for (const group of byCircuit.values()) for (const g of pieces(group)) {
+          const gx = g.reduce((a, f) => a + f.x, 0) / g.length, gy = g.reduce((a, f) => a + f.y, 0) / g.length;
+          const spread = Math.max(...g.map(f => Math.hypot(f.x - gx, f.y - gy)));
+          const L = new THREE.SpotLight(col, 0, 7, Math.min(1.2, Math.max(0.75, Math.atan((spread + 1.4) / H))), 0.9, 1.4);
+          L.position.set(gx, H - 0.03, -gy);
+          L.target.position.set(gx, 0, -gy);
+          L.userData.brightness = brightness;
+          L.userData.share = Math.min(1.5, 0.6 + 0.18 * g.reduce((a, f) => a + (f.n || 1), 0));  // more fittings, more light
+          scene.add(L, L.target);
+          r.lights.push(L);
+        }
+      } else {
+        const L = new THREE.PointLight(col, 0, 7, 1.4);
+        L.userData.brightness = brightness;
+        L.position.set(cx, H - 0.35, -cy);
+        scene.add(L);
+        r.lights.push(L);
+      }
+      r.light = r.lights[0] || null;
     }
   }
   const roomAt = (x, y) => Object.values(rooms).find(r => r.rings.some(ring => pointInRing([x, y], ring)));
@@ -794,7 +835,7 @@ function buildFlat(M, scene) {
     }
     r.lineMat.opacity = 1 - t;
     r.lineMat.visible = t < 0.999;
-    if (r.light) r.light.intensity = 2 * t * (r.light.userData.brightness ?? 1);
+    for (const L of r.lights || []) L.intensity = 2 * t * (L.userData.brightness ?? 1) * (L.userData.share ?? 1);
   }
 
   const furniture = furnish(scene, M, lib, vid);
@@ -1614,7 +1655,7 @@ const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   interact.update();
-  if (elecBuilt) { elecBuilt.group.visible = flat.furniture.root.visible; elecUI.update(); }
+  if (elecBuilt) { elecBuilt.group.visible = flat.furniture.root.visible; elecUI.update(); elecBuilt.update?.(camera, dt); }
   move.render();
   if (showing !== "model") return;  // the drawing or the renders cover the scene; no need to keep rendering it
   if (mode === "walk" && !tween && !glide) {

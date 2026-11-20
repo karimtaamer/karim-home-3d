@@ -53,6 +53,7 @@ def face(x, y, wall, reach=2.5):
 
 
 P = []        # points
+DROP = set()  # ids dropped by a later review: built in place (so the numbered ids after them stay put), left out of the JSON
 LINES = []    # linear LED runs (new only)
 BANKS = {}    # switch bank id -> point
 
@@ -102,8 +103,8 @@ spots("Master bedroom", "master-vanity-spots", [(3.0, 5.25), (4.05, 5.25)], "Cei
       "adapted", "the two spots in front of Main's bedroom vanity, controlled by the vanity switch")
 spots("Master bedroom", "master-dresser-spots", [(1.5, 5.575), (2.2, 5.575)], "Ceiling spot — dresser/wardrobe corner by the bathroom door",
       "adapted", "the two boxed spots by the wardrobe and bathroom door, controlled by the local switch at the marked wall")
-spots("Master bathroom", "mbath", [(0.95, 6.65), (1.75, 6.95), (0.95, 8.15), (1.78, 8.45)], "Ceiling spot — master bathroom (basin / middle / shower / WC)",
-      "adapted", "4 spots as on the plan, over Main's vanity, middle, shower and WC bay")
+spots("Master bathroom", "mbath", [(0.95, 6.65), (1.75, 6.65), (0.95, 8.15), (1.78, 8.15)], "Ceiling spot — master bathroom (basin / middle / shower / WC)",
+      "adapted", "4 spots as on the plan, over Main's vanity, middle, shower and WC bay; Karim's review (17 Nov 2026): the middle column moved 0.30 south, in line with the left column (rows at y 6.65 and 8.15)")
 spots("Kitchen", "kitchen-A", [(x, 6.55) for x in (7.45, 8.35, 9.25)] + [(7.45, 7.4), (9.25, 7.4)], "Ceiling spot — kitchen, half A")
 spots("Kitchen", "kitchen-B", [(8.35, 7.4)] + [(x, 8.3) for x in (7.45, 8.35, 9.25)], "Ceiling spot — kitchen, half B")
 # Laundry (Dad's review (Karim 11 Nov 2026)): the 3 spots become one 90 cm recessed linear light (LINES below); the north spot sat on the cupboard edge.
@@ -136,6 +137,7 @@ pt("walllight", "Terrace", "Terrace wall light", at=(21.47, 8.6), h=2.0, facing=
 pt("walllight", "Terrace", "Terrace wall light (party-mood height)", wall="W", x=21.8, y=2.45, h=2.2, circuit="terrace-wall",
    status="existing", note="the plan's wall light south of the window, now also modelled as a 3D sconce")
 pt("walllight", "Entrance", "Wall sconce beside the front door", at=(7.63, 3.6), h=1.75, facing="N", status="existing", circuit="door-sconces")
+DROP.add(P[-1]["id"])  # Karim's review (17 Nov 2026): the DB takes this wall; the door keeps its east sconce
 pt("walllight", "Entrance", "Wall sconce beside the front door", at=(9.33, 3.6), h=1.75, facing="N", status="existing", circuit="door-sconces")
 # Curtain pockets (Karim 7 Nov 2026): the plasterboard ceiling stops 0.20 short of each curtained window wall; a warm
 # LED strip at the top of the 0.15 slot, on the room side, washes down the curtains (furnish-kareems-changes.js pockets).
@@ -168,7 +170,7 @@ def bank(id, room, title, gangs, *, two_way=None, **kw):
 TOP, LOW = 1.25, 1.13
 # Front door flipped to hinge on the west jamb (#19): the switches move to the latch side, east of the door.
 bank("sw-front-door", "Entrance", "inside the front door, top box",
-     ["All hallway and lobby spots (two-way + lobby)", "Sconces beside the front door"],
+     ["All hallway and lobby spots (two-way + lobby)", "Sconce beside the front door"],
      two_way="sw-dining-end,sw-lobby", wall="S", x=9.2, y=4.2, h=TOP, stack="front-door", status="adapted",
      note="the front door now hinges on the west jamb, so the switches sit on the latch side east of it; top box of two")
 bank("sw-front-door-2", "Entrance", "inside the front door, lower box",
@@ -196,10 +198,10 @@ bank("sw-master-dresser", "Master bedroom", "bedroom vanity, beside the main swi
      wall="E", x=4.3, y=5.37, h=1.2, status="adapted",
      gang_circuits=["master-vanity-spots", "master-vanity-mirror", "master-vanity-led"],
      note="three vanity keys on the same wall, nearer the vanity; separated from the bedroom plate in both plan and 3D")
-bank("sw-master-dresser-spots", "Master bedroom", "dresser spots by the bathroom-door wall",
-     ["The two dresser/wardrobe corner spots marked on the plan"],
-     wall="N", x=2.296, y=5.8, h=1.2, status="added", gang_circuits=["master-dresser-spots"],
-     note="one key centred on the short return wall at the arrow, for the two boxed spots only")
+bank("sw-master-dresser-spots", "Master bedroom", "dressing corner by the bathroom-door wall, top box",
+     ["The two dresser/wardrobe corner spots marked on the plan", "Wardrobe LED (short wardrobe by the bathroom door)"],
+     wall="N", x=2.296, y=5.8, h=TOP, stack="dressing-door", status="added", gang_circuits=["master-dresser-spots", "dressing-wardrobe-led"],
+     note="centred on the short return wall at the arrow; Karim's review (17 Nov 2026): two keys, the corner spots and the wardrobe's LED; top box of two")
 # Bedsides: each of the two keys controls one pendant from either bedside.
 for side, y in (("S", 6.231), ("N", 8.79)):
     bank(f"sw-bed-{side}", "Master bedroom", f"bedside ({'door' if side == 'S' else 'window'} side), over the nightstand",
@@ -267,7 +269,9 @@ pt("multi", "Living room", "TV plate behind the TV — data, HDMI, TV + double s
 pt("multi", "Living room", "TV-console plate — data, HDMI, TV + double socket (boxes, soundbar)", wall="E", x=5.7, y=2.25 - 0.55, h=0.6,
    parts=["D", "H", "TV", "2S"], note="inside the floating console (0.45–0.72); HDMI conduit to the 120 plate")
 sock("Living room", "Double socket 45 cm — sofa end table (lamp, chargers)", wall="N", x=3.45, y=3.9, h=0.45)
-sock("Living room", "Double socket 90 cm — reading lamp over the end table", wall="N", x=3.75, y=3.9, h=0.9)
+DROP.add(P[-1]["id"])  # Karim's review (17 Nov 2026): removed; the 90 takes its place
+sock("Living room", "Double socket 90 cm — reading lamp over the end table", wall="N", x=3.45, y=3.9, h=0.9,
+     note="Karim's review (17 Nov 2026): moved 0.30 west (was x 3.75, behind the art's corner), clear of the door-wall art (x 3.80-4.70)")
 sock("Living room", "Double socket 45 cm — sofa corner", wall="N", x=4.6, y=3.9, h=0.45, note="clear of the art on the north wall")
 sock("Living room", "Double socket 45 cm — chaise end", wall="S", x=4.95, y=1.0, h=0.45)
 sock("Living room", "Double socket 45 cm — beside the TV wall (plant / cleaning)", wall="S", x=5.85, y=1.0, h=0.45)
@@ -281,6 +285,7 @@ for side, y in (("door", 6.231), ("window", 8.79)):
        parts=FLAP, finish="walnut", status="adapted", note="the plan's bedside 70 points, moved into the nightstand: a flush walnut flap at the back of the top, the cable down inside to a box on the headboard wall behind it")
 pt("flap", "Master bedroom", "Flap in the dresser top, under the mirror — socket + 2 USB-C (hair dryer, phone)", at=(3.37, 4.65), h=0.75, facing="N",
    parts=FLAP, finish="oak", status="adapted", note="the plan's 'table area' socket, moved off the wall into the dresser top: a flush oak flap at the back, under the mirror")
+DROP.add(P[-1]["id"])  # Karim's review (17 Nov 2026): no flap; a wall socket in the knee space instead (socket-dresser-52, late additions)
 sock("Master bedroom", "Double socket 45 cm — by the door (vacuum)", wall="E", x=4.3, y=5.15, h=0.45)
 pt("power", "Master bedroom", "AC power point — master split (dedicated circuit)", wall="S", x=3.95, y=5.0, h=2.3, appliance="split AC", status="added")
 # Master bathroom
@@ -288,7 +293,8 @@ sock("Master bathroom", "Socket 135 cm — tiled wall left of the mirror, over t
      wall="S", x=1.0, y=6.6, h=1.35, proud=0.012, status="adapted")  # on the 1 cm tile lining
 sock("Master bathroom", "Socket inside the medicine cabinet, bottom right (toothbrush, shaver)", n=1, at=(0.591, 6.985), h=1.39, facing="E",
      status="added", note="on the cabinet's back panel, behind the mirrored leaves")
-# The towel rail remains a passive towel holder: no electric towel heater or dedicated connection.
+# Heated towel rail (Karim's review 17 Nov 2026): the rail on the partition is electric: a flex-outlet plate behind it and a
+# double-pole switch outside the bathroom (sw-towel-rail, under the dresser-corner switch by the bathroom door).
 pt("power", "Master bathroom", "Electric instant water heater — inside the vanity (existing connection)", at=(0.566, 6.525), h=0.66, facing="E",
    appliance="electric instant water heater", status="existing",
    note="the selected water-heating approach for Main; the 3D model depicts a 7.5 kW unit, while the final unit and its electrical supply must be specified together")
@@ -354,14 +360,16 @@ pt("fan", "Guest bathroom", "Exhaust fan — guest bathroom (own switch key)", a
 sock("Entrance", "Double socket 45 cm — entrance corridor", wall="S", x=10.0, y=4.2, h=0.45, note="beside the console (cleaning)")
 sock("Entrance", "Double socket 45 cm — lobby by the bedroom door", wall="S", x=4.9, y=5.0, h=0.45)
 sock("Hallway", "Double socket 45 cm — hallway", wall="N", x=12.6, y=6.2, h=0.45)
-pt("db", "Entrance", "Distribution board (DB) — 36-way, behind the entrance artwork", wall="S", x=7.0, y=4.2, h=1.8, w=0.45, hh=0.6,
-   status="adapted", note="on the opposite side of the hall from its former position, concealed behind the entrance artwork; keep the artwork removable and confirm the panel remains accessible")
-pt("intercom", "Entrance", "Building intercom handset — answers the street gate", wall="S", x=7.75, y=4.2, h=1.45, status="adapted",
-   note="Dad's review (Karim 11 Nov 2026): the building's own intercom (one system for the whole building); there is no indoor screen for the flat's door. West of the door, since the door now hinges there and the switches moved east")
+pt("db", "Entrance", "Distribution board (DB) — 36-way, right of the entrance artwork", wall="S", x=7.70, y=4.2, h=1.8, w=0.36, hh=0.5,
+   status="adapted", note="Karim's review (17 Nov 2026): out from behind the artwork to the wall right of it (x 7.52-7.88, 155-205, top at the door head), in the open and easy to reach; the west door sconce is removed to make room")
+pt("intercom", "Entrance", "Building intercom handset — answers the street gate", wall="S", x=7.75, y=4.2, h=1.30, status="adapted",
+   note="Dad's review (Karim 11 Nov 2026): the building's own intercom (one system for the whole building); there is no indoor screen for the flat's door. West of the door, since the door now hinges there and the switches moved east. Karim's review (17 Nov 2026): down to 130, under the DB")
 # Network (Karim 7 Nov 2026): the hub in the shoe cabinet, Cat6 from it to three ceiling access points (PoE) and the TV / desk plates.
 pt("router", "Entrance", "Network hub — fibre box (ONT), router and 16-port PoE switch, in the space above the shoe cabinet", wall="S", x=10.8, y=4.2, h=2.35,
    status="added", id="hub", note="Dad's review (Karim 11 Nov 2026): kept at the entrance, in the void between the shoe cabinet top and the ceiling, behind a vented openable front; fibre, TV and every Cat6 cable run here")
+DROP.add("hub")  # Karim's review (17 Nov 2026): the hub moves to the low-current box in the laundry (id lcp)
 sock("Entrance", "Double socket above the shoe cabinet — network hub power", wall="S", x=11.1, y=4.2, h=2.35, status="added")
+DROP.add(P[-1]["id"])
 pt("ap", "Entrance", "Wi-Fi access point AP2 (main) — upper corridor ceiling, by the kitchen and laundry", at=(11.46, 6.25), h=CEIL, status="added", id="ap-2",
    note="Dad's review (Karim 11 Nov 2026): moved from above the shoe cabinet into the middle of the upper corridor (central to the kitchen, laundry, guest bathroom and dining); between the first two corridor spots, beside the corridor sensor; Cat6 + PoE from the hub")
 # (no indoor doorbell chime: the smart doorbell rings the phones and its own plug-in chime)
@@ -415,8 +423,8 @@ pt("wp", "Terrace", "Weatherproof socket 45 cm — east parapet, general use", w
 def sensor(room, label, xy, tech, status="added", note=""):
     pt("sensor", room, label, at=xy, h=CEIL, status=status, tech=tech, note=note)
 
-sensor("Master bathroom", "Presence sensor (mmWave) — master bathroom", (1.35, 6.80), "mmWave",
-       note="centred between the basin and middle spots, outside the shower and 1.2 m from the exhaust fan; sees the WC bay")
+sensor("Master bathroom", "Presence sensor (mmWave) — master bathroom", (1.35, 6.65), "mmWave",
+       note="centred between the basin and middle spots, on their row (Karim's review 17 Nov 2026: row moved to y 6.65), outside the shower and 1.2 m from the exhaust fan; sees the WC bay")
 sensor("Guest bathroom", "Presence sensor (mmWave) — guest bathroom", (13.40, 8.025), "mmWave",
        note="Dad's review (Karim 11 Nov 2026): in line with the spots, on the middle column between its two spots; 0.75 m from the exhaust fan")
 sensor("Laundry", "Motion sensor (PIR) — laundry, at the door end", (11.40, 7.05), "PIR",
@@ -465,7 +473,7 @@ feed("Living room", "TV-wall linear sconce, south — wall box", (6.11, 1.10), 1
 feed("Living room", "TV-wall linear sconce, north — wall box", (6.11, 3.40), 1.52, "W")
 feed("Living room", "TV console under-glow — driver in the console", (5.93, 2.25), 0.44, "W")
 feed("Master bedroom", "Bedroom vanity mirror glow — separately switched driver behind the mirror", (3.35, 4.59), 1.35, "N", circuit="master-vanity-mirror")
-feed("Master bedroom", "Bedroom vanity LED — shelf column and jewellery tray driver", (2.82, 4.59), 0.65, "N", circuit="master-vanity-led")
+feed("Master bedroom", "Bedroom vanity LED — jewellery tray driver (the shelf column has its own box, 135)", (2.82, 4.59), 0.65, "N", circuit="master-vanity-led")
 feed("Master bathroom", "Under-vanity LED + medicine-cabinet glow — driver under the vanity", (0.84, 6.68), 0.28, "E", "24 V strip")
 feed("Master bathroom", "Shower-niche LED — driver in the cabinet over the WC (dry)", (0.60, 7.75), 2.00, "E", "24 V IP67 strip in the niche")
 pt("ledfeed", "Guest bathroom", "Under-vanity, shelf + mirror glow — wall box behind the vanity", wall="E", x=14.3, y=8.04, h=0.30, status="added",
@@ -501,15 +509,55 @@ sock("Entrance", "Double socket 30 cm — lobby, just past the master-bedroom do
 sock("Entrance", "Double socket 30 cm — entrance, beside the front door", wall="S", x=7.75, y=4.2, h=0.30, status="added", id="socket-front-door-30",
      note="Karim's review (Karim 12 Nov 2026): at the red mark on the entrance wall just west of the front door, under the intercom handset")
 
+# Karim's review (Karim 17 Nov 2026)
+pt("power", "Master bathroom", "Heated towel rail — flex outlet behind the rail (fused, on a 30 mA RCD)", at=(2.2385, 7.6632), h=1.2, facing="W",
+   appliance="electric heated towel rail", status="added", id="power-towel-rail",
+   note="Karim's review (17 Nov 2026): the rail on the partition's west face is an electric towel heater; hard-wired through a flex-outlet plate hidden behind it, switched from outside the bathroom")
+bank("sw-towel-rail", "Master bedroom", "heated towel rail, outside the bathroom, lower box",
+     ["Heated towel rail (master bathroom) — double-pole with neon"],
+     wall="N", x=2.296, y=5.8, h=LOW, stack="dressing-door", status="added", gang_circuits=["mbath-towel-rail"],
+     note="Karim's review (17 Nov 2026): the towel heater is switched outside the wet room, just outside the bathroom door, under the dressing switches")
+# Dressing: the short wardrobe by the bathroom door gets its own LED (driver box in the wardrobe's top, on the west wall).
+pt("ledfeed", "Master bedroom", "Wardrobe LED — driver box in the top of the short wardrobe by the bathroom door", at=(0.559, 5.561), h=2.30, facing="E",
+   status="added", id="ledfeed-dressing-wardrobe", circuit="dressing-wardrobe-led",
+   note="Karim's review (17 Nov 2026): power behind the short wardrobe (0.87 m, west wall) so it can be lit inside; above the hanging zone, reached from inside; key 2 of the dressing-corner switch")
+# Dresser shelf column: its own LED driver box behind the column (the 65 box at the west end now feeds the jewellery tray only).
+pt("ledfeed", "Master bedroom", "Dresser shelf-column LED — driver box behind the column", at=(4.357, 4.59), h=1.35, facing="N",
+   status="added", id="ledfeed-dresser-column", circuit="master-vanity-led",
+   note="Karim's review (17 Nov 2026): behind the tall open shelf column at the dresser's east end, 135 (the column runs from the top at 75 to 245); same key as the jewellery-tray LED (vanity switch, key 3)")
+# Dresser: a plain double socket in the knee space instead of the flap in the top; centred on the knee space, 52 to its centre
+# (plate 48-56): clear of the 43 cm pouf when it is pushed in, under the shallow drawer (62).
+sock("Master bedroom", "Double socket 52 cm — dresser knee space, centred (hair dryer, phone)", wall="S", x=3.567, y=5.0, h=0.52, proud=0.02,
+     status="adapted", id="socket-dresser-52",
+     note="Karim's review (17 Nov 2026): replaces the flap in the dresser top; centred on the 0.90 knee space, set in its 2 cm walnut back panel (box in the wall behind); clear of the pouf top (43) and the drawer (62)")
+# Living room, window wall: a 90 to match the sofa-end 90 across the room, just west of the window-wall art (x 3.17-4.07).
+sock("Living room", "Double socket 90 cm — sofa end by the window wall (lamp)", wall="S", x=3.055, y=1.0, h=0.9, status="added", id="socket-living-s-90",
+     note="Karim's review (17 Nov 2026): the same height as the 90 on the door wall; between the corner and the art's edge, so the art does not hide it")
+# Low-current box (laundry, east wall, between the door frame and the 120 socket): the network hub moves here from the
+# entrance. 15 cm deep: 6 cm cut into the 12 cm partition (the guest bathroom is behind), 9 cm proud in a painted frame;
+# a vented, non-metal flush door (it swings open in the 3D when you walk up to it).
+pt("lcp", "Laundry", "Low-current box — fibre (ONT), router, PoE switch, patch panel, TV splitter, UPS, Zigbee hub", wall="E", x=11.6, y=7.21,
+   h=1.475, w=0.45, hh=0.75, depth=0.15, recess=0.06, status="added", id="lcp",
+   contents=["Fibre box (ONT), fibre in a conduit from the building riser at the front door",
+             "Router (its own Wi-Fi off: the 3 ceiling APs give the Wi-Fi)",
+             "16-port PoE switch, fanless: AP1-3 and the video doorbell on PoE, 6 data outlets, 2 phone; 4 spare",
+             "Cat6 patch panel (24 port) and short patch leads; every home run ends here, labelled",
+             "TV splitter / amplifier: 6 outputs (living x2, reception x2, kitchen, terrace)",
+             "Small UPS (about 600 VA): internet and doorbell through power cuts",
+             "MOES Zigbee/Matter hub (MZHUB) on Ethernet + its USB-C supply, at the top by the vents",
+             "Double socket inside on its own breaker from the DB"],
+   note="Karim's review (17 Nov 2026): the main low-current place, replacing the hub above the shoe cabinet; 0.45 x 0.75, bottom at 110; 6 cm recessed into the 12 cm toilet partition (no deeper: the guest bathroom's tiles are behind), 9 cm proud in a painted frame; vented top and bottom, non-metal door so the Zigbee and Wi-Fi radios get out; Zigbee channel 15, 20 or 25 (clear of Wi-Fi 1 / 6 / 11)")
+
 # ================================================================ write
+P[:] = [q for q in P if q["id"] not in DROP]
 counts = Counter(p["type"] for p in P)
 sockets = sum(1 for p in P if p["type"] in ("socket",))
 legend = {
     "socket": "Socket (single or double)", "power": "Dedicated power point (appliance, AC, heater)", "wp": "Weatherproof outdoor socket",
     "multi": "Combined plate (data / HDMI / TV / sockets on one plate)", "data": "Data point, Cat6 RJ-45", "phone": "Phone point, RJ-12",
-    "tv": "TV / antenna point", "sound": "Sound-system screen", "intercom": "Intercom screen", "intercom_out": "Outdoor intercom unit",
+    "tv": "TV / antenna point", "sound": "Sound-system screen", "intercom": "Building intercom handset", "intercom_out": "Outdoor intercom unit",
     "doorbell": "Doorbell push", "chime": "Doorbell chime", "switch": "Switch bank", "acctl": "AC controller", "spot": "Ceiling spot 6 W",
-    "pendant": "Pendant light", "walllight": "Wall light", "fan": "Exhaust fan", "db": "Distribution board", "lcp": "Low-current panel",
+    "pendant": "Pendant light", "walllight": "Wall light", "fan": "Exhaust fan", "db": "Distribution board", "lcp": "Low-current box (network, TV, Zigbee hub)",
     "router": "Network hub (fibre box, router, PoE switch)", "led": "Indirect LED strip", "sensor": "Ceiling motion / presence sensor (mmWave or PIR)", "ledfeed": "Accent-light power point (LED driver / picture-light box)",
     "ap": "Ceiling Wi-Fi access point (Cat6 + PoE from the hub)",
     "water": "Water outlet (filtered line + shut-off valve) for a plumbed appliance",
@@ -520,6 +568,7 @@ OUT.write_text(json.dumps({
     "source": "Designer's electrical plan, Lotus apartment: Furniture plan + Upper lighting with furniture, 1st issue 20-08-2026",
     "built_by": "build_electrical.py (edit there, then rerun)",
     "heights": "metres; the plan's heights are cm from the concrete slab, used as-is until the floor build-up is confirmed",
+    "lighting": "fixtures",  # index.html: light the rooms from these fittings, no generic room light (Karim 17 Nov 2026)
     "legend": legend, "points": P, "lines": LINES,
 }, ensure_ascii=False, indent=1) + "\n")
 print(f"{OUT.name}: {len(P)} points, {len(LINES)} LED lines")

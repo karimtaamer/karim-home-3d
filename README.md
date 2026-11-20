@@ -418,6 +418,8 @@ face to brick face (`brickOpenings()`), measured along the room's face:
   show on their new piece until it gets a newer value. Saving posts the new id. Old entries stay in the store and the
   JSON export, and the CSV lists them as `legacy → <id>` or `legacy/unmapped`.
 
+**Main from the site measurements (20 Nov 2026).** Karim's tapes (New As-built store plus the 20 Nov re-measure) went into Main only: the kitchen/laundry column now sits in the laundry (12 deep x 29 long from the window wall; the kitchen east wall runs straight to its window wall) and the laundry joinery stops at it (2.010, y 6.887-8.897); the guest WC door is 84 brick to brick (east jamb kept, hinge 13.235, leaf 0.73); windows brick to brick: Toilet 1 71 (1.42-2.13), kitchen 110 (7.57-8.67), guest WC 80 (13.456-14.256). Two corner-square blocks the build added (Toilet 1 by the door, the bedroom entrance pier) are cut in `build_flags.json`: they aren't built. Not changed (open): laundry door 94 and Toilet 1 door 86 (both +6, door blocks), the Toilet 1 / bedroom partition (10 on site, 15 drawn), the guest WC door side (94 / 84 / 65 = 243 against 255 drawn; the window side 136 / 80 / 40.5 matches the drawing, so the walls stay) and window-wall depths 4-6 cm deeper on site in the kitchen, laundry and guest WC. Report: `docs/main-site-update-2026-11-20.png`.
+
 As-built is the flat as it stands today, empty: the surveyor's "AS BUILT PLAN" (2026-10-24). It is a record, not a
 design, so the master-suite rule below doesn't apply to it and `suite_merge.py --check` skips `dwg/as-built*.dxf`.
 `furnish()` returns before building anything for it (no furniture, joinery or fittings), and `spots-as-built.json`

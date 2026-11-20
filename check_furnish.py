@@ -119,7 +119,7 @@ const [, , modelPath, version] = process.argv;
 const window = {};
 new Function("window", readFileSync(modelPath, "utf8"))(window);
 const mats = new Map();
-const material = name => ({ name, transparent: false, opacity: 1, userData: {}, color: { setRGB() {} },
+const material = name => ({ name, transparent: false, opacity: 1, userData: {}, color: { setRGB() {}, setHex() {} },
   clone() { return material(name + "*"); } });
 const mat = new Proxy({}, { get: (t, k) => {
   if (k === "art") return [material("art")];

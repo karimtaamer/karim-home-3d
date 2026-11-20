@@ -65,9 +65,11 @@ export function furnish(scene, M, mat, version = "main") {
   // Guest WC: hinged on the west jamb (Karim 25 Oct, opens toward the shower, not the vanity; was the east jamb 13.965).
   // Main, Karim 26 Oct (Karim's version keeps the old numbers): the laundry/WC partition is 0.202 west (laundry 1.06 clear, WC bath zone 0.95, entrance 1.00 to the
   // vanity); the WC door's west jamb follows the bath edge 0.154 west (leaf 0.84, 83 cm clear), the laundry door the wall.
+  // Main, site measurements (20 Nov 2026): the WC door is 84 brick to brick, east jamb kept, so the west jamb and hinge
+  // sit 0.114 east (13.235) and the leaf is 0.73.
   // Passage door = the laundry door, opening inwards into the laundry (doorsAsDrawn).
   // Corridor -> dining (batch 25 Oct): the new door on the guest WC's south-east corner, opening into the dining area.
-  if (["kareems-changes", "karims-version"].includes(version)) for (const [dId, dLabel, dx0, dy0, dTol] of [["guest-wc-door", "Guest toilet door", version === "kareems-changes" ? 13.115 : 13.275, 6.893, 0.05], ["passage-door", "Passage door", version === "kareems-changes" ? 11.845 : 12.0976, 6.7958, 0.25], ["dining-door", "Dining door", 14.755, 6.743, 0.05]]) {
+  if (["kareems-changes", "karims-version"].includes(version)) for (const [dId, dLabel, dx0, dy0, dTol] of [["guest-wc-door", "Guest toilet door", version === "kareems-changes" ? 13.235 : 13.275, 6.893, 0.05], ["passage-door", "Passage door", version === "kareems-changes" ? 11.845 : 12.0976, 6.7958, 0.25], ["dining-door", "Dining door", 14.755, 6.743, 0.05]]) {
     const swing = (M.swings || []).find(s => Math.hypot(s.hinge[0] - dx0, s.hinge[1] - dy0) < dTol);
     if (swing) {
       const [hx, hy] = swing.hinge;
@@ -1602,9 +1604,12 @@ export function furnish(scene, M, mat, version = "main") {
   });
 
   // --- Laundry: full-height oak joinery on the left, counter and stacked machines ahead ---------
-  item(10.32, 7.9215, "E", p => {  // DWG joinery 2.069 long x 0.617 deep (y 6.887 to 8.956)
-    p.box(-1.0345, 1.0345, 0, M.ceiling - 0.05, 0, 0.617, mat.oakVeneer);
-    fronts(p, -1.0345, 1.0345, 0.05, 2.5, 0.617, 0.55);
+  // Main, site measurements (20 Nov 2026): the column at the window end sits in the laundry (12 deep x 29 long from the
+  // window wall, plan y 8.897 to 9.187), not in the kitchen, so the joinery stops at it: 2.010 long (y 6.887 to 8.897).
+  const LJ = version === "kareems-changes" ? [7.892, 1.005] : [7.9215, 1.0345];
+  item(10.32, LJ[0], "E", p => {  // DWG joinery 2.069 long x 0.617 deep (y 6.887 to 8.956); Main 2.010 (y 6.887 to 8.897)
+    p.box(-LJ[1], LJ[1], 0, M.ceiling - 0.05, 0, 0.617, mat.oakVeneer);
+    fronts(p, -LJ[1], LJ[1], 0.05, 2.5, 0.617, 0.55);
     for (const x of [-0.6, -0.05, 0.5]) {
       p.box(x - 0.24, x + 0.24, 0.08, 0.45, 0.78, 0.8, mat.oakVeneer);
       p.box(x - 0.2, x + 0.2, 0.12, 0.42, 0.6, 0.78, mat.applianceWhite, 0.02);

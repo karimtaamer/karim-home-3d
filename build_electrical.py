@@ -191,8 +191,8 @@ bank("sw-living", "Living room", "living room, by the door",
 # main bedroom plate is nearer the entrance. They have distinct plan positions so both switch symbols remain visible.
 bank("sw-master-door", "Master bedroom", "main bedroom lights by the door",
      ["Bedroom spots, half A", "Bedroom spots, half B", "Bedroom curtain-pocket LED"],
-     wall="E", x=4.3, y=5.65, h=1.2, status="adapted", gang_circuits=["master-A", "master-B", "master-curtain"],
-     note="three keys near the bedroom entrance; the separate vanity plate is farther along the wall toward the vanity")
+     wall="E", x=4.3, y=5.58, h=1.2, status="adapted", gang_circuits=["master-A", "master-B", "master-curtain"],
+     note="three keys near the bedroom entrance; the separate vanity plate is farther along the wall toward the vanity. Site measurements (20 Nov 2026): this wall ends at the door line (plan y 5.66, no pier step), so the plate sits at 5.58, clear of the corner")
 bank("sw-master-dresser", "Master bedroom", "bedroom vanity, beside the main switch",
      ["Two spots over the vanity", "Vanity mirror glow", "Vanity LEDs: shelf column and jewellery tray"],
      wall="E", x=4.3, y=5.37, h=1.2, status="adapted",

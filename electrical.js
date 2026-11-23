@@ -1,12 +1,12 @@
-// Electrical, lighting and low-current points (electrical-<version>.json, written by build_electrical.py; only Main has
-// one so far). One file drives both views:
+// Electrical, lighting and low-current points (electrical-<version>.json, written by build_electrical.py for Main and
+// build_electrical_light_power_plan.py for the Light and Power Plan). One file drives both views:
 //   3D (index.html): buildElectrical() adds a faceplate / fitting for each point (ceiling spots and fans go in the
 //      furniture's ceilingBits, so they show with the ceilings), and createElectricalUI() names whatever the pointer is
 //      on: hover (or, with the mouse captured in Walk, look at it), tap / click to pin the card. The "Electrical" button
 //      in the bar adds see-through markers on every point, hidden ones too, in Walk and Top.
 //   2D (drawing.js): drawElectrical() draws the layer over the DWG; pickElectrical() finds the point under the pointer.
 // Point fields: type, room, x, y (plan metres), h (metres from the slab), facing (the way the plate looks: N/E/S/W),
-// label, status (plan / adapted / added / existing), note; switches add gangs (one line per rocker) and two_way;
+// label, status (plan / adapted / added / existing / engineer), note; switches add gangs (one line per rocker) and two_way;
 // flaps (outlets sunk in a furniture top) add parts and finish, their h being the top's height.
 
 const cache = new Map();
@@ -46,13 +46,24 @@ export const KINDS = {
   router:       { what: "This is the network hub: fibre box, router and PoE switch. Every network cable runs home here.", col: "#c58cff", glyph: "R" },
   ap:           { what: "This is a ceiling Wi-Fi access point: one network name everywhere, powered through its Cat6 cable.", col: "#46d39a", glyph: "AP" },
   water:        { what: "This is a water outlet: a filtered line with a shut-off valve for a plumbed appliance.", col: "#4fc3f7", glyph: "W" },
+  // The site engineer's symbols with no kind above (Light and Power Plan, 23 Nov 2026). Main uses none of them.
+  wpspot:       { what: "This is a waterproof ceiling spot light.", col: "#f2b134", glyph: "spot" },
+  curtainled:   { what: "This is an LED outlet in the curtain box, with a socket outlet beside it.", col: "#f2b134", glyph: "CL" },
+  shutter:      { what: "This is the button switch for a roller shutter.", col: "#ff6b6b", glyph: "SH" },
+  acsw:         { what: "This is the switch for an air conditioner.", col: "#ff6b6b", glyph: "AC" },
+  heatersw:     { what: "This is the switch for an instant water heater.", col: "#ff6b6b", glyph: "IH" },
+  boilersw:     { what: "This is the switch for a water heater.", col: "#ff6b6b", glyph: "WH" },
+  usb:          { what: "This is a USB charger outlet.", col: "#5aa9ff", glyph: "U" },
+  woutlet:      { what: "This is the engineer's \"W\" outlet: a phone-charger outlet, per his legend.", col: "#5aa9ff", glyph: "W" },
+  ipbox:        { what: "This is a weatherproof (IP65) outdoor box.", col: "#5aa9ff", glyph: "IP" },
+  hdmi:         { what: "This is an HDMI cable outlet.", col: "#46d39a", glyph: "H" },
 };
 // The chips under the 2D plan's Electrical button (drawing.js): each shows or hides one group (remembered).
 export const CATEGORIES = [
-  { id: "light",   label: "Lighting",          col: "#f2b134", types: ["spot", "pendant", "walllight", "led", "lightout"] },
-  { id: "switch",  label: "Switches",          col: "#ff6b6b", types: ["switch", "acctl"] },
-  { id: "power",   label: "Sockets & power",   col: "#5aa9ff", types: ["socket", "flap", "power", "ledfeed", "wp", "towelheater"] },
-  { id: "network", label: "Network & TV",      col: "#46d39a", types: ["multi", "data", "phone", "tv", "router", "lcp", "ap", "intercom", "intercom_out"] },
+  { id: "light",   label: "Lighting",          col: "#f2b134", types: ["spot", "pendant", "walllight", "led", "lightout", "wpspot", "curtainled"] },
+  { id: "switch",  label: "Switches",          col: "#ff6b6b", types: ["switch", "acctl", "shutter", "acsw", "heatersw", "boilersw"] },
+  { id: "power",   label: "Sockets & power",   col: "#5aa9ff", types: ["socket", "flap", "power", "ledfeed", "wp", "towelheater", "usb", "woutlet", "ipbox"] },
+  { id: "network", label: "Network & TV",      col: "#46d39a", types: ["multi", "data", "phone", "tv", "router", "lcp", "ap", "intercom", "intercom_out", "hdmi"] },
   { id: "sensors", label: "Sensors & fans",     col: "#2ee6d6", types: ["sensor", "fan"] },
   { id: "other",   label: "Other",              col: "#c58cff", types: ["sound", "doorbell", "chime", "db", "water"] },
 ];
@@ -64,6 +75,7 @@ const STATUS = {
   added: "Added for Main (not on the electrical plan).",
   existing: "Already in the model.",
   optional: "Optional: not decided yet.",
+  engineer: "As the site engineer drew it (his light / power plans).",
 };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const cmH = h => `${Math.round(h * 100)} cm`;
@@ -77,9 +89,11 @@ const NAME = {
   intercom_out: "Video doorbell", doorbell: "Doorbell", chime: "Doorbell chime", fan: "Exhaust fan", sensor: "Motion sensor",
   towelheater: "Towel heater", db: "Breaker panel", lcp: "Low-current box", router: "Wi-Fi router", ap: "Wi-Fi access point",
   ledfeed: "Accent-light power", water: "Water outlet", lightout: "Lighting outlet",
+  wpspot: "Waterproof spot", curtainled: "Curtain-box LED", shutter: "Shutter switch", acsw: "AC switch", heatersw: "Instant-heater switch",
+  boilersw: "Water-heater switch", usb: "USB charger", woutlet: "W outlet", ipbox: "IP65 box", hdmi: "HDMI outlet",
 };
-const BADGE = { plan: "Plan", adapted: "Adapted", added: "Added", existing: "Existing", optional: "Optional" };
-const ON_CEILING = ["spot", "fan", "sensor", "ap", "led"];
+const BADGE = { plan: "Plan", adapted: "Adapted", added: "Added", existing: "Existing", optional: "Optional", engineer: "Engineer" };
+const ON_CEILING = ["spot", "fan", "sensor", "ap", "led", "wpspot"];
 // What sits on a plate, as coloured chips: code -> [label, colour, count]; repeats add up (C, C -> USB-C ×2).
 const PART_CHIP = { D: ["Cat6", "#46d39a", 1], "2D": ["Cat6", "#46d39a", 2], H: ["HDMI", "#46d39a", 1], TV: ["TV aerial", "#46d39a", 1],
   S: ["Socket", "#5aa9ff", 1], "2S": ["Double socket", "#5aa9ff", 1], C: ["USB-C", "#5aa9ff", 1] };
@@ -106,7 +120,7 @@ const cleanNote = n => cap(n.replace(/\s*\([^()]*\b20\d\d\b[^()]*\)/g, "").repla
 // Stacks (dad's review, Karim 11 Nov 2026): the 2D plan looks down, so points at the same spot on a wall (stacked switch
 // boxes, oven + microwave, a feed above a socket) hide each other. Each group within STACK_R is drawn as one marker with a
 // count and its heights; its card is a little wall view, top to bottom. build_electrical.py lists the same groups.
-const STACK_R = 0.12, CEIL_T = new Set(["spot", "fan", "sensor", "ap"]);
+const STACK_R = 0.12, CEIL_T = new Set(["spot", "fan", "sensor", "ap", "wpspot"]);
 const stackCache = new WeakMap();
 export function stacksOf(data) {
   if (stackCache.has(data)) return stackCache.get(data);
@@ -245,7 +259,7 @@ export function makeCard() {
 
 // ------------------------------------------------------------------------------------------------ 3D
 const FACING = { S: 0, E: Math.PI / 2, N: Math.PI, W: -Math.PI / 2 };
-const CEILING_KINDS = new Set(["spot", "fan", "sensor", "ap"]);
+const CEILING_KINDS = new Set(["spot", "fan", "sensor", "ap", "wpspot"]);
 const NEAR = 5;  // metres: in Walk the see-through markers show only this close
 
 export function buildElectrical({ THREE, scene, ceilingBits, data, ceiling = 2.6, materials = {} }) {
@@ -325,6 +339,17 @@ export function buildElectrical({ THREE, scene, ceilingBits, data, ceiling = 2.6
         box(g, -0.01, 0.01, y - 0.06, y - 0.045, 0.01, 0.03, M.grey);
         break;
       case "ledfeed": plate(g, 0.086, 0.086, y); cyl(g, 0, y, 0.012, 0.009, 0.013, M.metal); break;  // blank plate, cable outlet
+      // The engineer's kinds (Light and Power Plan): the nearest look above.
+      case "curtainled": plate(g, 0.086, 0.086, y); cyl(g, 0, y, 0.012, 0.009, 0.013, M.metal); socketFace(g, 0.1, y); break;
+      case "shutter": plate(g, 0.086, 0.086, y); box(g, -0.017, 0.017, y + 0.004, y + 0.03, 0.009, 0.014, M.rocker); box(g, -0.017, 0.017, y - 0.03, y - 0.004, 0.009, 0.014, M.rocker); break;
+      case "acsw": case "heatersw": case "boilersw":  // a double-pole switch with its neon
+        plate(g, 0.086, 0.086, y); box(g, -0.017, 0.017, y - 0.03, y + 0.03, 0.009, 0.014, M.rocker); box(g, -0.004, 0.004, y + 0.033, y + 0.039, 0.009, 0.011, M.red); break;
+      case "usb": case "woutlet": modular(g, ["C"], y); box(g, -0.008, 0.008, y - 0.003, y + 0.003, 0.009, 0.0105, M.hole); break;
+      case "hdmi": modular(g, ["H"], y); break;
+      case "ipbox":
+        box(g, -0.05, 0.05, y - 0.055, y + 0.055, 0, 0.045, M.grey);
+        box(g, -0.044, 0.044, y - 0.045, y + 0.05, 0.045, 0.052, M.grey);
+        break;
       case "acctl": plate(g, 0.086, 0.086, y); box(g, -0.028, 0.028, y - 0.006, y + 0.026, 0.009, 0.011, M.glass); break;
       case "sound": case "intercom": plate(g, 0.13, 0.11, y); box(g, -0.055, 0.055, y - 0.04, y + 0.045, 0.009, 0.012, M.glass); break;
       case "intercom_out": box(g, -0.055, 0.055, y - 0.11, y + 0.11, 0, 0.03, M.metal); cyl(g, 0, y + 0.07, 0.012, 0.03, 0.034, M.glass); cyl(g, 0, y - 0.06, 0.013, 0.03, 0.036, M.glass); break;
@@ -432,7 +457,7 @@ export function buildElectrical({ THREE, scene, ceilingBits, data, ceiling = 2.6
   for (const p of data.points) {
     const world = new THREE.Vector3(p.x, p.h ?? ceiling, -p.y);
     let obj = null;
-    if (p.type === "spot") {
+    if (p.type === "spot" || p.type === "wpspot") {
       obj = new THREE.Group();
       const r = new THREE.Mesh(new THREE.RingGeometry(0.032, 0.045, 20), M.ring); r.rotation.x = Math.PI / 2; obj.add(r);
       const d = new THREE.Mesh(new THREE.CircleGeometry(0.032, 20), M.spot); d.rotation.x = Math.PI / 2; d.position.y = 0.001; obj.add(d);
@@ -665,7 +690,7 @@ export function drawElectrical(ctx, toScreen, s, data, hover = null) {
       ctx.font = `${Math.max(8, Math.min(11, s * 0.1))}px Inter, sans-serif`;
     }
     if (hover === p) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, rr + 4, 0, Math.PI * 2); ctx.stroke(); }
-    const hs = p.stack ? p.stack.map(q => Math.round(q.h * 100)).join("/") : p.h != null && !["spot", "fan", "pendant", "sensor", "ap"].includes(p.type) ? Math.round(p.h * 100) : null;
+    const hs = p.stack ? p.stack.map(q => Math.round(q.h * 100)).join("/") : p.h != null && !["spot", "fan", "pendant", "sensor", "ap", "wpspot"].includes(p.type) ? Math.round(p.h * 100) : null;
     if (showH && hs != null) {
       ctx.fillStyle = "#e8e2d8b0"; ctx.textAlign = "left";
       ctx.fillText(hs, x + r * (p.stack ? 1.9 : 1) + 2, y - r);

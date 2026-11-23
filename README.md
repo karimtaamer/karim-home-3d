@@ -223,6 +223,7 @@ and `dwg/main.dxf` are the retired pre-25-Oct Main layout. Nothing on the page l
 | Main | *(none)* / `main` | `dwg/kareems-changes.dxf` | the Kareem's Changes files below |
 | As-built | `as-built` | `dwg/as-built.dxf` (the surveyor's `as-built-original.dwg`, Sep 2026) | `model-as-built.js`, `drawing-as-built.json`, `tour-as-built.json`, `spots-as-built.json` (empty) |
 | New As-built | `new-asbuilt` | `dwg/new-asbuilt.dxf` (a byte copy of Main's `dwg/kareems-changes.dxf`, 2026-11-16) | `*-new-asbuilt.*` (byte copies of Main's; its furnish runs Main's branches), plus Site measurements |
+| Light and Power Plan | `light-power-plan` | `dwg/light-power-plan.dxf` (a byte copy of Main's `dwg/kareems-changes.dxf`, 2026-11-23) | `*-light-power-plan.*` (copies of Main's; its furnish runs Main's branches); its own electrical layer, the site engineer's drawings only (below) |
 | Karim's version | `kareems-changes` | `dwg/karims-version.dxf` (a copy of Main's `dwg/kareems-changes.dxf`, 2026-10-26, before Main's laundry/WC change) | `model-karims-version.js`, `drawing-karims-version.json`, `tour-karims-version.json`, `spots-karims-version.json` |
 | Nagham's version | `naghams-changes` | `dwg/naghams-changes.dxf` (a copy of the retired Shifted Bedroom drawing, 2026-10-24) | `model-naghams-changes.js`, `drawing-naghams-changes.json`, `tour-naghams-changes.json`, `spots-naghams-changes.json` |
 
@@ -390,6 +391,16 @@ model, drawing, electrical, spots and move-origins are byte copies of Main's, th
 `furnish-new-asbuilt.js` starts with `version = "kareems-changes"`, so it renders as Main did that day. It has the same
 `build_flags.json` flags (`build_version.py new-asbuilt`), its own column-face lock (`na-column-face`) and is in
 `edit_ai_pull.py`, `check_furnish.py` (checked as Main) and `spotnames.js`.
+
+**Light and Power Plan (23 Nov 2026)** is a copy of Main (DXF, model, drawing, spots, move-origins byte copies; tour and
+furnish / materials headers changed, furnish runs as `kareems-changes`), menu entry after New As-built. Same `build_flags.json`
+flags as Main, its own column-face lock (`lp-column-face`), in `edit_ai_pull.py`, `check_furnish.py` (checked as Main) and
+`spotnames.js`. No Site measurements. Its `electrical-light-power-plan.json` holds only what the site engineer drew on his
+Lighting Plan (S08) and Power Plan (S07), at his dimensions and heights, nothing of Main's: `python3
+build_electrical_light_power_plan.py` (data in `light_power_plan_points.py`: each symbol registered off the PDFs, his written
+dimensions applied from Main's wall faces, wall points snapped 3 mm proud). Points have `status: "engineer"`, `src` L / P / LP,
+`pdf` (PDF point of the symbol), `dim` and `note`; new kinds (shutter / AC / heater switches, USB, "W", HDMI, IP65 box,
+curtain-box LED) are in `electrical.js`.
 
 **Site measurements** (`sitemeasure.js`, New As-built only: the 📏 button, or `?v=new-asbuilt&measure`). Its own
 full-screen plan: tap a wall and type what the tape says (cm), with an optional note. `segmentWalls()` walks every room's

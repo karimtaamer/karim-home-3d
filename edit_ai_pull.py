@@ -17,8 +17,8 @@ SITE = "https://karim-home-3d.vercel.app"
 STORE = next(r["destination"].split("/edit-ai-live/")[0] for r in json.loads((ROOT / "vercel.json").read_text())["rewrites"]
              if r["source"].startswith("/edit-ai-live"))
 # Main loads kareems-changes (2026-10-25), "Karim's version" its own karims-version (26 Oct); Bigger / Shifted Bedroom are retired.
-# New As-built (16 Nov 2026) is its own copy of Main.
-VERSIONS = ["kareems-changes", "karims-version", "naghams-changes", "as-built", "new-asbuilt"]
+# New As-built (16 Nov 2026) and the Light and Power Plan (23 Nov 2026) are their own copies of Main.
+VERSIONS = ["kareems-changes", "karims-version", "naghams-changes", "as-built", "new-asbuilt", "light-power-plan"]
 OWN = ["furnish.js", "materials.js"]
 # The pre-split shared furnish.js overrides already in git (edit_ai.py PULLED; kept here so this needs no Edit AI imports).
 PULLED = {"kareems-changes": {"9924d0735c024e622ba3", "c3d4ac30615a61048d3a"}, "naghams-changes": {"99b962fa671a0b66c38a"}}

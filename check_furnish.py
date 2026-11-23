@@ -25,9 +25,10 @@ TOL = 0.02
 # Main on the page loads kareems-changes (2026-10-25), Karim's version karims-version (26 Oct). Each version has its
 # own furniture, furnish-<version>.js (26 Oct 2026); the retired pre-25-Oct 'main' (model.js) has none any more.
 MODELS = {'naghams-changes': 'model-naghams-changes.js', 'kareems-changes': 'model-kareems-changes.js',
-          'karims-version': 'model-karims-version.js', 'new-asbuilt': 'model-new-asbuilt.js'}
-# New As-built (16 Nov 2026) is a copy of Main: its pieces are checked as Main's.
-SAME_AS = {'new-asbuilt': 'kareems-changes'}
+          'karims-version': 'model-karims-version.js', 'new-asbuilt': 'model-new-asbuilt.js',
+          'light-power-plan': 'model-light-power-plan.js'}
+# New As-built (16 Nov 2026) and the Light and Power Plan (23 Nov 2026) are copies of Main: their pieces are checked as Main's.
+SAME_AS = {'new-asbuilt': 'kareems-changes', 'light-power-plan': 'kareems-changes'}
 
 # name, versions (None = all), DWG source, axes to check, 3D materials, margin (m, or (x, y)) round the outline.
 # Source: ('block', name) or ('outline', seed x, seed y, width cm, depth cm) for a closed 2furni polyline (plan m).

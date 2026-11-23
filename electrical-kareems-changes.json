@@ -978,7 +978,7 @@
    "note": "lower box of two, under the main-light box",
    "gangs": [
     "Entrance console cove + mirror lights + pill sconce",
-    "Gallery picture lights (4)"
+    "Gallery picture light over the entrance art"
    ],
    "two_way": null,
    "stack": "front-door"
@@ -2580,45 +2580,13 @@
    "id": "ledfeed-195",
    "type": "ledfeed",
    "room": "Entrance",
-   "x": 7.0,
-   "y": 3.631,
-   "h": 2.075,
-   "facing": "N",
-   "label": "Gallery picture light 1 of 4 — wall box",
-   "status": "added"
-  },
-  {
-   "id": "ledfeed-196",
-   "type": "ledfeed",
-   "room": "Entrance",
    "x": 6.541,
-   "y": 3.85,
-   "h": 2.09,
+   "y": 4.075,
+   "h": 2.1,
    "facing": "E",
-   "label": "Gallery picture light 2 of 4 — wall box",
-   "status": "added"
-  },
-  {
-   "id": "ledfeed-197",
-   "type": "ledfeed",
-   "room": "Entrance",
-   "x": 6.541,
-   "y": 4.3,
-   "h": 1.73,
-   "facing": "E",
-   "label": "Gallery picture light 3 of 4 — wall box",
-   "status": "added"
-  },
-  {
-   "id": "ledfeed-198",
-   "type": "ledfeed",
-   "room": "Entrance",
-   "x": 6.541,
-   "y": 3.95,
-   "h": 1.45,
-   "facing": "E",
-   "label": "Gallery picture light 4 of 4 — wall box",
-   "status": "added"
+   "label": "Gallery picture light — wall box, centred on the west wall at 210",
+   "status": "added",
+   "note": "Karim's review (23 Nov 2026): one wall box at 210, centred on the west wall that carries the paintings. Replaces the four earlier gallery boxes (south-wall 208, and west-wall 173, 209 and 145)."
   },
   {
    "id": "ledfeed-199",

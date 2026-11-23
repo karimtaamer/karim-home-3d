@@ -1861,8 +1861,15 @@ export function furnish(scene, M, mat, version = "main") {
     p.box(-0.33, -0.3, 0.7, 1.5, 0.06, 0.09, mat.brass);
   });
   plant(11.1, 4.72, 1.6, 0.24); plant(7.64, 5.3, 1.75, 0.2);  // olives on the side wall clear of the console seat, and left of the bench
-  art(7.0, 3.6, "N", 0.75, 1.05, 1.45, 0); art(6.72, 3.62, "N", 0.5, 0.5, 1.3, 1, false);
-  [[3.85, 0.36, 0.48, 1.75], [4.3, 0.36, 0.36, 1.45], [3.95, 0.3, 0.3, 1.2]].forEach(([y, w, h, z], k) => art(6.51, y, "E", w, h, z, k));
+  // Karim 23 Nov 2026: the paintings stay; the four picture lights (south-wall 208, west-wall 173 and stacked 209/145)
+  // become one light at 210, centred on the west gallery wall (y 3.60–4.55).
+  art(7.0, 3.6, "N", 0.75, 1.05, 1.45, 0, false); art(6.72, 3.62, "N", 0.5, 0.5, 1.3, 1, false);
+  [[3.85, 0.36, 0.48, 1.75], [4.3, 0.36, 0.36, 1.45], [3.95, 0.3, 0.3, 1.2]].forEach(([y, w, h, z], k) => art(6.51, y, "E", w, h, z, k, false));
+  named(item(6.51, 4.075, "E", p => {
+    const barC = 2.10, lw = 0.40;
+    p.box(-0.015, 0.015, barC - 0.02, barC + 0.06, 0, 0.1, mat.brass);
+    p.box(-lw / 2, lw / 2, barC - 0.02, barC + 0.02, 0.06, 0.13, mat.brass, 0.015);
+  }), "picture light over the entrance gallery");
   rug(7.1, 4.3, 10.9, 5.1, mat.art[1]);
 
   // --- Reception: TV wall with lit oak niches, two sofas, armchair -----------------------------

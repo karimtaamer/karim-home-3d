@@ -174,7 +174,7 @@ bank("sw-front-door", "Entrance", "inside the front door, top box",
      two_way="sw-dining-end,sw-lobby", wall="S", x=9.2, y=4.2, h=TOP, stack="front-door", status="adapted",
      note="the front door now hinges on the west jamb, so the switches sit on the latch side east of it; top box of two")
 bank("sw-front-door-2", "Entrance", "inside the front door, lower box",
-     ["Entrance console cove + mirror lights + pill sconce", "Gallery picture lights (4)"],
+     ["Entrance console cove + mirror lights + pill sconce", "Gallery picture light over the entrance art"],
      wall="S", x=9.2, y=4.2, h=LOW, stack="front-door", status="adapted", note="lower box of two, under the main-light box")
 bank("sw-dining-end", "Hallway", "hallway, dining end",
      ["All hallway and lobby spots (two-way)"],
@@ -468,8 +468,15 @@ feed("Dining", "Coffee corner — LED under the 2 shelves (driver in the drawer 
 feed("Dining", "Curtain-pocket LED, north window — driver above the plasterboard ceiling", (16.95, 9.40), 2.70, "S")
 feed("Entrance", "Entrance console — cove, shoe shelf, header downlight, mirror (driver in the console)", (10.60, 3.75), 0.30, "N")
 feed("Entrance", "Entrance pebble-mirror glow + pill sconce — box behind the mirror", (8.60, 5.50), 1.40, "S")
-for i, (x, y, h, f) in enumerate([(7.0, 3.631, 2.075, "N"), (6.541, 3.85, 2.09, "E"), (6.541, 4.30, 1.73, "E"), (6.541, 3.95, 1.45, "E")], 1):
-    feed("Entrance", f"Gallery picture light {i} of 4 — wall box", (x, y), h, f)
+# Karim's review (23 Nov 2026): one wall box at 210, centred on the west wall that carries the paintings
+# (y 3.60 to 4.55, centre 4.075). Replaces the four earlier gallery boxes: south-wall 208, west-wall 173,
+# and the stacked 209 / 145 (all four were picture-light feeds). The three leftover id slots are built then
+# dropped so later numbered ids stay put.
+feed("Entrance", "Gallery picture light — wall box, centred on the west wall at 210", (6.541, 4.075), 2.10, "E",
+     "Karim's review (23 Nov 2026): one wall box at 210, centred on the west wall that carries the paintings. Replaces the four earlier gallery boxes (south-wall 208, and west-wall 173, 209 and 145).")
+for x, y, h, f in [(6.541, 3.85, 2.09, "E"), (6.541, 4.30, 1.73, "E"), (6.541, 3.95, 1.45, "E")]:
+    feed("Entrance", "dropped gallery picture light", (x, y), h, f)
+    DROP.add(P[-1]["id"])
 feed("Living room", "Picture light over the window-wall art — wall box", (3.62, 0.579), 2.345, "N")
 feed("Living room", "Picture light over the door-wall art — wall box", (4.35, 4.412), 2.08, "S")
 feed("Living room", "TV-wall linear sconce, south — wall box", (6.11, 1.10), 1.52, "W")

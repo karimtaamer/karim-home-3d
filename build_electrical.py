@@ -335,7 +335,9 @@ sock("Kitchen", "Socket 45 cm — possible floor-standing water cooler", n=1, wa
      note="Dad's review (Karim 11 Nov 2026): for a water cooler that may stand here, at the entrance end")
 pt("water", "Kitchen", "Water outlet 45 cm — possible floor-standing water cooler", wall="S", x=8.42, y=6.2, h=0.45, status="added",
    note="Dad's review (Karim 11 Nov 2026): filtered water with a shut-off valve, beside the cooler socket")
+# Karim's review (23 Nov 2026): no kitchen phone point; the TV 180 stays. Built then dropped so later numbered ids stay put.
 pt("phone", "Kitchen", "Phone point 150 cm", wall="S", x=8.75, y=6.2, h=1.5, status="adapted", note="moved off the pantry wall, east of the tower; under the TV point")
+DROP.add(P[-1]["id"])
 pt("fan", "Kitchen", "Ceiling exhaust fan — kitchen (own switch key)", at=(8.35, 7.85), h=CEIL, status="added", circuit="kitchen-fan",
    note="Dad's review (Karim 11 Nov 2026): general extract for heat, steam and smells beyond the hood; ducted out to the north wall by the window")
 

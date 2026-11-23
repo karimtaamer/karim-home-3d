@@ -1829,18 +1829,6 @@
    "note": "Dad's review (Karim 11 Nov 2026): filtered water with a shut-off valve, beside the cooler socket"
   },
   {
-   "id": "phone-133",
-   "type": "phone",
-   "room": "Kitchen",
-   "x": 8.75,
-   "y": 5.6634,
-   "h": 1.5,
-   "facing": "N",
-   "label": "Phone point 150 cm",
-   "status": "adapted",
-   "note": "moved off the pantry wall, east of the tower; under the TV point"
-  },
-  {
    "id": "fan-134",
    "type": "fan",
    "room": "Kitchen",

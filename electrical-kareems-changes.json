@@ -1086,15 +1086,14 @@
    "y": 5.9968,
    "h": 1.25,
    "facing": "S",
-   "label": "2-gang switch — dressing corner by the bathroom-door wall, top box",
+   "label": "2-gang switch — dressing corner by the bathroom-door wall",
    "status": "added",
-   "note": "centred on the short return wall at the arrow; Karim's review (17 Nov 2026): two keys, the corner spots and the wardrobe's LED; top box of two",
+   "note": "centred on the short return wall at the arrow; Karim's review (17 Nov 2026): two keys, the corner spots and the wardrobe's LED. Karim's review (23 Nov 2026): the heated-towel switch moved inside the bathroom, so this is a single 125 plate (no longer stacked)",
    "gangs": [
     "The two dresser/wardrobe corner spots marked on the plan",
     "Wardrobe LED (short wardrobe by the bathroom door)"
    ],
    "two_way": null,
-   "stack": "dressing-door",
    "gang_circuits": [
     "master-dresser-spots",
     "dressing-wardrobe-led"
@@ -1148,17 +1147,17 @@
    "room": "Master bathroom",
    "x": 1.2,
    "y": 6.1381,
-   "h": 1.2,
+   "h": 1.25,
    "facing": "N",
-   "label": "3-gang switch — inside beside the vanity socket",
+   "label": "2-gang switch — inside beside the vanity socket, top box",
    "status": "adapted",
-   "note": "three keys on the short wall beside the 135 cm vanity socket; the exhaust fan has its own key",
+   "note": "Karim's review (23 Nov 2026): top box of two, on the short wall beside the 135 cm vanity socket; all spots, and the under-vanity / cabinet / shower-niche LEDs",
    "gangs": [
     "All spots (vanity, middle, shower and WC)",
-    "Under-vanity LED, cabinet glow + shower-niche LED",
-    "Exhaust fan"
+    "Under-vanity LED, cabinet glow + shower-niche LED"
    ],
-   "two_way": null
+   "two_way": null,
+   "stack": "mbath-vanity"
   },
   {
    "id": "sw-kitchen",
@@ -2897,26 +2896,28 @@
    "facing": "W",
    "label": "Heated towel rail — flex outlet behind the rail (fused, on a 30 mA RCD)",
    "status": "added",
-   "note": "Karim's review (17 Nov 2026): the rail on the partition's west face is an electric towel heater; hard-wired through a flex-outlet plate hidden behind it, switched from outside the bathroom",
+   "note": "Karim's review (17 Nov 2026): the rail on the partition's west face is an electric towel heater; hard-wired through a flex-outlet plate hidden behind it. Karim's review (23 Nov 2026): switched from the lower box inside the bathroom, beside the vanity (with the exhaust fan)",
    "appliance": "electric heated towel rail"
   },
   {
-   "id": "sw-towel-rail",
+   "id": "sw-mbath-2",
    "type": "switch",
-   "room": "Master bedroom",
-   "x": 2.296,
-   "y": 5.9968,
+   "room": "Master bathroom",
+   "x": 1.2,
+   "y": 6.1381,
    "h": 1.13,
-   "facing": "S",
-   "label": "1-gang switch — heated towel rail, outside the bathroom, lower box",
+   "facing": "N",
+   "label": "2-gang switch — inside beside the vanity socket, lower box",
    "status": "added",
-   "note": "Karim's review (17 Nov 2026): the towel heater is switched outside the wet room, just outside the bathroom door, under the dressing switches",
+   "note": "Karim's review (23 Nov 2026): lower box of two, under the lighting box; the exhaust fan and the heated towel rail (moved inside from the dressing-corner wall)",
    "gangs": [
-    "Heated towel rail (master bathroom) — double-pole with neon"
+    "Exhaust fan",
+    "Heated towel rail — double-pole with neon"
    ],
    "two_way": null,
-   "stack": "dressing-door",
+   "stack": "mbath-vanity",
    "gang_circuits": [
+    "mbath-fan",
     "mbath-towel-rail"
    ]
   },

@@ -198,10 +198,10 @@ bank("sw-master-dresser", "Master bedroom", "bedroom vanity, beside the main swi
      wall="E", x=4.3, y=5.37, h=1.2, status="adapted",
      gang_circuits=["master-vanity-spots", "master-vanity-mirror", "master-vanity-led"],
      note="three vanity keys on the same wall, nearer the vanity; separated from the bedroom plate in both plan and 3D")
-bank("sw-master-dresser-spots", "Master bedroom", "dressing corner by the bathroom-door wall, top box",
+bank("sw-master-dresser-spots", "Master bedroom", "dressing corner by the bathroom-door wall",
      ["The two dresser/wardrobe corner spots marked on the plan", "Wardrobe LED (short wardrobe by the bathroom door)"],
-     wall="N", x=2.296, y=5.8, h=TOP, stack="dressing-door", status="added", gang_circuits=["master-dresser-spots", "dressing-wardrobe-led"],
-     note="centred on the short return wall at the arrow; Karim's review (17 Nov 2026): two keys, the corner spots and the wardrobe's LED; top box of two")
+     wall="N", x=2.296, y=5.8, h=TOP, status="added", gang_circuits=["master-dresser-spots", "dressing-wardrobe-led"],
+     note="centred on the short return wall at the arrow; Karim's review (17 Nov 2026): two keys, the corner spots and the wardrobe's LED. Karim's review (23 Nov 2026): the heated-towel switch moved inside the bathroom, so this is a single 125 plate (no longer stacked)")
 # Bedsides: each of the two keys controls one pendant from either bedside.
 for side, y in (("S", 6.231), ("N", 8.79)):
     bank(f"sw-bed-{side}", "Master bedroom", f"bedside ({'door' if side == 'S' else 'window'} side), over the nightstand",
@@ -209,10 +209,13 @@ for side, y in (("S", 6.231), ("N", 8.79)):
          two_way=f"sw-bed-{'N' if side == 'S' else 'S'}", wall="W", x=2.6, y=y, h=0.85, status="adapted",
          gang_circuits=["bedside-S", "bedside-N"],
          note="both bedsides switch both pendants; the sockets are in the nightstand top, under a flap")
-bank("sw-mbath", "Master bathroom", "inside beside the vanity socket",
-     ["All spots (vanity, middle, shower and WC)", "Under-vanity LED, cabinet glow + shower-niche LED", "Exhaust fan"],
-     wall="S", x=1.20, y=6.6, status="adapted",
-     note="three keys on the short wall beside the 135 cm vanity socket; the exhaust fan has its own key")
+# Karim's review (23 Nov 2026): the inside plate becomes two 2-gang boxes (a standard Egyptian box takes 3 modules at
+# most), and the heated-towel switch moves here from outside the door. Same 125 / 113 stack as the other rooms.
+# Lower box (sw-mbath-2) is in the late-additions block so the numbered ids above stay put.
+bank("sw-mbath", "Master bathroom", "inside beside the vanity socket, top box",
+     ["All spots (vanity, middle, shower and WC)", "Under-vanity LED, cabinet glow + shower-niche LED"],
+     wall="S", x=1.20, y=6.6, h=TOP, stack="mbath-vanity", status="adapted",
+     note="Karim's review (23 Nov 2026): top box of two, on the short wall beside the 135 cm vanity socket; all spots, and the under-vanity / cabinet / shower-niche LEDs")
 # Karim's review (Karim 12 Nov 2026): the two boxes move beside the fridge, onto the south face of the fridge run's tall
 # end panel (y 6.878, x 9.466-10.196), 0.12 in from the door wall: on your right as you open the door and step in.
 # The door hinges on the south jamb and its leaf opens onto the south wall, so it never covers them.
@@ -293,8 +296,8 @@ sock("Master bathroom", "Socket 135 cm — tiled wall left of the mirror, over t
      wall="S", x=1.0, y=6.6, h=1.35, proud=0.012, status="adapted")  # on the 1 cm tile lining
 sock("Master bathroom", "Socket inside the medicine cabinet, bottom right (toothbrush, shaver)", n=1, at=(0.591, 6.985), h=1.39, facing="E",
      status="added", note="on the cabinet's back panel, behind the mirrored leaves")
-# Heated towel rail (Karim's review 17 Nov 2026): the rail on the partition is electric: a flex-outlet plate behind it and a
-# double-pole switch outside the bathroom (sw-towel-rail, under the dresser-corner switch by the bathroom door).
+# Heated towel rail (Karim's review 17 Nov 2026; switch moved 23 Nov 2026): the rail on the partition is electric: a
+# flex-outlet plate behind it, switched from the lower box beside the vanity (sw-mbath-2), not from outside the bathroom.
 pt("power", "Master bathroom", "Electric instant water heater — inside the vanity (existing connection)", at=(0.566, 6.525), h=0.66, facing="E",
    appliance="electric instant water heater", status="existing",
    note="the selected water-heating approach for Main; the 3D model depicts a 7.5 kW unit, while the final unit and its electrical supply must be specified together")
@@ -512,11 +515,11 @@ sock("Entrance", "Double socket 30 cm — entrance, beside the front door", wall
 # Karim's review (Karim 17 Nov 2026)
 pt("power", "Master bathroom", "Heated towel rail — flex outlet behind the rail (fused, on a 30 mA RCD)", at=(2.2385, 7.6632), h=1.2, facing="W",
    appliance="electric heated towel rail", status="added", id="power-towel-rail",
-   note="Karim's review (17 Nov 2026): the rail on the partition's west face is an electric towel heater; hard-wired through a flex-outlet plate hidden behind it, switched from outside the bathroom")
-bank("sw-towel-rail", "Master bedroom", "heated towel rail, outside the bathroom, lower box",
-     ["Heated towel rail (master bathroom) — double-pole with neon"],
-     wall="N", x=2.296, y=5.8, h=LOW, stack="dressing-door", status="added", gang_circuits=["mbath-towel-rail"],
-     note="Karim's review (17 Nov 2026): the towel heater is switched outside the wet room, just outside the bathroom door, under the dressing switches")
+   note="Karim's review (17 Nov 2026): the rail on the partition's west face is an electric towel heater; hard-wired through a flex-outlet plate hidden behind it. Karim's review (23 Nov 2026): switched from the lower box inside the bathroom, beside the vanity (with the exhaust fan)")
+bank("sw-mbath-2", "Master bathroom", "inside beside the vanity socket, lower box",
+     ["Exhaust fan", "Heated towel rail — double-pole with neon"],
+     wall="S", x=1.20, y=6.6, h=LOW, stack="mbath-vanity", status="added", gang_circuits=["mbath-fan", "mbath-towel-rail"],
+     note="Karim's review (23 Nov 2026): lower box of two, under the lighting box; the exhaust fan and the heated towel rail (moved inside from the dressing-corner wall)")
 # Dressing: the short wardrobe by the bathroom door gets its own LED (driver box in the wardrobe's top, on the west wall).
 pt("ledfeed", "Master bedroom", "Wardrobe LED — driver box in the top of the short wardrobe by the bathroom door", at=(0.559, 5.561), h=2.30, facing="E",
    status="added", id="ledfeed-dressing-wardrobe", circuit="dressing-wardrobe-led",

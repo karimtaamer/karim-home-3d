@@ -3373,7 +3373,7 @@
     "Lights — entrance (gang 1; circuit not marked on the engineer's plan)",
     "Lights — entrance (gang 2; circuit not marked on the engineer's plan)"
    ],
-   "two_way": "switch-14",
+   "two_way": "switch-14,switch-15",
    "note": "the gang count of this two-way symbol is hard to read (2 or 3 strokes): read as 2"
   },
   {
@@ -3511,7 +3511,7 @@
     "Lights — entrance (gang 1; circuit not marked on the engineer's plan)",
     "Lights — entrance (gang 2; circuit not marked on the engineer's plan)"
    ],
-   "two_way": "switch-11"
+   "two_way": "switch-11,switch-15"
   },
   {
    "id": "switch-15",
@@ -3521,7 +3521,7 @@
    "y": 5.5472,
    "h": 1.2,
    "facing": "S",
-   "label": "3-gang light switch — corridor, outside the master bedroom door, 120 cm",
+   "label": "Two-way 3-gang light switch — corridor, outside the master bedroom door, 120 cm",
    "status": "engineer",
    "src": "P",
    "pdf": [
@@ -3534,6 +3534,7 @@
     "Lights — entrance (gang 2; circuit not marked on the engineer's plan)",
     "Lights — entrance (gang 3; circuit not marked on the engineer's plan)"
    ],
+   "two_way": "switch-11,switch-14",
    "note": "Main's bedroom door jamb is about 15 cm west of the one he drew, so 0.20 from it lands 24 cm west of his symbol"
   },
   {
@@ -4138,7 +4139,7 @@
    "y": 8.4826,
    "h": 1.2,
    "facing": "W",
-   "label": "2-gang light switch — dining, by the terrace door, 120 cm",
+   "label": "3-gang light switch — dining, by the terrace door, 120 cm",
    "status": "engineer",
    "src": "P",
    "pdf": [
@@ -4148,7 +4149,8 @@
    "dim": "0.50 from the terrace-door jamb (to the height boxes)",
    "gangs": [
     "Lights — dining (gang 1; circuit not marked on the engineer's plan)",
-    "Lights — dining (gang 2; circuit not marked on the engineer's plan)"
+    "Lights — dining (gang 2; circuit not marked on the engineer's plan)",
+    "Lights — dining (gang 3; circuit not marked on the engineer's plan)"
    ]
   },
   {

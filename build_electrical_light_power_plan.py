@@ -148,7 +148,7 @@ for e in POINTS:
 
 for d in P:  # two-way partners (switches marked ديفاتير, linked where his drawing makes the pair obvious)
     if d.get("two_way"):
-        d["two_way"] = keyed[d["two_way"]]
+        d["two_way"] = ",".join(keyed[k] for k in d["two_way"].split(","))  # one or more partners
 
 legend = {
     "spot": "Ceiling spot (engineer's single spot)", "wpspot": "Waterproof ceiling spot", "pendant": "Pendant outlet (دلايات)",

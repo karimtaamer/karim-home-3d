@@ -1,12 +1,13 @@
 // Electrical, lighting and low-current points (electrical-<version>.json, written by build_electrical.py for Main and
-// build_electrical_light_power_plan.py for the Light and Power Plan). One file drives both views:
+// build_electrical_light_power_plan.py for the Light and Power Plan, build_electrical_final_electrical.py for Final
+// Electrical). One file drives both views:
 //   3D (index.html): buildElectrical() adds a faceplate / fitting for each point (ceiling spots and fans go in the
 //      furniture's ceilingBits, so they show with the ceilings), and createElectricalUI() names whatever the pointer is
 //      on: hover (or, with the mouse captured in Walk, look at it), tap / click to pin the card. The "Electrical" button
 //      in the bar adds see-through markers on every point, hidden ones too, in Walk and Top.
 //   2D (drawing.js): drawElectrical() draws the layer over the DWG; pickElectrical() finds the point under the pointer.
 // Point fields: type, room, x, y (plan metres), h (metres from the slab), facing (the way the plate looks: N/E/S/W),
-// label, status (plan / adapted / added / existing / engineer), note; switches add gangs (one line per rocker) and two_way;
+// label, status (plan / adapted / added / existing / engineer / requested), note; switches add gangs (one line per rocker) and two_way;
 // flaps (outlets sunk in a furniture top) add parts and finish, their h being the top's height.
 
 const cache = new Map();
@@ -76,6 +77,7 @@ const STATUS = {
   existing: "Already in the model.",
   optional: "Optional: not decided yet.",
   engineer: "As the site engineer drew it (his light / power plans).",
+  requested: "Karim's request, from the comments sent to the engineer",
 };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const cmH = h => `${Math.round(h * 100)} cm`;
@@ -92,7 +94,7 @@ const NAME = {
   wpspot: "Waterproof spot", curtainled: "Curtain-box LED", shutter: "Shutter switch", acsw: "AC switch", heatersw: "Instant-heater switch",
   boilersw: "Water-heater switch", usb: "USB charger", woutlet: "W outlet", ipbox: "IP65 box", hdmi: "HDMI outlet",
 };
-const BADGE = { plan: "Plan", adapted: "Adapted", added: "Added", existing: "Existing", optional: "Optional", engineer: "Engineer" };
+const BADGE = { plan: "Plan", adapted: "Adapted", added: "Added", existing: "Existing", optional: "Optional", engineer: "Engineer", requested: "Requested" };
 const ON_CEILING = ["spot", "fan", "sensor", "ap", "led", "wpspot"];
 // What sits on a plate, as coloured chips: code -> [label, colour, count]; repeats add up (C, C -> USB-C ×2).
 const PART_CHIP = { D: ["Cat6", "#46d39a", 1], "2D": ["Cat6", "#46d39a", 2], H: ["HDMI", "#46d39a", 1], TV: ["TV aerial", "#46d39a", 1],

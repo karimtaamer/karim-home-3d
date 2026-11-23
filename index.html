@@ -386,6 +386,10 @@ const VERSIONS = [
   // drawings, at his positions and heights (build_electrical_light_power_plan.py).
   { id: "light-power-plan", name: "Light and Power Plan", model: "model-light-power-plan.js",
     drawing: "drawing-light-power-plan.json", spots: "spots-light-power-plan.json" },
+  // Final Electrical (23 Nov 2026): a copy of the Light and Power Plan whose electrical layer is the engineer's plus Karim's
+  // final comments to him (build_electrical_final_electrical.py).
+  { id: "final-electrical", name: "Final Electrical", model: "model-final-electrical.js",
+    drawing: "drawing-final-electrical.json", spots: "spots-final-electrical.json" },
   { id: "kareems-changes", name: "Karim's version", data: "karims-version", model: "model-karims-version.js",
     drawing: "drawing-karims-version.json", spots: "spots-karims-version.json", sep: true },
   { id: "naghams-changes", name: "Nagham's version", model: "model-naghams-changes.js", drawing: "drawing-naghams-changes.json",
@@ -400,7 +404,8 @@ globalThis.EDIT_AI_URL = live.url;  // pictures Edit AI saved (uploads/...) load
 const { makeMaterials } = await liveImport(live, "materials.js");
 const { furnish } = await liveImport(live, "furnish.js");
 // Electrical, lighting and low-current points (build_electrical.py -> electrical-<version>.json for Main,
-// build_electrical_light_power_plan.py for the Light and Power Plan, New As-built's a copy of Main's):
+// build_electrical_light_power_plan.py for the Light and Power Plan, build_electrical_final_electrical.py for Final
+// Electrical, New As-built's a copy of Main's):
 // faceplates and spots in 3D, a layer in 2D, and a card naming each one on hover / tap (electrical.js).
 const electrical = await loadElectrical(live.url(`electrical-${vid}.json`));
 await new Promise((onload, onerror) => document.head.appendChild(Object.assign(document.createElement("script"), { src: live.url(version.model), onload, onerror })));

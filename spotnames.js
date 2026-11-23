@@ -72,6 +72,8 @@ WORDS.push(...WORDS.filter(w => w[3] === "kareems-changes").map(([x, y, word]) =
 WORDS.push(...WORDS.filter(w => w[3] === "kareems-changes").map(([x, y, word]) => [x, y, word, "new-asbuilt"]));
 // Light and Power Plan (light-power-plan, 23 Nov 2026) is a copy of Main: the same words.
 WORDS.push(...WORDS.filter(w => w[3] === "kareems-changes").map(([x, y, word]) => [x, y, word, "light-power-plan"]));
+// Final Electrical (final-electrical, 23 Nov 2026) is a copy of the Light and Power Plan: the same words.
+WORDS.push(...WORDS.filter(w => w[3] === "kareems-changes").map(([x, y, word]) => [x, y, word, "final-electrical"]));
 
 // The word for a furniture group (a direct child of furnish's root) in this plan version, or null.
 export function wordFor(group, version) {

@@ -1,0 +1,4 @@
+[
+  {"id": "26", "room": "LAUNDRY", "caption": "Laundry", "cam": [11.85, 6.3, 1.45, 11.3, 9.18, 1.15, 72], "photo": "renders/26-Laudanry_room.png"},
+  {"id": "29", "room": "ENTRANCE", "caption": "Entrance", "cam": [9.4, 5.1, 1.35, 9.25, 3.6, 1.25, 88], "photo": "renders/29-Entrance_door.jpg"}
+]

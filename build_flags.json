@@ -27,6 +27,12 @@
               "--window", "192.2087,-112.47,1.5,2.1,frosted", "--cut", "207.9471,-116.2418,208.2871,-115.8818",
               "--cut", "192.5227,-115.4781,192.6465,-115.2343", "--cut", "194.9223,-115.9531,195.1530,-115.7224"]
   },
+  "final-electrical": {
+    "dxf": "dwg/final-electrical.dxf", "model": "model-final-electrical.js", "drawing": "drawing-final-electrical.json", "tour": "tour-final-electrical.json",
+    "flags": ["--wall", "190.9609,-112.8031,190.9609,-112.3428", "--cut", "191.0034,-114.3031,191.7034,-114.1331",
+              "--window", "192.2087,-112.47,1.5,2.1,frosted", "--cut", "207.9471,-116.2418,208.2871,-115.8818",
+              "--cut", "192.5227,-115.4781,192.6465,-115.2343", "--cut", "194.9223,-115.9531,195.1530,-115.7224"]
+  },
   "as-built": {
     "dxf": "dwg/as-built.dxf", "model": "model-as-built.js", "drawing": "drawing-as-built.json", "tour": "tour-as-built.json",
     "flags": []

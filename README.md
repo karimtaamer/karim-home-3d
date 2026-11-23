@@ -224,6 +224,7 @@ and `dwg/main.dxf` are the retired pre-25-Oct Main layout. Nothing on the page l
 | As-built | `as-built` | `dwg/as-built.dxf` (the surveyor's `as-built-original.dwg`, Sep 2026) | `model-as-built.js`, `drawing-as-built.json`, `tour-as-built.json`, `spots-as-built.json` (empty) |
 | New As-built | `new-asbuilt` | `dwg/new-asbuilt.dxf` (a byte copy of Main's `dwg/kareems-changes.dxf`, 2026-11-16) | `*-new-asbuilt.*` (byte copies of Main's; its furnish runs Main's branches), plus Site measurements |
 | Light and Power Plan | `light-power-plan` | `dwg/light-power-plan.dxf` (a byte copy of Main's `dwg/kareems-changes.dxf`, 2026-11-23) | `*-light-power-plan.*` (copies of Main's; its furnish runs Main's branches); its own electrical layer, the site engineer's drawings only (below) |
+| Final Electrical | `final-electrical` | `dwg/final-electrical.dxf` (a byte copy of `dwg/light-power-plan.dxf`, 2026-11-23) | `*-final-electrical.*` (copies of the Light and Power Plan's; its furnish runs Main's branches); its own electrical layer: the engineer's plus Karim's final comments (below) |
 | Karim's version | `kareems-changes` | `dwg/karims-version.dxf` (a copy of Main's `dwg/kareems-changes.dxf`, 2026-10-26, before Main's laundry/WC change) | `model-karims-version.js`, `drawing-karims-version.json`, `tour-karims-version.json`, `spots-karims-version.json` |
 | Nagham's version | `naghams-changes` | `dwg/naghams-changes.dxf` (a copy of the retired Shifted Bedroom drawing, 2026-10-24) | `model-naghams-changes.js`, `drawing-naghams-changes.json`, `tour-naghams-changes.json`, `spots-naghams-changes.json` |
 
@@ -401,6 +402,15 @@ build_electrical_light_power_plan.py` (data in `light_power_plan_points.py`: eac
 dimensions applied from Main's wall faces, wall points snapped 3 mm proud). Points have `status: "engineer"`, `src` L / P / LP,
 `pdf` (PDF point of the symbol), `dim` and `note`; new kinds (shutter / AC / heater switches, USB, "W", HDMI, IP65 box,
 curtain-box LED) are in `electrical.js`.
+
+**Final Electrical (23 Nov 2026)** is a copy of the Light and Power Plan (DXF, model, drawing, spots, move-origins byte
+copies; tour and furnish / materials headers changed, furnish runs as `kareems-changes`), menu entry right after it. Same
+`build_flags.json` flags, its own column-face lock (`fe-column-face`), in `edit_ai_pull.py`, `check_furnish.py` (checked as
+Main) and `spotnames.js`. Its `electrical-final-electrical.json` is the engineer's layer (`electrical-light-power-plan.json`)
+plus the changes Karim asked him for in the final comments PDF, nothing else: `python3 build_electrical_final_electrical.py`
+(reads the LPP and Main layers, applies its EDITS table, one block per PDF item). Untouched points keep `status: "engineer"`;
+the ones the comments add or change have `status: "requested"` (badge "Requested"), `item`, and `from_main` (copied from
+Main) or `changed` (his point, what changed); answers to the PDF's open questions also have `assumption: true`.
 
 **Site measurements** (`sitemeasure.js`, New As-built only: the 📏 button, or `?v=new-asbuilt&measure`). Its own
 full-screen plan: tap a wall and type what the tape says (cm), with an optional note. `segmentWalls()` walks every room's

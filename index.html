@@ -356,8 +356,16 @@ import { loadElectrical, buildElectrical, createElectricalUI } from "./electrica
 
 // Models and textures still loading (GLTF pieces, pictures): reveal() waits for them before showing an edit.
 const loads = { busy: false };
+// Render on demand: the loop draws only while something changes (frames left), and the sun's shadow map is redrawn only
+// when the scene changes (shadows), not every frame. invalidate() asks for both; a camera move needs no new shadows.
+const dirty = { frames: 3, shadows: true };
+function invalidate({ shadows = false } = {}) {
+  dirty.frames = 3;  // this frame and 2 after
+  if (shadows) dirty.shadows = true;
+}
 THREE.DefaultLoadingManager.onStart = () => (loads.busy = true);
-THREE.DefaultLoadingManager.onLoad = () => (loads.busy = false);
+THREE.DefaultLoadingManager.onLoad = () => { loads.busy = false; invalidate({ shadows: true }); };
+THREE.DefaultLoadingManager.onProgress = () => invalidate({ shadows: true });  // each model / texture as it lands
 
 // --- Plan versions: the main plan and alternatives to it, each built from its own DWG ----------------
 // (build_geometry.py --out / --tour, build_drawing.py --out). ?v=<id> picks one; the main plan is the default.
@@ -930,11 +938,12 @@ const NORTH_UP = new THREE.Vector3(0, 0, -1);  // plan drawn the right way up wh
 
 const canvas = document.getElementById("scene");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
 renderer.localClippingEnabled = true;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.autoUpdate = false;  // redrawn on invalidate({ shadows: true }) only
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.85;
 const labelRenderer = new CSS2DRenderer();
@@ -958,7 +967,7 @@ const sun = new THREE.DirectionalLight(0xffd29a, 2.0);
 sun.position.set(centre.x - 14, 16, centre.z + 12);
 sun.target.position.copy(centre);
 sun.castShadow = true;
-sun.shadow.mapSize.set(4096, 4096);
+sun.shadow.mapSize.set(4096, 4096);  // 2048 washes out thin shadows (plants, chair legs); it is only redrawn on changes now
 Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 70 });
 sun.shadow.bias = -0.0004;
 scene.add(sun, sun.target);
@@ -980,6 +989,8 @@ const sky = (() => {  // a soft evening sky for walking (seen through windows an
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.35, 1.5);
+const bloomSize = bloom.setSize.bind(bloom);
+bloom.setSize = (w, h) => bloomSize(Math.round(w / 2), Math.round(h / 2));  // the glow at half the screen's resolution
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 const rooms = flat.rooms;
@@ -997,6 +1008,7 @@ function applyLook() {
   for (const r of Object.values(rooms)) r.ceilings.forEach(c => (c.visible = ceilings));
   flat.furniture.ceilingBits.visible = ceilings && look.finish > 0.01;
   scene.background = mode === "walk" ? sky : paper;
+  invalidate({ shadows: true });  // the cut changes what casts a shadow
 }
 
 // --- Room labels (top view) ------------------------------------------------------------------
@@ -1127,6 +1139,8 @@ function setMode(m) {
   document.getElementById("shade").style.opacity = m === "walk" ? 1 : 0;
   if (m !== "walk" && walker.isLocked) walker.unlock();
   photogen?.sync();
+  bloom.enabled = m !== "top";
+  invalidate({ shadows: true });
 }
 
 // Top from Walk centres on the room you stood in, and keeps where you stood: the Walk chip drops you back there.
@@ -1443,6 +1457,7 @@ const move = createMove({
   onChange: () => {
     for (const b of [moveBtn, moveBtn2D]) b.classList.toggle("on", move.active);
     showHelp();
+    invalidate({ shadows: true });  // a preview moved, resized, hid or put back a piece
   },
 });
 const toggleMove = () => {
@@ -1523,6 +1538,7 @@ function showScreen(next) {
   showing === "drawing" ? drawing.show() : drawing.hide();
   showing === "renders" ? renders.show() : renders.hide();
   placeActions();
+  invalidate({ shadows: true });
 }
 switcher.querySelectorAll("[data-show]").forEach(b => (b.onclick = () => showScreen(b.dataset.show)));
 
@@ -1656,11 +1672,34 @@ placeActions();
 TOUCH.addEventListener("change", showHelp);
 PHONE.addEventListener("change", placeActions);
 
+// Render on demand: what keeps frames coming besides invalidate(). A pointer, key, wheel or touch keeps them for 300 ms
+// (hover highlights); the camera is compared with the last frame drawn (lens, canvas size too).
+let poked = 0;
+for (const t of ["pointerdown", "pointermove", "pointerup", "wheel", "keydown", "keyup", "touchstart", "touchmove"])
+  addEventListener(t, () => (poked = performance.now() + 300), { capture: true, passive: true });
+const lastView = [];
+function viewChanged() {
+  camera.updateMatrixWorld();
+  const v = [...camera.matrixWorld.elements, ...camera.projectionMatrix.elements, canvas.width, canvas.height];
+  const changed = v.some((x, i) => !(Math.abs(x - lastView[i]) <= 1e-7 * Math.max(1, Math.abs(x))));  // orbit round-off isn't a move
+  if (changed) lastView.splice(0, v.length, ...v);
+  return changed;
+}
+const walking = () => velocity.lengthSq() > 1e-6 || Math.hypot(stick.x, stick.y) > 0.15
+  || Object.keys(keys).some(k => keys[k] && /^(Key[WASD]|Arrow)/.test(k));
+const tweening = () => gsap.globalTimeline.getChildren(false, true, true).some(t => t.isActive());
+let seen = -1, drawnAt = -1;  // objects in view last frame (added, removed, shown or hidden: new shadows); our last draw
+const perfStats = params.has("debug") ? (window.__perfStats = { rendered: 0, skipped: 0 }) : null;
+
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   interact.update();
-  if (elecBuilt) { elecBuilt.group.visible = flat.furniture.root.visible; elecUI.update(); elecBuilt.update?.(camera, dt); }
+  if (interact.moving) invalidate({ shadows: true });  // a door, drawer or curtain on its way
+  if (elecBuilt) {
+    elecBuilt.group.visible = flat.furniture.root.visible; elecUI.update();
+    if (elecBuilt.update?.(camera, dt)) invalidate({ shadows: true });  // the low-current box's door swinging
+  }
   move.render();
   if (showing !== "model") return;  // the drawing or the renders cover the scene; no need to keep rendering it
   if (mode === "walk" && !tween && !glide) {
@@ -1672,8 +1711,21 @@ renderer.setAnimationLoop(() => {
     orbitTop.update();
     fitNear();
   }
-  composer.render();
-  labelRenderer.render(scene, camera);
+  let n = 0;
+  scene.traverseVisible(() => n++);
+  if (n !== seen) { seen = n; invalidate({ shadows: true }); }
+  // something else drew into the canvas (Generate a render's screenshot): put the view back
+  if (renderer.info.render.frame !== drawnAt) invalidate();
+  if (viewChanged() || tween || glide || walking() || tweening() || performance.now() < poked) invalidate();
+  if (dirty.frames > 0) {
+    dirty.frames--;
+    if (dirty.shadows) renderer.shadowMap.needsUpdate = true;
+    dirty.shadows = false;
+    composer.render();
+    labelRenderer.render(scene, camera);
+    drawnAt = renderer.info.render.frame;
+    if (perfStats) perfStats.rendered++;
+  } else if (perfStats) perfStats.skipped++;
   measure.render();
 });
 
@@ -1716,6 +1768,7 @@ addEventListener("resize", () => {
   renderer.setSize(innerWidth, innerHeight);
   composer.setSize(innerWidth, innerHeight);
   labelRenderer.setSize(innerWidth, innerHeight);
+  invalidate();
 });
 </script>
 </body>

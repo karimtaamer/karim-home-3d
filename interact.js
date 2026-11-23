@@ -157,13 +157,13 @@ export function createInteract({ THREE, camera, scene, renderer, isActive, isLoc
     return best || hitO;
   }
 
-  let target = null, far = false, wait = 0, last = performance.now();
+  let target = null, far = false, wait = 0, last = performance.now(), moved = false;
   const v = new THREE.Vector3();
   function update() {
     // Real time, not the loop's capped step: a swing takes `duration` even on a slow phone.
     const now = performance.now(), dt = (now - last) / 1000;
     last = now;
-    let moved = false;
+    moved = false;
     for (const o of list) {
       if (o.t === o.to) continue;
       o.t = o.to ? Math.min(1, o.t + dt / o.duration) : Math.max(0, o.t - dt / o.duration);
@@ -197,5 +197,6 @@ export function createInteract({ THREE, camera, scene, renderer, isActive, isLoc
     label();
   }
 
-  return { update, refresh, toggle: id => toggle(list.find(o => o.id === id) || null), get target() { return target?.id ?? null; }, list };
+  // moving: a leaf moved in the last update() (index.html redraws the frame and the shadows)
+  return { update, refresh, toggle: id => toggle(list.find(o => o.id === id) || null), get target() { return target?.id ?? null; }, get moving() { return moved; }, list };
 }

@@ -525,12 +525,17 @@ export function buildElectrical({ THREE, scene, ceilingBits, data, ceiling = 2.6
   built.setXray = on => (markers.visible = on);
   // Doors that open as you come near (the low-current box): eased towards open within 1.6 m of the box, plan distance.
   for (const d of doors) d.at = new THREE.Vector3(d.p.x, d.p.h, -d.p.y);
+  // Returns true while a door is still moving (index.html redraws the frame and the shadows).
   built.update = (camera, dt = 1 / 60) => {
+    let moved = false;
     for (const d of doors) {
       const near = Math.hypot(camera.position.x - d.at.x, camera.position.z - d.at.z) < 1.6 ? 1 : 0;
-      d.open += (near - d.open) * Math.min(1, dt * 4);
+      const step = (near - d.open) * Math.min(1, dt * 4);
+      d.open += step;
       d.door.rotation.y = -1.75 * d.open;
+      if (Math.abs(step) > 1e-4) moved = true;
     }
+    return moved;
   };
   return built;
 }

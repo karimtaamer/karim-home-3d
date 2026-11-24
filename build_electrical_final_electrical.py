@@ -3,8 +3,8 @@
 
     python3 build_electrical_final_electrical.py    # writes the JSON; deterministic, re-running gives the same bytes
 
-Source: the site engineer's layer as the Light and Power Plan has it (electrical-light-power-plan.json, read, never
-written) PLUS the changes Karim asked him for in the final comments PDF (electrical-diff.pdf, 23 Nov 2026), nothing
+Source: the site engineer's first-sheets layer (electrical-final-electrical-base.json, a frozen copy of the Light and
+Power Plan's JSON before its R01 rebuild, read, never written) PLUS the changes Karim asked him for in the final comments PDF (electrical-diff.pdf, 23 Nov 2026), nothing
 else. EDITS below holds one block per PDF item (item: 1..19, and "Q1" / "Q2" for the open questions, whose requested
 answer is applied and marked assumption: true). Where an item asks for one of Main's points, it is copied from
 electrical-kareems-changes.json (read, never written). Everything the PDF does not mention stays exactly as the engineer
@@ -22,7 +22,8 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-LPP = json.loads((ROOT / "electrical-light-power-plan.json").read_text())
+# frozen byte copy of the engineer's first-sheets layer (23 Nov); the LPP json is now his R01/S09 rebuild
+LPP = json.loads((ROOT / "electrical-final-electrical-base.json").read_text())
 MAIN = {p["id"]: p for p in json.loads((ROOT / "electrical-kareems-changes.json").read_text())["points"]}
 OUT = ROOT / "electrical-final-electrical.json"
 

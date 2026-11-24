@@ -1,6 +1,6 @@
 {
  "version": "light-power-plan",
- "source": "Site engineer's drawings only (Level Up Construction Innovations, Lighting Plan S08 + Power Plan S07, Nov 2026)",
+ "source": "Site engineer's drawings only (Level Up Construction Innovations, Nov 2026): Power Plan S07 R01, Lighting Plan S08 R01, switches S09 (no revision number)",
  "built_by": "build_electrical_light_power_plan.py (edit light_power_plan_points.py, then rerun)",
  "heights": "metres; his boxed heights and H.L= notes (cm), as written",
  "lighting": "fixtures",
@@ -14,7 +14,8 @@
   "fan": "Ceiling exhaust fan",
   "sensor": "Motion sensor (MS)",
   "ap": "Wi-Fi access point",
-  "switch": "Light switch (gangs; two-way where marked)",
+  "switch": "Light switch (one gang per S09 code; two-way where a code is on several plates)",
+  "shutterout": "Shutter outlet (feed for an electric roller shutter)",
   "shutter": "Shutter button switch",
   "acsw": "AC switch",
   "heatersw": "Instant water-heater switch",
@@ -39,14 +40,15 @@
    "y": 3.6682,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — living room",
+   "label": "Ceiling spot — living room, switch C1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     363.0,
     854.6
    ],
-   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall"
+   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall",
+   "circuit": "C1"
   },
   {
    "id": "spot-2",
@@ -56,14 +58,15 @@
    "y": 3.6682,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — living room",
+   "label": "Ceiling spot — living room, switch C1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     471.6,
     854.6
    ],
-   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall"
+   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall",
+   "circuit": "C1"
   },
   {
    "id": "spot-3",
@@ -73,14 +76,15 @@
    "y": 2.8894,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — living room",
+   "label": "Ceiling spot — living room, switch C2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     363.0,
     914.8
    ],
-   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall"
+   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall",
+   "circuit": "C2"
   },
   {
    "id": "spot-4",
@@ -90,14 +94,15 @@
    "y": 2.8894,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — living room",
+   "label": "Ceiling spot — living room, switch C2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     471.6,
     914.8
    ],
-   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall"
+   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall",
+   "circuit": "C2"
   },
   {
    "id": "spot-5",
@@ -107,14 +112,15 @@
    "y": 2.1081,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — living room",
+   "label": "Ceiling spot — living room, switch C2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     363.0,
     975.0
    ],
-   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall"
+   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall",
+   "circuit": "C2"
   },
   {
    "id": "spot-6",
@@ -124,14 +130,15 @@
    "y": 2.1081,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — living room",
+   "label": "Ceiling spot — living room, switch C2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     471.6,
     975.0
    ],
-   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall"
+   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall",
+   "circuit": "C2"
   },
   {
    "id": "spot-7",
@@ -141,14 +148,15 @@
    "y": 1.3294,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — living room",
+   "label": "Ceiling spot — living room, switch C1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     363.0,
     1035.1
    ],
-   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall"
+   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall",
+   "circuit": "C1"
   },
   {
    "id": "spot-8",
@@ -158,14 +166,15 @@
    "y": 1.3294,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — living room",
+   "label": "Ceiling spot — living room, switch C1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     471.6,
     1035.1
    ],
-   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall"
+   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall",
+   "circuit": "C1"
   },
   {
    "id": "sensor-1",
@@ -194,16 +203,13 @@
    "facing": "W",
    "label": "Wall LED outlet — living room, TV wall, 50 cm",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     524.7,
     1034.7
    ],
    "dim": "0.32 + 0.45 = 0.77 from the south wall; H.L=+50cm",
-   "pdf_light": [
-    530.24,
-    1036.38
-   ]
+   "note": "no switch code on S09 (the TV-console LED)"
   },
   {
    "id": "walllight-1",
@@ -213,18 +219,15 @@
    "y": 4.4365,
    "h": 2.35,
    "facing": "S",
-   "label": "Wall-light outlet — living room, door wall, 235 cm",
+   "label": "Wall-light outlet — living room, door wall, 235 cm, switch C3",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     370.7,
     800.7
    ],
    "dim": "0.50 + 0.60 = 1.10 from the west wall; H.L=+235cm",
-   "pdf_light": [
-    369.98,
-    802.74
-   ]
+   "circuit": "C3"
   },
   {
    "id": "walllight-2",
@@ -234,18 +237,15 @@
    "y": 0.553,
    "h": 2.35,
    "facing": "N",
-   "label": "Wall-light outlet — living room, window wall, 235 cm",
+   "label": "Wall-light outlet — living room, window wall, 235 cm, switch C3",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     370.8,
     1087.3
    ],
    "dim": "0.20 + 0.95 + 0.95 = 2.10 from the east wall; H.L=+235cm",
-   "pdf_light": [
-    369.98,
-    1087.32
-   ]
+   "circuit": "C3"
   },
   {
    "id": "walllight-3",
@@ -255,18 +255,15 @@
    "y": 3.2793,
    "h": 1.6,
    "facing": "W",
-   "label": "Wall-light outlet — living room, TV wall (north end), 160 cm",
+   "label": "Wall-light outlet — living room, TV wall (north end), 160 cm, switch C4",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     525.6,
     884.1
    ],
    "dim": "1.16 from the north wall; H.L=+160cm",
-   "pdf_light": [
-    525.62,
-    884.1
-   ]
+   "circuit": "C4"
   },
   {
    "id": "walllight-4",
@@ -276,18 +273,15 @@
    "y": 0.87,
    "h": 1.6,
    "facing": "W",
-   "label": "Wall-light outlet — living room, TV wall (south end), 160 cm",
+   "label": "Wall-light outlet — living room, TV wall (south end), 160 cm, switch C4",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     524.7,
     1070.6
    ],
    "dim": "0.32 from the south wall; H.L=+160cm",
-   "pdf_light": [
-    525.62,
-    1070.46
-   ]
+   "circuit": "C4"
   },
   {
    "id": "socket-1",
@@ -301,8 +295,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    335.1,
-    800.7
+    494.6,
+    1134.3
    ],
    "dim": "0.50 from the west wall",
    "gang": 1
@@ -319,8 +313,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    329.3,
-    1091.5
+    486.6,
+    1538.3
    ],
    "dim": "0.50 from the west wall",
    "gang": 1
@@ -337,8 +331,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    449.8,
-    1091.5
+    654.1,
+    1538.3
    ],
    "dim": "0.20 + 0.95 = 1.15 from the east wall",
    "gang": 1
@@ -355,8 +349,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    522.7,
-    1091.5
+    755.4,
+    1538.3
    ],
    "dim": "0.20 from the east wall",
    "gang": 1
@@ -373,8 +367,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    449.5,
-    800.7
+    653.7,
+    1134.2
    ],
    "dim": "0.20 from the door jamb (to the plate's height box)",
    "gang": 1
@@ -387,17 +381,25 @@
    "y": 4.437,
    "h": 1.1,
    "facing": "S",
-   "label": "1-gang light switch — living room, by the door, 110 cm",
+   "label": "3-gang light switch — living room, by the door, 110 cm (C4,C5,C6)",
    "status": "engineer",
-   "src": "P",
+   "src": "PS",
    "pdf": [
-    452.4,
-    800.7
+    657.7,
+    1134.2
    ],
    "dim": "0.20 from the door jamb (to the plate's height box)",
    "gangs": [
-    "Lights — living room (gang 1; circuit not marked on the engineer's plan)"
-   ]
+    "C4 — living wall lights, TV wall (2)",
+    "C5 — living curtain-box LED",
+    "C6 — living curtain motor (CURTAIN)"
+   ],
+   "codes": [
+    "C4",
+    "C5",
+    "C6"
+   ],
+   "note": "S09 lists 3 codes on this 110 plate; the first power sheet drew it 1-gang"
   },
   {
    "id": "switch-2",
@@ -407,18 +409,25 @@
    "y": 4.437,
    "h": 1.2,
    "facing": "S",
-   "label": "2-gang light switch — living room, by the door, 120 cm",
+   "label": "3-gang light switch — living room, by the door, 120 cm (C1,C2,C3)",
    "status": "engineer",
-   "src": "P",
+   "src": "PS",
    "pdf": [
-    452.4,
-    800.7
+    657.7,
+    1134.2
    ],
    "dim": "0.20 from the door jamb (to the plate's height box)",
    "gangs": [
-    "Lights — living room (gang 1; circuit not marked on the engineer's plan)",
-    "Lights — living room (gang 2; circuit not marked on the engineer's plan)"
-   ]
+    "C1 — living spots, the two outer rows (4)",
+    "C2 — living spots, the two middle rows (4)",
+    "C3 — living wall lights, door and window walls (2)"
+   ],
+   "codes": [
+    "C1",
+    "C2",
+    "C3"
+   ],
+   "note": "S09 lists 3 codes on this 120 plate; the first power sheet drew it 2-gang"
   },
   {
    "id": "shutter-1",
@@ -432,8 +441,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    426.0,
-    800.7
+    621.0,
+    1134.2
    ],
    "dim": "registered",
    "h_unreadable": true,
@@ -451,8 +460,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    391.0,
-    800.7
+    572.4,
+    1134.3
    ],
    "dim": "0.50 + 0.60 + 0.14 = 1.24 from the west wall (to its 110 box)"
   },
@@ -468,8 +477,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    515.3,
-    953.9
+    745.2,
+    1347.2
    ],
    "dim": "0.32 + 0.45 + 0.75 = 1.52 from the south wall to the group's middle",
    "gang": 2
@@ -486,8 +495,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    523.1,
-    953.9
+    756.0,
+    1347.2
    ],
    "dim": "0.32 + 0.45 + 0.75 = 1.52 from the south wall to the group's middle",
    "gang": 2,
@@ -505,8 +514,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    515.3,
-    974.4
+    745.2,
+    1375.7
    ],
    "dim": "0.32 + 0.45 + 0.75 = 1.52 from the south wall to the group's middle"
   },
@@ -522,8 +531,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    515.3,
-    982.0
+    745.2,
+    1386.2
    ],
    "dim": "0.32 + 0.45 + 0.75 = 1.52 from the south wall to the group's middle"
   },
@@ -539,8 +548,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    515.3,
-    1004.8
+    745.2,
+    1417.9
    ],
    "dim": "0.32 + 0.45 + 0.75 = 1.52 from the south wall to the group's middle",
    "note": "the two D outlets have no height box: each takes its column's height (120 / 60)"
@@ -557,8 +566,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    523.1,
-    1004.4
+    756.0,
+    1417.3
    ],
    "dim": "0.32 + 0.45 + 0.75 = 1.52 from the south wall to the group's middle",
    "note": "the two D outlets have no height box: each takes its column's height (120 / 60)"
@@ -571,14 +580,15 @@
    "y": 8.601,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bedroom",
+   "label": "Ceiling spot — master bedroom, switch A1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     387.0,
     470.9
    ],
-   "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall"
+   "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall",
+   "circuit": "A1"
   },
   {
    "id": "spot-10",
@@ -588,15 +598,16 @@
    "y": 8.601,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bedroom",
+   "label": "Ceiling spot — master bedroom, switch A1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     459.2,
     470.9
    ],
    "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "A1"
   },
   {
    "id": "spot-11",
@@ -606,15 +617,16 @@
    "y": 8.601,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bedroom",
+   "label": "Ceiling spot — master bedroom, switch A1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     470.1,
     470.9
    ],
    "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "A1"
   },
   {
    "id": "spot-12",
@@ -624,14 +636,15 @@
    "y": 7.4997,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bedroom",
+   "label": "Ceiling spot — master bedroom, switch A2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     387.0,
     556.7
    ],
-   "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall"
+   "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall",
+   "circuit": "A2"
   },
   {
    "id": "spot-13",
@@ -641,15 +654,16 @@
    "y": 7.4997,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bedroom",
+   "label": "Ceiling spot — master bedroom, switch A2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     459.2,
     556.7
    ],
    "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "A2"
   },
   {
    "id": "spot-14",
@@ -659,15 +673,16 @@
    "y": 7.4997,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bedroom",
+   "label": "Ceiling spot — master bedroom, switch A2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     470.1,
     556.7
    ],
    "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "A2"
   },
   {
    "id": "spot-15",
@@ -677,14 +692,15 @@
    "y": 6.401,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bedroom",
+   "label": "Ceiling spot — master bedroom, switch A1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     387.0,
     642.4
    ],
-   "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall"
+   "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall",
+   "circuit": "A1"
   },
   {
    "id": "spot-16",
@@ -694,15 +710,16 @@
    "y": 6.401,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bedroom",
+   "label": "Ceiling spot — master bedroom, switch A1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     459.2,
     642.4
    ],
    "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "A1"
   },
   {
    "id": "spot-17",
@@ -712,15 +729,16 @@
    "y": 6.401,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bedroom",
+   "label": "Ceiling spot — master bedroom, switch A1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     470.1,
     642.4
    ],
    "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "A1"
   },
   {
    "id": "spot-18",
@@ -730,15 +748,16 @@
    "y": 5.5986,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bedroom",
+   "label": "Ceiling spot — master bedroom, switch A3",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     189.0,
     704.8
    ],
    "dim": "1.21 / 0.90 / 0.90 from the west wall; 0.40 from the bathroom wall",
-   "note": "dressing strip; drawn as a linked pair of spots"
+   "note": "dressing strip; drawn as a linked pair of spots",
+   "circuit": "A3"
   },
   {
    "id": "spot-19",
@@ -748,15 +767,16 @@
    "y": 5.5986,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bedroom",
+   "label": "Ceiling spot — master bedroom, switch A3",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     199.9,
     704.8
    ],
    "dim": "1.21 / 0.90 / 0.90 from the west wall; 0.40 from the bathroom wall",
-   "note": "dressing strip; drawn as a linked pair of spots"
+   "note": "dressing strip; drawn as a linked pair of spots",
+   "circuit": "A3"
   },
   {
    "id": "spot-20",
@@ -766,15 +786,16 @@
    "y": 5.5986,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bedroom",
+   "label": "Ceiling spot — master bedroom, switch A3",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     259.2,
     704.8
    ],
    "dim": "1.21 / 0.90 / 0.90 from the west wall; 0.40 from the bathroom wall",
-   "note": "dressing strip; drawn as a linked pair of spots"
+   "note": "dressing strip; drawn as a linked pair of spots",
+   "circuit": "A3"
   },
   {
    "id": "spot-21",
@@ -784,15 +805,16 @@
    "y": 5.5986,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bedroom",
+   "label": "Ceiling spot — master bedroom, switch A3",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     270.0,
     704.8
    ],
    "dim": "1.21 / 0.90 / 0.90 from the west wall; 0.40 from the bathroom wall",
-   "note": "dressing strip; drawn as a linked pair of spots"
+   "note": "dressing strip; drawn as a linked pair of spots",
+   "circuit": "A3"
   },
   {
    "id": "spot-22",
@@ -802,15 +824,16 @@
    "y": 5.5986,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bedroom",
+   "label": "Ceiling spot — master bedroom, switch A3",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     329.3,
     704.8
    ],
    "dim": "1.21 / 0.90 / 0.90 from the west wall; 0.40 from the bathroom wall",
-   "note": "dressing strip; drawn as a linked pair of spots"
+   "note": "dressing strip; drawn as a linked pair of spots",
+   "circuit": "A3"
   },
   {
    "id": "spot-23",
@@ -820,15 +843,16 @@
    "y": 5.5986,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bedroom",
+   "label": "Ceiling spot — master bedroom, switch A3",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     340.2,
     704.8
    ],
    "dim": "1.21 / 0.90 / 0.90 from the west wall; 0.40 from the bathroom wall",
-   "note": "dressing strip; drawn as a linked pair of spots"
+   "note": "dressing strip; drawn as a linked pair of spots",
+   "circuit": "A3"
   },
   {
    "id": "sensor-2",
@@ -842,7 +866,7 @@
    "status": "engineer",
    "src": "L",
    "pdf": [
-    425.8,
+    425.7,
     603.7
    ],
    "dim": "1.63 from the east wall, 1.20 from the south wall"
@@ -855,18 +879,15 @@
    "y": 8.7201,
    "h": 2.6,
    "facing": null,
-   "label": "Pendant outlet — master bedroom, north bedside",
+   "label": "Pendant outlet — master bedroom, north bedside, switch A8",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     265.4,
     460.8
    ],
    "dim": "0.30 from the headboard wall and 0.30 from the window wall",
-   "pdf_light": [
-    267.02,
-    460.86
-   ]
+   "circuit": "A8"
   },
   {
    "id": "pendant-2",
@@ -876,19 +897,16 @@
    "y": 6.283,
    "h": 2.6,
    "facing": null,
-   "label": "Pendant outlet — master bedroom, south bedside",
+   "label": "Pendant outlet — master bedroom, south bedside, switch A7",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     265.4,
     650.5
    ],
    "dim": "0.30 from the headboard wall; along it as drawn",
-   "pdf_light": [
-    265.46,
-    650.58
-   ],
-   "note": "his 0.30 to the south is measured from the bedside table line, not a wall: drawn position kept for that axis"
+   "note": "his 0.30 to the south is measured from the bedside table line, not a wall: drawn position kept for that axis",
+   "circuit": "A7"
   },
   {
    "id": "curtainled-1",
@@ -898,16 +916,18 @@
    "y": 9.0171,
    "h": 2.5,
    "facing": "S",
-   "label": "Curtain-box LED + socket outlet — master bedroom window",
+   "label": "Curtain-box LED + socket outlet — master bedroom window, switch A9 (curtain motor A10)",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     307.9,
     451.1
    ],
    "dim": "registered",
    "h_unreadable": true,
-   "note": "no height written; put just under the 2.60 ceiling, in the curtain box"
+   "note": "no height written; put just under the 2.60 ceiling, in the curtain box",
+   "circuit": "A9",
+   "motor_circuit": "A10"
   },
   {
    "id": "ledfeed-2",
@@ -917,19 +937,16 @@
    "y": 5.8102,
    "h": 2.5,
    "facing": "W",
-   "label": "Wall LED outlet — master bedroom wardrobe, below the ceiling",
+   "label": "Wall LED outlet — master bedroom wardrobe, below the ceiling, switch A6",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     544.9,
     684.9
    ],
    "dim": "0.15 from the south wall; H.L=BELOW CEILING",
-   "pdf_light": [
-    548.24,
-    675.54
-   ],
-   "note": "H.L=BELOW CEILING: put at 250"
+   "note": "H.L=BELOW CEILING: put at 250",
+   "circuit": "A6"
   },
   {
    "id": "ledfeed-3",
@@ -939,19 +956,16 @@
    "y": 5.8498,
    "h": 2.5,
    "facing": "E",
-   "label": "Wall LED outlet — dressing wardrobe, below the ceiling",
+   "label": "Wall LED outlet — dressing wardrobe, below the ceiling, switch A6",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     105.1,
     684.9
    ],
    "dim": "0.15 from the bathroom wall; H.L=BELOW CEILING",
-   "pdf_light": [
-    102.92,
-    688.2
-   ],
-   "note": "H.L=BELOW CEILING: put at 250"
+   "note": "H.L=BELOW CEILING: put at 250",
+   "circuit": "A6"
   },
   {
    "id": "ledfeed-4",
@@ -961,18 +975,15 @@
    "y": 4.5532,
    "h": 0.7,
    "facing": "N",
-   "label": "Wall LED outlet — dresser wall, 70 cm",
+   "label": "Wall LED outlet — dresser wall, 70 cm, switch A5",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     268.2,
     769.6
    ],
    "dim": "0.40 / 1.20 / 0.15 chain from the niche's east wall; H.L=+70cm",
-   "pdf_light": [
-    268.64,
-    780.96
-   ]
+   "circuit": "A5"
   },
   {
    "id": "ledfeed-5",
@@ -982,18 +993,15 @@
    "y": 4.5531,
    "h": 1.5,
    "facing": "N",
-   "label": "Wall LED outlet — dresser wall, 150 cm",
+   "label": "Wall LED outlet — dresser wall, 150 cm, switch A4",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     299.3,
     769.6
    ],
    "dim": "0.40 / 1.20 / 0.15 chain from the niche's east wall; H.L=+150cm",
-   "pdf_light": [
-    299.66,
-    780.96
-   ]
+   "circuit": "A4"
   },
   {
    "id": "ledfeed-6",
@@ -1003,19 +1011,16 @@
    "y": 4.5526,
    "h": 2.5,
    "facing": "N",
-   "label": "Wall LED outlet — dresser wall, below the ceiling",
+   "label": "Wall LED outlet — dresser wall, below the ceiling, switch A4",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     392.6,
     769.6
    ],
    "dim": "0.40 / 1.20 / 0.15 chain from the niche's east wall; H.L=BELOW CEILING",
-   "pdf_light": [
-    393.14,
-    784.32
-   ],
-   "note": "H.L=BELOW CEILING: put at 250"
+   "note": "H.L=BELOW CEILING: put at 250",
+   "circuit": "A4"
   },
   {
    "id": "socket-8",
@@ -1029,8 +1034,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    247.3,
-    449.9
+    372.6,
+    646.7
    ],
    "dim": "registered",
    "gang": 1
@@ -1047,8 +1052,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    247.3,
-    461.2
+    372.6,
+    662.4
    ],
    "dim": "registered",
    "note": "written as \"USB\" beside the socket's 65 box"
@@ -1061,19 +1066,26 @@
    "y": 8.84,
    "h": 0.75,
    "facing": "E",
-   "label": "2-gang light switch — master bedroom, north bedside, 75 cm",
+   "label": "Two-way 3-gang light switch — master bedroom, north bedside, 75 cm (A7,A8,A9)",
    "status": "engineer",
-   "src": "P",
+   "src": "PS",
    "pdf": [
-    247.3,
-    451.8
+    372.6,
+    649.4
    ],
    "dim": "registered",
    "gangs": [
-    "Lights — master bedroom (gang 1; circuit not marked on the engineer's plan)",
-    "Lights — master bedroom (gang 2; circuit not marked on the engineer's plan)"
+    "A7 — south bedside pendant",
+    "A8 — north bedside pendant",
+    "A9 — master curtain-box LED"
    ],
-   "note": "drawn as a plain 2-gang switch (no two-way mark)"
+   "note": "drawn as a plain 2-gang switch (no two-way mark); S09 lists 3 codes on each bedside plate; the first power sheet drew them 2-gang",
+   "codes": [
+    "A7",
+    "A8",
+    "A9"
+   ],
+   "two_way": "switch-4"
   },
   {
    "id": "socket-9",
@@ -1087,8 +1099,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    247.3,
-    632.5
+    372.6,
+    900.5
    ],
    "dim": "registered",
    "gang": 1
@@ -1105,8 +1117,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    247.3,
-    643.8
+    372.6,
+    916.1
    ],
    "dim": "registered",
    "note": "written as \"USB\" beside the socket's 65 box"
@@ -1119,37 +1131,26 @@
    "y": 6.49,
    "h": 0.75,
    "facing": "E",
-   "label": "2-gang light switch — master bedroom, south bedside, 75 cm",
+   "label": "Two-way 3-gang light switch — master bedroom, south bedside, 75 cm (A7,A8,A9)",
    "status": "engineer",
-   "src": "P",
+   "src": "PS",
    "pdf": [
-    247.3,
-    634.4
+    372.6,
+    903.2
    ],
    "dim": "registered",
    "gangs": [
-    "Lights — master bedroom (gang 1; circuit not marked on the engineer's plan)",
-    "Lights — master bedroom (gang 2; circuit not marked on the engineer's plan)"
+    "A7 — south bedside pendant",
+    "A8 — north bedside pendant",
+    "A9 — master curtain-box LED"
    ],
-   "note": "drawn as a plain 2-gang switch (no two-way mark)"
-  },
-  {
-   "id": "shutter-2",
-   "type": "shutter",
-   "room": "Master bedroom",
-   "x": 5.14,
-   "y": 9.0171,
-   "h": 1.1,
-   "facing": "S",
-   "label": "Shutter button switch — master bedroom window, 110 cm",
-   "status": "engineer",
-   "src": "P",
-   "pdf": [
-    456.3,
-    451.1
+   "note": "drawn as a plain 2-gang switch (no two-way mark); S09 lists 3 codes on each bedside plate; the first power sheet drew them 2-gang",
+   "codes": [
+    "A7",
+    "A8",
+    "A9"
    ],
-   "dim": "registered",
-   "note": "his 0.65 from the window jamb ends on the height box beside it; drawn position kept"
+   "two_way": "switch-3"
   },
   {
    "id": "switch-5",
@@ -1159,18 +1160,23 @@
    "y": 5.8937,
    "h": 1.2,
    "facing": "N",
-   "label": "3-gang light switch — master bedroom door, 120 cm",
+   "label": "3-gang light switch — master bedroom door, 120 cm (A1,A2,A3)",
    "status": "engineer",
-   "src": "P",
+   "src": "PS",
    "pdf": [
-    424.9,
-    676.4
+    619.5,
+    961.5
    ],
    "dim": "registered; the three plates are drawn as one stack beside the door, put on the wall below them",
    "gangs": [
-    "Lights — master bedroom (gang 1; circuit not marked on the engineer's plan)",
-    "Lights — master bedroom (gang 2; circuit not marked on the engineer's plan)",
-    "Lights — master bedroom (gang 3; circuit not marked on the engineer's plan)"
+    "A1 — master bedroom spots, north and south rows (6)",
+    "A2 — master bedroom spots, middle row (3)",
+    "A3 — dresser / dressing spots (6)"
+   ],
+   "codes": [
+    "A1",
+    "A2",
+    "A3"
    ]
   },
   {
@@ -1181,18 +1187,23 @@
    "y": 5.8937,
    "h": 1.1,
    "facing": "N",
-   "label": "3-gang light switch — master bedroom door, 110 cm",
+   "label": "3-gang light switch — master bedroom door, 110 cm (A4,A5,A6)",
    "status": "engineer",
-   "src": "P",
+   "src": "PS",
    "pdf": [
-    424.9,
-    676.4
+    619.5,
+    961.5
    ],
    "dim": "registered; the three plates are drawn as one stack beside the door, put on the wall below them",
    "gangs": [
-    "Lights — master bedroom (gang 1; circuit not marked on the engineer's plan)",
-    "Lights — master bedroom (gang 2; circuit not marked on the engineer's plan)",
-    "Lights — master bedroom (gang 3; circuit not marked on the engineer's plan)"
+    "A4 — dresser-wall LED outlets, 150 cm and under the ceiling (2)",
+    "A5 — dresser-wall LED outlet, 70 cm",
+    "A6 — wardrobe LED outlets (bedroom wardrobe and dressing wardrobe)"
+   ],
+   "codes": [
+    "A4",
+    "A5",
+    "A6"
    ]
   },
   {
@@ -1207,8 +1218,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    424.9,
-    676.4
+    619.5,
+    961.5
    ],
    "dim": "registered; the three plates are drawn as one stack beside the door, put on the wall below them",
    "gang": 1
@@ -1225,8 +1236,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    400.3,
-    716.0
+    585.4,
+    1016.5
    ],
    "dim": "0.25 from the corner"
   },
@@ -1238,15 +1249,16 @@
    "y": 8.3907,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bathroom",
+   "label": "Ceiling spot — master bathroom, switch B3",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     198.0,
     490.6
    ],
    "dim": "0.70 from the north wall (pair centre)",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "B3"
   },
   {
    "id": "spot-25",
@@ -1256,15 +1268,16 @@
    "y": 8.2501,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bathroom",
+   "label": "Ceiling spot — master bathroom, switch B3",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     198.0,
     501.5
    ],
    "dim": "0.70 from the north wall (pair centre)",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "B3"
   },
   {
    "id": "fan-1",
@@ -1274,14 +1287,15 @@
    "y": 7.8201,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling exhaust fan — master bathroom",
+   "label": "Ceiling exhaust fan — master bathroom, switch B3",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
-    198.0,
-    535.1
+    197.9,
+    535.0
    ],
-   "dim": "0.40 from the east wall, 0.70 + 0.50 = 1.20 from the north wall"
+   "dim": "0.40 from the east wall, 0.70 + 0.50 = 1.20 from the north wall",
+   "circuit": "B3"
   },
   {
    "id": "spot-26",
@@ -1291,14 +1305,15 @@
    "y": 7.6697,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bathroom",
+   "label": "Ceiling spot — master bathroom, switch B2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     135.6,
     535.1
    ],
-   "dim": "0.41 from the west wall, 0.30 from the bench wall"
+   "dim": "0.41 from the west wall, 0.30 from the bench wall",
+   "circuit": "B2"
   },
   {
    "id": "spot-27",
@@ -1310,12 +1325,13 @@
    "facing": null,
    "label": "Ceiling spot — master bathroom",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     127.5,
     620.6
    ],
-   "dim": "0.30 / 0.45 / 0.45 from the west wall; 0.50 from the south wall"
+   "dim": "0.30 / 0.45 / 0.45 from the west wall; 0.50 from the south wall",
+   "note": "no switch code on S09 (probably B3 with the other spots, not printed)"
   },
   {
    "id": "sensor-3",
@@ -1329,8 +1345,8 @@
    "status": "engineer",
    "src": "L",
    "pdf": [
-    162.7,
-    620.6
+    162.6,
+    620.7
    ],
    "dim": "0.30 / 0.45 / 0.45 from the west wall; 0.50 from the south wall"
   },
@@ -1342,15 +1358,16 @@
    "y": 6.705,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bathroom",
+   "label": "Ceiling spot — master bathroom, switch B3",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     198.0,
     615.2
    ],
    "dim": "0.30 / 0.45 / 0.45 from the west wall; 0.50 from the south wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "B3"
   },
   {
    "id": "spot-29",
@@ -1360,15 +1377,16 @@
    "y": 6.566,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — master bathroom",
+   "label": "Ceiling spot — master bathroom, switch B3",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     198.0,
     626.0
    ],
    "dim": "0.30 / 0.45 / 0.45 from the west wall; 0.50 from the south wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "B3"
   },
   {
    "id": "ledfeed-7",
@@ -1378,20 +1396,17 @@
    "y": 7.3231,
    "h": 1.5,
    "facing": "N",
-   "label": "Wall LED outlet — master bathroom shower niche (\"3 outlet indirect LED light for 3 shelves\")",
+   "label": "Wall LED outlet — master bathroom shower niche (\"3 outlet indirect LED light for 3 shelves\"), switch B1",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     116.9,
     568.4
    ],
    "dim": "registered",
-   "pdf_light": [
-    117.02,
-    571.44
-   ],
    "h_unreadable": true,
-   "note": "his note says 3 outlets for 3 shelves but one symbol is drawn: one point; no height written, 150 taken from the vanity LED"
+   "note": "his note says 3 outlets for 3 shelves but one symbol is drawn: one point; no height written, 150 taken from the vanity LED",
+   "circuit": "B1"
   },
   {
    "id": "ledfeed-8",
@@ -1401,19 +1416,16 @@
    "y": 7.075,
    "h": 1.5,
    "facing": "E",
-   "label": "Wall LED outlet — master bathroom vanity wall, 150 cm",
+   "label": "Wall LED outlet — master bathroom vanity wall, 150 cm, switch B1",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     105.1,
     589.0
    ],
    "dim": "registered; H.L=+150cm",
-   "pdf_light": [
-    105.32,
-    632.34
-   ],
-   "note": "the +150 / +30 notes share one leader to the two vanity LEDs: upper one read as 150"
+   "note": "the +150 / +30 notes share one leader to the two vanity LEDs: upper one read as 150",
+   "circuit": "B1"
   },
   {
    "id": "ledfeed-9",
@@ -1423,19 +1435,16 @@
    "y": 6.4851,
    "h": 0.3,
    "facing": "E",
-   "label": "Wall LED outlet — master bathroom vanity wall, 30 cm",
+   "label": "Wall LED outlet — master bathroom vanity wall, 30 cm, switch B1",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     105.1,
     632.3
    ],
    "dim": "0.35 from the south wall; H.L=+30cm",
-   "pdf_light": [
-    105.32,
-    644.4
-   ],
-   "note": "the +150 / +30 notes share one leader to the two vanity LEDs: lower one read as 30"
+   "note": "the +150 / +30 notes share one leader to the two vanity LEDs: lower one read as 30",
+   "circuit": "B1"
   },
   {
    "id": "heatersw-1",
@@ -1449,8 +1458,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    105.1,
-    647.6
+    175.0,
+    921.6
    ],
    "dim": "0.15 from the south wall"
   },
@@ -1462,18 +1471,23 @@
    "y": 6.1381,
    "h": 1.2,
    "facing": "N",
-   "label": "3-gang light switch — master bathroom, by the door, 120 cm",
+   "label": "3-gang light switch — master bathroom, by the door, 120 cm (B1,B2,B3)",
    "status": "engineer",
-   "src": "P",
+   "src": "PS",
    "pdf": [
-    156.7,
-    653.1
+    246.8,
+    929.1
    ],
    "dim": "0.20 from the door jamb (to the plate's height box)",
    "gangs": [
-    "Lights — master bathroom (gang 1; circuit not marked on the engineer's plan)",
-    "Lights — master bathroom (gang 2; circuit not marked on the engineer's plan)",
-    "Lights — master bathroom (gang 3; circuit not marked on the engineer's plan)"
+    "B1 — master bathroom LED outlets (shower niche, vanity wall)",
+    "B2 — master bathroom spot, shower side",
+    "B3 — master bathroom spots and exhaust fan"
+   ],
+   "codes": [
+    "B1",
+    "B2",
+    "B3"
    ]
   },
   {
@@ -1488,8 +1502,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    159.5,
-    653.1
+    250.6,
+    929.1
    ],
    "dim": "0.20 from the door jamb (to the plate's height box)",
    "gang": 1
@@ -1506,8 +1520,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    220.1,
-    538.1
+    334.8,
+    769.3
    ],
    "dim": "1.30 from the north wall",
    "gang": 1
@@ -1520,15 +1534,16 @@
    "y": 8.1903,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — kitchen",
+   "label": "Ceiling spot — kitchen, switch D1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     630.0,
     502.1
    ],
    "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "D1"
   },
   {
    "id": "spot-31",
@@ -1538,15 +1553,16 @@
    "y": 8.1903,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — kitchen",
+   "label": "Ceiling spot — kitchen, switch D1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     640.8,
     502.1
    ],
    "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "D1"
   },
   {
    "id": "spot-32",
@@ -1556,15 +1572,16 @@
    "y": 8.1903,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — kitchen",
+   "label": "Ceiling spot — kitchen, switch D1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     701.4,
     502.1
    ],
    "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "D1"
   },
   {
    "id": "spot-33",
@@ -1574,15 +1591,16 @@
    "y": 8.1903,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — kitchen",
+   "label": "Ceiling spot — kitchen, switch D1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     712.2,
     502.1
    ],
    "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "D1"
   },
   {
    "id": "spot-34",
@@ -1592,15 +1610,16 @@
    "y": 8.1903,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — kitchen",
+   "label": "Ceiling spot — kitchen, switch D1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     772.8,
     502.1
    ],
    "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "D1"
   },
   {
    "id": "spot-35",
@@ -1610,15 +1629,16 @@
    "y": 8.1903,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — kitchen",
+   "label": "Ceiling spot — kitchen, switch D1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     783.6,
     502.1
    ],
    "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "D1"
   },
   {
    "id": "spot-36",
@@ -1628,15 +1648,16 @@
    "y": 7.3703,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — kitchen",
+   "label": "Ceiling spot — kitchen, switch D2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     630.0,
     565.6
    ],
    "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "D2"
   },
   {
    "id": "spot-37",
@@ -1646,15 +1667,16 @@
    "y": 7.3703,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — kitchen",
+   "label": "Ceiling spot — kitchen, switch D2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     640.8,
     565.6
    ],
    "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "D2"
   },
   {
    "id": "spot-38",
@@ -1664,15 +1686,16 @@
    "y": 7.3703,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — kitchen",
+   "label": "Ceiling spot — kitchen, switch D2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     772.8,
     565.6
    ],
    "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "D2"
   },
   {
    "id": "spot-39",
@@ -1682,15 +1705,16 @@
    "y": 7.3703,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — kitchen",
+   "label": "Ceiling spot — kitchen, switch D2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     783.6,
     565.6
    ],
    "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "D2"
   },
   {
    "id": "spot-40",
@@ -1700,15 +1724,16 @@
    "y": 6.5493,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — kitchen",
+   "label": "Ceiling spot — kitchen, switch D1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     630.0,
     629.0
    ],
    "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "D1"
   },
   {
    "id": "spot-41",
@@ -1718,15 +1743,16 @@
    "y": 6.5493,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — kitchen",
+   "label": "Ceiling spot — kitchen, switch D1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     640.8,
     629.0
    ],
    "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "D1"
   },
   {
    "id": "spot-42",
@@ -1736,15 +1762,16 @@
    "y": 6.5493,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — kitchen",
+   "label": "Ceiling spot — kitchen, switch D1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     701.4,
     629.0
    ],
    "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "D1"
   },
   {
    "id": "spot-43",
@@ -1754,15 +1781,16 @@
    "y": 6.5493,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — kitchen",
+   "label": "Ceiling spot — kitchen, switch D1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     712.2,
     629.0
    ],
    "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "D1"
   },
   {
    "id": "spot-44",
@@ -1772,15 +1800,16 @@
    "y": 6.5493,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — kitchen",
+   "label": "Ceiling spot — kitchen, switch D1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     772.8,
     629.0
    ],
    "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "D1"
   },
   {
    "id": "spot-45",
@@ -1790,15 +1819,16 @@
    "y": 6.5493,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — kitchen",
+   "label": "Ceiling spot — kitchen, switch D1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     783.6,
     629.0
    ],
    "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "D1"
   },
   {
    "id": "fan-2",
@@ -1808,14 +1838,15 @@
    "y": 7.37,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling exhaust fan — kitchen",
+   "label": "Ceiling exhaust fan — kitchen, switch D3",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     671.2,
     565.5
    ],
-   "dim": "0.90 + 0.46 from the west wall; on the middle spot row"
+   "dim": "0.90 + 0.46 from the west wall; on the middle spot row",
+   "circuit": "D3"
   },
   {
    "id": "sensor-4",
@@ -1842,18 +1873,15 @@
    "y": 9.087,
    "h": 1.6,
    "facing": "S",
-   "label": "Wall LED outlet — kitchen, north-east corner, 160 cm",
+   "label": "Wall LED outlet — kitchen, north-east corner, 160 cm, switch D4",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     839.3,
     439.4
    ],
    "dim": "registered; H.L=+160cm",
-   "pdf_light": [
-    839.42,
-    434.88
-   ]
+   "circuit": "D4"
   },
   {
    "id": "ledfeed-11",
@@ -1861,20 +1889,18 @@
    "room": "Kitchen",
    "x": 8.249,
    "y": 5.6634,
-   "h": 1.6,
+   "h": 0.1,
    "facing": "N",
-   "label": "Wall LED outlet — kitchen, south wall, 160 cm",
+   "label": "Wall LED outlet — kitchen, south wall, 10 cm, switch D5",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     697.8,
     694.3
    ],
-   "dim": "registered; H.L=+160cm",
-   "pdf_light": [
-    697.94,
-    693.0
-   ]
+   "dim": "registered; H.L=+10cm",
+   "note": "R01: light-04-Kitchen, KEY3: H.L=+160cm -> +10cm (a second LED beside it, ledfeed-30)",
+   "circuit": "D5"
   },
   {
    "id": "ledfeed-12",
@@ -1884,18 +1910,15 @@
    "y": 6.15,
    "h": 1.6,
    "facing": "E",
-   "label": "Wall LED outlet — kitchen, west wall, 160 cm",
+   "label": "Wall LED outlet — kitchen, west wall, 160 cm, switch D4",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     569.7,
     660.8
    ],
    "dim": "registered; H.L=+160cm",
-   "pdf_light": [
-    568.28,
-    661.2
-   ]
+   "circuit": "D4"
   },
   {
    "id": "switch-8",
@@ -1905,18 +1928,23 @@
    "y": 6.8334,
    "h": 1.2,
    "facing": "W",
-   "label": "3-gang light switch — kitchen, by the door, 120 cm",
+   "label": "3-gang light switch — kitchen, by the door, 120 cm (D1,D2,D3)",
    "status": "engineer",
-   "src": "P",
+   "src": "PS",
    "pdf": [
-    837.0,
-    607.2
+    1192.3,
+    865.3
    ],
    "dim": "0.20 from the door jamb (to the height boxes)",
    "gangs": [
-    "Lights — kitchen (gang 1; circuit not marked on the engineer's plan)",
-    "Lights — kitchen (gang 2; circuit not marked on the engineer's plan)",
-    "Lights — kitchen (gang 3; circuit not marked on the engineer's plan)"
+    "D1 — kitchen spots, north and south rows (12)",
+    "D2 — kitchen spots, middle row (4)",
+    "D3 — kitchen exhaust fan"
+   ],
+   "codes": [
+    "D1",
+    "D2",
+    "D3"
    ]
   },
   {
@@ -1927,18 +1955,23 @@
    "y": 6.8334,
    "h": 1.1,
    "facing": "W",
-   "label": "3-gang light switch — kitchen, by the door, 110 cm",
+   "label": "3-gang light switch — kitchen, by the door, 110 cm (D4,D5,D6)",
    "status": "engineer",
-   "src": "P",
+   "src": "PS",
    "pdf": [
-    844.8,
-    607.2
+    1203.1,
+    865.3
    ],
    "dim": "0.20 from the door jamb (to the height boxes)",
    "gangs": [
-    "Lights — kitchen (gang 1; circuit not marked on the engineer's plan)",
-    "Lights — kitchen (gang 2; circuit not marked on the engineer's plan)",
-    "Lights — kitchen (gang 3; circuit not marked on the engineer's plan)"
+    "D4 — kitchen LED outlets: north-east corner, west wall 160, south wall west 10 (3)",
+    "D5 — kitchen LED outlet, south wall east, 10 cm",
+    "D6 — kitchen LED outlet, west wall 220"
+   ],
+   "codes": [
+    "D4",
+    "D5",
+    "D6"
    ]
   },
   {
@@ -1953,8 +1986,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    613.2,
-    439.4
+    881.3,
+    632.1
    ],
    "dim": "1.00 + 0.80 + 1.35 = 3.15 from the east wall",
    "gang": 3
@@ -1971,8 +2004,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    697.1,
-    439.4
+    997.9,
+    632.1
    ],
    "dim": "1.00 + 0.80 = 1.80 from the east wall",
    "gang": 3
@@ -1989,8 +2022,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    760.9,
-    439.4
+    1086.4,
+    632.1
    ],
    "dim": "1.00 from the east wall",
    "gang": 3
@@ -2007,8 +2040,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    843.2,
-    443.8
+    1200.9,
+    638.2
    ],
    "dim": "0.30 from the north wall",
    "gang": 3
@@ -2025,8 +2058,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    838.6,
-    518.7
+    1194.4,
+    742.2
    ],
    "dim": "0.30 + 0.15 + 0.50 = 0.95 from the north wall",
    "gang": 3
@@ -2043,8 +2076,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    843.2,
-    518.7
+    1200.9,
+    742.2
    ],
    "dim": "0.30 + 0.15 + 0.50 = 0.95 from the north wall",
    "gang": 3
@@ -2061,8 +2094,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    838.6,
-    557.5
+    1194.4,
+    796.2
    ],
    "dim": "0.95 + 0.50 = 1.45 from the north wall",
    "gang": 3
@@ -2079,8 +2112,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    843.2,
-    557.5
+    1200.9,
+    796.2
    ],
    "dim": "0.95 + 0.50 = 1.45 from the north wall",
    "gang": 3
@@ -2097,8 +2130,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    569.7,
-    479.8
+    820.8,
+    688.3
    ],
    "dim": "0.75 from the north wall",
    "gang": 3
@@ -2115,8 +2148,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    569.7,
-    579.3
+    820.8,
+    826.5
    ],
    "dim": "0.75 + 1.23 = 1.98 from the north wall",
    "gang": 3
@@ -2133,8 +2166,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    571.3,
-    579.3
+    822.9,
+    826.5
    ],
    "dim": "0.75 + 1.23 = 1.98 from the north wall",
    "gang": 3
@@ -2151,8 +2184,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    569.7,
-    649.2
+    820.8,
+    923.7
    ],
    "dim": "0.75 + 1.23 + 0.70 = 2.68 from the north wall",
    "gang": 3
@@ -2169,8 +2202,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    708.8,
-    688.0
+    1014.1,
+    977.6
    ],
    "dim": "1.00 + 0.15 + 0.50 = 1.65 from the east wall",
    "gang": 3
@@ -2187,8 +2220,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    708.8,
-    688.0
+    1014.1,
+    977.6
    ],
    "dim": "1.00 + 0.15 + 0.50 = 1.65 from the east wall",
    "gang": 3
@@ -2205,8 +2238,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    708.8,
-    688.0
+    1014.1,
+    977.6
    ],
    "dim": "1.00 + 0.15 + 0.50 = 1.65 from the east wall",
    "gang": 3
@@ -2223,8 +2256,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    843.2,
-    478.2
+    1200.9,
+    686.1
    ],
    "dim": "0.30 + 0.15 = 0.45 from the north wall"
   },
@@ -2240,8 +2273,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    708.8,
-    688.0
+    1014.1,
+    977.6
    ],
    "dim": "1.65 from the east wall (the socket column)"
   },
@@ -2257,8 +2290,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    743.0,
-    688.0
+    1061.6,
+    977.6
    ],
    "dim": "1.00 + 0.15 = 1.15 from the east wall"
   },
@@ -2274,8 +2307,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    750.0,
-    688.0
+    1071.3,
+    977.6
    ],
    "dim": "1.00 + 0.15 = 1.15 from the east wall",
    "h_unreadable": true,
@@ -2293,8 +2326,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    781.8,
-    688.0
+    1115.6,
+    977.6
    ],
    "dim": "1.00 from the east wall",
    "gang": 2
@@ -2307,14 +2340,15 @@
    "y": 8.2866,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling exhaust fan — laundry",
+   "label": "Ceiling exhaust fan — laundry, switch E1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
-    945.3,
-    494.8
+    945.2,
+    494.7
    ],
-   "dim": "0.52 from the east wall, 0.90 from the north wall"
+   "dim": "0.52 from the east wall, 0.90 from the north wall",
+   "circuit": "E1"
   },
   {
    "id": "spot-46",
@@ -2324,15 +2358,16 @@
    "y": 7.97,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — laundry (one of three heads on a short track)",
+   "label": "Ceiling spot — laundry (one of three heads on a short track), switch E1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     945.0,
     519.4
    ],
    "dim": "0.52 from the east wall; on a 0.60 run 0.90 + 0.25 from the north wall",
-   "note": "drawn as three adjustable spot heads on a 0.60 track (not his single-spot cross); counted as three spots"
+   "note": "drawn as three adjustable spot heads on a 0.60 track (not his single-spot cross); counted as three spots",
+   "circuit": "E1"
   },
   {
    "id": "spot-47",
@@ -2342,15 +2377,16 @@
    "y": 7.75,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — laundry (one of three heads on a short track)",
+   "label": "Ceiling spot — laundry (one of three heads on a short track), switch E1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     945.0,
     536.5
    ],
    "dim": "0.52 from the east wall; on a 0.60 run 0.90 + 0.25 from the north wall",
-   "note": "drawn as three adjustable spot heads on a 0.60 track (not his single-spot cross); counted as three spots"
+   "note": "drawn as three adjustable spot heads on a 0.60 track (not his single-spot cross); counted as three spots",
+   "circuit": "E1"
   },
   {
    "id": "spot-48",
@@ -2360,15 +2396,16 @@
    "y": 7.5,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — laundry (one of three heads on a short track)",
+   "label": "Ceiling spot — laundry (one of three heads on a short track), switch E1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     945.0,
     556.0
    ],
    "dim": "0.52 from the east wall; on a 0.60 run 0.90 + 0.25 from the north wall",
-   "note": "drawn as three adjustable spot heads on a 0.60 track (not his single-spot cross); counted as three spots"
+   "note": "drawn as three adjustable spot heads on a 0.60 track (not his single-spot cross); counted as three spots",
+   "circuit": "E1"
   },
   {
    "id": "sensor-5",
@@ -2382,7 +2419,7 @@
    "status": "engineer",
    "src": "L",
    "pdf": [
-    945.3,
+    945.2,
     580.0
    ],
    "dim": "0.52 from the east wall; 0.90 + 0.25 + 0.60 + 0.25 = 2.00 from the north wall"
@@ -2395,18 +2432,15 @@
    "y": 9.184,
    "h": 1.6,
    "facing": "S",
-   "label": "Wall LED outlet — laundry, north wall, 160 cm",
+   "label": "Wall LED outlet — laundry, north wall, 160 cm, switch E2",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     906.2,
     430.1
    ],
    "dim": "registered; H.L=+160cm",
-   "pdf_light": [
-    907.46,
-    429.12
-   ]
+   "circuit": "E2"
   },
   {
    "id": "socket-29",
@@ -2420,8 +2454,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    915.5,
-    430.1
+    1301.3,
+    619.1
    ],
    "dim": "0.20 + 0.60 = 0.80 from the east wall (to the height boxes)",
    "gang": 3
@@ -2438,8 +2472,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    916.3,
-    430.1
+    1302.4,
+    619.1
    ],
    "dim": "0.20 + 0.60 = 0.80 from the east wall (to the height boxes)"
   },
@@ -2455,8 +2489,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    962.9,
-    430.1
+    1367.2,
+    619.1
    ],
    "dim": "0.20 from the east wall (to the height box)",
    "gang": 3
@@ -2473,8 +2507,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    981.5,
-    540.4
+    1393.1,
+    772.4
    ],
    "dim": "0.95 from the south wall (to the height box)",
    "gang": 3
@@ -2484,38 +2518,19 @@
    "type": "socket",
    "room": "Laundry",
    "x": 10.3232,
-   "y": 7.6888,
+   "y": 7.6688,
    "h": 0.6,
    "facing": "E",
    "label": "Triple universal socket — laundry, west wall, 60 cm",
    "status": "engineer",
    "src": "P",
    "pdf": [
-    861.1,
-    557.5
+    1225.7,
+    796.2
    ],
-   "dim": "0.30 + 0.50 = 0.80 from the south wall (to the height box)",
-   "gang": 3
-  },
-  {
-   "id": "lcp-1",
-   "type": "lcp",
-   "room": "Laundry",
-   "x": 10.3232,
-   "y": 7.1888,
-   "h": 1.5,
-   "facing": "E",
-   "label": "Low-current panel (L.C) — laundry, on the kitchen wall",
-   "status": "engineer",
-   "src": "P",
-   "pdf": [
-    861.1,
-    580.8
-   ],
-   "dim": "0.30 from the south wall to its middle",
-   "w": 0.45,
-   "h_unreadable": true,
-   "note": "no height written: middle put at 150; drawn 0.45 long on the wall"
+   "dim": "0.78 from the south wall (to the height box)",
+   "gang": 3,
+   "note": "R01: KEY3: 0.30 + 0.50 = 0.80 -> 0.78 from the laundry's south wall"
   },
   {
    "id": "spot-49",
@@ -2525,14 +2540,15 @@
    "y": 8.8131,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — guest bathroom",
+   "label": "Ceiling spot — guest bathroom, switch F2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1168.2,
     467.3
    ],
-   "dim": "0.37 / 0.68 / 0.68 from the north wall"
+   "dim": "0.37 / 0.68 / 0.68 from the north wall",
+   "circuit": "F2"
   },
   {
    "id": "spot-50",
@@ -2542,14 +2558,15 @@
    "y": 8.133,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — guest bathroom",
+   "label": "Ceiling spot — guest bathroom, switch F2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1168.2,
     520.2
    ],
-   "dim": "0.37 / 0.68 / 0.68 from the north wall"
+   "dim": "0.37 / 0.68 / 0.68 from the north wall",
+   "circuit": "F2"
   },
   {
    "id": "spot-51",
@@ -2559,14 +2576,15 @@
    "y": 7.4514,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — guest bathroom",
+   "label": "Ceiling spot — guest bathroom, switch F2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1168.2,
     573.2
    ],
-   "dim": "0.37 / 0.68 / 0.68 from the north wall"
+   "dim": "0.37 / 0.68 / 0.68 from the north wall",
+   "circuit": "F2"
   },
   {
    "id": "spot-52",
@@ -2576,15 +2594,16 @@
    "y": 7.9601,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — guest bathroom",
+   "label": "Ceiling spot — guest bathroom, switch F1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1106.4,
     520.2
    ],
    "dim": "registered",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "F1"
   },
   {
    "id": "spot-53",
@@ -2594,15 +2613,16 @@
    "y": 7.9601,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — guest bathroom",
+   "label": "Ceiling spot — guest bathroom, switch F1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1117.3,
     520.2
    ],
    "dim": "registered",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "F1"
   },
   {
    "id": "spot-54",
@@ -2612,15 +2632,16 @@
    "y": 7.279,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — guest bathroom",
+   "label": "Ceiling spot — guest bathroom, switch F2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1032.2,
     573.1
    ],
    "dim": "registered",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "F2"
   },
   {
    "id": "spot-55",
@@ -2630,15 +2651,16 @@
    "y": 7.279,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — guest bathroom",
+   "label": "Ceiling spot — guest bathroom, switch F2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1043.1,
     573.1
    ],
    "dim": "registered",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "F2"
   },
   {
    "id": "spot-56",
@@ -2648,15 +2670,16 @@
    "y": 7.279,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — guest bathroom",
+   "label": "Ceiling spot — guest bathroom, switch F1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1106.4,
     573.1
    ],
    "dim": "registered",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "F1"
   },
   {
    "id": "spot-57",
@@ -2666,15 +2689,16 @@
    "y": 7.279,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — guest bathroom",
+   "label": "Ceiling spot — guest bathroom, switch F1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1117.3,
     573.1
    ],
    "dim": "registered",
-   "note": "drawn as a linked pair of spots"
+   "note": "drawn as a linked pair of spots",
+   "circuit": "F1"
   },
   {
    "id": "fan-4",
@@ -2684,14 +2708,15 @@
    "y": 8.643,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling exhaust fan — guest bathroom, over the WC",
+   "label": "Ceiling exhaust fan — guest bathroom, over the WC, switch F1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1111.9,
-    467.2
+    467.1
    ],
-   "dim": "registered"
+   "dim": "registered",
+   "circuit": "F1"
   },
   {
    "id": "ledfeed-14",
@@ -2701,18 +2726,15 @@
    "y": 9.0821,
    "h": 0.3,
    "facing": "W",
-   "label": "Wall LED outlet — guest bathroom, WC corner, 30 cm",
+   "label": "Wall LED outlet — guest bathroom, WC corner, 30 cm, switch F3",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     1187.4,
     451.1
    ],
    "dim": "0.10 from the north wall; H.L=+30cm",
-   "pdf_light": [
-    1190.0,
-    446.28
-   ]
+   "circuit": "F3"
   },
   {
    "id": "ledfeed-15",
@@ -2722,18 +2744,15 @@
    "y": 7.4849,
    "h": 1.5,
    "facing": "W",
-   "label": "Wall LED outlet — guest bathroom, vanity wall, 150 cm",
+   "label": "Wall LED outlet — guest bathroom, vanity wall, 150 cm, switch F3",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     1187.4,
     555.2
    ],
    "dim": "0.60 from the south wall; H.L=+150cm",
-   "pdf_light": [
-    1190.0,
-    555.42
-   ]
+   "circuit": "F3"
   },
   {
    "id": "ledfeed-16",
@@ -2743,20 +2762,17 @@
    "y": 6.8936,
    "h": 0.3,
    "facing": "N",
-   "label": "Wall LED outlet — guest bathroom, below the bath",
+   "label": "Wall LED outlet — guest bathroom, below the bath, switch F3",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     1018.0,
     594.0
    ],
    "dim": "registered",
-   "pdf_light": [
-    1017.68,
-    596.64
-   ],
    "h_unreadable": true,
-   "note": "no height or leader for these two: 30 taken from the other low LED outlet in this bathroom"
+   "note": "no height or leader for these two: 30 taken from the other low LED outlet in this bathroom",
+   "circuit": "F3"
   },
   {
    "id": "ledfeed-17",
@@ -2766,20 +2782,17 @@
    "y": 6.8936,
    "h": 0.3,
    "facing": "N",
-   "label": "Wall LED outlet — guest bathroom, below the bath",
+   "label": "Wall LED outlet — guest bathroom, below the bath, switch F3",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     1048.4,
     594.0
    ],
    "dim": "registered",
-   "pdf_light": [
-    1048.46,
-    596.64
-   ],
    "h_unreadable": true,
-   "note": "no height or leader for these two: 30 taken from the other low LED outlet in this bathroom"
+   "note": "no height or leader for these two: 30 taken from the other low LED outlet in this bathroom",
+   "circuit": "F3"
   },
   {
    "id": "switch-10",
@@ -2789,18 +2802,23 @@
    "y": 6.8879,
    "h": 1.2,
    "facing": "N",
-   "label": "3-gang light switch — guest bathroom, by the door, 120 cm",
+   "label": "3-gang light switch — guest bathroom, by the door, 120 cm (F1,F2,F3)",
    "status": "engineer",
-   "src": "P",
+   "src": "PS",
    "pdf": [
-    1152.5,
-    597.1
+    1630.7,
+    851.2
    ],
    "dim": "0.20 from the door jamb (to the height boxes)",
    "gangs": [
-    "Lights — guest bathroom (gang 1; circuit not marked on the engineer's plan)",
-    "Lights — guest bathroom (gang 2; circuit not marked on the engineer's plan)",
-    "Lights — guest bathroom (gang 3; circuit not marked on the engineer's plan)"
+    "F1 — guest bathroom spots over the WC / middle and exhaust fan",
+    "F2 — guest bathroom spots, vanity side and over the bath",
+    "F3 — guest bathroom LED outlets (4)"
+   ],
+   "codes": [
+    "F1",
+    "F2",
+    "F3"
    ]
   },
   {
@@ -2815,8 +2833,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1152.5,
-    597.1
+    1630.7,
+    851.2
    ],
    "dim": "0.20 from the door jamb (to the height boxes)",
    "gang": 1
@@ -2829,14 +2847,15 @@
    "y": 5.0497,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance",
+   "label": "Ceiling spot — entrance, switch R1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     449.8,
     746.3
    ],
-   "dim": "0.40 / 0.55 / 0.54 / 0.55 / 0.54 / 1.09 / 1.09 / 0.40 from the corridor's west end; 0.50 from its north wall"
+   "dim": "0.40 / 0.55 / 0.54 / 0.55 / 0.54 / 1.09 / 1.09 / 0.40 from the corridor's west end; 0.50 from its north wall",
+   "circuit": "R1"
   },
   {
    "id": "spot-59",
@@ -2846,14 +2865,15 @@
    "y": 5.0497,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance",
+   "label": "Ceiling spot — entrance, switch R2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     534.4,
     746.3
    ],
-   "dim": "0.40 / 0.55 / 0.54 / 0.55 / 0.54 / 1.09 / 1.09 / 0.40 from the corridor's west end; 0.50 from its north wall"
+   "dim": "0.40 / 0.55 / 0.54 / 0.55 / 0.54 / 1.09 / 1.09 / 0.40 from the corridor's west end; 0.50 from its north wall",
+   "circuit": "R2"
   },
   {
    "id": "spot-60",
@@ -2863,14 +2883,15 @@
    "y": 5.0497,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance",
+   "label": "Ceiling spot — entrance, switch R1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     619.0,
     746.3
    ],
-   "dim": "0.40 / 0.55 / 0.54 / 0.55 / 0.54 / 1.09 / 1.09 / 0.40 from the corridor's west end; 0.50 from its north wall"
+   "dim": "0.40 / 0.55 / 0.54 / 0.55 / 0.54 / 1.09 / 1.09 / 0.40 from the corridor's west end; 0.50 from its north wall",
+   "circuit": "R1"
   },
   {
    "id": "spot-61",
@@ -2880,14 +2901,15 @@
    "y": 5.0497,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance",
+   "label": "Ceiling spot — entrance, switch R2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     703.7,
     746.3
    ],
-   "dim": "0.40 / 0.55 / 0.54 / 0.55 / 0.54 / 1.09 / 1.09 / 0.40 from the corridor's west end; 0.50 from its north wall"
+   "dim": "0.40 / 0.55 / 0.54 / 0.55 / 0.54 / 1.09 / 1.09 / 0.40 from the corridor's west end; 0.50 from its north wall",
+   "circuit": "R2"
   },
   {
    "id": "spot-62",
@@ -2897,14 +2919,15 @@
    "y": 5.0502,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance",
+   "label": "Ceiling spot — entrance, switch R1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     788.5,
     746.2
    ],
-   "dim": "0.40 / 0.55 / 0.54 / 0.55 / 0.54 / 1.09 / 1.09 / 0.40 from the corridor's west end; 0.50 from its north wall"
+   "dim": "0.40 / 0.55 / 0.54 / 0.55 / 0.54 / 1.09 / 1.09 / 0.40 from the corridor's west end; 0.50 from its north wall",
+   "circuit": "R1"
   },
   {
    "id": "ap-1",
@@ -2948,14 +2971,15 @@
    "y": 4.0997,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance",
+   "label": "Ceiling spot — entrance, switch R2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     614.4,
     820.1
    ],
-   "dim": "0.50 + 0.95 + 0.50 across the hall: 0.50 from its south wall; along it as drawn"
+   "dim": "0.50 + 0.95 + 0.50 across the hall: 0.50 from its south wall; along it as drawn",
+   "circuit": "R2"
   },
   {
    "id": "spot-64",
@@ -2965,14 +2989,15 @@
    "y": 4.0997,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance",
+   "label": "Ceiling spot — entrance, switch R1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     699.1,
     820.1
    ],
-   "dim": "0.50 + 0.95 + 0.50 across the hall: 0.50 from its south wall; along it as drawn"
+   "dim": "0.50 + 0.95 + 0.50 across the hall: 0.50 from its south wall; along it as drawn",
+   "circuit": "R1"
   },
   {
    "id": "spot-65",
@@ -2982,14 +3007,15 @@
    "y": 4.1007,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance",
+   "label": "Ceiling spot — entrance, switch R2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     784.0,
     820.1
    ],
-   "dim": "0.50 + 0.95 + 0.50 across the hall: 0.50 from its south wall; along it as drawn"
+   "dim": "0.50 + 0.95 + 0.50 across the hall: 0.50 from its south wall; along it as drawn",
+   "circuit": "R2"
   },
   {
    "id": "spot-66",
@@ -2999,14 +3025,15 @@
    "y": 6.2894,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance",
+   "label": "Ceiling spot — entrance, switch R1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     896.1,
     654.7
    ],
-   "dim": "0.48 / 0.57 / 0.56 / 0.57 / 0.56 from the west wall, 1.12 / 0.48 to the east wall; 0.49 / 0.49 across"
+   "dim": "0.48 / 0.57 / 0.56 / 0.57 / 0.56 from the west wall, 1.12 / 0.48 to the east wall; 0.49 / 0.49 across",
+   "circuit": "R1"
   },
   {
    "id": "spot-67",
@@ -3016,14 +3043,15 @@
    "y": 6.2894,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance",
+   "label": "Ceiling spot — entrance, switch R2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     983.8,
     654.7
    ],
-   "dim": "0.48 / 0.57 / 0.56 / 0.57 / 0.56 from the west wall, 1.12 / 0.48 to the east wall; 0.49 / 0.49 across"
+   "dim": "0.48 / 0.57 / 0.56 / 0.57 / 0.56 from the west wall, 1.12 / 0.48 to the east wall; 0.49 / 0.49 across",
+   "circuit": "R2"
   },
   {
    "id": "spot-68",
@@ -3033,14 +3061,15 @@
    "y": 6.2894,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance",
+   "label": "Ceiling spot — entrance, switch R1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1071.6,
     654.7
    ],
-   "dim": "0.48 / 0.57 / 0.56 / 0.57 / 0.56 from the west wall, 1.12 / 0.48 to the east wall; 0.49 / 0.49 across"
+   "dim": "0.48 / 0.57 / 0.56 / 0.57 / 0.56 from the west wall, 1.12 / 0.48 to the east wall; 0.49 / 0.49 across",
+   "circuit": "R1"
   },
   {
    "id": "spot-69",
@@ -3050,14 +3079,15 @@
    "y": 6.2894,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance",
+   "label": "Ceiling spot — entrance, switch R2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1158.5,
     654.7
    ],
-   "dim": "0.48 / 0.57 / 0.56 / 0.57 / 0.56 from the west wall, 1.12 / 0.48 to the east wall; 0.49 / 0.49 across"
+   "dim": "0.48 / 0.57 / 0.56 / 0.57 / 0.56 from the west wall, 1.12 / 0.48 to the east wall; 0.49 / 0.49 across",
+   "circuit": "R2"
   },
   {
    "id": "ap-2",
@@ -3089,7 +3119,7 @@
    "src": "L",
    "pdf": [
     1027.6,
-    650.2
+    650.1
    ],
    "dim": "0.48 / 0.57 / 0.56 / 0.57 / 0.56 from the west wall, 1.12 / 0.48 to the east wall; 0.49 / 0.49 across"
   },
@@ -3101,15 +3131,16 @@
    "y": 5.052,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — entrance",
+   "label": "Ceiling spot — entrance, switch R2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     896.1,
     746.2
    ],
    "dim": "registered",
-   "note": "his 0.54 / 0.54 run between wall lines Main does not have here (open to the corridor): drawn position kept"
+   "note": "his 0.54 / 0.54 run between wall lines Main does not have here (open to the corridor): drawn position kept",
+   "circuit": "R2"
   },
   {
    "id": "ledfeed-18",
@@ -3119,19 +3150,16 @@
    "y": 5.5472,
    "h": 1.6,
    "facing": "S",
-   "label": "Wall LED outlet — corridor, kitchen wall, 160 cm",
+   "label": "Wall LED outlet — corridor, kitchen wall, 160 cm, switch R4",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     695.6,
     711.4
    ],
    "dim": "registered; H.L=+160cm",
-   "pdf_light": [
-    697.16,
-    709.68
-   ],
-   "note": "his 1.20 / 0.40 dimensions run from a dashed ceiling line, not a wall: drawn position kept"
+   "note": "his 1.20 / 0.40 dimensions run from a dashed ceiling line, not a wall: drawn position kept",
+   "circuit": "R4"
   },
   {
    "id": "walllight-5",
@@ -3141,19 +3169,16 @@
    "y": 5.5472,
    "h": 1.6,
    "facing": "S",
-   "label": "Wall-light outlet — corridor, kitchen wall, 160 cm",
+   "label": "Wall-light outlet — corridor, kitchen wall, 160 cm, switch R3",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     788.8,
     711.4
    ],
    "dim": "registered; H.L=+160cm",
-   "pdf_light": [
-    788.54,
-    715.5
-   ],
-   "note": "his 0.40 dimension runs from a dashed ceiling line, not a wall: drawn position kept"
+   "note": "his 0.40 dimension runs from a dashed ceiling line, not a wall: drawn position kept",
+   "circuit": "R3"
   },
   {
    "id": "walllight-6",
@@ -3163,20 +3188,17 @@
    "y": 3.6031,
    "h": 1.6,
    "facing": "N",
-   "label": "Wall-light outlet — entrance hall, beside the front door",
+   "label": "Wall-light outlet — entrance hall, beside the front door, switch R3",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     789.6,
     851.2
    ],
    "dim": "registered",
-   "pdf_light": [
-    788.54,
-    850.68
-   ],
    "h_unreadable": true,
-   "note": "no height written: 160 taken from the other blue wall-light outlet in the corridor"
+   "note": "no height written: 160 taken from the other blue wall-light outlet in the corridor",
+   "circuit": "R3"
   },
   {
    "id": "walllight-7",
@@ -3186,15 +3208,16 @@
    "y": 4.3,
    "h": 1.73,
    "facing": "E",
-   "label": "Wall-light outlet — entrance hall, 173 cm",
+   "label": "Wall-light outlet — entrance hall, 173 cm, switch R3",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     574.4,
     804.6
    ],
    "dim": "registered; H.L=+173cm",
-   "note": "drawn in black (not his blue), with a black leader note"
+   "note": "drawn in black (not his blue), with a black leader note",
+   "circuit": "R3"
   },
   {
    "id": "walllight-8",
@@ -3204,15 +3227,16 @@
    "y": 3.9,
    "h": 2.08,
    "facing": "E",
-   "label": "Wall-light outlet — entrance hall, 208 cm",
+   "label": "Wall-light outlet — entrance hall, 208 cm, switch R3",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     574.4,
     835.7
    ],
    "dim": "registered; H.L=+208cm",
-   "note": "drawn in black (not his blue), with a black leader note"
+   "note": "drawn in black (not his blue), with a black leader note",
+   "circuit": "R3"
   },
   {
    "id": "walllight-9",
@@ -3222,15 +3246,16 @@
    "y": 3.9,
    "h": 1.45,
    "facing": "E",
-   "label": "Wall-light outlet — entrance hall, 145 cm",
+   "label": "Wall-light outlet — entrance hall, 145 cm, switch R3",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     590.7,
     835.7
    ],
    "dim": "registered; H.L=+145cm",
-   "note": "drawn in black (not his blue), with a black leader note; drawn 36 cm off the wall, put on the wall"
+   "note": "drawn in black (not his blue), with a black leader note; drawn 36 cm off the wall, put on the wall",
+   "circuit": "R3"
   },
   {
    "id": "walllight-10",
@@ -3240,15 +3265,16 @@
    "y": 3.6031,
    "h": 2.08,
    "facing": "N",
-   "label": "Wall-light outlet — entrance hall, 208 cm",
+   "label": "Wall-light outlet — entrance hall, 208 cm, switch R3",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     601.6,
     848.1
    ],
    "dim": "registered; H.L=+208cm",
-   "note": "drawn in black (not his blue), with a black leader note"
+   "note": "drawn in black (not his blue), with a black leader note",
+   "circuit": "R3"
   },
   {
    "id": "ledfeed-19",
@@ -3258,18 +3284,15 @@
    "y": 3.6031,
    "h": 1.5,
    "facing": "N",
-   "label": "Wall LED outlet — entrance console wall, 150 cm",
+   "label": "Wall LED outlet — entrance console wall, 150 cm, switch R4",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     862.6,
     851.2
    ],
    "dim": "registered (0.15 / 0.70 / 0.20 from a grey line, not a wall); H.L=+150cm",
-   "pdf_light": [
-    862.4,
-    855.48
-   ]
+   "circuit": "R4"
   },
   {
    "id": "ledfeed-20",
@@ -3279,19 +3302,16 @@
    "y": 3.6031,
    "h": 2.5,
    "facing": "N",
-   "label": "Wall LED outlet — entrance console wall, below the ceiling",
+   "label": "Wall LED outlet — entrance console wall, below the ceiling, switch R4",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     917.8,
     851.2
    ],
    "dim": "registered (0.15 / 0.70 / 0.20 from a grey line, not a wall); H.L=BELOW CEILING",
-   "pdf_light": [
-    917.42,
-    856.92
-   ],
-   "note": "H.L=BELOW CEILING: put at 250"
+   "note": "H.L=BELOW CEILING: put at 250",
+   "circuit": "R4"
   },
   {
    "id": "ledfeed-21",
@@ -3301,19 +3321,16 @@
    "y": 3.6031,
    "h": 0.2,
    "facing": "N",
-   "label": "Wall LED outlet — entrance console wall, 20 cm",
+   "label": "Wall LED outlet — entrance console wall, 20 cm, switch R4",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     933.4,
     851.2
    ],
    "dim": "registered (0.15 / 0.70 / 0.20 from a grey line, not a wall); H.L=+20cm",
-   "pdf_light": [
-    930.14,
-    856.08
-   ],
-   "note": "the note is cut by the sheet frame: read as +20cm"
+   "note": "the note is cut by the sheet frame: read as +20cm",
+   "circuit": "R4"
   },
   {
    "id": "socket-34",
@@ -3327,8 +3344,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    934.9,
-    792.9
+    1328.3,
+    1123.4
    ],
    "dim": "0.90 from the south wall (to the height box)",
    "gang": 1
@@ -3361,20 +3378,24 @@
    "y": 3.6031,
    "h": 1.2,
    "facing": "N",
-   "label": "Two-way 2-gang light switch — inside the front door, 120 cm",
+   "label": "Two-way 2-gang light switch — inside the front door, 120 cm (R1,R2)",
    "status": "engineer",
-   "src": "P",
+   "src": "PS",
    "pdf": [
-    759.3,
-    847.3
+    1084.3,
+    1199.0
    ],
    "dim": "0.20 from the front-door jamb (to the height boxes)",
    "gangs": [
-    "Lights — entrance (gang 1; circuit not marked on the engineer's plan)",
-    "Lights — entrance (gang 2; circuit not marked on the engineer's plan)"
+    "R1 — corridor / lobby spots, set 1 (6)",
+    "R2 — corridor / lobby spots, set 2 (7)"
    ],
    "two_way": "switch-14,switch-15",
-   "note": "the gang count of this two-way symbol is hard to read (2 or 3 strokes): read as 2"
+   "note": "the gang count of this two-way symbol is hard to read (2 or 3 strokes): read as 2",
+   "codes": [
+    "R1",
+    "R2"
+   ]
   },
   {
    "id": "switch-12",
@@ -3384,19 +3405,25 @@
    "y": 3.6031,
    "h": 1.1,
    "facing": "N",
-   "label": "3-gang light switch — inside the front door, 110 cm",
+   "label": "3-gang light switch — inside the front door, 110 cm (R3,R4,R5)",
    "status": "engineer",
-   "src": "P",
+   "src": "PS",
    "pdf": [
-    759.3,
-    847.3
+    1084.3,
+    1199.0
    ],
    "dim": "0.20 from the front-door jamb (to the height boxes)",
    "gangs": [
-    "Lights — entrance (gang 1; circuit not marked on the engineer's plan)",
-    "Lights — entrance (gang 2; circuit not marked on the engineer's plan)",
-    "Lights — entrance (gang 3; circuit not marked on the engineer's plan)"
-   ]
+    "R3 — entrance wall lights (6)",
+    "R4 — entrance LED outlets: console wall and corridor kitchen wall (4)",
+    "R5 — outside wall light above the front door"
+   ],
+   "codes": [
+    "R3",
+    "R4",
+    "R5"
+   ],
+   "note": "S09 prints 'R3,R3,R5' on this plate: taken as R3,R4,R5 (R4 is on no other plate; a typo)"
   },
   {
    "id": "socket-35",
@@ -3410,8 +3437,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    759.3,
-    847.3
+    1084.3,
+    1199.0
    ],
    "dim": "0.20 from the front-door jamb (to the height boxes)",
    "gang": 1
@@ -3428,8 +3455,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    759.3,
-    847.3
+    1084.3,
+    1199.0
    ],
    "dim": "0.20 from the front-door jamb (to the height boxes)",
    "note": "written as \"Intercom\" beside a 130 box (not in his legend)"
@@ -3446,8 +3473,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    769.4,
-    882.3
+    1098.3,
+    1247.6
    ],
    "dim": "registered",
    "note": "written as \"BELL\" beside a 135 box, outside the front door (not in his legend)"
@@ -3460,18 +3487,23 @@
    "y": 6.7766,
    "h": 1.1,
    "facing": "S",
-   "label": "2-gang light switch — corridor, outside the laundry door, 110 cm",
+   "label": "2-gang light switch — corridor, outside the laundry door, 110 cm (E1,E2)",
    "status": "engineer",
-   "src": "P",
+   "src": "PS",
    "pdf": [
-    882.1,
-    620.4
+    1254.9,
+    883.7
    ],
    "dim": "0.20 from the laundry door jamb (to the height box)",
    "gangs": [
-    "Lights — entrance (gang 1; circuit not marked on the engineer's plan)",
-    "Lights — entrance (gang 2; circuit not marked on the engineer's plan)"
-   ]
+    "E1 — laundry spots (track) and exhaust fan",
+    "E2 — laundry LED outlet"
+   ],
+   "codes": [
+    "E1",
+    "E2"
+   ],
+   "note": "the laundry's switches, on the corridor side of its door"
   },
   {
    "id": "socket-36",
@@ -3485,8 +3517,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1038.3,
-    620.4
+    1471.9,
+    883.7
    ],
    "dim": "0.65 from the laundry door jamb (to the height box)",
    "gang": 1
@@ -3499,19 +3531,23 @@
    "y": 5.733,
    "h": 1.2,
    "facing": "N",
-   "label": "Two-way 2-gang light switch — corridor, by the dining door, 120 cm",
+   "label": "Two-way 2-gang light switch — corridor, by the dining door, 120 cm (R1,R2)",
    "status": "engineer",
-   "src": "P",
+   "src": "PS",
    "pdf": [
-    1150.9,
-    691.1
+    1628.5,
+    981.9
    ],
    "dim": "registered (his 0.40 runs from a wall nib Main doesn't have)",
    "gangs": [
-    "Lights — entrance (gang 1; circuit not marked on the engineer's plan)",
-    "Lights — entrance (gang 2; circuit not marked on the engineer's plan)"
+    "R1 — corridor / lobby spots, set 1 (6)",
+    "R2 — corridor / lobby spots, set 2 (7)"
    ],
-   "two_way": "switch-11,switch-15"
+   "two_way": "switch-11,switch-15",
+   "codes": [
+    "R1",
+    "R2"
+   ]
   },
   {
    "id": "switch-15",
@@ -3521,21 +3557,24 @@
    "y": 5.5472,
    "h": 1.2,
    "facing": "S",
-   "label": "Two-way 3-gang light switch — corridor, outside the master bedroom door, 120 cm",
+   "label": "Two-way 2-gang light switch — corridor, outside the master bedroom door, 120 cm (R1,R2)",
    "status": "engineer",
-   "src": "P",
+   "src": "PS",
    "pdf": [
-    523.1,
-    711.4
+    756.0,
+    1010.1
    ],
    "dim": "0.20 from the bedroom door jamb",
    "gangs": [
-    "Lights — entrance (gang 1; circuit not marked on the engineer's plan)",
-    "Lights — entrance (gang 2; circuit not marked on the engineer's plan)",
-    "Lights — entrance (gang 3; circuit not marked on the engineer's plan)"
+    "R1 — corridor / lobby spots, set 1 (6)",
+    "R2 — corridor / lobby spots, set 2 (7)"
    ],
    "two_way": "switch-11,switch-14",
-   "note": "Main's bedroom door jamb is about 15 cm west of the one he drew, so 0.20 from it lands 24 cm west of his symbol"
+   "note": "Main's bedroom door jamb is about 15 cm west of the one he drew, so 0.20 from it lands 24 cm west of his symbol; S09 lists 2 codes; the first power sheet drew it 3-gang",
+   "codes": [
+    "R1",
+    "R2"
+   ]
   },
   {
    "id": "spot-71",
@@ -3545,14 +3584,15 @@
    "y": 8.9469,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — dining",
+   "label": "Ceiling spot — dining, switch G1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1282.2,
     444.4
    ],
-   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall",
+   "circuit": "G1"
   },
   {
    "id": "spot-72",
@@ -3562,14 +3602,15 @@
    "y": 8.9469,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — dining",
+   "label": "Ceiling spot — dining, switch G1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1364.5,
     444.4
    ],
-   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall",
+   "circuit": "G1"
   },
   {
    "id": "spot-73",
@@ -3579,14 +3620,15 @@
    "y": 8.9469,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — dining",
+   "label": "Ceiling spot — dining, switch G1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1446.8,
     444.4
    ],
-   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall",
+   "circuit": "G1"
   },
   {
    "id": "spot-74",
@@ -3596,14 +3638,15 @@
    "y": 8.9469,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — dining",
+   "label": "Ceiling spot — dining, switch G1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1529.1,
     444.4
    ],
-   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall",
+   "circuit": "G1"
   },
   {
    "id": "spot-75",
@@ -3613,14 +3656,15 @@
    "y": 8.0455,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — dining",
+   "label": "Ceiling spot — dining, switch G1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1282.2,
     514.3
    ],
-   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall",
+   "circuit": "G1"
   },
   {
    "id": "spot-76",
@@ -3630,14 +3674,15 @@
    "y": 7.1466,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — dining",
+   "label": "Ceiling spot — dining, switch G1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1282.2,
     584.2
    ],
-   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall",
+   "circuit": "G1"
   },
   {
    "id": "spot-77",
@@ -3647,14 +3692,15 @@
    "y": 6.2355,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — dining",
+   "label": "Ceiling spot — dining, switch G1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1282.2,
     654.7
    ],
-   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall",
+   "circuit": "G1"
   },
   {
    "id": "spot-78",
@@ -3664,14 +3710,15 @@
    "y": 6.2355,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — dining",
+   "label": "Ceiling spot — dining, switch G1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1364.5,
     654.7
    ],
-   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall",
+   "circuit": "G1"
   },
   {
    "id": "spot-79",
@@ -3681,14 +3728,15 @@
    "y": 6.2355,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — dining",
+   "label": "Ceiling spot — dining, switch G1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1446.8,
     654.7
    ],
-   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall",
+   "circuit": "G1"
   },
   {
    "id": "spot-80",
@@ -3698,14 +3746,15 @@
    "y": 6.2355,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — dining",
+   "label": "Ceiling spot — dining, switch G1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1529.1,
     654.7
    ],
-   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall",
+   "circuit": "G1"
   },
   {
    "id": "spot-81",
@@ -3715,14 +3764,15 @@
    "y": 6.2355,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — dining",
+   "label": "Ceiling spot — dining, switch G1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1611.4,
     654.7
    ],
-   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall",
+   "circuit": "G1"
   },
   {
    "id": "spot-82",
@@ -3732,14 +3782,15 @@
    "y": 8.0455,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — dining",
+   "label": "Ceiling spot — dining, switch G1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1611.4,
     514.3
    ],
-   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall",
+   "circuit": "G1"
   },
   {
    "id": "spot-83",
@@ -3749,14 +3800,15 @@
    "y": 7.1466,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — dining",
+   "label": "Ceiling spot — dining, switch G1",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1611.4,
     584.2
    ],
-   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall",
+   "circuit": "G1"
   },
   {
    "id": "sensor-8",
@@ -3800,14 +3852,15 @@
    "y": 8.0457,
    "h": 2.6,
    "facing": null,
-   "label": "Pendant outlet — dining table",
+   "label": "Pendant outlet — dining table, switch G2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1396.9,
-    514.3
+    514.2
    ],
-   "dim": "2.47 / 0.52 / 0.52 from the west wall; on the 2.33 spot row"
+   "dim": "2.47 / 0.52 / 0.52 from the west wall; on the 2.33 spot row",
+   "circuit": "G2"
   },
   {
    "id": "pendant-4",
@@ -3817,14 +3870,15 @@
    "y": 8.0457,
    "h": 2.6,
    "facing": null,
-   "label": "Pendant outlet — dining table",
+   "label": "Pendant outlet — dining table, switch G2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
-    1437.3,
-    514.3
+    1437.2,
+    514.2
    ],
-   "dim": "2.47 / 0.52 / 0.52 from the west wall; on the 2.33 spot row"
+   "dim": "2.47 / 0.52 / 0.52 from the west wall; on the 2.33 spot row",
+   "circuit": "G2"
   },
   {
    "id": "pendant-5",
@@ -3834,14 +3888,15 @@
    "y": 8.0457,
    "h": 2.6,
    "facing": null,
-   "label": "Pendant outlet — dining table",
+   "label": "Pendant outlet — dining table, switch G2",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1477.7,
-    514.3
+    514.2
    ],
-   "dim": "2.47 / 0.52 / 0.52 from the west wall; on the 2.33 spot row"
+   "dim": "2.47 / 0.52 / 0.52 from the west wall; on the 2.33 spot row",
+   "circuit": "G2"
   },
   {
    "id": "ledfeed-22",
@@ -3851,20 +3906,17 @@
    "y": 9.4972,
    "h": 2.0,
    "facing": "S",
-   "label": "Wall LED outlet — coffee corner shelves (\"LED light for 2 shelves\")",
+   "label": "Wall LED outlet — coffee corner shelves (\"LED light for 2 shelves\"), switch T1",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     1701.0,
     408.3
    ],
    "dim": "registered; note \"LED LIGHT FOR 2 SHELVES\"",
-   "pdf_light": [
-    1700.78,
-    404.88
-   ],
    "h_unreadable": true,
-   "note": "no height written: 200 taken from the dining niche LED"
+   "note": "no height written: 200 taken from the dining niche LED",
+   "circuit": "T1"
   },
   {
    "id": "ledfeed-23",
@@ -3874,20 +3926,17 @@
    "y": 8.9043,
    "h": 2.0,
    "facing": "E",
-   "label": "Wall LED outlet — dining, west wall",
+   "label": "Wall LED outlet — dining, west wall, switch G4",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     1210.7,
     462.7
    ],
    "dim": "0.22 + 0.38 = 0.60 from the north wall",
-   "pdf_light": [
-    1208.24,
-    459.48
-   ],
    "h_unreadable": true,
-   "note": "no height or leader: 200 taken from the dining niche LED"
+   "note": "no height or leader: 200 taken from the dining niche LED",
+   "circuit": "G4"
   },
   {
    "id": "ledfeed-24",
@@ -3897,18 +3946,15 @@
    "y": 7.14,
    "h": 2.0,
    "facing": "E",
-   "label": "Wall LED outlet — dining niche, 200 cm",
+   "label": "Wall LED outlet — dining niche, 200 cm, switch G3",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     1221.6,
     583.9
    ],
    "dim": "registered; H.L=+200cm",
-   "pdf_light": [
-    1221.68,
-    583.5
-   ]
+   "circuit": "G3"
   },
   {
    "id": "acsw-3",
@@ -3922,8 +3968,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1210.7,
-    427.7
+    1711.7,
+    615.8
    ],
    "dim": "0.22 from the north wall (to the height box)"
   },
@@ -3939,8 +3985,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1258.1,
-    420.0
+    1777.6,
+    605.0
    ],
    "dim": "0.85 from the west wall (to the height box)",
    "gang": 1
@@ -3957,8 +4003,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1511.4,
-    420.0
+    2129.6,
+    605.0
    ],
    "dim": "registered (his 0.35 runs from a pier Main doesn't have)",
    "gang": 1
@@ -3975,8 +4021,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1600.0,
-    408.3
+    2252.7,
+    588.8
    ],
    "dim": "0.20 + 0.50 + 0.50 = 1.20 from the east wall (to the height boxes)",
    "gang": 1
@@ -3993,8 +4039,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1622.6,
-    408.3
+    2284.0,
+    588.8
    ],
    "dim": "1.20 from the east wall (to the height boxes)"
   },
@@ -4010,8 +4056,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1636.5,
-    408.3
+    2303.5,
+    588.8
    ],
    "dim": "0.20 + 0.50 = 0.70 from the east wall (to the height boxes)",
    "gang": 2
@@ -4028,8 +4074,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1662.2,
-    408.3
+    2339.1,
+    588.8
    ],
    "dim": "0.70 from the east wall (to the height boxes)"
   },
@@ -4045,8 +4091,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1675.4,
-    408.3
+    2357.4,
+    588.8
    ],
    "dim": "0.20 from the east wall (to the height box)",
    "gang": 2
@@ -4063,8 +4109,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1210.7,
-    532.6
+    1711.7,
+    761.6
    ],
    "dim": "1.05 from the dining-door jamb (to the height box)",
    "gang": 1
@@ -4077,18 +4123,23 @@
    "y": 5.7262,
    "h": 1.2,
    "facing": "N",
-   "label": "3-gang light switch — dining, by the corridor door, 120 cm",
+   "label": "3-gang light switch — dining, by the corridor door, 120 cm (G1,G2,G3)",
    "status": "engineer",
-   "src": "P",
+   "src": "PS",
    "pdf": [
-    1240.3,
-    688.0
+    1752.7,
+    977.6
    ],
    "dim": "registered (his 0.40 runs from a wall nib Main doesn't have)",
    "gangs": [
-    "Lights — dining (gang 1; circuit not marked on the engineer's plan)",
-    "Lights — dining (gang 2; circuit not marked on the engineer's plan)",
-    "Lights — dining (gang 3; circuit not marked on the engineer's plan)"
+    "G1 — dining spots (13)",
+    "G2 — dining pendants (3)",
+    "G3 — dining niche LED outlet"
+   ],
+   "codes": [
+    "G1",
+    "G2",
+    "G3"
    ]
   },
   {
@@ -4099,18 +4150,23 @@
    "y": 5.7262,
    "h": 1.1,
    "facing": "N",
-   "label": "3-gang light switch — dining, by the corridor door, 110 cm",
+   "label": "3-gang light switch — dining, by the corridor door, 110 cm (G4,G5,G6)",
    "status": "engineer",
-   "src": "P",
+   "src": "PS",
    "pdf": [
-    1240.3,
-    688.0
+    1752.7,
+    977.6
    ],
    "dim": "registered (his 0.40 runs from a wall nib Main doesn't have)",
    "gangs": [
-    "Lights — dining (gang 1; circuit not marked on the engineer's plan)",
-    "Lights — dining (gang 2; circuit not marked on the engineer's plan)",
-    "Lights — dining (gang 3; circuit not marked on the engineer's plan)"
+    "G4 — dining west-wall LED outlet",
+    "G5 — dining north-window curtain-box LED",
+    "G6 — curtain motors (CURTAIN), 4 places: dining north window, dining slider, reception window, dining / reception divider"
+   ],
+   "codes": [
+    "G4",
+    "G5",
+    "G6"
    ]
   },
   {
@@ -4125,8 +4181,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1314.1,
-    688.0
+    1855.3,
+    977.6
    ],
    "dim": "1.20 from the wall end by the reception (to the height box)",
    "gang": 1
@@ -4139,18 +4195,23 @@
    "y": 8.4826,
    "h": 1.2,
    "facing": "W",
-   "label": "3-gang light switch — dining, by the terrace door, 120 cm",
+   "label": "3-gang light switch — dining, by the terrace door, 120 cm (H1,H2,H3)",
    "status": "engineer",
-   "src": "P",
+   "src": "PS",
    "pdf": [
-    1694.8,
-    465.8
+    2384.4,
+    668.7
    ],
    "dim": "0.50 from the terrace-door jamb (to the height boxes)",
    "gangs": [
-    "Lights — dining (gang 1; circuit not marked on the engineer's plan)",
-    "Lights — dining (gang 2; circuit not marked on the engineer's plan)",
-    "Lights — dining (gang 3; circuit not marked on the engineer's plan)"
+    "H1 — terrace wall lights (3)",
+    "H2 — terrace planter LED (spotlights above the L-seat)",
+    "H3 — terrace sofa-skirting LED"
+   ],
+   "codes": [
+    "H1",
+    "H2",
+    "H3"
    ]
   },
   {
@@ -4161,17 +4222,25 @@
    "y": 8.4826,
    "h": 1.1,
    "facing": "W",
-   "label": "1-gang light switch — dining, by the terrace door, 110 cm",
+   "label": "3-gang light switch — dining, by the terrace door, 110 cm (T1,T2,T3)",
    "status": "engineer",
-   "src": "P",
+   "src": "PS",
    "pdf": [
-    1702.6,
-    465.8
+    2395.2,
+    668.7
    ],
    "dim": "0.50 from the terrace-door jamb (to the height boxes)",
    "gangs": [
-    "Lights — dining (gang 1; circuit not marked on the engineer's plan)"
-   ]
+    "T1 — coffee-corner shelf LED",
+    "T2 — dining-slider curtain-box LED",
+    "T3 — reception-window curtain-box LED"
+   ],
+   "codes": [
+    "T1",
+    "T2",
+    "T3"
+   ],
+   "note": "S09 lists 3 codes on this 110 plate; the power sheet (R01 too) draws it 1-gang"
   },
   {
    "id": "shutter-3",
@@ -4185,12 +4254,12 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1701.0,
-    487.6
+    2393.1,
+    698.9
    ],
    "dim": "registered",
    "h_unreadable": true,
-   "note": "no height box of its own: 120 taken from the light switch above it"
+   "note": "no height box of its own: 120 taken from the light switch above it; R01: power-19: R01 adds a wire from it towards the dining opening's shutter outlet"
   },
   {
    "id": "shutter-4",
@@ -4204,10 +4273,11 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1700.3,
-    676.4
+    2392.0,
+    961.3
    ],
-   "dim": "registered (0.57 / 0.57 centres it on the pier between the two openings)"
+   "dim": "registered (0.57 / 0.57 centres it on the pier between the two openings)",
+   "note": "R01: power-17/18, KEY2: R01 wires it to the shutter outlet at the dining opening (shutterout-4); a second shutter switch (shutter-5) under the same 110 box feeds the reception one"
   },
   {
    "id": "spot-84",
@@ -4217,14 +4287,15 @@
    "y": 4.9503,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — reception",
+   "label": "Ceiling spot — reception, switch G7",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1446.8,
     752.2
    ],
-   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)"
+   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)",
+   "circuit": "G7"
   },
   {
    "id": "spot-85",
@@ -4234,14 +4305,15 @@
    "y": 4.9503,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — reception",
+   "label": "Ceiling spot — reception, switch G7",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1529.1,
     752.2
    ],
-   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)"
+   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)",
+   "circuit": "G7"
   },
   {
    "id": "spot-86",
@@ -4251,14 +4323,15 @@
    "y": 4.9503,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — reception",
+   "label": "Ceiling spot — reception, switch G7",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1611.4,
     752.2
    ],
-   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)"
+   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)",
+   "circuit": "G7"
   },
   {
    "id": "spot-87",
@@ -4268,14 +4341,15 @@
    "y": 3.9917,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — reception",
+   "label": "Ceiling spot — reception, switch G7",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1611.4,
     826.6
    ],
-   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)"
+   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)",
+   "circuit": "G7"
   },
   {
    "id": "spot-88",
@@ -4285,14 +4359,15 @@
    "y": 3.0317,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — reception",
+   "label": "Ceiling spot — reception, switch G7",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1446.8,
     901.1
    ],
-   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)"
+   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)",
+   "circuit": "G7"
   },
   {
    "id": "spot-89",
@@ -4302,14 +4377,15 @@
    "y": 3.0317,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — reception",
+   "label": "Ceiling spot — reception, switch G7",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1529.1,
     901.1
    ],
-   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)"
+   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)",
+   "circuit": "G7"
   },
   {
    "id": "spot-90",
@@ -4319,14 +4395,15 @@
    "y": 3.0317,
    "h": 2.6,
    "facing": null,
-   "label": "Ceiling spot — reception",
+   "label": "Ceiling spot — reception, switch G7",
    "status": "engineer",
-   "src": "L",
+   "src": "LS",
    "pdf": [
     1611.4,
     901.1
    ],
-   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)"
+   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)",
+   "circuit": "G7"
   },
   {
    "id": "ledfeed-25",
@@ -4336,18 +4413,15 @@
    "y": 3.8205,
    "h": 0.8,
    "facing": "E",
-   "label": "Wall LED outlet — reception TV wall, 80 cm",
+   "label": "Wall LED outlet — reception TV wall, 80 cm, switch G8",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     1401.1,
     839.6
    ],
    "dim": "0.20 / 0.75 / 0.80 chain from the south wall; H.L=+80cm",
-   "pdf_light": [
-    1399.28,
-    841.26
-   ]
+   "circuit": "G8"
   },
   {
    "id": "ledfeed-26",
@@ -4357,18 +4431,15 @@
    "y": 3.0205,
    "h": 2.0,
    "facing": "E",
-   "label": "Wall LED outlet — reception TV wall, 200 cm",
+   "label": "Wall LED outlet — reception TV wall, 200 cm, switch G8",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     1401.1,
     901.7
    ],
    "dim": "0.20 / 0.75 / 0.80 chain from the south wall; H.L=+200cm",
-   "pdf_light": [
-    1400.0,
-    903.42
-   ]
+   "circuit": "G8"
   },
   {
    "id": "ledfeed-27",
@@ -4378,18 +4449,15 @@
    "y": 2.2705,
    "h": 2.0,
    "facing": "E",
-   "label": "Wall LED outlet — reception TV wall, 200 cm",
+   "label": "Wall LED outlet — reception TV wall, 200 cm, switch G8",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     1401.1,
     960.0
    ],
    "dim": "0.20 / 0.75 / 0.80 chain from the south wall; H.L=+200cm",
-   "pdf_light": [
-    1400.0,
-    958.38
-   ]
+   "circuit": "G8"
   },
   {
    "id": "walllight-11",
@@ -4399,20 +4467,17 @@
    "y": 2.0735,
    "h": 1.6,
    "facing": "N",
-   "label": "Wall-light outlet — reception, window wall",
+   "label": "Wall-light outlet — reception, window wall, switch G9",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     1515.3,
     967.8
    ],
    "dim": "0.50 / 0.79 / 1.15 / 0.79 chain from the east wall",
-   "pdf_light": [
-    1515.5,
-    967.2
-   ],
    "h_unreadable": true,
-   "note": "no height or leader: 160 taken from his other blue wall-light outlets"
+   "note": "no height or leader: 160 taken from his other blue wall-light outlets",
+   "circuit": "G9"
   },
   {
    "id": "walllight-12",
@@ -4422,20 +4487,17 @@
    "y": 2.0735,
    "h": 1.6,
    "facing": "N",
-   "label": "Wall-light outlet — reception, window wall",
+   "label": "Wall-light outlet — reception, window wall, switch G9",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     1604.7,
     967.8
    ],
    "dim": "0.50 / 0.79 / 1.15 / 0.79 chain from the east wall",
-   "pdf_light": [
-    1604.78,
-    967.2
-   ],
    "h_unreadable": true,
-   "note": "no height or leader: 160 taken from his other blue wall-light outlets"
+   "note": "no height or leader: 160 taken from his other blue wall-light outlets",
+   "circuit": "G9"
   },
   {
    "id": "acsw-4",
@@ -4449,8 +4511,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1443.8,
-    967.8
+    2035.6,
+    1366.3
    ],
    "dim": "0.50 + 0.79 + 1.15 + 0.79 = 3.23 from the east wall (to the height boxes)"
   },
@@ -4466,8 +4528,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1443.8,
-    967.8
+    2035.6,
+    1366.3
    ],
    "dim": "3.23 from the east wall (to the height boxes)",
    "gang": 1
@@ -4484,8 +4546,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1443.8,
-    967.8
+    2035.6,
+    1366.3
    ],
    "dim": "3.23 from the east wall (to the height boxes)",
    "gang": 1
@@ -4502,8 +4564,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1665.3,
-    967.8
+    2343.4,
+    1366.3
    ],
    "dim": "0.50 from the east wall (to the height box)",
    "gang": 1
@@ -4520,8 +4582,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1700.6,
-    948.3
+    2392.5,
+    1339.3
    ],
    "dim": "0.50 from the south wall (to the height box)"
   },
@@ -4537,8 +4599,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1406.5,
-    724.6
+    1983.8,
+    1028.3
    ],
    "dim": "registered (his 0.70 runs from a wall line Main doesn't have: open to the dining)",
    "gang": 2
@@ -4555,8 +4617,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1416.7,
-    724.6
+    1997.8,
+    1028.3
    ],
    "dim": "registered (his 0.70 runs from a wall line Main doesn't have: open to the dining)",
    "gang": 2
@@ -4573,8 +4635,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1416.7,
-    745.5
+    1997.8,
+    1057.5
    ],
    "dim": "registered (his 0.70 runs from a wall line Main doesn't have: open to the dining)"
   },
@@ -4590,8 +4652,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1416.7,
-    753.3
+    1997.8,
+    1068.3
    ],
    "dim": "registered (his 0.70 runs from a wall line Main doesn't have: open to the dining)"
   },
@@ -4607,8 +4669,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1408.1,
-    775.8
+    1986.0,
+    1099.6
    ],
    "dim": "registered (his 0.70 runs from a wall line Main doesn't have: open to the dining)",
    "note": "two columns of height boxes (120 x 3 / 50 x 3); the two D outlets have no box and take their column's height"
@@ -4625,8 +4687,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1416.7,
-    775.8
+    1997.8,
+    1099.6
    ],
    "dim": "registered (his 0.70 runs from a wall line Main doesn't have: open to the dining)",
    "note": "two columns of height boxes (120 x 3 / 50 x 3); the two D outlets have no box and take their column's height"
@@ -4639,18 +4701,15 @@
    "y": 8.62,
    "h": 2.0,
    "facing": "E",
-   "label": "Wall-light outlet — terrace, house wall, 200 cm",
+   "label": "Wall-light outlet — terrace, house wall, 200 cm, switch H1",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     1735.2,
     468.9
    ],
    "dim": "registered; H.L=+200cm",
-   "pdf_light": [
-    1732.77,
-    469.26
-   ]
+   "circuit": "H1"
   },
   {
    "id": "walllight-14",
@@ -4660,18 +4719,15 @@
    "y": 5.8,
    "h": 2.0,
    "facing": "E",
-   "label": "Wall-light outlet — terrace, house wall, 200 cm",
+   "label": "Wall-light outlet — terrace, house wall, 200 cm, switch H1",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     1735.2,
     688.0
    ],
    "dim": "registered; H.L=+200cm",
-   "pdf_light": [
-    1732.65,
-    688.38
-   ]
+   "circuit": "H1"
   },
   {
    "id": "walllight-15",
@@ -4681,18 +4737,15 @@
    "y": 2.63,
    "h": 2.0,
    "facing": "E",
-   "label": "Wall-light outlet — terrace, house wall, 200 cm",
+   "label": "Wall-light outlet — terrace, house wall, 200 cm, switch H1",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     1735.2,
     934.3
    ],
    "dim": "registered; H.L=+200cm",
-   "pdf_light": [
-    1732.77,
-    934.26
-   ]
+   "circuit": "H1"
   },
   {
    "id": "ipbox-1",
@@ -4706,8 +4759,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1727.5,
-    442.5
+    2429.8,
+    636.3
    ],
    "dim": "registered",
    "h_unreadable": true,
@@ -4725,8 +4778,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1727.5,
-    918.8
+    2429.8,
+    1298.2
    ],
    "dim": "registered",
    "h_unreadable": true,
@@ -4744,8 +4797,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1761.6,
-    420.8
+    2477.3,
+    606.1
    ],
    "dim": "0.63 from the house wall (to the height box)",
    "gang": 3
@@ -4762,8 +4815,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1839.3,
-    422.3
+    2585.3,
+    608.2
    ],
    "dim": "0.63 + 1.00 = 1.63 from the house wall (to the height box)",
    "gang": 3
@@ -4780,8 +4833,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1899.9,
-    399.0
+    2669.5,
+    575.8
    ],
    "dim": "0.40 from the recess wall (to the height box)",
    "gang": 3
@@ -4798,8 +4851,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1736.8,
-    670.2
+    2442.7,
+    952.7
    ],
    "dim": "registered",
    "gang": 3
@@ -4816,8 +4869,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1725.9,
-    699.7
+    2427.6,
+    993.7
    ],
    "dim": "registered",
    "gang": 1
@@ -4834,8 +4887,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1740.7,
-    704.4
+    2448.1,
+    1000.2
    ],
    "dim": "registered"
   },
@@ -4851,8 +4904,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1740.7,
-    711.4
+    2448.1,
+    1009.9
    ],
    "dim": "registered",
    "h_unreadable": true,
@@ -4870,8 +4923,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1980.0,
-    695.8
+    2780.7,
+    988.3
    ],
    "dim": "registered",
    "gang": 3,
@@ -4889,8 +4942,8 @@
    "status": "engineer",
    "src": "P",
    "pdf": [
-    1729.0,
-    957.7
+    2431.9,
+    1352.2
    ],
    "dim": "registered",
    "gang": 3
@@ -4903,20 +4956,401 @@
    "y": 1.85,
    "h": 0.3,
    "facing": "N",
-   "label": "Wall LED outlet — terrace planter",
+   "label": "Wall LED outlet — terrace planter (\"spotlights above L-seat\"), switch H2",
    "status": "engineer",
-   "src": "LP",
+   "src": "LPS",
    "pdf": [
     1731.3,
     995.0
    ],
    "dim": "registered",
-   "pdf_light": [
-    1731.74,
-    997.2
-   ],
    "h_unreadable": true,
-   "note": "no height or leader: put at 30 (the low LED height he uses in the guest bathroom); his 0.10 runs from the house wall"
+   "note": "no height or leader: put at 30 (the low LED height he uses in the guest bathroom); his 0.10 runs from the house wall; R01: power-20..28, KEY4: R01 labels it SPOTLIGHTS ABOVE L-SEAT",
+   "circuit": "H2"
+  },
+  {
+   "id": "curtainled-2",
+   "type": "curtainled",
+   "room": "Living room",
+   "x": 2.942,
+   "y": 1.705,
+   "h": 2.5,
+   "facing": "E",
+   "label": "Curtain-box LED + socket outlet — living room window, switch C5 (curtain motor C6)",
+   "status": "engineer",
+   "src": "LS",
+   "pdf": [
+    295.7,
+    1006.2
+   ],
+   "dim": "registered",
+   "h_unreadable": true,
+   "note": "no height written; put just under the 2.60 ceiling, in the curtain box; R01: light-06-Living, KEY1: new",
+   "circuit": "C5",
+   "motor_circuit": "C6"
+  },
+  {
+   "id": "curtainled-3",
+   "type": "curtainled",
+   "room": "Dining",
+   "x": 16.122,
+   "y": 9.5006,
+   "h": 2.5,
+   "facing": "S",
+   "label": "Curtain-box LED + socket outlet — dining north window, switch G5 (curtain motor G6)",
+   "status": "engineer",
+   "src": "LS",
+   "pdf": [
+    1309.6,
+    420.9
+   ],
+   "dim": "registered",
+   "h_unreadable": true,
+   "note": "no height written; put just under the 2.60 ceiling, in the curtain box; R01: light-00-Dining, KEY1: new",
+   "circuit": "G5",
+   "motor_circuit": "G6"
+  },
+  {
+   "id": "curtainled-4",
+   "type": "curtainled",
+   "room": "Dining",
+   "x": 21.2201,
+   "y": 8.36,
+   "h": 2.5,
+   "facing": "W",
+   "label": "Curtain-box LED + socket outlet — dining slider (east), switch T2 (curtain motor G6)",
+   "status": "engineer",
+   "src": "LS",
+   "pdf": [
+    1699.0,
+    489.1
+   ],
+   "dim": "registered",
+   "h_unreadable": true,
+   "note": "no height written; put just under the 2.60 ceiling, in the curtain box; R01: light-01-Dining, KEY1: new",
+   "circuit": "T2",
+   "motor_circuit": "G6"
+  },
+  {
+   "id": "curtainled-5",
+   "type": "curtainled",
+   "room": "Reception",
+   "x": 21.2192,
+   "y": 2.921,
+   "h": 2.5,
+   "facing": "W",
+   "label": "Curtain-box LED + socket outlet — reception window (east), switch T3 (curtain motor G6)",
+   "status": "engineer",
+   "src": "LS",
+   "pdf": [
+    1696.5,
+    911.7
+   ],
+   "dim": "registered",
+   "h_unreadable": true,
+   "note": "no height written; put just under the 2.60 ceiling, in the curtain box; R01: light-07-Reception, KEY1: new",
+   "circuit": "T3",
+   "motor_circuit": "G6"
+  },
+  {
+   "id": "curtainled-6",
+   "type": "curtainled",
+   "room": "Reception",
+   "x": 17.639,
+   "y": 5.622,
+   "h": 2.5,
+   "facing": "S",
+   "label": "Curtain-box outlet — dining / reception divider (curtain motor), switch G6 (curtain motor G6)",
+   "status": "engineer",
+   "src": "SS",
+   "pdf": [
+    2012.8,
+    996.8
+   ],
+   "dim": "registered",
+   "h_unreadable": true,
+   "note": "on S09 only (not on the S08 R01 light sheet): his curtain-box symbol with 'CURTAIN G6' and no LED code; no height written, put under the ceiling; R01: S09 only",
+   "circuit": "G6",
+   "motor_circuit": "G6"
+  },
+  {
+   "id": "walllight-16",
+   "type": "walllight",
+   "room": "Entrance",
+   "x": 8.514,
+   "y": 3.347,
+   "h": 2.4,
+   "facing": "S",
+   "label": "Wall-light outlet — outside the front door, above the door, 240 cm, switch R5",
+   "status": "engineer",
+   "src": "LPS",
+   "pdf": [
+    718.4,
+    878.6
+   ],
+   "dim": "registered, on the lobby face of the entrance wall (y 3.35, as the doorbell); H.L=+240cm ABOVE DOOR",
+   "note": "outside the flat, in the building lobby; R01: light-03-Entrance, power-04, KEY4: new outside light",
+   "circuit": "R5"
+  },
+  {
+   "id": "ledfeed-29",
+   "type": "ledfeed",
+   "room": "Kitchen",
+   "x": 6.4778,
+   "y": 5.956,
+   "h": 2.2,
+   "facing": "E",
+   "label": "Wall LED outlet — kitchen, west wall, 220 cm, switch D6",
+   "status": "engineer",
+   "src": "LPS",
+   "pdf": [
+    565.8,
+    675.9
+   ],
+   "dim": "registered (0.19 below the 160 cm LED); H.L=+220cm",
+   "note": "R01: light-02, power-02/03, KEY3: new",
+   "circuit": "D6"
+  },
+  {
+   "id": "ledfeed-30",
+   "type": "ledfeed",
+   "room": "Kitchen",
+   "x": 8.109,
+   "y": 5.6634,
+   "h": 0.1,
+   "facing": "N",
+   "label": "Wall LED outlet — kitchen, south wall (west), 10 cm, switch D4",
+   "status": "engineer",
+   "src": "LPS",
+   "pdf": [
+    687.0,
+    695.8
+   ],
+   "dim": "registered (0.14 west of the other one); H.L=+10cm",
+   "note": "R01: light-04-Kitchen, KEY3: new",
+   "circuit": "D4"
+  },
+  {
+   "id": "woutlet-4",
+   "type": "woutlet",
+   "room": "Kitchen",
+   "x": 8.1,
+   "y": 9.087,
+   "h": 0.6,
+   "facing": "S",
+   "label": "\"W\" outlet (phone charger, per his legend) — kitchen, under the sink, 60 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    982.8,
+    632.1
+   ],
+   "dim": "registered, moved +0.16 with the under-sink socket's dimension",
+   "note": "R01 also draws three '23 mm sleeve for filter hose' runs from the sink (not electrical points); R01: power-09-Kitchen, KEY3: new"
+  },
+  {
+   "id": "lcp-1",
+   "type": "lcp",
+   "room": "Entrance",
+   "x": 11.84,
+   "y": 5.249,
+   "h": 1.5,
+   "facing": "N",
+   "label": "Low-current panel (L.C) — corridor, on the 45° wall",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1386.6,
+    1037.1
+   ],
+   "dim": "registered",
+   "w": 0.55,
+   "h_unreadable": true,
+   "note": "no height written: middle put at 150; drawn about 0.55 long on the 45° wall (facing taken as N, the corridor side); R01: power-07, KEY3: moved here from the laundry's kitchen wall"
+  },
+  {
+   "id": "shutterout-1",
+   "type": "shutterout",
+   "room": "Living room",
+   "x": 2.642,
+   "y": 2.947,
+   "h": 2.4,
+   "facing": "W",
+   "label": "Shutter outlet — living room window",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    393.3,
+    1285.8
+   ],
+   "dim": "registered",
+   "h_unreadable": true,
+   "note": "no height written: put at 240, at the shutter box over the opening; wired to shutter-1 by the door; R01: power-13-Living, KEY2: new"
+  },
+  {
+   "id": "shutterout-2",
+   "type": "shutterout",
+   "room": "Master bedroom",
+   "x": 4.559,
+   "y": 9.348,
+   "h": 2.4,
+   "facing": "N",
+   "label": "Shutter outlet — master bedroom window",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    600.4,
+    594.5
+   ],
+   "dim": "registered",
+   "h_unreadable": true,
+   "note": "no height written: put at 240, at the shutter box over the opening; wired to the plate by the window (S09 codes that plate A10 'CURTAIN'); R01: power-15-MasterBed, KEY2: new"
+  },
+  {
+   "id": "shutterout-3",
+   "type": "shutterout",
+   "room": "Dining",
+   "x": 17.566,
+   "y": 9.838,
+   "h": 2.4,
+   "facing": "N",
+   "label": "Shutter outlet — dining north window",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    2005.0,
+    541.5
+   ],
+   "dim": "registered",
+   "h_unreadable": true,
+   "note": "no height written: put at 240, at the shutter box over the opening; R01: power-00-Dining, KEY2: new"
+  },
+  {
+   "id": "shutterout-4",
+   "type": "shutterout",
+   "room": "Dining",
+   "x": 21.505,
+   "y": 6.499,
+   "h": 2.4,
+   "facing": "E",
+   "label": "Shutter outlet — dining opening to the terrace",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    2430.3,
+    902.0
+   ],
+   "dim": "registered",
+   "h_unreadable": true,
+   "note": "no height written: put at 240, at the shutter box over the opening; wired to shutter-4; R01: power-17/18-Terrace, KEY2: new"
+  },
+  {
+   "id": "shutterout-5",
+   "type": "shutterout",
+   "room": "Reception",
+   "x": 21.505,
+   "y": 5.044,
+   "h": 2.4,
+   "facing": "E",
+   "label": "Shutter outlet — reception opening to the terrace",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    2430.3,
+    1059.2
+   ],
+   "dim": "registered",
+   "h_unreadable": true,
+   "note": "no height written: put at 240, at the shutter box over the opening; wired to shutter-5; R01: power-17/18-Terrace, KEY2: new"
+  },
+  {
+   "id": "shutter-5",
+   "type": "shutter",
+   "room": "Reception",
+   "x": 21.2194,
+   "y": 5.615,
+   "h": 1.1,
+   "facing": "W",
+   "label": "Shutter button switch — dining / reception pier (lower), 110 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    2392.0,
+    997.5
+   ],
+   "dim": "registered (under the 110 box it shares with shutter-4)",
+   "note": "R01: power-17/18, KEY2: new second shutter switch"
+  },
+  {
+   "id": "switch-20",
+   "type": "switch",
+   "room": "Reception",
+   "x": 17.2645,
+   "y": 5.3114,
+   "h": 1.2,
+   "facing": "E",
+   "label": "3-gang light switch — reception TV wall, north end, 120 cm (G7,G8,G9)",
+   "status": "engineer",
+   "src": "PS",
+   "pdf": [
+    1987.0,
+    1020.8
+   ],
+   "dim": "0.40 from the dining wall (to the height box)",
+   "gangs": [
+    "G7 — reception spots (7)",
+    "G8 — reception TV-wall LED outlets (3)",
+    "G9 — reception window-wall wall lights (2)"
+   ],
+   "note": "R01: power-16-Reception, KEY4: new",
+   "codes": [
+    "G7",
+    "G8",
+    "G9"
+   ]
+  },
+  {
+   "id": "switch-21",
+   "type": "switch",
+   "room": "Master bedroom",
+   "x": 5.14,
+   "y": 9.0171,
+   "h": 1.1,
+   "facing": "S",
+   "label": "Curtain switch — master bedroom window, 110 cm (A10)",
+   "status": "engineer",
+   "src": "PS",
+   "pdf": [
+    663.1,
+    648.3
+   ],
+   "dim": "registered",
+   "gangs": [
+    "A10 — master curtain motor (CURTAIN)"
+   ],
+   "note": "the power sheet draws this plate as the roller-shutter switch (hatched) and R01 wires it to the new shutter outlet; S09 codes it A10 with 'CURTAIN' at the curtain box; R01: was shutter-2 (KEY2)",
+   "codes": [
+    "A10"
+   ]
+  },
+  {
+   "id": "ledfeed-31",
+   "type": "ledfeed",
+   "room": "Terrace",
+   "x": 22.126,
+   "y": 2.243,
+   "h": 0.1,
+   "facing": "N",
+   "label": "Wall LED outlet — terrace L-seat, sofa skirting, 10 cm, switch H3",
+   "status": "engineer",
+   "src": "LPS",
+   "pdf": [
+    1776.1,
+    964.4
+   ],
+   "dim": "0.65 from the house wall; H.L=+10cm SOFA SKIRTING",
+   "note": "R01: light-08-Terrace, power-20..28, KEY4: new",
+   "circuit": "H3"
   }
  ],
  "lines": []

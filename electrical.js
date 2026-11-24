@@ -1,5 +1,5 @@
 // Electrical, lighting and low-current points (electrical-<version>.json, written by build_electrical.py for Main and
-// build_electrical_light_power_plan.py for the Light and Power Plan, build_electrical_final_electrical.py for Final
+// build_electrical_light_power_plan.py for the Engineer Electrical Plan, build_electrical_final_electrical.py for Final
 // Electrical). One file drives both views:
 //   3D (index.html): buildElectrical() adds a faceplate / fitting for each point (ceiling spots and fans go in the
 //      furniture's ceilingBits, so they show with the ceilings), and createElectricalUI() names whatever the pointer is
@@ -47,7 +47,7 @@ export const KINDS = {
   router:       { what: "This is the network hub: fibre box, router and PoE switch. Every network cable runs home here.", col: "#c58cff", glyph: "R" },
   ap:           { what: "This is a ceiling Wi-Fi access point: one network name everywhere, powered through its Cat6 cable.", col: "#46d39a", glyph: "AP" },
   water:        { what: "This is a water outlet: a filtered line with a shut-off valve for a plumbed appliance.", col: "#4fc3f7", glyph: "W" },
-  // The site engineer's symbols with no kind above (Light and Power Plan, 23 Nov 2026). Main uses none of them.
+  // The site engineer's symbols with no kind above (Engineer Electrical Plan, 23 Nov 2026). Main uses none of them.
   wpspot:       { what: "This is a waterproof ceiling spot light.", col: "#f2b134", glyph: "spot" },
   curtainled:   { what: "This is an LED outlet in the curtain box, with a socket outlet beside it.", col: "#f2b134", glyph: "CL" },
   shutter:      { what: "This is the button switch for a roller shutter.", col: "#ff6b6b", glyph: "SH" },
@@ -58,12 +58,14 @@ export const KINDS = {
   woutlet:      { what: "This is the engineer's \"W\" outlet: a phone-charger outlet, per his legend.", col: "#5aa9ff", glyph: "W" },
   ipbox:        { what: "This is a weatherproof (IP65) outdoor box.", col: "#5aa9ff", glyph: "IP" },
   hdmi:         { what: "This is an HDMI cable outlet.", col: "#46d39a", glyph: "H" },
+  // Engineer Electrical Plan (S07 R01, 24 Nov 2026)
+  shutterout:   { what: "This is a shutter outlet: a separate feed for an electric roller shutter's motor.", col: "#ff9f43", glyph: "SO" },
 };
 // The chips under the 2D plan's Electrical button (drawing.js): each shows or hides one group (remembered).
 export const CATEGORIES = [
   { id: "light",   label: "Lighting",          col: "#f2b134", types: ["spot", "pendant", "walllight", "led", "lightout", "wpspot", "curtainled"] },
   { id: "switch",  label: "Switches",          col: "#ff6b6b", types: ["switch", "acctl", "shutter", "acsw", "heatersw", "boilersw"] },
-  { id: "power",   label: "Sockets & power",   col: "#5aa9ff", types: ["socket", "flap", "power", "ledfeed", "wp", "towelheater", "usb", "woutlet", "ipbox"] },
+  { id: "power",   label: "Sockets & power",   col: "#5aa9ff", types: ["socket", "flap", "power", "ledfeed", "wp", "towelheater", "usb", "woutlet", "ipbox", "shutterout"] },
   { id: "network", label: "Network & TV",      col: "#46d39a", types: ["multi", "data", "phone", "tv", "router", "lcp", "ap", "intercom", "intercom_out", "hdmi"] },
   { id: "sensors", label: "Sensors & fans",     col: "#2ee6d6", types: ["sensor", "fan"] },
   { id: "other",   label: "Other",              col: "#c58cff", types: ["sound", "doorbell", "chime", "db", "water"] },
@@ -76,7 +78,7 @@ const STATUS = {
   added: "Added for Main (not on the electrical plan).",
   existing: "Already in the model.",
   optional: "Optional: not decided yet.",
-  engineer: "As the site engineer drew it (his light / power plans).",
+  engineer: "As the site engineer drew it (his electrical drawings).",
   requested: "Karim's request, from the comments sent to the engineer",
 };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -93,6 +95,7 @@ const NAME = {
   ledfeed: "Accent-light power", water: "Water outlet", lightout: "Lighting outlet",
   wpspot: "Waterproof spot", curtainled: "Curtain-box LED", shutter: "Shutter switch", acsw: "AC switch", heatersw: "Instant-heater switch",
   boilersw: "Water-heater switch", usb: "USB charger", woutlet: "W outlet", ipbox: "IP65 box", hdmi: "HDMI outlet",
+  shutterout: "Shutter outlet",
 };
 const BADGE = { plan: "Plan", adapted: "Adapted", added: "Added", existing: "Existing", optional: "Optional", engineer: "Engineer", requested: "Requested" };
 const ON_CEILING = ["spot", "fan", "sensor", "ap", "led", "wpspot"];
@@ -340,8 +343,8 @@ export function buildElectrical({ THREE, scene, ceilingBits, data, ceiling = 2.6
         box(g, -0.045, 0.045, y - 0.045, y + 0.045, 0, 0.04, M.grey);
         box(g, -0.01, 0.01, y - 0.06, y - 0.045, 0.01, 0.03, M.grey);
         break;
-      case "ledfeed": plate(g, 0.086, 0.086, y); cyl(g, 0, y, 0.012, 0.009, 0.013, M.metal); break;  // blank plate, cable outlet
-      // The engineer's kinds (Light and Power Plan): the nearest look above.
+      case "ledfeed": case "shutterout": plate(g, 0.086, 0.086, y); cyl(g, 0, y, 0.012, 0.009, 0.013, M.metal); break;  // blank plate, cable outlet
+      // The engineer's kinds (Engineer Electrical Plan): the nearest look above.
       case "curtainled": plate(g, 0.086, 0.086, y); cyl(g, 0, y, 0.012, 0.009, 0.013, M.metal); socketFace(g, 0.1, y); break;
       case "shutter": plate(g, 0.086, 0.086, y); box(g, -0.017, 0.017, y + 0.004, y + 0.03, 0.009, 0.014, M.rocker); box(g, -0.017, 0.017, y - 0.03, y - 0.004, 0.009, 0.014, M.rocker); break;
       case "acsw": case "heatersw": case "boilersw":  // a double-pole switch with its neon

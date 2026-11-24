@@ -382,9 +382,10 @@ const VERSIONS = [
   // New As-built (16 Nov 2026): a copy of Main for recording site measurements (sitemeasure.js, this version only).
   { id: "new-asbuilt", name: "New As-built", model: "model-new-asbuilt.js", drawing: "drawing-new-asbuilt.json",
     spots: "spots-new-asbuilt.json" },
-  // Light and Power Plan (23 Nov 2026): a copy of Main whose electrical layer is only the site engineer's light and power
-  // drawings, at his positions and heights (build_electrical_light_power_plan.py).
-  { id: "light-power-plan", name: "Light and Power Plan", model: "model-light-power-plan.js",
+  // Engineer Electrical Plan (was "Light and Power Plan", 23 Nov 2026; id kept so its files and old links still work):
+  // a copy of Main whose electrical layer is only the site engineer's latest drawings (power S07 R01, lighting S08 R01,
+  // switches S09), at his positions and heights, with his switch codes (build_electrical_light_power_plan.py).
+  { id: "light-power-plan", name: "Engineer Electrical Plan", model: "model-light-power-plan.js",
     drawing: "drawing-light-power-plan.json", spots: "spots-light-power-plan.json" },
   // Final Electrical (23 Nov 2026): a copy of the Light and Power Plan whose electrical layer is the engineer's plus Karim's
   // final comments to him (build_electrical_final_electrical.py).
@@ -396,7 +397,8 @@ const VERSIONS = [
     spots: "spots-naghams-changes.json" },
 ];
 const params = new URLSearchParams(location.search);
-const version = VERSIONS.find(v => v.id === params.get("v")) || VERSIONS[0];
+const V_ALIAS = { "engineer-electrical-plan": "light-power-plan" };  // ?v= names that open another id
+const version = VERSIONS.find(v => v.id === (V_ALIAS[params.get("v")] || params.get("v"))) || VERSIONS[0];
 const vid = version.data || version.id;  // the plan version on screen
 // Edit AI's live changes to this version (edit-ai.js): its files stand in for the deployed ones until git catches up.
 const live = await liveFiles(vid);
@@ -404,7 +406,7 @@ globalThis.EDIT_AI_URL = live.url;  // pictures Edit AI saved (uploads/...) load
 const { makeMaterials } = await liveImport(live, "materials.js");
 const { furnish } = await liveImport(live, "furnish.js");
 // Electrical, lighting and low-current points (build_electrical.py -> electrical-<version>.json for Main,
-// build_electrical_light_power_plan.py for the Light and Power Plan, build_electrical_final_electrical.py for Final
+// build_electrical_light_power_plan.py for the Engineer Electrical Plan, build_electrical_final_electrical.py for Final
 // Electrical, New As-built's a copy of Main's):
 // faceplates and spots in 3D, a layer in 2D, and a card naming each one on hover / tap (electrical.js).
 const electrical = await loadElectrical(live.url(`electrical-${vid}.json`));

@@ -1,0 +1,4923 @@
+{
+ "version": "light-power-plan",
+ "source": "Site engineer's drawings only (Level Up Construction Innovations, Lighting Plan S08 + Power Plan S07, Nov 2026)",
+ "built_by": "build_electrical_light_power_plan.py (edit light_power_plan_points.py, then rerun)",
+ "heights": "metres; his boxed heights and H.L= notes (cm), as written",
+ "lighting": "fixtures",
+ "legend": {
+  "spot": "Ceiling spot (engineer's single spot)",
+  "wpspot": "Waterproof ceiling spot",
+  "pendant": "Pendant outlet (دلايات)",
+  "walllight": "Wall-light outlet",
+  "ledfeed": "Wall LED outlet",
+  "curtainled": "Curtain-box LED + socket outlet",
+  "fan": "Ceiling exhaust fan",
+  "sensor": "Motion sensor (MS)",
+  "ap": "Wi-Fi access point",
+  "switch": "Light switch (gangs; two-way where marked)",
+  "shutter": "Shutter button switch",
+  "acsw": "AC switch",
+  "heatersw": "Instant water-heater switch",
+  "boilersw": "Water-heater switch",
+  "socket": "Socket (single / double / triple universal)",
+  "wp": "Waterproof socket",
+  "usb": "USB charger outlet",
+  "woutlet": "\"W\" outlet (phone charger, per his legend)",
+  "tv": "TV dish outlet",
+  "phone": "Phone outlet (T)",
+  "data": "Data outlet (D)",
+  "hdmi": "HDMI cable outlet",
+  "lcp": "Low-current panel (L.C)",
+  "db": "Distribution board (DB)"
+ },
+ "points": [
+  {
+   "id": "spot-1",
+   "type": "spot",
+   "room": "Living room",
+   "x": 3.9388,
+   "y": 3.6682,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — living room",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    363.0,
+    854.6
+   ],
+   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall"
+  },
+  {
+   "id": "spot-2",
+   "type": "spot",
+   "room": "Living room",
+   "x": 5.3395,
+   "y": 3.6682,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — living room",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    471.6,
+    854.6
+   ],
+   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall"
+  },
+  {
+   "id": "spot-3",
+   "type": "spot",
+   "room": "Living room",
+   "x": 3.9388,
+   "y": 2.8894,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — living room",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    363.0,
+    914.8
+   ],
+   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall"
+  },
+  {
+   "id": "spot-4",
+   "type": "spot",
+   "room": "Living room",
+   "x": 5.3395,
+   "y": 2.8894,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — living room",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    471.6,
+    914.8
+   ],
+   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall"
+  },
+  {
+   "id": "spot-5",
+   "type": "spot",
+   "room": "Living room",
+   "x": 3.9388,
+   "y": 2.1081,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — living room",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    363.0,
+    975.0
+   ],
+   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall"
+  },
+  {
+   "id": "spot-6",
+   "type": "spot",
+   "room": "Living room",
+   "x": 5.3395,
+   "y": 2.1081,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — living room",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    471.6,
+    975.0
+   ],
+   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall"
+  },
+  {
+   "id": "spot-7",
+   "type": "spot",
+   "room": "Living room",
+   "x": 3.9388,
+   "y": 1.3294,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — living room",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    363.0,
+    1035.1
+   ],
+   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall"
+  },
+  {
+   "id": "spot-8",
+   "type": "spot",
+   "room": "Living room",
+   "x": 5.3395,
+   "y": 1.3294,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — living room",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    471.6,
+    1035.1
+   ],
+   "dim": "1.00 / 1.40 / 0.80 from the west wall; 0.77 + 0.78 x 4 from the north wall"
+  },
+  {
+   "id": "sensor-1",
+   "type": "sensor",
+   "room": "Living room",
+   "x": 4.539,
+   "y": 2.492,
+   "h": 2.6,
+   "facing": null,
+   "label": "Motion sensor (MS) — living room ceiling",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    409.6,
+    945.1
+   ],
+   "dim": "registered"
+  },
+  {
+   "id": "ledfeed-1",
+   "type": "ledfeed",
+   "room": "Living room",
+   "x": 6.1349,
+   "y": 1.32,
+   "h": 0.5,
+   "facing": "W",
+   "label": "Wall LED outlet — living room, TV wall, 50 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    524.7,
+    1034.7
+   ],
+   "dim": "0.32 + 0.45 = 0.77 from the south wall; H.L=+50cm",
+   "pdf_light": [
+    530.24,
+    1036.38
+   ]
+  },
+  {
+   "id": "walllight-1",
+   "type": "walllight",
+   "room": "Living room",
+   "x": 4.039,
+   "y": 4.4365,
+   "h": 2.35,
+   "facing": "S",
+   "label": "Wall-light outlet — living room, door wall, 235 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    370.7,
+    800.7
+   ],
+   "dim": "0.50 + 0.60 = 1.10 from the west wall; H.L=+235cm",
+   "pdf_light": [
+    369.98,
+    802.74
+   ]
+  },
+  {
+   "id": "walllight-2",
+   "type": "walllight",
+   "room": "Living room",
+   "x": 4.0379,
+   "y": 0.553,
+   "h": 2.35,
+   "facing": "N",
+   "label": "Wall-light outlet — living room, window wall, 235 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    370.8,
+    1087.3
+   ],
+   "dim": "0.20 + 0.95 + 0.95 = 2.10 from the east wall; H.L=+235cm",
+   "pdf_light": [
+    369.98,
+    1087.32
+   ]
+  },
+  {
+   "id": "walllight-3",
+   "type": "walllight",
+   "room": "Living room",
+   "x": 6.1349,
+   "y": 3.2793,
+   "h": 1.6,
+   "facing": "W",
+   "label": "Wall-light outlet — living room, TV wall (north end), 160 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    525.6,
+    884.1
+   ],
+   "dim": "1.16 from the north wall; H.L=+160cm",
+   "pdf_light": [
+    525.62,
+    884.1
+   ]
+  },
+  {
+   "id": "walllight-4",
+   "type": "walllight",
+   "room": "Living room",
+   "x": 6.1349,
+   "y": 0.87,
+   "h": 1.6,
+   "facing": "W",
+   "label": "Wall-light outlet — living room, TV wall (south end), 160 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    524.7,
+    1070.6
+   ],
+   "dim": "0.32 from the south wall; H.L=+160cm",
+   "pdf_light": [
+    525.62,
+    1070.46
+   ]
+  },
+  {
+   "id": "socket-1",
+   "type": "socket",
+   "room": "Living room",
+   "x": 3.439,
+   "y": 4.4368,
+   "h": 0.9,
+   "facing": "S",
+   "label": "Single socket — living room, door wall, 90 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    335.1,
+    800.7
+   ],
+   "dim": "0.50 from the west wall",
+   "gang": 1
+  },
+  {
+   "id": "socket-2",
+   "type": "socket",
+   "room": "Living room",
+   "x": 3.439,
+   "y": 0.553,
+   "h": 0.9,
+   "facing": "N",
+   "label": "Single socket — living room, window wall, 90 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    329.3,
+    1091.5
+   ],
+   "dim": "0.50 from the west wall",
+   "gang": 1
+  },
+  {
+   "id": "socket-3",
+   "type": "socket",
+   "room": "Living room",
+   "x": 4.9879,
+   "y": 0.553,
+   "h": 0.45,
+   "facing": "N",
+   "label": "Single socket — living room, window wall, 45 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    449.8,
+    1091.5
+   ],
+   "dim": "0.20 + 0.95 = 1.15 from the east wall",
+   "gang": 1
+  },
+  {
+   "id": "socket-4",
+   "type": "socket",
+   "room": "Living room",
+   "x": 5.9379,
+   "y": 0.553,
+   "h": 0.45,
+   "facing": "N",
+   "label": "Single socket — living room, window-wall corner, 45 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    522.7,
+    1091.5
+   ],
+   "dim": "0.20 from the east wall",
+   "gang": 1
+  },
+  {
+   "id": "socket-5",
+   "type": "socket",
+   "room": "Living room",
+   "x": 5.0064,
+   "y": 4.437,
+   "h": 0.45,
+   "facing": "S",
+   "label": "Single socket — living room, by the door, 45 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    449.5,
+    800.7
+   ],
+   "dim": "0.20 from the door jamb (to the plate's height box)",
+   "gang": 1
+  },
+  {
+   "id": "switch-1",
+   "type": "switch",
+   "room": "Living room",
+   "x": 5.0064,
+   "y": 4.437,
+   "h": 1.1,
+   "facing": "S",
+   "label": "1-gang light switch — living room, by the door, 110 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    452.4,
+    800.7
+   ],
+   "dim": "0.20 from the door jamb (to the plate's height box)",
+   "gangs": [
+    "Lights — living room (gang 1; circuit not marked on the engineer's plan)"
+   ]
+  },
+  {
+   "id": "switch-2",
+   "type": "switch",
+   "room": "Living room",
+   "x": 5.0064,
+   "y": 4.437,
+   "h": 1.2,
+   "facing": "S",
+   "label": "2-gang light switch — living room, by the door, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    452.4,
+    800.7
+   ],
+   "dim": "0.20 from the door jamb (to the plate's height box)",
+   "gangs": [
+    "Lights — living room (gang 1; circuit not marked on the engineer's plan)",
+    "Lights — living room (gang 2; circuit not marked on the engineer's plan)"
+   ]
+  },
+  {
+   "id": "shutter-1",
+   "type": "shutter",
+   "room": "Living room",
+   "x": 4.75,
+   "y": 4.437,
+   "h": 1.2,
+   "facing": "S",
+   "label": "Shutter button switch — living room, door wall",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    426.0,
+    800.7
+   ],
+   "dim": "registered",
+   "h_unreadable": true,
+   "note": "no height box of its own: 120 taken from the light switch beside it"
+  },
+  {
+   "id": "acsw-1",
+   "type": "acsw",
+   "room": "Living room",
+   "x": 4.179,
+   "y": 4.4365,
+   "h": 1.1,
+   "facing": "S",
+   "label": "AC switch — living room, door wall, 110 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    391.0,
+    800.7
+   ],
+   "dim": "0.50 + 0.60 + 0.14 = 1.24 from the west wall (to its 110 box)"
+  },
+  {
+   "id": "socket-6",
+   "type": "socket",
+   "room": "Living room",
+   "x": 6.1349,
+   "y": 2.365,
+   "h": 1.2,
+   "facing": "W",
+   "label": "Double socket — living room, TV wall, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    515.3,
+    953.9
+   ],
+   "dim": "0.32 + 0.45 + 0.75 = 1.52 from the south wall to the group's middle",
+   "gang": 2
+  },
+  {
+   "id": "socket-7",
+   "type": "socket",
+   "room": "Living room",
+   "x": 6.1349,
+   "y": 2.365,
+   "h": 0.6,
+   "facing": "W",
+   "label": "Double socket — living room, TV wall, 60 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    523.1,
+    953.9
+   ],
+   "dim": "0.32 + 0.45 + 0.75 = 1.52 from the south wall to the group's middle",
+   "gang": 2,
+   "note": "the 60 column has three 60 boxes but only this double socket and one D drawn beside them"
+  },
+  {
+   "id": "tv-1",
+   "type": "tv",
+   "room": "Living room",
+   "x": 6.1349,
+   "y": 2.101,
+   "h": 1.2,
+   "facing": "W",
+   "label": "TV (dish) outlet — living room, TV wall, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    515.3,
+    974.4
+   ],
+   "dim": "0.32 + 0.45 + 0.75 = 1.52 from the south wall to the group's middle"
+  },
+  {
+   "id": "hdmi-1",
+   "type": "hdmi",
+   "room": "Living room",
+   "x": 6.1349,
+   "y": 2.004,
+   "h": 1.2,
+   "facing": "W",
+   "label": "HDMI outlet — living room, TV wall, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    515.3,
+    982.0
+   ],
+   "dim": "0.32 + 0.45 + 0.75 = 1.52 from the south wall to the group's middle"
+  },
+  {
+   "id": "data-1",
+   "type": "data",
+   "room": "Living room",
+   "x": 6.1349,
+   "y": 1.71,
+   "h": 1.2,
+   "facing": "W",
+   "label": "Data outlet — living room, TV wall, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    515.3,
+    1004.8
+   ],
+   "dim": "0.32 + 0.45 + 0.75 = 1.52 from the south wall to the group's middle",
+   "note": "the two D outlets have no height box: each takes its column's height (120 / 60)"
+  },
+  {
+   "id": "data-2",
+   "type": "data",
+   "room": "Living room",
+   "x": 6.1349,
+   "y": 1.716,
+   "h": 0.6,
+   "facing": "W",
+   "label": "Data outlet — living room, TV wall, 60 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    523.1,
+    1004.4
+   ],
+   "dim": "0.32 + 0.45 + 0.75 = 1.52 from the south wall to the group's middle",
+   "note": "the two D outlets have no height box: each takes its column's height (120 / 60)"
+  },
+  {
+   "id": "spot-9",
+   "type": "spot",
+   "room": "Master bedroom",
+   "x": 4.1514,
+   "y": 8.601,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bedroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    387.0,
+    470.9
+   ],
+   "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall"
+  },
+  {
+   "id": "spot-10",
+   "type": "spot",
+   "room": "Master bedroom",
+   "x": 5.0811,
+   "y": 8.601,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bedroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    459.2,
+    470.9
+   ],
+   "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-11",
+   "type": "spot",
+   "room": "Master bedroom",
+   "x": 5.2209,
+   "y": 8.601,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bedroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    470.1,
+    470.9
+   ],
+   "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-12",
+   "type": "spot",
+   "room": "Master bedroom",
+   "x": 4.1514,
+   "y": 7.4997,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bedroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    387.0,
+    556.7
+   ],
+   "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall"
+  },
+  {
+   "id": "spot-13",
+   "type": "spot",
+   "room": "Master bedroom",
+   "x": 5.0811,
+   "y": 7.4997,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bedroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    459.2,
+    556.7
+   ],
+   "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-14",
+   "type": "spot",
+   "room": "Master bedroom",
+   "x": 5.2209,
+   "y": 7.4997,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bedroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    470.1,
+    556.7
+   ],
+   "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-15",
+   "type": "spot",
+   "room": "Master bedroom",
+   "x": 4.1514,
+   "y": 6.401,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bedroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    387.0,
+    642.4
+   ],
+   "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall"
+  },
+  {
+   "id": "spot-16",
+   "type": "spot",
+   "room": "Master bedroom",
+   "x": 5.0811,
+   "y": 6.401,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bedroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    459.2,
+    642.4
+   ],
+   "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-17",
+   "type": "spot",
+   "room": "Master bedroom",
+   "x": 5.2209,
+   "y": 6.401,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bedroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    470.1,
+    642.4
+   ],
+   "dim": "0.30 + 1.55 / + 1.00 from the headboard wall; 0.42 / 1.10 / 1.10 from the window wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-18",
+   "type": "spot",
+   "room": "Master bedroom",
+   "x": 1.6963,
+   "y": 5.5986,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bedroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    189.0,
+    704.8
+   ],
+   "dim": "1.21 / 0.90 / 0.90 from the west wall; 0.40 from the bathroom wall",
+   "note": "dressing strip; drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-19",
+   "type": "spot",
+   "room": "Master bedroom",
+   "x": 1.8361,
+   "y": 5.5986,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bedroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    199.9,
+    704.8
+   ],
+   "dim": "1.21 / 0.90 / 0.90 from the west wall; 0.40 from the bathroom wall",
+   "note": "dressing strip; drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-20",
+   "type": "spot",
+   "room": "Master bedroom",
+   "x": 2.596,
+   "y": 5.5986,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bedroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    259.2,
+    704.8
+   ],
+   "dim": "1.21 / 0.90 / 0.90 from the west wall; 0.40 from the bathroom wall",
+   "note": "dressing strip; drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-21",
+   "type": "spot",
+   "room": "Master bedroom",
+   "x": 2.7358,
+   "y": 5.5986,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bedroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    270.0,
+    704.8
+   ],
+   "dim": "1.21 / 0.90 / 0.90 from the west wall; 0.40 from the bathroom wall",
+   "note": "dressing strip; drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-22",
+   "type": "spot",
+   "room": "Master bedroom",
+   "x": 3.4967,
+   "y": 5.5986,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bedroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    329.3,
+    704.8
+   ],
+   "dim": "1.21 / 0.90 / 0.90 from the west wall; 0.40 from the bathroom wall",
+   "note": "dressing strip; drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-23",
+   "type": "spot",
+   "room": "Master bedroom",
+   "x": 3.6365,
+   "y": 5.5986,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bedroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    340.2,
+    704.8
+   ],
+   "dim": "1.21 / 0.90 / 0.90 from the west wall; 0.40 from the bathroom wall",
+   "note": "dressing strip; drawn as a linked pair of spots"
+  },
+  {
+   "id": "sensor-2",
+   "type": "sensor",
+   "room": "Master bedroom",
+   "x": 4.735,
+   "y": 6.8602,
+   "h": 2.6,
+   "facing": null,
+   "label": "Motion sensor (MS) — master bedroom ceiling",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    425.8,
+    603.7
+   ],
+   "dim": "1.63 from the east wall, 1.20 from the south wall"
+  },
+  {
+   "id": "pendant-1",
+   "type": "pendant",
+   "room": "Master bedroom",
+   "x": 2.6015,
+   "y": 8.7201,
+   "h": 2.6,
+   "facing": null,
+   "label": "Pendant outlet — master bedroom, north bedside",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    265.4,
+    460.8
+   ],
+   "dim": "0.30 from the headboard wall and 0.30 from the window wall",
+   "pdf_light": [
+    267.02,
+    460.86
+   ]
+  },
+  {
+   "id": "pendant-2",
+   "type": "pendant",
+   "room": "Master bedroom",
+   "x": 2.6015,
+   "y": 6.283,
+   "h": 2.6,
+   "facing": null,
+   "label": "Pendant outlet — master bedroom, south bedside",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    265.4,
+    650.5
+   ],
+   "dim": "0.30 from the headboard wall; along it as drawn",
+   "pdf_light": [
+    265.46,
+    650.58
+   ],
+   "note": "his 0.30 to the south is measured from the bedside table line, not a wall: drawn position kept for that axis"
+  },
+  {
+   "id": "curtainled-1",
+   "type": "curtainled",
+   "room": "Master bedroom",
+   "x": 3.23,
+   "y": 9.0171,
+   "h": 2.5,
+   "facing": "S",
+   "label": "Curtain-box LED + socket outlet — master bedroom window",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    307.9,
+    451.1
+   ],
+   "dim": "registered",
+   "h_unreadable": true,
+   "note": "no height written; put just under the 2.60 ceiling, in the curtain box"
+  },
+  {
+   "id": "ledfeed-2",
+   "type": "ledfeed",
+   "room": "Master bedroom",
+   "x": 6.362,
+   "y": 5.8102,
+   "h": 2.5,
+   "facing": "W",
+   "label": "Wall LED outlet — master bedroom wardrobe, below the ceiling",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    544.9,
+    684.9
+   ],
+   "dim": "0.15 from the south wall; H.L=BELOW CEILING",
+   "pdf_light": [
+    548.24,
+    675.54
+   ],
+   "note": "H.L=BELOW CEILING: put at 250"
+  },
+  {
+   "id": "ledfeed-3",
+   "type": "ledfeed",
+   "room": "Master bedroom",
+   "x": 0.5589,
+   "y": 5.8498,
+   "h": 2.5,
+   "facing": "E",
+   "label": "Wall LED outlet — dressing wardrobe, below the ceiling",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    105.1,
+    684.9
+   ],
+   "dim": "0.15 from the bathroom wall; H.L=BELOW CEILING",
+   "pdf_light": [
+    102.92,
+    688.2
+   ],
+   "note": "H.L=BELOW CEILING: put at 250"
+  },
+  {
+   "id": "ledfeed-4",
+   "type": "ledfeed",
+   "room": "Master bedroom",
+   "x": 2.7671,
+   "y": 4.5532,
+   "h": 0.7,
+   "facing": "N",
+   "label": "Wall LED outlet — dresser wall, 70 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    268.2,
+    769.6
+   ],
+   "dim": "0.40 / 1.20 / 0.15 chain from the niche's east wall; H.L=+70cm",
+   "pdf_light": [
+    268.64,
+    780.96
+   ]
+  },
+  {
+   "id": "ledfeed-5",
+   "type": "ledfeed",
+   "room": "Master bedroom",
+   "x": 3.1671,
+   "y": 4.5531,
+   "h": 1.5,
+   "facing": "N",
+   "label": "Wall LED outlet — dresser wall, 150 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    299.3,
+    769.6
+   ],
+   "dim": "0.40 / 1.20 / 0.15 chain from the niche's east wall; H.L=+150cm",
+   "pdf_light": [
+    299.66,
+    780.96
+   ]
+  },
+  {
+   "id": "ledfeed-6",
+   "type": "ledfeed",
+   "room": "Master bedroom",
+   "x": 4.3671,
+   "y": 4.5526,
+   "h": 2.5,
+   "facing": "N",
+   "label": "Wall LED outlet — dresser wall, below the ceiling",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    392.6,
+    769.6
+   ],
+   "dim": "0.40 / 1.20 / 0.15 chain from the niche's east wall; H.L=BELOW CEILING",
+   "pdf_light": [
+    393.14,
+    784.32
+   ],
+   "note": "H.L=BELOW CEILING: put at 250"
+  },
+  {
+   "id": "socket-8",
+   "type": "socket",
+   "room": "Master bedroom",
+   "x": 2.3045,
+   "y": 8.865,
+   "h": 0.65,
+   "facing": "E",
+   "label": "Single socket — master bedroom, north bedside, 65 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    247.3,
+    449.9
+   ],
+   "dim": "registered",
+   "gang": 1
+  },
+  {
+   "id": "usb-1",
+   "type": "usb",
+   "room": "Master bedroom",
+   "x": 2.3045,
+   "y": 8.72,
+   "h": 0.65,
+   "facing": "E",
+   "label": "USB charger outlet — master bedroom, north bedside, 65 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    247.3,
+    461.2
+   ],
+   "dim": "registered",
+   "note": "written as \"USB\" beside the socket's 65 box"
+  },
+  {
+   "id": "switch-3",
+   "type": "switch",
+   "room": "Master bedroom",
+   "x": 2.3045,
+   "y": 8.84,
+   "h": 0.75,
+   "facing": "E",
+   "label": "2-gang light switch — master bedroom, north bedside, 75 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    247.3,
+    451.8
+   ],
+   "dim": "registered",
+   "gangs": [
+    "Lights — master bedroom (gang 1; circuit not marked on the engineer's plan)",
+    "Lights — master bedroom (gang 2; circuit not marked on the engineer's plan)"
+   ],
+   "note": "drawn as a plain 2-gang switch (no two-way mark)"
+  },
+  {
+   "id": "socket-9",
+   "type": "socket",
+   "room": "Master bedroom",
+   "x": 2.3045,
+   "y": 6.515,
+   "h": 0.65,
+   "facing": "E",
+   "label": "Single socket — master bedroom, south bedside, 65 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    247.3,
+    632.5
+   ],
+   "dim": "registered",
+   "gang": 1
+  },
+  {
+   "id": "usb-2",
+   "type": "usb",
+   "room": "Master bedroom",
+   "x": 2.3045,
+   "y": 6.37,
+   "h": 0.65,
+   "facing": "E",
+   "label": "USB charger outlet — master bedroom, south bedside, 65 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    247.3,
+    643.8
+   ],
+   "dim": "registered",
+   "note": "written as \"USB\" beside the socket's 65 box"
+  },
+  {
+   "id": "switch-4",
+   "type": "switch",
+   "room": "Master bedroom",
+   "x": 2.3045,
+   "y": 6.49,
+   "h": 0.75,
+   "facing": "E",
+   "label": "2-gang light switch — master bedroom, south bedside, 75 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    247.3,
+    634.4
+   ],
+   "dim": "registered",
+   "gangs": [
+    "Lights — master bedroom (gang 1; circuit not marked on the engineer's plan)",
+    "Lights — master bedroom (gang 2; circuit not marked on the engineer's plan)"
+   ],
+   "note": "drawn as a plain 2-gang switch (no two-way mark)"
+  },
+  {
+   "id": "shutter-2",
+   "type": "shutter",
+   "room": "Master bedroom",
+   "x": 5.14,
+   "y": 9.0171,
+   "h": 1.1,
+   "facing": "S",
+   "label": "Shutter button switch — master bedroom window, 110 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    456.3,
+    451.1
+   ],
+   "dim": "registered",
+   "note": "his 0.65 from the window jamb ends on the height box beside it; drawn position kept"
+  },
+  {
+   "id": "switch-5",
+   "type": "switch",
+   "room": "Master bedroom",
+   "x": 4.736,
+   "y": 5.8937,
+   "h": 1.2,
+   "facing": "N",
+   "label": "3-gang light switch — master bedroom door, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    424.9,
+    676.4
+   ],
+   "dim": "registered; the three plates are drawn as one stack beside the door, put on the wall below them",
+   "gangs": [
+    "Lights — master bedroom (gang 1; circuit not marked on the engineer's plan)",
+    "Lights — master bedroom (gang 2; circuit not marked on the engineer's plan)",
+    "Lights — master bedroom (gang 3; circuit not marked on the engineer's plan)"
+   ]
+  },
+  {
+   "id": "switch-6",
+   "type": "switch",
+   "room": "Master bedroom",
+   "x": 4.736,
+   "y": 5.8937,
+   "h": 1.1,
+   "facing": "N",
+   "label": "3-gang light switch — master bedroom door, 110 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    424.9,
+    676.4
+   ],
+   "dim": "registered; the three plates are drawn as one stack beside the door, put on the wall below them",
+   "gangs": [
+    "Lights — master bedroom (gang 1; circuit not marked on the engineer's plan)",
+    "Lights — master bedroom (gang 2; circuit not marked on the engineer's plan)",
+    "Lights — master bedroom (gang 3; circuit not marked on the engineer's plan)"
+   ]
+  },
+  {
+   "id": "socket-10",
+   "type": "socket",
+   "room": "Master bedroom",
+   "x": 4.736,
+   "y": 5.8937,
+   "h": 0.45,
+   "facing": "N",
+   "label": "Single socket — master bedroom door, 45 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    424.9,
+    676.4
+   ],
+   "dim": "registered; the three plates are drawn as one stack beside the door, put on the wall below them",
+   "gang": 1
+  },
+  {
+   "id": "acsw-2",
+   "type": "acsw",
+   "room": "Master bedroom",
+   "x": 4.5143,
+   "y": 5.6408,
+   "h": 1.1,
+   "facing": "W",
+   "label": "AC switch — master bedroom, dresser-niche side wall, 110 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    400.3,
+    716.0
+   ],
+   "dim": "0.25 from the corner"
+  },
+  {
+   "id": "spot-24",
+   "type": "spot",
+   "room": "Master bathroom",
+   "x": 1.8154,
+   "y": 8.3907,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bathroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    198.0,
+    490.6
+   ],
+   "dim": "0.70 from the north wall (pair centre)",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-25",
+   "type": "spot",
+   "room": "Master bathroom",
+   "x": 1.8154,
+   "y": 8.2501,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bathroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    198.0,
+    501.5
+   ],
+   "dim": "0.70 from the north wall (pair centre)",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "fan-1",
+   "type": "fan",
+   "room": "Master bathroom",
+   "x": 1.7915,
+   "y": 7.8201,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling exhaust fan — master bathroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    198.0,
+    535.1
+   ],
+   "dim": "0.40 from the east wall, 0.70 + 0.50 = 1.20 from the north wall"
+  },
+  {
+   "id": "spot-26",
+   "type": "spot",
+   "room": "Master bathroom",
+   "x": 0.9654,
+   "y": 7.6697,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bathroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    135.6,
+    535.1
+   ],
+   "dim": "0.41 from the west wall, 0.30 from the bench wall"
+  },
+  {
+   "id": "spot-27",
+   "type": "spot",
+   "room": "Master bathroom",
+   "x": 0.8564,
+   "y": 6.6355,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bathroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    127.5,
+    620.6
+   ],
+   "dim": "0.30 / 0.45 / 0.45 from the west wall; 0.50 from the south wall"
+  },
+  {
+   "id": "sensor-3",
+   "type": "sensor",
+   "room": "Master bathroom",
+   "x": 1.3063,
+   "y": 6.6351,
+   "h": 2.6,
+   "facing": null,
+   "label": "Motion sensor (MS) — master bathroom ceiling",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    162.7,
+    620.6
+   ],
+   "dim": "0.30 / 0.45 / 0.45 from the west wall; 0.50 from the south wall"
+  },
+  {
+   "id": "spot-28",
+   "type": "spot",
+   "room": "Master bathroom",
+   "x": 1.7567,
+   "y": 6.705,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bathroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    198.0,
+    615.2
+   ],
+   "dim": "0.30 / 0.45 / 0.45 from the west wall; 0.50 from the south wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-29",
+   "type": "spot",
+   "room": "Master bathroom",
+   "x": 1.7567,
+   "y": 6.566,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — master bathroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    198.0,
+    626.0
+   ],
+   "dim": "0.30 / 0.45 / 0.45 from the west wall; 0.50 from the south wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "ledfeed-7",
+   "type": "ledfeed",
+   "room": "Master bathroom",
+   "x": 0.772,
+   "y": 7.3231,
+   "h": 1.5,
+   "facing": "N",
+   "label": "Wall LED outlet — master bathroom shower niche (\"3 outlet indirect LED light for 3 shelves\")",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    116.9,
+    568.4
+   ],
+   "dim": "registered",
+   "pdf_light": [
+    117.02,
+    571.44
+   ],
+   "h_unreadable": true,
+   "note": "his note says 3 outlets for 3 shelves but one symbol is drawn: one point; no height written, 150 taken from the vanity LED"
+  },
+  {
+   "id": "ledfeed-8",
+   "type": "ledfeed",
+   "room": "Master bathroom",
+   "x": 0.5595,
+   "y": 7.075,
+   "h": 1.5,
+   "facing": "E",
+   "label": "Wall LED outlet — master bathroom vanity wall, 150 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    105.1,
+    589.0
+   ],
+   "dim": "registered; H.L=+150cm",
+   "pdf_light": [
+    105.32,
+    632.34
+   ],
+   "note": "the +150 / +30 notes share one leader to the two vanity LEDs: upper one read as 150"
+  },
+  {
+   "id": "ledfeed-9",
+   "type": "ledfeed",
+   "room": "Master bathroom",
+   "x": 0.5591,
+   "y": 6.4851,
+   "h": 0.3,
+   "facing": "E",
+   "label": "Wall LED outlet — master bathroom vanity wall, 30 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    105.1,
+    632.3
+   ],
+   "dim": "0.35 from the south wall; H.L=+30cm",
+   "pdf_light": [
+    105.32,
+    644.4
+   ],
+   "note": "the +150 / +30 notes share one leader to the two vanity LEDs: lower one read as 30"
+  },
+  {
+   "id": "heatersw-1",
+   "type": "heatersw",
+   "room": "Master bathroom",
+   "x": 0.559,
+   "y": 6.2851,
+   "h": 0.65,
+   "facing": "E",
+   "label": "Instant water-heater switch — master bathroom vanity, 65 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    105.1,
+    647.6
+   ],
+   "dim": "0.15 from the south wall"
+  },
+  {
+   "id": "switch-7",
+   "type": "switch",
+   "room": "Master bathroom",
+   "x": 1.2077,
+   "y": 6.1381,
+   "h": 1.2,
+   "facing": "N",
+   "label": "3-gang light switch — master bathroom, by the door, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    156.7,
+    653.1
+   ],
+   "dim": "0.20 from the door jamb (to the plate's height box)",
+   "gangs": [
+    "Lights — master bathroom (gang 1; circuit not marked on the engineer's plan)",
+    "Lights — master bathroom (gang 2; circuit not marked on the engineer's plan)",
+    "Lights — master bathroom (gang 3; circuit not marked on the engineer's plan)"
+   ]
+  },
+  {
+   "id": "socket-11",
+   "type": "socket",
+   "room": "Master bathroom",
+   "x": 1.2077,
+   "y": 6.1381,
+   "h": 1.1,
+   "facing": "N",
+   "label": "Single socket — master bathroom, by the door, 110 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    159.5,
+    653.1
+   ],
+   "dim": "0.20 from the door jamb (to the plate's height box)",
+   "gang": 1
+  },
+  {
+   "id": "socket-12",
+   "type": "socket",
+   "room": "Master bathroom",
+   "x": 2.1885,
+   "y": 7.7201,
+   "h": 1.1,
+   "facing": "W",
+   "label": "Single socket — master bathroom, WC wall, 110 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    220.1,
+    538.1
+   ],
+   "dim": "1.30 from the north wall",
+   "gang": 1
+  },
+  {
+   "id": "spot-30",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 7.3041,
+   "y": 8.1903,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    630.0,
+    502.1
+   ],
+   "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-31",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 7.4439,
+   "y": 8.1903,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    640.8,
+    502.1
+   ],
+   "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-32",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 8.225,
+   "y": 8.1903,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    701.4,
+    502.1
+   ],
+   "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-33",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 8.3648,
+   "y": 8.1903,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    712.2,
+    502.1
+   ],
+   "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-34",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 9.1449,
+   "y": 8.1903,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    772.8,
+    502.1
+   ],
+   "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-35",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 9.2847,
+   "y": 8.1903,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    783.6,
+    502.1
+   ],
+   "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-36",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 7.3041,
+   "y": 7.3703,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    630.0,
+    565.6
+   ],
+   "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-37",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 7.4439,
+   "y": 7.3703,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    640.8,
+    565.6
+   ],
+   "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-38",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 9.1449,
+   "y": 7.3703,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    772.8,
+    565.6
+   ],
+   "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-39",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 9.2847,
+   "y": 7.3703,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    783.6,
+    565.6
+   ],
+   "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-40",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 7.3041,
+   "y": 6.5493,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    630.0,
+    629.0
+   ],
+   "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-41",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 7.4439,
+   "y": 6.5493,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    640.8,
+    629.0
+   ],
+   "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-42",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 8.225,
+   "y": 6.5493,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    701.4,
+    629.0
+   ],
+   "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-43",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 8.3648,
+   "y": 6.5493,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    712.2,
+    629.0
+   ],
+   "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-44",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 9.1449,
+   "y": 6.5493,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    772.8,
+    629.0
+   ],
+   "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-45",
+   "type": "spot",
+   "room": "Kitchen",
+   "x": 9.2847,
+   "y": 6.5493,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — kitchen",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    783.6,
+    629.0
+   ],
+   "dim": "0.90 / 0.92 / 0.92 / 0.90 from the west wall; 0.90 / 0.82 / 0.82 / 0.90 from the north wall",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "fan-2",
+   "type": "fan",
+   "room": "Kitchen",
+   "x": 7.8348,
+   "y": 7.37,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling exhaust fan — kitchen",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    671.2,
+    565.5
+   ],
+   "dim": "0.90 + 0.46 from the west wall; on the middle spot row"
+  },
+  {
+   "id": "sensor-4",
+   "type": "sensor",
+   "room": "Kitchen",
+   "x": 8.2948,
+   "y": 7.37,
+   "h": 2.6,
+   "facing": null,
+   "label": "Motion sensor (MS) — kitchen ceiling",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    706.8,
+    565.6
+   ],
+   "dim": "0.90 + 0.46 + 0.46 from the west wall; on the middle spot row"
+  },
+  {
+   "id": "ledfeed-10",
+   "type": "ledfeed",
+   "room": "Kitchen",
+   "x": 10.07,
+   "y": 9.087,
+   "h": 1.6,
+   "facing": "S",
+   "label": "Wall LED outlet — kitchen, north-east corner, 160 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    839.3,
+    439.4
+   ],
+   "dim": "registered; H.L=+160cm",
+   "pdf_light": [
+    839.42,
+    434.88
+   ]
+  },
+  {
+   "id": "ledfeed-11",
+   "type": "ledfeed",
+   "room": "Kitchen",
+   "x": 8.249,
+   "y": 5.6634,
+   "h": 1.6,
+   "facing": "N",
+   "label": "Wall LED outlet — kitchen, south wall, 160 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    697.8,
+    694.3
+   ],
+   "dim": "registered; H.L=+160cm",
+   "pdf_light": [
+    697.94,
+    693.0
+   ]
+  },
+  {
+   "id": "ledfeed-12",
+   "type": "ledfeed",
+   "room": "Kitchen",
+   "x": 6.4778,
+   "y": 6.15,
+   "h": 1.6,
+   "facing": "E",
+   "label": "Wall LED outlet — kitchen, west wall, 160 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    569.7,
+    660.8
+   ],
+   "dim": "registered; H.L=+160cm",
+   "pdf_light": [
+    568.28,
+    661.2
+   ]
+  },
+  {
+   "id": "switch-8",
+   "type": "switch",
+   "room": "Kitchen",
+   "x": 10.2072,
+   "y": 6.8334,
+   "h": 1.2,
+   "facing": "W",
+   "label": "3-gang light switch — kitchen, by the door, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    837.0,
+    607.2
+   ],
+   "dim": "0.20 from the door jamb (to the height boxes)",
+   "gangs": [
+    "Lights — kitchen (gang 1; circuit not marked on the engineer's plan)",
+    "Lights — kitchen (gang 2; circuit not marked on the engineer's plan)",
+    "Lights — kitchen (gang 3; circuit not marked on the engineer's plan)"
+   ]
+  },
+  {
+   "id": "switch-9",
+   "type": "switch",
+   "room": "Kitchen",
+   "x": 10.2072,
+   "y": 6.8334,
+   "h": 1.1,
+   "facing": "W",
+   "label": "3-gang light switch — kitchen, by the door, 110 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    844.8,
+    607.2
+   ],
+   "dim": "0.20 from the door jamb (to the height boxes)",
+   "gangs": [
+    "Lights — kitchen (gang 1; circuit not marked on the engineer's plan)",
+    "Lights — kitchen (gang 2; circuit not marked on the engineer's plan)",
+    "Lights — kitchen (gang 3; circuit not marked on the engineer's plan)"
+   ]
+  },
+  {
+   "id": "socket-13",
+   "type": "socket",
+   "room": "Kitchen",
+   "x": 7.0602,
+   "y": 9.087,
+   "h": 1.2,
+   "facing": "S",
+   "label": "Triple universal socket — kitchen, north worktop, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    613.2,
+    439.4
+   ],
+   "dim": "1.00 + 0.80 + 1.35 = 3.15 from the east wall",
+   "gang": 3
+  },
+  {
+   "id": "socket-14",
+   "type": "socket",
+   "room": "Kitchen",
+   "x": 8.4102,
+   "y": 9.087,
+   "h": 0.6,
+   "facing": "S",
+   "label": "Triple universal socket — kitchen, under the sink, 60 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    697.1,
+    439.4
+   ],
+   "dim": "1.00 + 0.80 = 1.80 from the east wall",
+   "gang": 3
+  },
+  {
+   "id": "socket-15",
+   "type": "socket",
+   "room": "Kitchen",
+   "x": 9.2102,
+   "y": 9.087,
+   "h": 1.2,
+   "facing": "S",
+   "label": "Triple universal socket — kitchen, north worktop, east end, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    760.9,
+    439.4
+   ],
+   "dim": "1.00 from the east wall",
+   "gang": 3
+  },
+  {
+   "id": "socket-16",
+   "type": "socket",
+   "room": "Kitchen",
+   "x": 10.2072,
+   "y": 8.79,
+   "h": 1.2,
+   "facing": "W",
+   "label": "Triple universal socket — kitchen, east wall, north corner, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    843.2,
+    443.8
+   ],
+   "dim": "0.30 from the north wall",
+   "gang": 3
+  },
+  {
+   "id": "socket-17",
+   "type": "socket",
+   "room": "Kitchen",
+   "x": 10.2072,
+   "y": 8.14,
+   "h": 1.2,
+   "facing": "W",
+   "label": "Triple universal socket — kitchen, east wall (dishwasher), 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    838.6,
+    518.7
+   ],
+   "dim": "0.30 + 0.15 + 0.50 = 0.95 from the north wall",
+   "gang": 3
+  },
+  {
+   "id": "socket-18",
+   "type": "socket",
+   "room": "Kitchen",
+   "x": 10.2072,
+   "y": 8.14,
+   "h": 0.6,
+   "facing": "W",
+   "label": "Triple universal socket — kitchen, east wall, low (dishwasher), 60 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    843.2,
+    518.7
+   ],
+   "dim": "0.30 + 0.15 + 0.50 = 0.95 from the north wall",
+   "gang": 3
+  },
+  {
+   "id": "socket-19",
+   "type": "socket",
+   "room": "Kitchen",
+   "x": 10.2072,
+   "y": 7.64,
+   "h": 1.2,
+   "facing": "W",
+   "label": "Triple universal socket — kitchen, east wall (fridge), 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    838.6,
+    557.5
+   ],
+   "dim": "0.95 + 0.50 = 1.45 from the north wall",
+   "gang": 3
+  },
+  {
+   "id": "socket-20",
+   "type": "socket",
+   "room": "Kitchen",
+   "x": 10.2072,
+   "y": 7.64,
+   "h": 0.6,
+   "facing": "W",
+   "label": "Triple universal socket — kitchen, east wall, low (fridge), 60 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    843.2,
+    557.5
+   ],
+   "dim": "0.95 + 0.50 = 1.45 from the north wall",
+   "gang": 3
+  },
+  {
+   "id": "socket-21",
+   "type": "socket",
+   "room": "Kitchen",
+   "x": 6.4778,
+   "y": 8.34,
+   "h": 1.2,
+   "facing": "E",
+   "label": "Triple universal socket — kitchen, west worktop, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    569.7,
+    479.8
+   ],
+   "dim": "0.75 from the north wall",
+   "gang": 3
+  },
+  {
+   "id": "socket-22",
+   "type": "socket",
+   "room": "Kitchen",
+   "x": 6.4778,
+   "y": 7.11,
+   "h": 0.6,
+   "facing": "E",
+   "label": "Triple universal socket — kitchen, west wall, cooker, 60 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    569.7,
+    579.3
+   ],
+   "dim": "0.75 + 1.23 = 1.98 from the north wall",
+   "gang": 3
+  },
+  {
+   "id": "socket-23",
+   "type": "socket",
+   "room": "Kitchen",
+   "x": 6.4778,
+   "y": 7.11,
+   "h": 1.8,
+   "facing": "E",
+   "label": "Triple universal socket — kitchen, west wall, hood, 180 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    571.3,
+    579.3
+   ],
+   "dim": "0.75 + 1.23 = 1.98 from the north wall",
+   "gang": 3
+  },
+  {
+   "id": "socket-24",
+   "type": "socket",
+   "room": "Kitchen",
+   "x": 6.4778,
+   "y": 6.41,
+   "h": 1.2,
+   "facing": "E",
+   "label": "Triple universal socket — kitchen, west worktop, south end, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    569.7,
+    649.2
+   ],
+   "dim": "0.75 + 1.23 + 0.70 = 2.68 from the north wall",
+   "gang": 3
+  },
+  {
+   "id": "socket-25",
+   "type": "socket",
+   "room": "Kitchen",
+   "x": 8.5602,
+   "y": 5.6634,
+   "h": 1.4,
+   "facing": "N",
+   "label": "Triple universal socket — kitchen, south wall (microwave), 140 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    708.8,
+    688.0
+   ],
+   "dim": "1.00 + 0.15 + 0.50 = 1.65 from the east wall",
+   "gang": 3
+  },
+  {
+   "id": "socket-26",
+   "type": "socket",
+   "room": "Kitchen",
+   "x": 8.5602,
+   "y": 5.6634,
+   "h": 0.9,
+   "facing": "N",
+   "label": "Triple universal socket — kitchen, south wall (oven), 90 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    708.8,
+    688.0
+   ],
+   "dim": "1.00 + 0.15 + 0.50 = 1.65 from the east wall",
+   "gang": 3
+  },
+  {
+   "id": "socket-27",
+   "type": "socket",
+   "room": "Kitchen",
+   "x": 8.5602,
+   "y": 5.6634,
+   "h": 0.55,
+   "facing": "N",
+   "label": "Triple universal socket — kitchen, south wall, low, 55 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    708.8,
+    688.0
+   ],
+   "dim": "1.00 + 0.15 + 0.50 = 1.65 from the east wall",
+   "gang": 3
+  },
+  {
+   "id": "woutlet-1",
+   "type": "woutlet",
+   "room": "Kitchen",
+   "x": 10.2072,
+   "y": 8.64,
+   "h": 1.05,
+   "facing": "W",
+   "label": "\"W\" outlet (phone charger, per his legend) — kitchen, east wall, 105 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    843.2,
+    478.2
+   ],
+   "dim": "0.30 + 0.15 = 0.45 from the north wall"
+  },
+  {
+   "id": "woutlet-2",
+   "type": "woutlet",
+   "room": "Kitchen",
+   "x": 8.5602,
+   "y": 5.6634,
+   "h": 0.45,
+   "facing": "N",
+   "label": "\"W\" outlet (phone charger, per his legend) — kitchen, south wall, 45 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    708.8,
+    688.0
+   ],
+   "dim": "1.65 from the east wall (the socket column)"
+  },
+  {
+   "id": "tv-2",
+   "type": "tv",
+   "room": "Kitchen",
+   "x": 9.0602,
+   "y": 5.6634,
+   "h": 1.8,
+   "facing": "N",
+   "label": "TV (dish) outlet — kitchen, south wall, 180 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    743.0,
+    688.0
+   ],
+   "dim": "1.00 + 0.15 = 1.15 from the east wall"
+  },
+  {
+   "id": "hdmi-2",
+   "type": "hdmi",
+   "room": "Kitchen",
+   "x": 9.0602,
+   "y": 5.6634,
+   "h": 1.8,
+   "facing": "N",
+   "label": "HDMI outlet — kitchen, south wall, 180 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    750.0,
+    688.0
+   ],
+   "dim": "1.00 + 0.15 = 1.15 from the east wall",
+   "h_unreadable": true,
+   "note": "two 180 boxes for three symbols (TV, HDMI, double socket): 180 used for all three"
+  },
+  {
+   "id": "socket-28",
+   "type": "socket",
+   "room": "Kitchen",
+   "x": 9.2102,
+   "y": 5.6634,
+   "h": 1.8,
+   "facing": "N",
+   "label": "Double socket — kitchen, south wall (TV), 180 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    781.8,
+    688.0
+   ],
+   "dim": "1.00 from the east wall",
+   "gang": 2
+  },
+  {
+   "id": "fan-3",
+   "type": "fan",
+   "room": "Laundry",
+   "x": 11.475,
+   "y": 8.2866,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling exhaust fan — laundry",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    945.3,
+    494.8
+   ],
+   "dim": "0.52 from the east wall, 0.90 from the north wall"
+  },
+  {
+   "id": "spot-46",
+   "type": "spot",
+   "room": "Laundry",
+   "x": 11.475,
+   "y": 7.97,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — laundry (one of three heads on a short track)",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    945.0,
+    519.4
+   ],
+   "dim": "0.52 from the east wall; on a 0.60 run 0.90 + 0.25 from the north wall",
+   "note": "drawn as three adjustable spot heads on a 0.60 track (not his single-spot cross); counted as three spots"
+  },
+  {
+   "id": "spot-47",
+   "type": "spot",
+   "room": "Laundry",
+   "x": 11.475,
+   "y": 7.75,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — laundry (one of three heads on a short track)",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    945.0,
+    536.5
+   ],
+   "dim": "0.52 from the east wall; on a 0.60 run 0.90 + 0.25 from the north wall",
+   "note": "drawn as three adjustable spot heads on a 0.60 track (not his single-spot cross); counted as three spots"
+  },
+  {
+   "id": "spot-48",
+   "type": "spot",
+   "room": "Laundry",
+   "x": 11.475,
+   "y": 7.5,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — laundry (one of three heads on a short track)",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    945.0,
+    556.0
+   ],
+   "dim": "0.52 from the east wall; on a 0.60 run 0.90 + 0.25 from the north wall",
+   "note": "drawn as three adjustable spot heads on a 0.60 track (not his single-spot cross); counted as three spots"
+  },
+  {
+   "id": "sensor-5",
+   "type": "sensor",
+   "room": "Laundry",
+   "x": 11.475,
+   "y": 7.1866,
+   "h": 2.6,
+   "facing": null,
+   "label": "Motion sensor (MS) — laundry ceiling",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    945.3,
+    580.0
+   ],
+   "dim": "0.52 from the east wall; 0.90 + 0.25 + 0.60 + 0.25 = 2.00 from the north wall"
+  },
+  {
+   "id": "ledfeed-13",
+   "type": "ledfeed",
+   "room": "Laundry",
+   "x": 10.93,
+   "y": 9.184,
+   "h": 1.6,
+   "facing": "S",
+   "label": "Wall LED outlet — laundry, north wall, 160 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    906.2,
+    430.1
+   ],
+   "dim": "registered; H.L=+160cm",
+   "pdf_light": [
+    907.46,
+    429.12
+   ]
+  },
+  {
+   "id": "socket-29",
+   "type": "socket",
+   "room": "Laundry",
+   "x": 11.195,
+   "y": 9.1838,
+   "h": 1.2,
+   "facing": "S",
+   "label": "Triple universal socket — laundry, north wall, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    915.5,
+    430.1
+   ],
+   "dim": "0.20 + 0.60 = 0.80 from the east wall (to the height boxes)",
+   "gang": 3
+  },
+  {
+   "id": "boilersw-1",
+   "type": "boilersw",
+   "room": "Laundry",
+   "x": 11.195,
+   "y": 9.1838,
+   "h": 1.3,
+   "facing": "S",
+   "label": "Water-heater switch — laundry, north wall, 130 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    916.3,
+    430.1
+   ],
+   "dim": "0.20 + 0.60 = 0.80 from the east wall (to the height boxes)"
+  },
+  {
+   "id": "socket-30",
+   "type": "socket",
+   "room": "Laundry",
+   "x": 11.795,
+   "y": 9.1834,
+   "h": 0.6,
+   "facing": "S",
+   "label": "Triple universal socket — laundry, washer, 60 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    962.9,
+    430.1
+   ],
+   "dim": "0.20 from the east wall (to the height box)",
+   "gang": 3
+  },
+  {
+   "id": "socket-31",
+   "type": "socket",
+   "room": "Laundry",
+   "x": 11.992,
+   "y": 7.8404,
+   "h": 1.2,
+   "facing": "W",
+   "label": "Triple universal socket — laundry, east wall, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    981.5,
+    540.4
+   ],
+   "dim": "0.95 from the south wall (to the height box)",
+   "gang": 3
+  },
+  {
+   "id": "socket-32",
+   "type": "socket",
+   "room": "Laundry",
+   "x": 10.3232,
+   "y": 7.6888,
+   "h": 0.6,
+   "facing": "E",
+   "label": "Triple universal socket — laundry, west wall, 60 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    861.1,
+    557.5
+   ],
+   "dim": "0.30 + 0.50 = 0.80 from the south wall (to the height box)",
+   "gang": 3
+  },
+  {
+   "id": "lcp-1",
+   "type": "lcp",
+   "room": "Laundry",
+   "x": 10.3232,
+   "y": 7.1888,
+   "h": 1.5,
+   "facing": "E",
+   "label": "Low-current panel (L.C) — laundry, on the kitchen wall",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    861.1,
+    580.8
+   ],
+   "dim": "0.30 from the south wall to its middle",
+   "w": 0.45,
+   "h_unreadable": true,
+   "note": "no height written: middle put at 150; drawn 0.45 long on the wall"
+  },
+  {
+   "id": "spot-49",
+   "type": "spot",
+   "room": "Guest bathroom",
+   "x": 14.3027,
+   "y": 8.8131,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — guest bathroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1168.2,
+    467.3
+   ],
+   "dim": "0.37 / 0.68 / 0.68 from the north wall"
+  },
+  {
+   "id": "spot-50",
+   "type": "spot",
+   "room": "Guest bathroom",
+   "x": 14.3027,
+   "y": 8.133,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — guest bathroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1168.2,
+    520.2
+   ],
+   "dim": "0.37 / 0.68 / 0.68 from the north wall"
+  },
+  {
+   "id": "spot-51",
+   "type": "spot",
+   "room": "Guest bathroom",
+   "x": 14.3027,
+   "y": 7.4514,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — guest bathroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1168.2,
+    573.2
+   ],
+   "dim": "0.37 / 0.68 / 0.68 from the north wall"
+  },
+  {
+   "id": "spot-52",
+   "type": "spot",
+   "room": "Guest bathroom",
+   "x": 13.5073,
+   "y": 7.9601,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — guest bathroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1106.4,
+    520.2
+   ],
+   "dim": "registered",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-53",
+   "type": "spot",
+   "room": "Guest bathroom",
+   "x": 13.6479,
+   "y": 7.9601,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — guest bathroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1117.3,
+    520.2
+   ],
+   "dim": "registered",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-54",
+   "type": "spot",
+   "room": "Guest bathroom",
+   "x": 12.5521,
+   "y": 7.279,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — guest bathroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1032.2,
+    573.1
+   ],
+   "dim": "registered",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-55",
+   "type": "spot",
+   "room": "Guest bathroom",
+   "x": 12.6919,
+   "y": 7.279,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — guest bathroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1043.1,
+    573.1
+   ],
+   "dim": "registered",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-56",
+   "type": "spot",
+   "room": "Guest bathroom",
+   "x": 13.5073,
+   "y": 7.279,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — guest bathroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1106.4,
+    573.1
+   ],
+   "dim": "registered",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "spot-57",
+   "type": "spot",
+   "room": "Guest bathroom",
+   "x": 13.6479,
+   "y": 7.279,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — guest bathroom",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1117.3,
+    573.1
+   ],
+   "dim": "registered",
+   "note": "drawn as a linked pair of spots"
+  },
+  {
+   "id": "fan-4",
+   "type": "fan",
+   "room": "Guest bathroom",
+   "x": 13.578,
+   "y": 8.643,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling exhaust fan — guest bathroom, over the WC",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1111.9,
+    467.2
+   ],
+   "dim": "registered"
+  },
+  {
+   "id": "ledfeed-14",
+   "type": "ledfeed",
+   "room": "Guest bathroom",
+   "x": 14.6638,
+   "y": 9.0821,
+   "h": 0.3,
+   "facing": "W",
+   "label": "Wall LED outlet — guest bathroom, WC corner, 30 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    1187.4,
+    451.1
+   ],
+   "dim": "0.10 from the north wall; H.L=+30cm",
+   "pdf_light": [
+    1190.0,
+    446.28
+   ]
+  },
+  {
+   "id": "ledfeed-15",
+   "type": "ledfeed",
+   "room": "Guest bathroom",
+   "x": 14.6638,
+   "y": 7.4849,
+   "h": 1.5,
+   "facing": "W",
+   "label": "Wall LED outlet — guest bathroom, vanity wall, 150 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    1187.4,
+    555.2
+   ],
+   "dim": "0.60 from the south wall; H.L=+150cm",
+   "pdf_light": [
+    1190.0,
+    555.42
+   ]
+  },
+  {
+   "id": "ledfeed-16",
+   "type": "ledfeed",
+   "room": "Guest bathroom",
+   "x": 12.37,
+   "y": 6.8936,
+   "h": 0.3,
+   "facing": "N",
+   "label": "Wall LED outlet — guest bathroom, below the bath",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    1018.0,
+    594.0
+   ],
+   "dim": "registered",
+   "pdf_light": [
+    1017.68,
+    596.64
+   ],
+   "h_unreadable": true,
+   "note": "no height or leader for these two: 30 taken from the other low LED outlet in this bathroom"
+  },
+  {
+   "id": "ledfeed-17",
+   "type": "ledfeed",
+   "room": "Guest bathroom",
+   "x": 12.76,
+   "y": 6.8936,
+   "h": 0.3,
+   "facing": "N",
+   "label": "Wall LED outlet — guest bathroom, below the bath",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    1048.4,
+    594.0
+   ],
+   "dim": "registered",
+   "pdf_light": [
+    1048.46,
+    596.64
+   ],
+   "h_unreadable": true,
+   "note": "no height or leader for these two: 30 taken from the other low LED outlet in this bathroom"
+  },
+  {
+   "id": "switch-10",
+   "type": "switch",
+   "room": "Guest bathroom",
+   "x": 14.147,
+   "y": 6.8879,
+   "h": 1.2,
+   "facing": "N",
+   "label": "3-gang light switch — guest bathroom, by the door, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1152.5,
+    597.1
+   ],
+   "dim": "0.20 from the door jamb (to the height boxes)",
+   "gangs": [
+    "Lights — guest bathroom (gang 1; circuit not marked on the engineer's plan)",
+    "Lights — guest bathroom (gang 2; circuit not marked on the engineer's plan)",
+    "Lights — guest bathroom (gang 3; circuit not marked on the engineer's plan)"
+   ]
+  },
+  {
+   "id": "socket-33",
+   "type": "socket",
+   "room": "Guest bathroom",
+   "x": 14.147,
+   "y": 6.8879,
+   "h": 1.1,
+   "facing": "N",
+   "label": "Single socket — guest bathroom, by the door, 110 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1152.5,
+    597.1
+   ],
+   "dim": "0.20 from the door jamb (to the height boxes)",
+   "gang": 1
+  },
+  {
+   "id": "spot-58",
+   "type": "spot",
+   "room": "Entrance",
+   "x": 5.0265,
+   "y": 5.0497,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — entrance",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    449.8,
+    746.3
+   ],
+   "dim": "0.40 / 0.55 / 0.54 / 0.55 / 0.54 / 1.09 / 1.09 / 0.40 from the corridor's west end; 0.50 from its north wall"
+  },
+  {
+   "id": "spot-59",
+   "type": "spot",
+   "room": "Entrance",
+   "x": 6.1163,
+   "y": 5.0497,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — entrance",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    534.4,
+    746.3
+   ],
+   "dim": "0.40 / 0.55 / 0.54 / 0.55 / 0.54 / 1.09 / 1.09 / 0.40 from the corridor's west end; 0.50 from its north wall"
+  },
+  {
+   "id": "spot-60",
+   "type": "spot",
+   "room": "Entrance",
+   "x": 7.2058,
+   "y": 5.0497,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — entrance",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    619.0,
+    746.3
+   ],
+   "dim": "0.40 / 0.55 / 0.54 / 0.55 / 0.54 / 1.09 / 1.09 / 0.40 from the corridor's west end; 0.50 from its north wall"
+  },
+  {
+   "id": "spot-61",
+   "type": "spot",
+   "room": "Entrance",
+   "x": 8.2964,
+   "y": 5.0497,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — entrance",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    703.7,
+    746.3
+   ],
+   "dim": "0.40 / 0.55 / 0.54 / 0.55 / 0.54 / 1.09 / 1.09 / 0.40 from the corridor's west end; 0.50 from its north wall"
+  },
+  {
+   "id": "spot-62",
+   "type": "spot",
+   "room": "Entrance",
+   "x": 9.3863,
+   "y": 5.0502,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — entrance",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    788.5,
+    746.2
+   ],
+   "dim": "0.40 / 0.55 / 0.54 / 0.55 / 0.54 / 1.09 / 1.09 / 0.40 from the corridor's west end; 0.50 from its north wall"
+  },
+  {
+   "id": "ap-1",
+   "type": "ap",
+   "room": "Entrance",
+   "x": 5.5761,
+   "y": 5.0502,
+   "h": 2.6,
+   "facing": null,
+   "label": "Wi-Fi access point — entrance corridor ceiling",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    492.9,
+    736.1
+   ],
+   "dim": "0.40 / 0.55 / 0.54 / 0.55 / 0.54 / 1.09 / 1.09 / 0.40 from the corridor's west end; 0.50 from its north wall"
+  },
+  {
+   "id": "sensor-6",
+   "type": "sensor",
+   "room": "Entrance",
+   "x": 6.6661,
+   "y": 5.0502,
+   "h": 2.6,
+   "facing": null,
+   "label": "Motion sensor (MS) — entrance corridor ceiling",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    576.7,
+    741.7
+   ],
+   "dim": "0.40 / 0.55 / 0.54 / 0.55 / 0.54 / 1.09 / 1.09 / 0.40 from the corridor's west end; 0.50 from its north wall"
+  },
+  {
+   "id": "spot-63",
+   "type": "spot",
+   "room": "Entrance",
+   "x": 7.1753,
+   "y": 4.0997,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — entrance",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    614.4,
+    820.1
+   ],
+   "dim": "0.50 + 0.95 + 0.50 across the hall: 0.50 from its south wall; along it as drawn"
+  },
+  {
+   "id": "spot-64",
+   "type": "spot",
+   "room": "Entrance",
+   "x": 8.2649,
+   "y": 4.0997,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — entrance",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    699.1,
+    820.1
+   ],
+   "dim": "0.50 + 0.95 + 0.50 across the hall: 0.50 from its south wall; along it as drawn"
+  },
+  {
+   "id": "spot-65",
+   "type": "spot",
+   "room": "Entrance",
+   "x": 9.3575,
+   "y": 4.1007,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — entrance",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    784.0,
+    820.1
+   ],
+   "dim": "0.50 + 0.95 + 0.50 across the hall: 0.50 from its south wall; along it as drawn"
+  },
+  {
+   "id": "spot-66",
+   "type": "spot",
+   "room": "Entrance",
+   "x": 10.7822,
+   "y": 6.2894,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — entrance",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    896.1,
+    654.7
+   ],
+   "dim": "0.48 / 0.57 / 0.56 / 0.57 / 0.56 from the west wall, 1.12 / 0.48 to the east wall; 0.49 / 0.49 across"
+  },
+  {
+   "id": "spot-67",
+   "type": "spot",
+   "room": "Entrance",
+   "x": 11.9122,
+   "y": 6.2894,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — entrance",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    983.8,
+    654.7
+   ],
+   "dim": "0.48 / 0.57 / 0.56 / 0.57 / 0.56 from the west wall, 1.12 / 0.48 to the east wall; 0.49 / 0.49 across"
+  },
+  {
+   "id": "spot-68",
+   "type": "spot",
+   "room": "Entrance",
+   "x": 13.0419,
+   "y": 6.2894,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — entrance",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1071.6,
+    654.7
+   ],
+   "dim": "0.48 / 0.57 / 0.56 / 0.57 / 0.56 from the west wall, 1.12 / 0.48 to the east wall; 0.49 / 0.49 across"
+  },
+  {
+   "id": "spot-69",
+   "type": "spot",
+   "room": "Entrance",
+   "x": 14.1776,
+   "y": 6.2894,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — entrance",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1158.5,
+    654.7
+   ],
+   "dim": "0.48 / 0.57 / 0.56 / 0.57 / 0.56 from the west wall, 1.12 / 0.48 to the east wall; 0.49 / 0.49 across"
+  },
+  {
+   "id": "ap-2",
+   "type": "ap",
+   "room": "Entrance",
+   "x": 11.3522,
+   "y": 6.2896,
+   "h": 2.6,
+   "facing": null,
+   "label": "Wi-Fi access point — upper corridor ceiling",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    939.9,
+    644.6
+   ],
+   "dim": "0.48 / 0.57 / 0.56 / 0.57 / 0.56 from the west wall, 1.12 / 0.48 to the east wall; 0.49 / 0.49 across"
+  },
+  {
+   "id": "sensor-7",
+   "type": "sensor",
+   "room": "Entrance",
+   "x": 12.4822,
+   "y": 6.2896,
+   "h": 2.6,
+   "facing": null,
+   "label": "Motion sensor (MS) — upper corridor ceiling",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1027.6,
+    650.2
+   ],
+   "dim": "0.48 / 0.57 / 0.56 / 0.57 / 0.56 from the west wall, 1.12 / 0.48 to the east wall; 0.49 / 0.49 across"
+  },
+  {
+   "id": "spot-70",
+   "type": "spot",
+   "room": "Entrance",
+   "x": 10.8,
+   "y": 5.052,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — entrance",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    896.1,
+    746.2
+   ],
+   "dim": "registered",
+   "note": "his 0.54 / 0.54 run between wall lines Main does not have here (open to the corridor): drawn position kept"
+  },
+  {
+   "id": "ledfeed-18",
+   "type": "ledfeed",
+   "room": "Entrance",
+   "x": 8.22,
+   "y": 5.5472,
+   "h": 1.6,
+   "facing": "S",
+   "label": "Wall LED outlet — corridor, kitchen wall, 160 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    695.6,
+    711.4
+   ],
+   "dim": "registered; H.L=+160cm",
+   "pdf_light": [
+    697.16,
+    709.68
+   ],
+   "note": "his 1.20 / 0.40 dimensions run from a dashed ceiling line, not a wall: drawn position kept"
+  },
+  {
+   "id": "walllight-5",
+   "type": "walllight",
+   "room": "Entrance",
+   "x": 9.42,
+   "y": 5.5472,
+   "h": 1.6,
+   "facing": "S",
+   "label": "Wall-light outlet — corridor, kitchen wall, 160 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    788.8,
+    711.4
+   ],
+   "dim": "registered; H.L=+160cm",
+   "pdf_light": [
+    788.54,
+    715.5
+   ],
+   "note": "his 0.40 dimension runs from a dashed ceiling line, not a wall: drawn position kept"
+  },
+  {
+   "id": "walllight-6",
+   "type": "walllight",
+   "room": "Entrance",
+   "x": 9.43,
+   "y": 3.6031,
+   "h": 1.6,
+   "facing": "N",
+   "label": "Wall-light outlet — entrance hall, beside the front door",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    789.6,
+    851.2
+   ],
+   "dim": "registered",
+   "pdf_light": [
+    788.54,
+    850.68
+   ],
+   "h_unreadable": true,
+   "note": "no height written: 160 taken from the other blue wall-light outlet in the corridor"
+  },
+  {
+   "id": "walllight-7",
+   "type": "walllight",
+   "room": "Entrance",
+   "x": 6.5087,
+   "y": 4.3,
+   "h": 1.73,
+   "facing": "E",
+   "label": "Wall-light outlet — entrance hall, 173 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    574.4,
+    804.6
+   ],
+   "dim": "registered; H.L=+173cm",
+   "note": "drawn in black (not his blue), with a black leader note"
+  },
+  {
+   "id": "walllight-8",
+   "type": "walllight",
+   "room": "Entrance",
+   "x": 6.5087,
+   "y": 3.9,
+   "h": 2.08,
+   "facing": "E",
+   "label": "Wall-light outlet — entrance hall, 208 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    574.4,
+    835.7
+   ],
+   "dim": "registered; H.L=+208cm",
+   "note": "drawn in black (not his blue), with a black leader note"
+  },
+  {
+   "id": "walllight-9",
+   "type": "walllight",
+   "room": "Entrance",
+   "x": 6.5087,
+   "y": 3.9,
+   "h": 1.45,
+   "facing": "E",
+   "label": "Wall-light outlet — entrance hall, 145 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    590.7,
+    835.7
+   ],
+   "dim": "registered; H.L=+145cm",
+   "note": "drawn in black (not his blue), with a black leader note; drawn 36 cm off the wall, put on the wall"
+  },
+  {
+   "id": "walllight-10",
+   "type": "walllight",
+   "room": "Entrance",
+   "x": 7.01,
+   "y": 3.6031,
+   "h": 2.08,
+   "facing": "N",
+   "label": "Wall-light outlet — entrance hall, 208 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    601.6,
+    848.1
+   ],
+   "dim": "registered; H.L=+208cm",
+   "note": "drawn in black (not his blue), with a black leader note"
+  },
+  {
+   "id": "ledfeed-19",
+   "type": "ledfeed",
+   "room": "Entrance",
+   "x": 10.37,
+   "y": 3.6031,
+   "h": 1.5,
+   "facing": "N",
+   "label": "Wall LED outlet — entrance console wall, 150 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    862.6,
+    851.2
+   ],
+   "dim": "registered (0.15 / 0.70 / 0.20 from a grey line, not a wall); H.L=+150cm",
+   "pdf_light": [
+    862.4,
+    855.48
+   ]
+  },
+  {
+   "id": "ledfeed-20",
+   "type": "ledfeed",
+   "room": "Entrance",
+   "x": 11.08,
+   "y": 3.6031,
+   "h": 2.5,
+   "facing": "N",
+   "label": "Wall LED outlet — entrance console wall, below the ceiling",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    917.8,
+    851.2
+   ],
+   "dim": "registered (0.15 / 0.70 / 0.20 from a grey line, not a wall); H.L=BELOW CEILING",
+   "pdf_light": [
+    917.42,
+    856.92
+   ],
+   "note": "H.L=BELOW CEILING: put at 250"
+  },
+  {
+   "id": "ledfeed-21",
+   "type": "ledfeed",
+   "room": "Entrance",
+   "x": 11.28,
+   "y": 3.6031,
+   "h": 0.2,
+   "facing": "N",
+   "label": "Wall LED outlet — entrance console wall, 20 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    933.4,
+    851.2
+   ],
+   "dim": "registered (0.15 / 0.70 / 0.20 from a grey line, not a wall); H.L=+20cm",
+   "pdf_light": [
+    930.14,
+    856.08
+   ],
+   "note": "the note is cut by the sheet frame: read as +20cm"
+  },
+  {
+   "id": "socket-34",
+   "type": "socket",
+   "room": "Entrance",
+   "x": 11.3456,
+   "y": 4.5001,
+   "h": 0.45,
+   "facing": "W",
+   "label": "Single socket — entrance hall, east wall, 45 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    934.9,
+    792.9
+   ],
+   "dim": "0.90 from the south wall (to the height box)",
+   "gang": 1
+  },
+  {
+   "id": "db-1",
+   "type": "db",
+   "room": "Entrance",
+   "x": 7.44,
+   "y": 3.6031,
+   "h": 1.8,
+   "facing": "N",
+   "label": "Distribution board (DB) — entrance hall, beside the front door",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    635.0,
+    855.1
+   ],
+   "dim": "registered",
+   "w": 0.41,
+   "h_unreadable": true,
+   "note": "no height written: middle put at 180; drawn 0.41 wide"
+  },
+  {
+   "id": "switch-11",
+   "type": "switch",
+   "room": "Entrance",
+   "x": 9.1169,
+   "y": 3.6031,
+   "h": 1.2,
+   "facing": "N",
+   "label": "Two-way 2-gang light switch — inside the front door, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    759.3,
+    847.3
+   ],
+   "dim": "0.20 from the front-door jamb (to the height boxes)",
+   "gangs": [
+    "Lights — entrance (gang 1; circuit not marked on the engineer's plan)",
+    "Lights — entrance (gang 2; circuit not marked on the engineer's plan)"
+   ],
+   "two_way": "switch-14,switch-15",
+   "note": "the gang count of this two-way symbol is hard to read (2 or 3 strokes): read as 2"
+  },
+  {
+   "id": "switch-12",
+   "type": "switch",
+   "room": "Entrance",
+   "x": 9.1169,
+   "y": 3.6031,
+   "h": 1.1,
+   "facing": "N",
+   "label": "3-gang light switch — inside the front door, 110 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    759.3,
+    847.3
+   ],
+   "dim": "0.20 from the front-door jamb (to the height boxes)",
+   "gangs": [
+    "Lights — entrance (gang 1; circuit not marked on the engineer's plan)",
+    "Lights — entrance (gang 2; circuit not marked on the engineer's plan)",
+    "Lights — entrance (gang 3; circuit not marked on the engineer's plan)"
+   ]
+  },
+  {
+   "id": "socket-35",
+   "type": "socket",
+   "room": "Entrance",
+   "x": 9.1169,
+   "y": 3.6031,
+   "h": 0.45,
+   "facing": "N",
+   "label": "Single socket — inside the front door, 45 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    759.3,
+    847.3
+   ],
+   "dim": "0.20 from the front-door jamb (to the height boxes)",
+   "gang": 1
+  },
+  {
+   "id": "intercom-1",
+   "type": "intercom",
+   "room": "Entrance",
+   "x": 9.1169,
+   "y": 3.6031,
+   "h": 1.3,
+   "facing": "N",
+   "label": "Intercom — inside the front door, 130 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    759.3,
+    847.3
+   ],
+   "dim": "0.20 from the front-door jamb (to the height boxes)",
+   "note": "written as \"Intercom\" beside a 130 box (not in his legend)"
+  },
+  {
+   "id": "doorbell-1",
+   "type": "doorbell",
+   "room": "Entrance",
+   "x": 9.17,
+   "y": 3.3471,
+   "h": 1.35,
+   "facing": "S",
+   "label": "Doorbell (BELL) — outside the front door, 135 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    769.4,
+    882.3
+   ],
+   "dim": "registered",
+   "note": "written as \"BELL\" beside a 135 box, outside the front door (not in his legend)"
+  },
+  {
+   "id": "switch-13",
+   "type": "switch",
+   "room": "Entrance",
+   "x": 10.7852,
+   "y": 6.7766,
+   "h": 1.1,
+   "facing": "S",
+   "label": "2-gang light switch — corridor, outside the laundry door, 110 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    882.1,
+    620.4
+   ],
+   "dim": "0.20 from the laundry door jamb (to the height box)",
+   "gangs": [
+    "Lights — entrance (gang 1; circuit not marked on the engineer's plan)",
+    "Lights — entrance (gang 2; circuit not marked on the engineer's plan)"
+   ]
+  },
+  {
+   "id": "socket-36",
+   "type": "socket",
+   "room": "Entrance",
+   "x": 12.5136,
+   "y": 6.7766,
+   "h": 0.45,
+   "facing": "S",
+   "label": "Single socket — corridor, guest-bathroom wall, 45 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1038.3,
+    620.4
+   ],
+   "dim": "0.65 from the laundry door jamb (to the height box)",
+   "gang": 1
+  },
+  {
+   "id": "switch-14",
+   "type": "switch",
+   "room": "Entrance",
+   "x": 14.08,
+   "y": 5.733,
+   "h": 1.2,
+   "facing": "N",
+   "label": "Two-way 2-gang light switch — corridor, by the dining door, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1150.9,
+    691.1
+   ],
+   "dim": "registered (his 0.40 runs from a wall nib Main doesn't have)",
+   "gangs": [
+    "Lights — entrance (gang 1; circuit not marked on the engineer's plan)",
+    "Lights — entrance (gang 2; circuit not marked on the engineer's plan)"
+   ],
+   "two_way": "switch-11,switch-15"
+  },
+  {
+   "id": "switch-15",
+   "type": "switch",
+   "room": "Entrance",
+   "x": 5.7579,
+   "y": 5.5472,
+   "h": 1.2,
+   "facing": "S",
+   "label": "Two-way 3-gang light switch — corridor, outside the master bedroom door, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    523.1,
+    711.4
+   ],
+   "dim": "0.20 from the bedroom door jamb",
+   "gangs": [
+    "Lights — entrance (gang 1; circuit not marked on the engineer's plan)",
+    "Lights — entrance (gang 2; circuit not marked on the engineer's plan)",
+    "Lights — entrance (gang 3; circuit not marked on the engineer's plan)"
+   ],
+   "two_way": "switch-11,switch-14",
+   "note": "Main's bedroom door jamb is about 15 cm west of the one he drew, so 0.20 from it lands 24 cm west of his symbol"
+  },
+  {
+   "id": "spot-71",
+   "type": "spot",
+   "room": "Dining",
+   "x": 15.7777,
+   "y": 8.9469,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — dining",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1282.2,
+    444.4
+   ],
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+  },
+  {
+   "id": "spot-72",
+   "type": "spot",
+   "room": "Dining",
+   "x": 16.8372,
+   "y": 8.9469,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — dining",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1364.5,
+    444.4
+   ],
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+  },
+  {
+   "id": "spot-73",
+   "type": "spot",
+   "room": "Dining",
+   "x": 17.8976,
+   "y": 8.9469,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — dining",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1446.8,
+    444.4
+   ],
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+  },
+  {
+   "id": "spot-74",
+   "type": "spot",
+   "room": "Dining",
+   "x": 18.9581,
+   "y": 8.9469,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — dining",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1529.1,
+    444.4
+   ],
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+  },
+  {
+   "id": "spot-75",
+   "type": "spot",
+   "room": "Dining",
+   "x": 15.7777,
+   "y": 8.0455,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — dining",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1282.2,
+    514.3
+   ],
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+  },
+  {
+   "id": "spot-76",
+   "type": "spot",
+   "room": "Dining",
+   "x": 15.7777,
+   "y": 7.1466,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — dining",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1282.2,
+    584.2
+   ],
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+  },
+  {
+   "id": "spot-77",
+   "type": "spot",
+   "room": "Dining",
+   "x": 15.7777,
+   "y": 6.2355,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — dining",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1282.2,
+    654.7
+   ],
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+  },
+  {
+   "id": "spot-78",
+   "type": "spot",
+   "room": "Dining",
+   "x": 16.8372,
+   "y": 6.2355,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — dining",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1364.5,
+    654.7
+   ],
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+  },
+  {
+   "id": "spot-79",
+   "type": "spot",
+   "room": "Dining",
+   "x": 17.8976,
+   "y": 6.2355,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — dining",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1446.8,
+    654.7
+   ],
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+  },
+  {
+   "id": "spot-80",
+   "type": "spot",
+   "room": "Dining",
+   "x": 18.9581,
+   "y": 6.2355,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — dining",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1529.1,
+    654.7
+   ],
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+  },
+  {
+   "id": "spot-81",
+   "type": "spot",
+   "room": "Dining",
+   "x": 20.0175,
+   "y": 6.2355,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — dining",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1611.4,
+    654.7
+   ],
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+  },
+  {
+   "id": "spot-82",
+   "type": "spot",
+   "room": "Dining",
+   "x": 20.0175,
+   "y": 8.0455,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — dining",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1611.4,
+    514.3
+   ],
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+  },
+  {
+   "id": "spot-83",
+   "type": "spot",
+   "room": "Dining",
+   "x": 20.0175,
+   "y": 7.1466,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — dining",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1611.4,
+    584.2
+   ],
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+  },
+  {
+   "id": "sensor-8",
+   "type": "sensor",
+   "room": "Dining",
+   "x": 16.3076,
+   "y": 6.2357,
+   "h": 2.6,
+   "facing": null,
+   "label": "Motion sensor (MS) — dining ceiling",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1323.3,
+    654.7
+   ],
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+  },
+  {
+   "id": "ap-3",
+   "type": "ap",
+   "room": "Dining",
+   "x": 18.4276,
+   "y": 6.2357,
+   "h": 2.6,
+   "facing": null,
+   "label": "Wi-Fi access point — dining ceiling",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1488.0,
+    644.5
+   ],
+   "dim": "1.00 / 1.06 x 3 (top row) and 1.00 / 0.53 / 0.53 / 1.06 / 0.53 / 0.53 / 1.06 / 0.99 (bottom row) from the west wall; 0.52 / 0.91 / 0.90 / 0.90 from the south wall"
+  },
+  {
+   "id": "pendant-3",
+   "type": "pendant",
+   "room": "Dining",
+   "x": 17.2476,
+   "y": 8.0457,
+   "h": 2.6,
+   "facing": null,
+   "label": "Pendant outlet — dining table",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1396.9,
+    514.3
+   ],
+   "dim": "2.47 / 0.52 / 0.52 from the west wall; on the 2.33 spot row"
+  },
+  {
+   "id": "pendant-4",
+   "type": "pendant",
+   "room": "Dining",
+   "x": 17.7676,
+   "y": 8.0457,
+   "h": 2.6,
+   "facing": null,
+   "label": "Pendant outlet — dining table",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1437.3,
+    514.3
+   ],
+   "dim": "2.47 / 0.52 / 0.52 from the west wall; on the 2.33 spot row"
+  },
+  {
+   "id": "pendant-5",
+   "type": "pendant",
+   "room": "Dining",
+   "x": 18.2876,
+   "y": 8.0457,
+   "h": 2.6,
+   "facing": null,
+   "label": "Pendant outlet — dining table",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1477.7,
+    514.3
+   ],
+   "dim": "2.47 / 0.52 / 0.52 from the west wall; on the 2.33 spot row"
+  },
+  {
+   "id": "ledfeed-22",
+   "type": "ledfeed",
+   "room": "Dining",
+   "x": 21.16,
+   "y": 9.4972,
+   "h": 2.0,
+   "facing": "S",
+   "label": "Wall LED outlet — coffee corner shelves (\"LED light for 2 shelves\")",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    1701.0,
+    408.3
+   ],
+   "dim": "registered; note \"LED LIGHT FOR 2 SHELVES\"",
+   "pdf_light": [
+    1700.78,
+    404.88
+   ],
+   "h_unreadable": true,
+   "note": "no height written: 200 taken from the dining niche LED"
+  },
+  {
+   "id": "ledfeed-23",
+   "type": "ledfeed",
+   "room": "Dining",
+   "x": 14.7801,
+   "y": 8.9043,
+   "h": 2.0,
+   "facing": "E",
+   "label": "Wall LED outlet — dining, west wall",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    1210.7,
+    462.7
+   ],
+   "dim": "0.22 + 0.38 = 0.60 from the north wall",
+   "pdf_light": [
+    1208.24,
+    459.48
+   ],
+   "h_unreadable": true,
+   "note": "no height or leader: 200 taken from the dining niche LED"
+  },
+  {
+   "id": "ledfeed-24",
+   "type": "ledfeed",
+   "room": "Dining",
+   "x": 14.7798,
+   "y": 7.14,
+   "h": 2.0,
+   "facing": "E",
+   "label": "Wall LED outlet — dining niche, 200 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    1221.6,
+    583.9
+   ],
+   "dim": "registered; H.L=+200cm",
+   "pdf_light": [
+    1221.68,
+    583.5
+   ]
+  },
+  {
+   "id": "acsw-3",
+   "type": "acsw",
+   "room": "Dining",
+   "x": 14.7798,
+   "y": 9.2843,
+   "h": 1.1,
+   "facing": "E",
+   "label": "AC switch — dining, west wall, 110 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1210.7,
+    427.7
+   ],
+   "dim": "0.22 from the north wall (to the height box)"
+  },
+  {
+   "id": "socket-37",
+   "type": "socket",
+   "room": "Dining",
+   "x": 15.6269,
+   "y": 9.5009,
+   "h": 0.45,
+   "facing": "S",
+   "label": "Single socket — dining, window wall, 45 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1258.1,
+    420.0
+   ],
+   "dim": "0.85 from the west wall (to the height box)",
+   "gang": 1
+  },
+  {
+   "id": "socket-38",
+   "type": "socket",
+   "room": "Dining",
+   "x": 18.72,
+   "y": 9.4989,
+   "h": 0.45,
+   "facing": "S",
+   "label": "Single socket — dining, window wall by the pier, 45 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1511.4,
+    420.0
+   ],
+   "dim": "registered (his 0.35 runs from a pier Main doesn't have)",
+   "gang": 1
+  },
+  {
+   "id": "socket-39",
+   "type": "socket",
+   "room": "Dining",
+   "x": 20.0238,
+   "y": 9.498,
+   "h": 1.2,
+   "facing": "S",
+   "label": "Single socket — coffee corner, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1600.0,
+    408.3
+   ],
+   "dim": "0.20 + 0.50 + 0.50 = 1.20 from the east wall (to the height boxes)",
+   "gang": 1
+  },
+  {
+   "id": "woutlet-3",
+   "type": "woutlet",
+   "room": "Dining",
+   "x": 20.0238,
+   "y": 9.498,
+   "h": 0.6,
+   "facing": "S",
+   "label": "\"W\" outlet (phone charger, per his legend) — coffee corner, 60 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1622.6,
+    408.3
+   ],
+   "dim": "1.20 from the east wall (to the height boxes)"
+  },
+  {
+   "id": "socket-40",
+   "type": "socket",
+   "room": "Dining",
+   "x": 20.5238,
+   "y": 9.4977,
+   "h": 1.2,
+   "facing": "S",
+   "label": "Double socket — coffee corner, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1636.5,
+    408.3
+   ],
+   "dim": "0.20 + 0.50 = 0.70 from the east wall (to the height boxes)",
+   "gang": 2
+  },
+  {
+   "id": "data-3",
+   "type": "data",
+   "room": "Dining",
+   "x": 20.5238,
+   "y": 9.4977,
+   "h": 0.55,
+   "facing": "S",
+   "label": "Data outlet — coffee corner, 55 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1662.2,
+    408.3
+   ],
+   "dim": "0.70 from the east wall (to the height boxes)"
+  },
+  {
+   "id": "socket-41",
+   "type": "socket",
+   "room": "Dining",
+   "x": 21.0238,
+   "y": 9.4973,
+   "h": 0.45,
+   "facing": "S",
+   "label": "Double socket — coffee corner, 45 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1675.4,
+    408.3
+   ],
+   "dim": "0.20 from the east wall (to the height box)",
+   "gang": 2
+  },
+  {
+   "id": "socket-42",
+   "type": "socket",
+   "room": "Dining",
+   "x": 14.7812,
+   "y": 7.791,
+   "h": 1.1,
+   "facing": "E",
+   "label": "Single socket — dining, west wall, 110 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1210.7,
+    532.6
+   ],
+   "dim": "1.05 from the dining-door jamb (to the height box)",
+   "gang": 1
+  },
+  {
+   "id": "switch-16",
+   "type": "switch",
+   "room": "Dining",
+   "x": 15.23,
+   "y": 5.7262,
+   "h": 1.2,
+   "facing": "N",
+   "label": "3-gang light switch — dining, by the corridor door, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1240.3,
+    688.0
+   ],
+   "dim": "registered (his 0.40 runs from a wall nib Main doesn't have)",
+   "gangs": [
+    "Lights — dining (gang 1; circuit not marked on the engineer's plan)",
+    "Lights — dining (gang 2; circuit not marked on the engineer's plan)",
+    "Lights — dining (gang 3; circuit not marked on the engineer's plan)"
+   ]
+  },
+  {
+   "id": "switch-17",
+   "type": "switch",
+   "room": "Dining",
+   "x": 15.23,
+   "y": 5.7262,
+   "h": 1.1,
+   "facing": "N",
+   "label": "3-gang light switch — dining, by the corridor door, 110 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1240.3,
+    688.0
+   ],
+   "dim": "registered (his 0.40 runs from a wall nib Main doesn't have)",
+   "gangs": [
+    "Lights — dining (gang 1; circuit not marked on the engineer's plan)",
+    "Lights — dining (gang 2; circuit not marked on the engineer's plan)",
+    "Lights — dining (gang 3; circuit not marked on the engineer's plan)"
+   ]
+  },
+  {
+   "id": "socket-43",
+   "type": "socket",
+   "room": "Dining",
+   "x": 16.3421,
+   "y": 5.7196,
+   "h": 0.45,
+   "facing": "N",
+   "label": "Single socket — dining, south wall, 45 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1314.1,
+    688.0
+   ],
+   "dim": "1.20 from the wall end by the reception (to the height box)",
+   "gang": 1
+  },
+  {
+   "id": "switch-18",
+   "type": "switch",
+   "room": "Dining",
+   "x": 21.2202,
+   "y": 8.4826,
+   "h": 1.2,
+   "facing": "W",
+   "label": "3-gang light switch — dining, by the terrace door, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1694.8,
+    465.8
+   ],
+   "dim": "0.50 from the terrace-door jamb (to the height boxes)",
+   "gangs": [
+    "Lights — dining (gang 1; circuit not marked on the engineer's plan)",
+    "Lights — dining (gang 2; circuit not marked on the engineer's plan)",
+    "Lights — dining (gang 3; circuit not marked on the engineer's plan)"
+   ]
+  },
+  {
+   "id": "switch-19",
+   "type": "switch",
+   "room": "Dining",
+   "x": 21.2202,
+   "y": 8.4826,
+   "h": 1.1,
+   "facing": "W",
+   "label": "1-gang light switch — dining, by the terrace door, 110 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1702.6,
+    465.8
+   ],
+   "dim": "0.50 from the terrace-door jamb (to the height boxes)",
+   "gangs": [
+    "Lights — dining (gang 1; circuit not marked on the engineer's plan)"
+   ]
+  },
+  {
+   "id": "shutter-3",
+   "type": "shutter",
+   "room": "Dining",
+   "x": 21.2201,
+   "y": 8.38,
+   "h": 1.2,
+   "facing": "W",
+   "label": "Shutter button switch — dining, by the terrace door",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1701.0,
+    487.6
+   ],
+   "dim": "registered",
+   "h_unreadable": true,
+   "note": "no height box of its own: 120 taken from the light switch above it"
+  },
+  {
+   "id": "shutter-4",
+   "type": "shutter",
+   "room": "Dining",
+   "x": 21.2196,
+   "y": 5.95,
+   "h": 1.1,
+   "facing": "W",
+   "label": "Shutter button switch — dining / reception pier, 110 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1700.3,
+    676.4
+   ],
+   "dim": "registered (0.57 / 0.57 centres it on the pier between the two openings)"
+  },
+  {
+   "id": "spot-84",
+   "type": "spot",
+   "room": "Reception",
+   "x": 17.8931,
+   "y": 4.9503,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — reception",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1446.8,
+    752.2
+   ],
+   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)"
+  },
+  {
+   "id": "spot-85",
+   "type": "spot",
+   "room": "Reception",
+   "x": 18.9536,
+   "y": 4.9503,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — reception",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1529.1,
+    752.2
+   ],
+   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)"
+  },
+  {
+   "id": "spot-86",
+   "type": "spot",
+   "room": "Reception",
+   "x": 20.013,
+   "y": 4.9503,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — reception",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1611.4,
+    752.2
+   ],
+   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)"
+  },
+  {
+   "id": "spot-87",
+   "type": "spot",
+   "room": "Reception",
+   "x": 20.013,
+   "y": 3.9917,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — reception",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1611.4,
+    826.6
+   ],
+   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)"
+  },
+  {
+   "id": "spot-88",
+   "type": "spot",
+   "room": "Reception",
+   "x": 17.8931,
+   "y": 3.0317,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — reception",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1446.8,
+    901.1
+   ],
+   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)"
+  },
+  {
+   "id": "spot-89",
+   "type": "spot",
+   "room": "Reception",
+   "x": 18.9536,
+   "y": 3.0317,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — reception",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1529.1,
+    901.1
+   ],
+   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)"
+  },
+  {
+   "id": "spot-90",
+   "type": "spot",
+   "room": "Reception",
+   "x": 20.013,
+   "y": 3.0317,
+   "h": 2.6,
+   "facing": null,
+   "label": "Ceiling spot — reception",
+   "status": "engineer",
+   "src": "L",
+   "pdf": [
+    1611.4,
+    901.1
+   ],
+   "dim": "0.24 + 0.41 = 0.65 / 1.06 / 1.06 from the TV wall (west end of his chain; the 0.99 / 0.22 east end runs to a step Main doesn't have); 0.52 / 0.96 / 0.96 from the north wall (Main is open to the dining there: rows measured from the south wall, 0.96 / 1.92 / 2.88)"
+  },
+  {
+   "id": "ledfeed-25",
+   "type": "ledfeed",
+   "room": "Reception",
+   "x": 17.2515,
+   "y": 3.8205,
+   "h": 0.8,
+   "facing": "E",
+   "label": "Wall LED outlet — reception TV wall, 80 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    1401.1,
+    839.6
+   ],
+   "dim": "0.20 / 0.75 / 0.80 chain from the south wall; H.L=+80cm",
+   "pdf_light": [
+    1399.28,
+    841.26
+   ]
+  },
+  {
+   "id": "ledfeed-26",
+   "type": "ledfeed",
+   "room": "Reception",
+   "x": 17.2446,
+   "y": 3.0205,
+   "h": 2.0,
+   "facing": "E",
+   "label": "Wall LED outlet — reception TV wall, 200 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    1401.1,
+    901.7
+   ],
+   "dim": "0.20 / 0.75 / 0.80 chain from the south wall; H.L=+200cm",
+   "pdf_light": [
+    1400.0,
+    903.42
+   ]
+  },
+  {
+   "id": "ledfeed-27",
+   "type": "ledfeed",
+   "room": "Reception",
+   "x": 17.238,
+   "y": 2.2705,
+   "h": 2.0,
+   "facing": "E",
+   "label": "Wall LED outlet — reception TV wall, 200 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    1401.1,
+    960.0
+   ],
+   "dim": "0.20 / 0.75 / 0.80 chain from the south wall; H.L=+200cm",
+   "pdf_light": [
+    1400.0,
+    958.38
+   ]
+  },
+  {
+   "id": "walllight-11",
+   "type": "walllight",
+   "room": "Reception",
+   "x": 18.7822,
+   "y": 2.0735,
+   "h": 1.6,
+   "facing": "N",
+   "label": "Wall-light outlet — reception, window wall",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    1515.3,
+    967.8
+   ],
+   "dim": "0.50 / 0.79 / 1.15 / 0.79 chain from the east wall",
+   "pdf_light": [
+    1515.5,
+    967.2
+   ],
+   "h_unreadable": true,
+   "note": "no height or leader: 160 taken from his other blue wall-light outlets"
+  },
+  {
+   "id": "walllight-12",
+   "type": "walllight",
+   "room": "Reception",
+   "x": 19.9322,
+   "y": 2.0735,
+   "h": 1.6,
+   "facing": "N",
+   "label": "Wall-light outlet — reception, window wall",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    1604.7,
+    967.8
+   ],
+   "dim": "0.50 / 0.79 / 1.15 / 0.79 chain from the east wall",
+   "pdf_light": [
+    1604.78,
+    967.2
+   ],
+   "h_unreadable": true,
+   "note": "no height or leader: 160 taken from his other blue wall-light outlets"
+  },
+  {
+   "id": "acsw-4",
+   "type": "acsw",
+   "room": "Reception",
+   "x": 17.9922,
+   "y": 2.0735,
+   "h": 1.1,
+   "facing": "N",
+   "label": "AC switch — reception, window wall, 110 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1443.8,
+    967.8
+   ],
+   "dim": "0.50 + 0.79 + 1.15 + 0.79 = 3.23 from the east wall (to the height boxes)"
+  },
+  {
+   "id": "socket-44",
+   "type": "socket",
+   "room": "Reception",
+   "x": 17.9922,
+   "y": 2.0735,
+   "h": 1.0,
+   "facing": "N",
+   "label": "Single socket — reception, window wall, 100 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1443.8,
+    967.8
+   ],
+   "dim": "3.23 from the east wall (to the height boxes)",
+   "gang": 1
+  },
+  {
+   "id": "socket-45",
+   "type": "socket",
+   "room": "Reception",
+   "x": 17.9922,
+   "y": 2.0735,
+   "h": 0.45,
+   "facing": "N",
+   "label": "Single socket — reception, window wall, 45 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1443.8,
+    967.8
+   ],
+   "dim": "3.23 from the east wall (to the height boxes)",
+   "gang": 1
+  },
+  {
+   "id": "socket-46",
+   "type": "socket",
+   "room": "Reception",
+   "x": 20.7222,
+   "y": 2.0735,
+   "h": 0.45,
+   "facing": "N",
+   "label": "Single socket — reception, window-wall corner, 45 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1665.3,
+    967.8
+   ],
+   "dim": "0.50 from the east wall (to the height box)",
+   "gang": 1
+  },
+  {
+   "id": "data-4",
+   "type": "data",
+   "room": "Reception",
+   "x": 21.2192,
+   "y": 2.5705,
+   "h": 0.45,
+   "facing": "W",
+   "label": "Data outlet — reception, east wall, 45 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1700.6,
+    948.3
+   ],
+   "dim": "0.50 from the south wall (to the height box)"
+  },
+  {
+   "id": "socket-47",
+   "type": "socket",
+   "room": "Reception",
+   "x": 17.2647,
+   "y": 5.33,
+   "h": 1.2,
+   "facing": "E",
+   "label": "Double socket — reception TV wall, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1406.5,
+    724.6
+   ],
+   "dim": "registered (his 0.70 runs from a wall line Main doesn't have: open to the dining)",
+   "gang": 2
+  },
+  {
+   "id": "socket-48",
+   "type": "socket",
+   "room": "Reception",
+   "x": 17.2647,
+   "y": 5.33,
+   "h": 0.5,
+   "facing": "E",
+   "label": "Double socket — reception TV wall, 50 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1416.7,
+    724.6
+   ],
+   "dim": "registered (his 0.70 runs from a wall line Main doesn't have: open to the dining)",
+   "gang": 2
+  },
+  {
+   "id": "tv-3",
+   "type": "tv",
+   "room": "Reception",
+   "x": 17.2623,
+   "y": 5.06,
+   "h": 1.2,
+   "facing": "E",
+   "label": "TV (dish) outlet — reception TV wall, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1416.7,
+    745.5
+   ],
+   "dim": "registered (his 0.70 runs from a wall line Main doesn't have: open to the dining)"
+  },
+  {
+   "id": "hdmi-3",
+   "type": "hdmi",
+   "room": "Reception",
+   "x": 17.2614,
+   "y": 4.96,
+   "h": 1.2,
+   "facing": "E",
+   "label": "HDMI outlet — reception TV wall, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1416.7,
+    753.3
+   ],
+   "dim": "registered (his 0.70 runs from a wall line Main doesn't have: open to the dining)"
+  },
+  {
+   "id": "data-5",
+   "type": "data",
+   "room": "Reception",
+   "x": 17.2589,
+   "y": 4.67,
+   "h": 1.2,
+   "facing": "E",
+   "label": "Data outlet — reception TV wall, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1408.1,
+    775.8
+   ],
+   "dim": "registered (his 0.70 runs from a wall line Main doesn't have: open to the dining)",
+   "note": "two columns of height boxes (120 x 3 / 50 x 3); the two D outlets have no box and take their column's height"
+  },
+  {
+   "id": "data-6",
+   "type": "data",
+   "room": "Reception",
+   "x": 17.2589,
+   "y": 4.67,
+   "h": 0.5,
+   "facing": "E",
+   "label": "Data outlet — reception TV wall, 50 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1416.7,
+    775.8
+   ],
+   "dim": "registered (his 0.70 runs from a wall line Main doesn't have: open to the dining)",
+   "note": "two columns of height boxes (120 x 3 / 50 x 3); the two D outlets have no box and take their column's height"
+  },
+  {
+   "id": "walllight-13",
+   "type": "walllight",
+   "room": "Terrace",
+   "x": 21.4762,
+   "y": 8.62,
+   "h": 2.0,
+   "facing": "E",
+   "label": "Wall-light outlet — terrace, house wall, 200 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    1735.2,
+    468.9
+   ],
+   "dim": "registered; H.L=+200cm",
+   "pdf_light": [
+    1732.77,
+    469.26
+   ]
+  },
+  {
+   "id": "walllight-14",
+   "type": "walllight",
+   "room": "Terrace",
+   "x": 21.4757,
+   "y": 5.8,
+   "h": 2.0,
+   "facing": "E",
+   "label": "Wall-light outlet — terrace, house wall, 200 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    1735.2,
+    688.0
+   ],
+   "dim": "registered; H.L=+200cm",
+   "pdf_light": [
+    1732.65,
+    688.38
+   ]
+  },
+  {
+   "id": "walllight-15",
+   "type": "walllight",
+   "room": "Terrace",
+   "x": 21.4753,
+   "y": 2.63,
+   "h": 2.0,
+   "facing": "E",
+   "label": "Wall-light outlet — terrace, house wall, 200 cm",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    1735.2,
+    934.3
+   ],
+   "dim": "registered; H.L=+200cm",
+   "pdf_light": [
+    1732.77,
+    934.26
+   ]
+  },
+  {
+   "id": "ipbox-1",
+   "type": "ipbox",
+   "room": "Terrace",
+   "x": 21.4765,
+   "y": 8.96,
+   "h": 0.45,
+   "facing": "E",
+   "label": "IP65 box — terrace, house wall",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1727.5,
+    442.5
+   ],
+   "dim": "registered",
+   "h_unreadable": true,
+   "note": "written \"IP65 BOX\" (not in his legend); no height written: 45 taken from the terrace sockets"
+  },
+  {
+   "id": "ipbox-2",
+   "type": "ipbox",
+   "room": "Terrace",
+   "x": 21.4753,
+   "y": 2.83,
+   "h": 0.45,
+   "facing": "E",
+   "label": "IP65 box — terrace, house wall",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1727.5,
+    918.8
+   ],
+   "dim": "registered",
+   "h_unreadable": true,
+   "note": "written \"IP65 BOX\" (not in his legend); no height written: 45 taken from the terrace sockets"
+  },
+  {
+   "id": "socket-49",
+   "type": "socket",
+   "room": "Terrace",
+   "x": 22.1035,
+   "y": 9.24,
+   "h": 0.6,
+   "facing": "S",
+   "label": "Triple universal socket — terrace, north wall, 60 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1761.6,
+    420.8
+   ],
+   "dim": "0.63 from the house wall (to the height box)",
+   "gang": 3
+  },
+  {
+   "id": "socket-50",
+   "type": "socket",
+   "room": "Terrace",
+   "x": 23.1035,
+   "y": 9.22,
+   "h": 1.2,
+   "facing": "S",
+   "label": "Triple universal socket — terrace, north wall, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1839.3,
+    422.3
+   ],
+   "dim": "0.63 + 1.00 = 1.63 from the house wall (to the height box)",
+   "gang": 3
+  },
+  {
+   "id": "socket-51",
+   "type": "socket",
+   "room": "Terrace",
+   "x": 23.6144,
+   "y": 9.52,
+   "h": 1.2,
+   "facing": "S",
+   "label": "Triple universal socket — terrace, north recess, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1899.9,
+    399.0
+   ],
+   "dim": "0.40 from the recess wall (to the height box)",
+   "gang": 3
+  },
+  {
+   "id": "socket-52",
+   "type": "socket",
+   "room": "Terrace",
+   "x": 21.4758,
+   "y": 6.03,
+   "h": 1.2,
+   "facing": "E",
+   "label": "Triple universal socket — terrace TV, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1736.8,
+    670.2
+   ],
+   "dim": "registered",
+   "gang": 3
+  },
+  {
+   "id": "socket-53",
+   "type": "socket",
+   "room": "Terrace",
+   "x": 21.4756,
+   "y": 5.65,
+   "h": 0.45,
+   "facing": "E",
+   "label": "Single socket — terrace TV, 45 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1725.9,
+    699.7
+   ],
+   "dim": "registered",
+   "gang": 1
+  },
+  {
+   "id": "tv-4",
+   "type": "tv",
+   "room": "Terrace",
+   "x": 21.4756,
+   "y": 5.59,
+   "h": 1.2,
+   "facing": "E",
+   "label": "TV (dish) outlet — terrace, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1740.7,
+    704.4
+   ],
+   "dim": "registered"
+  },
+  {
+   "id": "hdmi-4",
+   "type": "hdmi",
+   "room": "Terrace",
+   "x": 21.4755,
+   "y": 5.5,
+   "h": 1.2,
+   "facing": "E",
+   "label": "HDMI outlet — terrace, 120 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1740.7,
+    711.4
+   ],
+   "dim": "registered",
+   "h_unreadable": true,
+   "note": "three boxes (45 / 120 / 120) for four symbols: the HDMI under the TV takes 120"
+  },
+  {
+   "id": "socket-54",
+   "type": "socket",
+   "room": "Terrace",
+   "x": 24.75,
+   "y": 5.7,
+   "h": 0.45,
+   "facing": "W",
+   "label": "Triple universal socket — terrace, east wall, 45 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1980.0,
+    695.8
+   ],
+   "dim": "registered",
+   "gang": 3,
+   "note": "his 0.30 runs from the bench outline, not a wall: drawn position kept"
+  },
+  {
+   "id": "socket-55",
+   "type": "socket",
+   "room": "Terrace",
+   "x": 21.4753,
+   "y": 2.33,
+   "h": 0.45,
+   "facing": "E",
+   "label": "Triple universal socket — terrace, house wall (south), 45 cm",
+   "status": "engineer",
+   "src": "P",
+   "pdf": [
+    1729.0,
+    957.7
+   ],
+   "dim": "registered",
+   "gang": 3
+  },
+  {
+   "id": "ledfeed-28",
+   "type": "ledfeed",
+   "room": "Terrace",
+   "x": 21.55,
+   "y": 1.85,
+   "h": 0.3,
+   "facing": "N",
+   "label": "Wall LED outlet — terrace planter",
+   "status": "engineer",
+   "src": "LP",
+   "pdf": [
+    1731.3,
+    995.0
+   ],
+   "dim": "registered",
+   "pdf_light": [
+    1731.74,
+    997.2
+   ],
+   "h_unreadable": true,
+   "note": "no height or leader: put at 30 (the low LED height he uses in the guest bathroom); his 0.10 runs from the house wall"
+  }
+ ],
+ "lines": []
+}

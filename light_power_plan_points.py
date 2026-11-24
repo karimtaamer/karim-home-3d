@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""The site engineer's symbols for the Light and Power Plan, read off his two PDFs room by room (generated; see
+"""The site engineer's symbols for the Engineer Electrical Plan (id light-power-plan): POINTS are his first two sheets, read
+room by room (generated; the R01 / S09 tables at the end bring them to his latest sheets; see
 build_electrical_light_power_plan.py). reg: the symbol registered onto Main's plan (metres); pdf: its centre on the PDF
 (points; the power plan for LP points, pdf_light the light plan's); members: each spot of a linked pair; cl: the symbol
 cluster id of the reading (A = light plan, B = power plan); r: his written dimensions [(wall, metres[, ray origin])]."""
@@ -2654,3 +2655,181 @@ POINTS = [{'type': 'spot',
   'reg': [21.55, 1.85],
   'pdf': [1731.3, 995.0],
   'pdf_light': [1731.74, 997.2]}]
+
+# --- Engineer Electrical Plan (24 Nov 2026): his LATEST sheets, power S07 R01, lighting S08 R01, switches S09 (no rev). ---
+# POINTS above are his first sheets; build_electrical_light_power_plan.py places them, then applies R01_DROP / R01_CHANGE /
+# R01_ADD (ids of the first build kept; crop names from eng-rev-2026-11-23/crops) and the S09 codes (CIRCUIT, MOTOR, PLATES).
+# Sheet -> metres: L (S08 R01) is the first light sheet's frame, REG. P and S are re-plotted on a rotated 3370x2384 sheet:
+# their display points at 215.85 dpi map onto the light sheet at 300 dpi by an affine found by ECC on the wall lines
+# (S: eng-rev-2026-11-23/swreg.py; P: the same, started from S's; both checked by overlay):
+#   sheet_px = M[:, :2] @ light_px + M[:, 2]
+SHEET_M = {"S": [[0.99999452, 7.458e-05, 86.23188019], [4.266e-05, 0.99998772, 63.74184036]],
+           "P": [[0.99996305, -3.235e-05, 86.95288086], [-7.736e-05, 0.99994576, 64.42808533]]}
+SHEET_DPI = 215.85
+
+R01_DROP = {  # id -> why (lcp-1 comes back from R01_ADD at its new place)
+    "lcp-1": "power-10/11/12 (KEY3): the L.C left the laundry's kitchen wall; R01 draws it on the 45° corridor wall (power-07)",
+    "shutter-2": "S09 codes this plate A10 'CURTAIN': it is switch-21 now (power-15, KEY2)",
+}
+R01_CHANGE = {  # id -> fields to set; 'r': his written dimensions re-applied from the placed point; 'r01': what changed
+    "ledfeed-11": {"h": 0.1, "dim": "registered; H.L=+10cm", "label": "Wall LED outlet — kitchen, south wall, 10 cm",
+                   "r01": "light-04-Kitchen, KEY3: H.L=+160cm -> +10cm (a second LED beside it, ledfeed-30)"},
+    "socket-32": {"r": [("S", 0.78)], "dim": "0.78 from the south wall (to the height box)",
+                  "r01": "KEY3: 0.30 + 0.50 = 0.80 -> 0.78 from the laundry's south wall"},
+    "ledfeed-28": {"label": "Wall LED outlet — terrace planter (\"spotlights above L-seat\")",
+                   "r01": "power-20..28, KEY4: R01 labels it SPOTLIGHTS ABOVE L-SEAT"},
+    "shutter-4": {"r01": "power-17/18, KEY2: R01 wires it to the shutter outlet at the dining opening (shutterout-4); a "
+                         "second shutter switch (shutter-5) under the same 110 box feeds the reception one"},
+    "shutter-3": {"r01": "power-19: R01 adds a wire from it towards the dining opening's shutter outlet"},
+}
+_SH = "no height written: put at 240, at the shutter box over the opening"
+R01_ADD = [
+    {"id": "curtainled-2", "type": "curtainled", "room": "Living room", "src": "L", "wall": "W", "h": 2.5, "unreadable_h": True,
+     "label": "Curtain-box LED + socket outlet — living room window", "reg": [3.073, 1.705],
+     "note": "no height written; put just under the 2.60 ceiling, in the curtain box", "r01": "light-06-Living, KEY1: new"},
+    {"id": "curtainled-3", "type": "curtainled", "room": "Dining", "src": "L", "wall": "N", "h": 2.5, "unreadable_h": True,
+     "label": "Curtain-box LED + socket outlet — dining north window", "reg": [16.122, 9.238],
+     "note": "no height written; put just under the 2.60 ceiling, in the curtain box", "r01": "light-00-Dining, KEY1: new"},
+    {"id": "curtainled-4", "type": "curtainled", "room": "Dining", "src": "L", "wall": "E", "h": 2.5, "unreadable_h": True,
+     "label": "Curtain-box LED + socket outlet — dining slider (east)", "reg": [21.134, 8.36],
+     "note": "no height written; put just under the 2.60 ceiling, in the curtain box", "r01": "light-01-Dining, KEY1: new"},
+    {"id": "curtainled-5", "type": "curtainled", "room": "Reception", "src": "L", "wall": "E", "h": 2.5, "unreadable_h": True,
+     "label": "Curtain-box LED + socket outlet — reception window (east)", "reg": [21.102, 2.921],
+     "note": "no height written; put just under the 2.60 ceiling, in the curtain box", "r01": "light-07-Reception, KEY1: new"},
+    {"id": "curtainled-6", "type": "curtainled", "room": "Reception", "src": "S", "facing": "S", "h": 2.5, "unreadable_h": True,
+     "label": "Curtain-box outlet — dining / reception divider (curtain motor)", "reg": [17.639, 5.622],
+     "note": "on S09 only (not on the S08 R01 light sheet): his curtain-box symbol with 'CURTAIN G6' and no LED code; "
+             "no height written, put under the ceiling", "r01": "S09 only"},
+    {"id": "walllight-16", "type": "walllight", "room": "Entrance", "src": "LP", "facing": "S", "h": 2.4,
+     "dim": "registered, on the lobby face of the entrance wall (y 3.35, as the doorbell); H.L=+240cm ABOVE DOOR",
+     "label": "Wall-light outlet — outside the front door, above the door, 240 cm", "reg": [8.514, 3.347],
+     "note": "outside the flat, in the building lobby", "r01": "light-03-Entrance, power-04, KEY4: new outside light"},
+    {"id": "ledfeed-29", "type": "ledfeed", "room": "Kitchen", "src": "LP", "wall": "W", "h": 2.2,
+     "dim": "registered (0.19 below the 160 cm LED); H.L=+220cm", "label": "Wall LED outlet — kitchen, west wall, 220 cm",
+     "reg": [6.55, 5.956], "r01": "light-02, power-02/03, KEY3: new"},
+    {"id": "ledfeed-30", "type": "ledfeed", "room": "Kitchen", "src": "LP", "wall": "S", "h": 0.1,
+     "dim": "registered (0.14 west of the other one); H.L=+10cm", "label": "Wall LED outlet — kitchen, south wall (west), 10 cm",
+     "reg": [8.109, 5.70], "r01": "light-04-Kitchen, KEY3: new"},
+    {"id": "woutlet-4", "type": "woutlet", "room": "Kitchen", "src": "P", "wall": "N@x7.4", "h": 0.6,
+     "dim": "registered, moved +0.16 with the under-sink socket's dimension",
+     "label": "\"W\" outlet (phone charger, per his legend) — kitchen, under the sink, 60 cm", "reg": [8.10, 9.0],
+     "note": "R01 also draws three '23 mm sleeve for filter hose' runs from the sink (not electrical points)",
+     "r01": "power-09-Kitchen, KEY3: new"},
+    {"id": "lcp-1", "type": "lcp", "room": "Entrance", "src": "P", "facing": "N", "h": 1.5, "unreadable_h": True, "w": 0.55,
+     "label": "Low-current panel (L.C) — corridor, on the 45° wall", "reg": [11.84, 5.249],
+     "note": "no height written: middle put at 150; drawn about 0.55 long on the 45° wall (facing taken as N, the corridor side)",
+     "r01": "power-07, KEY3: moved here from the laundry's kitchen wall"},
+    {"id": "shutterout-1", "type": "shutterout", "room": "Living room", "src": "P", "facing": "W", "h": 2.4, "unreadable_h": True,
+     "label": "Shutter outlet — living room window", "reg": [2.642, 2.947], "note": _SH + "; wired to shutter-1 by the door",
+     "r01": "power-13-Living, KEY2: new"},
+    {"id": "shutterout-2", "type": "shutterout", "room": "Master bedroom", "src": "P", "facing": "N", "h": 2.4, "unreadable_h": True,
+     "label": "Shutter outlet — master bedroom window", "reg": [4.559, 9.348],
+     "note": _SH + "; wired to the plate by the window (S09 codes that plate A10 'CURTAIN')", "r01": "power-15-MasterBed, KEY2: new"},
+    {"id": "shutterout-3", "type": "shutterout", "room": "Dining", "src": "P", "facing": "N", "h": 2.4, "unreadable_h": True,
+     "label": "Shutter outlet — dining north window", "reg": [17.566, 9.838], "note": _SH, "r01": "power-00-Dining, KEY2: new"},
+    {"id": "shutterout-4", "type": "shutterout", "room": "Dining", "src": "P", "facing": "E", "h": 2.4, "unreadable_h": True,
+     "label": "Shutter outlet — dining opening to the terrace", "reg": [21.505, 6.499], "note": _SH + "; wired to shutter-4",
+     "r01": "power-17/18-Terrace, KEY2: new"},
+    {"id": "shutterout-5", "type": "shutterout", "room": "Reception", "src": "P", "facing": "E", "h": 2.4, "unreadable_h": True,
+     "label": "Shutter outlet — reception opening to the terrace", "reg": [21.505, 5.044], "note": _SH + "; wired to shutter-5",
+     "r01": "power-17/18-Terrace, KEY2: new"},
+    {"id": "shutter-5", "type": "shutter", "room": "Reception", "src": "P", "wall": "E", "h": 1.1,
+     "dim": "registered (under the 110 box it shares with shutter-4)",
+     "label": "Shutter button switch — dining / reception pier (lower), 110 cm",
+     "reg": [21.15, 5.615], "r01": "power-17/18, KEY2: new second shutter switch"},
+    {"id": "switch-20", "type": "switch", "room": "Reception", "src": "PS", "wall": "W", "h": 1.2, "r": [("N", 0.40, "@x17.4")],
+     "dim": "0.40 from the dining wall (to the height box)", "label": "3-gang light switch — reception TV wall, north end, 120 cm",
+     "reg": [17.4, 5.40], "r01": "power-16-Reception, KEY4: new"},
+    {"id": "switch-21", "type": "switch", "room": "Master bedroom", "src": "PS", "wall": "N", "h": 1.1, "dim": "registered",
+     "label": "Curtain switch — master bedroom window, 110 cm", "reg": [5.14, 8.85],
+     "note": "the power sheet draws this plate as the roller-shutter switch (hatched) and R01 wires it to the new shutter "
+             "outlet; S09 codes it A10 with 'CURTAIN' at the curtain box", "r01": "was shutter-2 (KEY2)"},
+    {"id": "ledfeed-31", "type": "ledfeed", "room": "Terrace", "src": "LP", "facing": "N", "h": 0.1,
+     "dim": "0.65 from the house wall; H.L=+10cm SOFA SKIRTING", "label": "Wall LED outlet — terrace L-seat, sofa skirting, 10 cm",
+     "reg": [22.126, 2.243], "r01": "light-08-Terrace, power-20..28, KEY4: new"},
+]
+
+# S09: what each switch code works (gang text: "<code> — <this>")
+CODES = {
+    "C1": "living spots, the two outer rows (4)", "C2": "living spots, the two middle rows (4)",
+    "C3": "living wall lights, door and window walls (2)", "C4": "living wall lights, TV wall (2)",
+    "C5": "living curtain-box LED", "C6": "living curtain motor (CURTAIN)",
+    "A1": "master bedroom spots, north and south rows (6)", "A2": "master bedroom spots, middle row (3)",
+    "A3": "dresser / dressing spots (6)", "A4": "dresser-wall LED outlets, 150 cm and under the ceiling (2)",
+    "A5": "dresser-wall LED outlet, 70 cm", "A6": "wardrobe LED outlets (bedroom wardrobe and dressing wardrobe)",
+    "A7": "south bedside pendant", "A8": "north bedside pendant", "A9": "master curtain-box LED",
+    "A10": "master curtain motor (CURTAIN)",
+    "B1": "master bathroom LED outlets (shower niche, vanity wall)", "B2": "master bathroom spot, shower side",
+    "B3": "master bathroom spots and exhaust fan",
+    "D1": "kitchen spots, north and south rows (12)", "D2": "kitchen spots, middle row (4)", "D3": "kitchen exhaust fan",
+    "D4": "kitchen LED outlets: north-east corner, west wall 160, south wall west 10 (3)",
+    "D5": "kitchen LED outlet, south wall east, 10 cm", "D6": "kitchen LED outlet, west wall 220",
+    "E1": "laundry spots (track) and exhaust fan", "E2": "laundry LED outlet",
+    "F1": "guest bathroom spots over the WC / middle and exhaust fan",
+    "F2": "guest bathroom spots, vanity side and over the bath", "F3": "guest bathroom LED outlets (4)",
+    "G1": "dining spots (13)", "G2": "dining pendants (3)", "G3": "dining niche LED outlet", "G4": "dining west-wall LED outlet",
+    "G5": "dining north-window curtain-box LED",
+    "G6": "curtain motors (CURTAIN), 4 places: dining north window, dining slider, reception window, dining / reception divider",
+    "G7": "reception spots (7)", "G8": "reception TV-wall LED outlets (3)", "G9": "reception window-wall wall lights (2)",
+    "H1": "terrace wall lights (3)", "H2": "terrace planter LED (spotlights above the L-seat)", "H3": "terrace sofa-skirting LED",
+    "T1": "coffee-corner shelf LED", "T2": "dining-slider curtain-box LED", "T3": "reception-window curtain-box LED",
+    "R1": "corridor / lobby spots, set 1 (6)", "R2": "corridor / lobby spots, set 2 (7)",
+    "R3": "entrance wall lights (6)", "R4": "entrance LED outlets: console wall and corridor kitchen wall (4)",
+    "R5": "outside wall light above the front door",
+}
+
+
+def _c(code, *ids):
+    return {i: code for i in ids}
+
+
+CIRCUIT = {  # load id -> the code printed beside it on S09
+    **_c("C1", "spot-1", "spot-2", "spot-7", "spot-8"), **_c("C2", "spot-3", "spot-4", "spot-5", "spot-6"),
+    **_c("C3", "walllight-1", "walllight-2"), **_c("C4", "walllight-3", "walllight-4"), **_c("C5", "curtainled-2"),
+    **_c("A1", "spot-9", "spot-10", "spot-11", "spot-15", "spot-16", "spot-17"), **_c("A2", "spot-12", "spot-13", "spot-14"),
+    **_c("A3", "spot-18", "spot-19", "spot-20", "spot-21", "spot-22", "spot-23"), **_c("A4", "ledfeed-5", "ledfeed-6"),
+    **_c("A5", "ledfeed-4"), **_c("A6", "ledfeed-2", "ledfeed-3"), **_c("A7", "pendant-2"), **_c("A8", "pendant-1"),
+    **_c("A9", "curtainled-1"),
+    **_c("B1", "ledfeed-7", "ledfeed-8", "ledfeed-9"), **_c("B2", "spot-26"),
+    **_c("B3", "spot-24", "spot-25", "spot-28", "spot-29", "fan-1"),
+    **_c("D1", *[f"spot-{i}" for i in (30, 31, 32, 33, 34, 35, 40, 41, 42, 43, 44, 45)]),
+    **_c("D2", "spot-36", "spot-37", "spot-38", "spot-39"), **_c("D3", "fan-2"),
+    **_c("D4", "ledfeed-10", "ledfeed-12", "ledfeed-30"), **_c("D5", "ledfeed-11"), **_c("D6", "ledfeed-29"),
+    **_c("E1", "fan-3", "spot-46", "spot-47", "spot-48"), **_c("E2", "ledfeed-13"),
+    **_c("F1", "spot-52", "spot-53", "spot-56", "spot-57", "fan-4"),
+    **_c("F2", "spot-49", "spot-50", "spot-51", "spot-54", "spot-55"),
+    **_c("F3", "ledfeed-14", "ledfeed-15", "ledfeed-16", "ledfeed-17"),
+    **_c("G1", *[f"spot-{i}" for i in range(71, 84)]), **_c("G2", "pendant-3", "pendant-4", "pendant-5"),
+    **_c("G3", "ledfeed-24"), **_c("G4", "ledfeed-23"), **_c("G5", "curtainled-3"), **_c("G6", "curtainled-6"),
+    **_c("G7", *[f"spot-{i}" for i in range(84, 91)]), **_c("G8", "ledfeed-25", "ledfeed-26", "ledfeed-27"),
+    **_c("G9", "walllight-11", "walllight-12"),
+    **_c("H1", "walllight-13", "walllight-14", "walllight-15"), **_c("H2", "ledfeed-28"), **_c("H3", "ledfeed-31"),
+    **_c("T1", "ledfeed-22"), **_c("T2", "curtainled-4"), **_c("T3", "curtainled-5"),
+    **_c("R1", "spot-58", "spot-60", "spot-62", "spot-64", "spot-66", "spot-68"),
+    **_c("R2", "spot-59", "spot-61", "spot-63", "spot-65", "spot-67", "spot-69", "spot-70"),
+    **_c("R3", "walllight-5", "walllight-6", "walllight-7", "walllight-8", "walllight-9", "walllight-10"),
+    **_c("R4", "ledfeed-18", "ledfeed-19", "ledfeed-20", "ledfeed-21"), **_c("R5", "walllight-16"),
+}
+MOTOR = {"curtainled-1": "A10", "curtainled-2": "C6", "curtainled-3": "G6", "curtainled-4": "G6", "curtainled-5": "G6",
+         "curtainled-6": "G6"}  # curtain-box outlets: the CURTAIN code beside them (the motor's socket)
+NO_CODE = {  # loads S09 draws with no code beside them
+    "ledfeed-1": "no switch code on S09 (the TV-console LED)",
+    "spot-27": "no switch code on S09 (probably B3 with the other spots, not printed)",
+}
+PLATES = {  # switch id -> (S09 codes in the plate's order, note)
+    "switch-1": (["C4", "C5", "C6"], "S09 lists 3 codes on this 110 plate; the first power sheet drew it 1-gang"),
+    "switch-2": (["C1", "C2", "C3"], "S09 lists 3 codes on this 120 plate; the first power sheet drew it 2-gang"),
+    "switch-3": (["A7", "A8", "A9"], "S09 lists 3 codes on each bedside plate; the first power sheet drew them 2-gang"),
+    "switch-4": (["A7", "A8", "A9"], "S09 lists 3 codes on each bedside plate; the first power sheet drew them 2-gang"),
+    "switch-5": (["A1", "A2", "A3"], None), "switch-6": (["A4", "A5", "A6"], None),
+    "switch-7": (["B1", "B2", "B3"], None), "switch-8": (["D1", "D2", "D3"], None), "switch-9": (["D4", "D5", "D6"], None),
+    "switch-10": (["F1", "F2", "F3"], None), "switch-11": (["R1", "R2"], None),
+    "switch-12": (["R3", "R4", "R5"], "S09 prints 'R3,R3,R5' on this plate: taken as R3,R4,R5 (R4 is on no other plate; a typo)"),
+    "switch-13": (["E1", "E2"], "the laundry's switches, on the corridor side of its door"),
+    "switch-14": (["R1", "R2"], None),
+    "switch-15": (["R1", "R2"], "S09 lists 2 codes; the first power sheet drew it 3-gang"),
+    "switch-16": (["G1", "G2", "G3"], None), "switch-17": (["G4", "G5", "G6"], None),
+    "switch-18": (["H1", "H2", "H3"], None),
+    "switch-19": (["T1", "T2", "T3"], "S09 lists 3 codes on this 110 plate; the power sheet (R01 too) draws it 1-gang"),
+    "switch-20": (["G7", "G8", "G9"], None), "switch-21": (["A10"], None),
+}

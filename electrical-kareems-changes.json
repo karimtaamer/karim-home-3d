@@ -278,7 +278,7 @@
    "facing": null,
    "label": "Ceiling spot — master bathroom (basin / middle / shower / WC)",
    "status": "adapted",
-   "note": "4 spots as on the plan, over Main's vanity, middle, shower and WC bay; Karim's review (17 Nov 2026): the middle column moved 0.30 south, in line with the left column (rows at y 6.65 and 8.15)",
+   "note": "4 spots as on the plan, over Main's vanity, middle, shower and WC bay",
    "circuit": "mbath"
   },
   {
@@ -291,7 +291,7 @@
    "facing": null,
    "label": "Ceiling spot — master bathroom (basin / middle / shower / WC)",
    "status": "adapted",
-   "note": "4 spots as on the plan, over Main's vanity, middle, shower and WC bay; Karim's review (17 Nov 2026): the middle column moved 0.30 south, in line with the left column (rows at y 6.65 and 8.15)",
+   "note": "4 spots as on the plan, over Main's vanity, middle, shower and WC bay",
    "circuit": "mbath"
   },
   {
@@ -304,7 +304,7 @@
    "facing": null,
    "label": "Ceiling spot — master bathroom (basin / middle / shower / WC)",
    "status": "adapted",
-   "note": "4 spots as on the plan, over Main's vanity, middle, shower and WC bay; Karim's review (17 Nov 2026): the middle column moved 0.30 south, in line with the left column (rows at y 6.65 and 8.15)",
+   "note": "4 spots as on the plan, over Main's vanity, middle, shower and WC bay",
    "circuit": "mbath"
   },
   {
@@ -317,7 +317,7 @@
    "facing": null,
    "label": "Ceiling spot — master bathroom (basin / middle / shower / WC)",
    "status": "adapted",
-   "note": "4 spots as on the plan, over Main's vanity, middle, shower and WC bay; Karim's review (17 Nov 2026): the middle column moved 0.30 south, in line with the left column (rows at y 6.65 and 8.15)",
+   "note": "4 spots as on the plan, over Main's vanity, middle, shower and WC bay",
    "circuit": "mbath"
   },
   {
@@ -1088,7 +1088,7 @@
    "facing": "S",
    "label": "2-gang switch — dressing corner by the bathroom-door wall",
    "status": "added",
-   "note": "centred on the short return wall at the arrow; Karim's review (17 Nov 2026): two keys, the corner spots and the wardrobe's LED. Karim's review (23 Nov 2026): the heated-towel switch moved inside the bathroom, so this is a single 125 plate (no longer stacked)",
+   "note": "centred on the short return wall at the arrow",
    "gangs": [
     "The two dresser/wardrobe corner spots marked on the plan",
     "Wardrobe LED (short wardrobe by the bathroom door)"
@@ -1151,7 +1151,6 @@
    "facing": "N",
    "label": "2-gang switch — inside beside the vanity socket, top box",
    "status": "adapted",
-   "note": "Karim's review (23 Nov 2026): top box of two, on the short wall beside the 135 cm vanity socket; all spots, and the under-vanity / cabinet / shower-niche LEDs",
    "gangs": [
     "All spots (vanity, middle, shower and WC)",
     "Under-vanity LED, cabinet glow + shower-niche LED"
@@ -1169,7 +1168,6 @@
    "facing": "S",
    "label": "3-gang switch — kitchen, beside the fridge as you come in, top box",
    "status": "adapted",
-   "note": "Karim's review (Karim 12 Nov 2026): moved from the south wall (x 9.15) to beside the fridge, on your right as you open the door; same 125 / 113 heights; on the tall end panel, so the back box needs a stud lining or a box set in the panel (the fridge's 5 cm vent gap is behind it)",
    "gangs": [
     "Spots, half A",
     "Spots, half B",
@@ -1188,7 +1186,6 @@
    "facing": "S",
    "label": "2-gang switch — kitchen, beside the fridge as you come in, lower box",
    "status": "adapted",
-   "note": "Karim's review (Karim 12 Nov 2026): lower box: the cabinet LEDs, under the top box beside the fridge",
    "gangs": [
     "Under-cabinet LED strips (upper cabinets)",
     "Plinth LED (lower cabinets)"
@@ -1329,7 +1326,6 @@
    "facing": "W",
    "label": "3-gang switch — by the terrace door, just past the curtain (terrace lights)",
    "status": "adapted",
-   "note": "Karim's review (Karim 12 Nov 2026): moved 0.35 m north (was y 8.25, behind the curtain's stack) to just past the curtain, so it shows; same 120 cm. Key 3 now switches the light outlet for the spotlights above the L-seat (no socket)",
    "gangs": [
     "Terrace floor lighting (seat-lip LED) + BBQ counter LED",
     "Terrace wall lights",
@@ -1347,7 +1343,6 @@
    "facing": "W",
    "label": "1-gang switch — coffee corner, east end (over the counter, at the corner)",
    "status": "added",
-   "note": "Karim's review (Karim 12 Nov 2026): on the end wall at the coffee corner's east end, 11 cm in from the counter's front corner, facing the room; 120 = 20 cm over the marble; 0.35 m north of the terrace switch on the same wall",
    "gangs": [
     "Coffee corner shelf LED"
    ],
@@ -1410,7 +1405,6 @@
    "facing": "S",
    "label": "Double socket 90 cm — reading lamp over the end table",
    "status": "plan",
-   "note": "Karim's review (17 Nov 2026): moved 0.30 west (was x 3.75, behind the art's corner), clear of the door-wall art (x 3.80-4.70)",
    "gang": 2
   },
   {
@@ -1990,7 +1984,6 @@
    "facing": "N",
    "label": "Distribution board (DB) — 36-way, right of the entrance artwork",
    "status": "adapted",
-   "note": "Karim's review (17 Nov 2026): out from behind the artwork to the wall right of it (x 7.52-7.88, 155-205, top at the door head), in the open and easy to reach; the west door sconce is removed to make room",
    "w": 0.36,
    "hh": 0.5
   },
@@ -2004,7 +1997,7 @@
    "facing": "N",
    "label": "Building intercom handset — answers the street gate",
    "status": "adapted",
-   "note": "Dad's review (Karim 11 Nov 2026): the building's own intercom (one system for the whole building); there is no indoor screen for the flat's door. West of the door, since the door now hinges there and the switches moved east. Karim's review (17 Nov 2026): down to 130, under the DB"
+   "note": "Dad's review (Karim 11 Nov 2026): the building's own intercom (one system for the whole building); there is no indoor screen for the flat's door. West of the door, since the door now hinges there and the switches moved east"
   },
   {
    "id": "ap-2",
@@ -2308,7 +2301,6 @@
    "facing": "E",
    "label": "Light outlet (no socket) — spotlights above the L-seat, at the planter end, above the soil",
    "status": "added",
-   "note": "Karim's review (Karim 12 Nov 2026): no longer a socket: a switched lighting outlet (IP66 box, cable gland) hard-wired to the spotlights above the L-seat (the spike lights in the planter strip behind it); terrace plate key 3; on a 30 mA RCD. Planter 28 cm (Karim 15 Nov 2026): raised from 30 to 100 cm (centre of the box) so it is on the house wall above the soil (soil top 88, back coping 95), not buried in the planter; centred on the 28 cm bed",
    "circuit": "terrace-seat-spots"
   },
   {
@@ -2333,7 +2325,7 @@
    "facing": null,
    "label": "Presence sensor (mmWave) — master bathroom",
    "status": "added",
-   "note": "centred between the basin and middle spots, on their row (Karim's review 17 Nov 2026: row moved to y 6.65), outside the shower and 1.2 m from the exhaust fan; sees the WC bay",
+   "note": "centred between the basin and middle spots, on their row, outside the shower and 1.2 m from the exhaust fan; sees the WC bay",
    "tech": "mmWave"
   },
   {
@@ -2573,8 +2565,7 @@
    "h": 2.1,
    "facing": "E",
    "label": "Gallery picture light — wall box, centred on the west wall at 210",
-   "status": "added",
-   "note": "Karim's review (23 Nov 2026): one wall box at 210, centred on the west wall that carries the paintings. Replaces the four earlier gallery boxes (south-wall 208, and west-wall 173, 209 and 145)."
+   "status": "added"
   },
   {
    "id": "ledfeed-199",
@@ -2826,7 +2817,6 @@
    "facing": "S",
    "label": "Double socket 30 cm — lobby, just past the master-bedroom door",
    "status": "added",
-   "note": "Karim's review (Karim 12 Nov 2026): at the red mark on the corridor wall east of the bedroom door, under the corridor switch",
    "gang": 2
   },
   {
@@ -2839,7 +2829,6 @@
    "facing": "N",
    "label": "Double socket 30 cm — entrance, beside the front door",
    "status": "added",
-   "note": "Karim's review (Karim 12 Nov 2026): at the red mark on the entrance wall just west of the front door, under the intercom handset",
    "gang": 2
   },
   {
@@ -2852,7 +2841,6 @@
    "facing": "W",
    "label": "Heated towel rail — flex outlet behind the rail (fused, on a 30 mA RCD)",
    "status": "added",
-   "note": "Karim's review (17 Nov 2026): the rail on the partition's west face is an electric towel heater; hard-wired through a flex-outlet plate hidden behind it. Karim's review (23 Nov 2026): switched from the lower box inside the bathroom, beside the vanity (with the exhaust fan)",
    "appliance": "electric heated towel rail"
   },
   {
@@ -2865,7 +2853,6 @@
    "facing": "N",
    "label": "2-gang switch — inside beside the vanity socket, lower box",
    "status": "added",
-   "note": "Karim's review (23 Nov 2026): lower box of two, under the lighting box; the exhaust fan and the heated towel rail (moved inside from the dressing-corner wall)",
    "gangs": [
     "Exhaust fan",
     "Heated towel rail — double-pole with neon"
@@ -2887,7 +2874,6 @@
    "facing": "E",
    "label": "Wardrobe LED — driver box in the top of the short wardrobe by the bathroom door",
    "status": "added",
-   "note": "Karim's review (17 Nov 2026): power behind the short wardrobe (0.87 m, west wall) so it can be lit inside; above the hanging zone, reached from inside; key 2 of the dressing-corner switch",
    "circuit": "dressing-wardrobe-led"
   },
   {
@@ -2900,7 +2886,6 @@
    "facing": "N",
    "label": "Dresser shelf-column LED — driver box behind the column",
    "status": "added",
-   "note": "Karim's review (17 Nov 2026): behind the tall open shelf column at the dresser's east end, 135 (the column runs from the top at 75 to 245); same key as the jewellery-tray LED (vanity switch, key 3)",
    "circuit": "master-vanity-led"
   },
   {
@@ -2913,7 +2898,6 @@
    "facing": "N",
    "label": "Double socket 52 cm — dresser knee space, centred (hair dryer, phone)",
    "status": "adapted",
-   "note": "Karim's review (17 Nov 2026): replaces the flap in the dresser top; centred on the 0.90 knee space, set in its 2 cm walnut back panel (box in the wall behind); clear of the pouf top (43) and the drawer (62)",
    "gang": 2
   },
   {
@@ -2926,7 +2910,6 @@
    "facing": "N",
    "label": "Double socket 90 cm — sofa end by the window wall (lamp)",
    "status": "added",
-   "note": "Karim's review (17 Nov 2026): the same height as the 90 on the door wall; between the corner and the art's edge, so the art does not hide it",
    "gang": 2
   },
   {
@@ -2939,7 +2922,6 @@
    "facing": "W",
    "label": "Low-current box — fibre (ONT), router, PoE switch, patch panel, TV splitter, UPS, Zigbee hub",
    "status": "added",
-   "note": "Karim's review (17 Nov 2026): the main low-current place, replacing the hub above the shoe cabinet; 0.45 x 0.75, bottom at 110; 6 cm recessed into the 12 cm toilet partition (no deeper: the guest bathroom's tiles are behind), 9 cm proud in a painted frame; vented top and bottom, non-metal door so the Zigbee and Wi-Fi radios get out; Zigbee channel 15, 20 or 25 (clear of Wi-Fi 1 / 6 / 11)",
    "w": 0.45,
    "hh": 0.75,
    "depth": 0.15,

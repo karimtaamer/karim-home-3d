@@ -1178,7 +1178,6 @@
    "facing": "S",
    "label": "3-gang switch — kitchen, beside the fridge as you come in, top box",
    "status": "adapted",
-   "note": "Karim's review (Karim 12 Nov 2026): moved from the south wall (x 9.15) to beside the fridge, on your right as you open the door; same 125 / 113 heights; on the tall end panel, so the back box needs a stud lining or a box set in the panel (the fridge's 5 cm vent gap is behind it)",
    "gangs": [
     "Spots, half A",
     "Spots, half B",
@@ -1197,7 +1196,6 @@
    "facing": "S",
    "label": "2-gang switch — kitchen, beside the fridge as you come in, lower box",
    "status": "adapted",
-   "note": "Karim's review (Karim 12 Nov 2026): lower box: the cabinet LEDs, under the top box beside the fridge",
    "gangs": [
     "Under-cabinet LED strips (upper cabinets)",
     "Plinth LED (lower cabinets)"
@@ -1338,7 +1336,6 @@
    "facing": "W",
    "label": "3-gang switch — by the terrace door, just past the curtain (terrace lights)",
    "status": "adapted",
-   "note": "Karim's review (Karim 12 Nov 2026): moved 0.35 m north (was y 8.25, behind the curtain's stack) to just past the curtain, so it shows; same 120 cm. Key 3 now switches the light outlet for the spotlights above the L-seat (no socket)",
    "gangs": [
     "Terrace floor lighting (seat-lip LED) + BBQ counter LED",
     "Terrace wall lights",
@@ -1356,7 +1353,6 @@
    "facing": "W",
    "label": "1-gang switch — coffee corner, east end (over the counter, at the corner)",
    "status": "added",
-   "note": "Karim's review (Karim 12 Nov 2026): on the end wall at the coffee corner's east end, 11 cm in from the counter's front corner, facing the room; 120 = 20 cm over the marble; 0.35 m north of the terrace switch on the same wall",
    "gangs": [
     "Coffee corner shelf LED"
    ],
@@ -2382,7 +2378,6 @@
    "facing": "E",
    "label": "Light outlet (no socket) — spotlights above the L-seat, at the planter end, above the soil",
    "status": "added",
-   "note": "Karim's review (Karim 12 Nov 2026): no longer a socket: a switched lighting outlet (IP66 box, cable gland) hard-wired to the spotlights above the L-seat (the spike lights in the planter strip behind it); terrace plate key 3; on a 30 mA RCD. Planter 28 cm (Karim 15 Nov 2026): raised from 30 to 100 cm (centre of the box) so it is on the house wall above the soil (soil top 88, back coping 95), not buried in the planter; centred on the 28 cm bed",
    "circuit": "terrace-seat-spots"
   },
   {
@@ -2932,7 +2927,6 @@
    "facing": "S",
    "label": "Double socket 30 cm — lobby, just past the master-bedroom door",
    "status": "added",
-   "note": "Karim's review (Karim 12 Nov 2026): at the red mark on the corridor wall east of the bedroom door, under the corridor switch",
    "gang": 2
   },
   {
@@ -2945,7 +2939,6 @@
    "facing": "N",
    "label": "Double socket 30 cm — entrance, beside the front door",
    "status": "added",
-   "note": "Karim's review (Karim 12 Nov 2026): at the red mark on the entrance wall just west of the front door, under the intercom handset",
    "gang": 2
   }
  ],

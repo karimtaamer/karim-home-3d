@@ -5010,8 +5010,7 @@
    "label": "Gallery picture light — wall box, centred on the west wall at 210",
    "status": "requested",
    "item": 7,
-   "from_main": "ledfeed-195",
-   "note": "Karim's review (23 Nov 2026): one wall box at 210, centred on the west wall that carries the paintings. Replaces the four earlier gallery boxes (south-wall 208, and west-wall 173, 209 and 145)."
+   "from_main": "ledfeed-195"
   },
   {
    "id": "socket-console-60",
@@ -5039,7 +5038,6 @@
    "status": "requested",
    "item": 10,
    "from_main": "socket-lobby-30",
-   "note": "Karim's review (Karim 12 Nov 2026): at the red mark on the corridor wall east of the bedroom door, under the corridor switch",
    "gang": 2
   },
   {
@@ -5068,7 +5066,6 @@
    "status": "requested",
    "item": 13,
    "from_main": "socket-dresser-52",
-   "note": "Karim's review (17 Nov 2026): replaces the flap in the dresser top; centred on the 0.90 knee space, set in its 2 cm walnut back panel (box in the wall behind); clear of the pouf top (43) and the drawer (62)",
    "gang": 2
   },
   {
@@ -5083,7 +5080,7 @@
    "status": "requested",
    "item": 14,
    "from_main": "sw-master-dresser-spots",
-   "note": "centred on the short return wall at the arrow; Karim's review (17 Nov 2026): two keys, the corner spots and the wardrobe's LED. Karim's review (23 Nov 2026): the heated-towel switch moved inside the bathroom, so this is a single 125 plate (no longer stacked)",
+   "note": "centred on the short return wall at the arrow",
    "gangs": [
     "The two dresser/wardrobe corner spots marked on the plan",
     "Wardrobe LED (short wardrobe by the bathroom door)"
@@ -5102,7 +5099,6 @@
    "status": "requested",
    "item": 15,
    "from_main": "sw-mbath",
-   "note": "Karim's review (23 Nov 2026): top box of two, on the short wall beside the 135 cm vanity socket; all spots, and the under-vanity / cabinet / shower-niche LEDs",
    "gangs": [
     "All spots (vanity, middle, shower and WC)",
     "Under-vanity LED, cabinet glow + shower-niche LED"
@@ -5122,7 +5118,6 @@
    "status": "requested",
    "item": 15,
    "from_main": "sw-mbath-2",
-   "note": "Karim's review (23 Nov 2026): lower box of two, under the lighting box; the exhaust fan and the heated towel rail (moved inside from the dressing-corner wall)",
    "gangs": [
     "Exhaust fan",
     "Heated towel rail — double-pole with neon"

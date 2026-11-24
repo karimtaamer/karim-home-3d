@@ -169,8 +169,17 @@ function describeStackHTML(st, byId = {}, full = false) {
 }
 
 // The card for a point (HTML). byId: id -> point, for the two-way partners; full: the pinned card, which adds the note.
+// p.stack is either stacksOf's array, or (3D, and ungrouped 2D points) the JSON's string id shared by the plates at one
+// wall spot: those are looked up in byId, top to bottom, and get the same card when there are 2 or more.
+function stackGroup(p, byId) {
+  if (Array.isArray(p.stack)) return p.stack;
+  if (typeof p.stack !== "string" || !byId) return null;
+  const g = [...new Set([p, ...Object.values(byId).filter(q => q?.stack === p.stack)])].filter(q => q.h != null);
+  return g.length > 1 ? g.sort((a, b) => b.h - a.h) : null;
+}
 export function describeHTML(p, byId = {}, full = false) {
-  if (p.stack) return describeStackHTML(p, byId, full);
+  const g = stackGroup(p, byId);
+  if (g) return describeStackHTML(g === p.stack ? p : { ...p, stack: g }, byId, full);
   const k = KINDS[p.type] || { what: "", col: "#ccc" };
   const facts = [];
   if (ON_CEILING.includes(p.type)) facts.push("In the ceiling");
@@ -664,7 +673,7 @@ export function drawElectrical(ctx, toScreen, s, data, hover = null) {
   ctx.font = `${Math.max(8, Math.min(11, s * 0.1))}px Inter, sans-serif`;
   ctx.textBaseline = "middle";
   for (const p of stacksOf(data)) {
-    const k = KINDS[p.type] || KINDS.socket, [x, y] = toScreen([p.x, p.y]);
+    const k = KINDS[p.type] || KINDS.socket, [x, y] = toScreen([p.x, p.y]), st = Array.isArray(p.stack) ? p.stack : null;
     const rr = p.type === "spot" ? r * 0.75 : r;
     ctx.strokeStyle = k.col; ctx.fillStyle = k.col; ctx.lineWidth = 1.4;
     ctx.beginPath();
@@ -687,23 +696,23 @@ export function drawElectrical(ctx, toScreen, s, data, hover = null) {
         ctx.fillStyle = k.col; ctx.textAlign = "center";
         const f = Math.max(7, Math.min(11, sq * (k.glyph.length > 1 ? 0.95 : 1.3)));
         ctx.font = `600 ${f}px Inter, sans-serif`;
-        ctx.fillText(p.stack ? (p.stack.every(q => q.type === "switch") ? p.stack.map(q => q.gangs?.length || 1).join("+") : k.glyph)
+        ctx.fillText(st ? (st.every(q => q.type === "switch") ? st.map(q => q.gangs?.length || 1).join("+") : k.glyph)
           : p.type === "switch" ? String(p.gangs?.length || 1) : k.glyph, x, y + 0.5);
         ctx.font = `${Math.max(8, Math.min(11, s * 0.1))}px Inter, sans-serif`;
       }
     }
-    if (p.stack) {  // count badge on the marker's top-right corner
+    if (st) {  // count badge on the marker's top-right corner
       const bx = x + r * 1.1, by = y - r * 1.1, br = Math.max(4.5, r * 0.62);
       ctx.fillStyle = "#f6efe6"; ctx.beginPath(); ctx.arc(bx, by, br, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = "#1f1b18"; ctx.textAlign = "center"; ctx.font = `700 ${Math.max(7, br * 1.3)}px Inter, sans-serif`;
-      ctx.fillText(String(p.stack.length), bx, by + 0.5);
+      ctx.fillText(String(st.length), bx, by + 0.5);
       ctx.font = `${Math.max(8, Math.min(11, s * 0.1))}px Inter, sans-serif`;
     }
     if (hover === p) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, rr + 4, 0, Math.PI * 2); ctx.stroke(); }
-    const hs = p.stack ? p.stack.map(q => Math.round(q.h * 100)).join("/") : p.h != null && !["spot", "fan", "pendant", "sensor", "ap", "wpspot"].includes(p.type) ? Math.round(p.h * 100) : null;
+    const hs = st ? st.map(q => Math.round(q.h * 100)).join("/") : p.h != null && !["spot", "fan", "pendant", "sensor", "ap", "wpspot"].includes(p.type) ? Math.round(p.h * 100) : null;
     if (showH && hs != null) {
       ctx.fillStyle = "#e8e2d8b0"; ctx.textAlign = "left";
-      ctx.fillText(hs, x + r * (p.stack ? 1.9 : 1) + 2, y - r);
+      ctx.fillText(hs, x + r * (st ? 1.9 : 1) + 2, y - r);
     }
   }
   ctx.restore();
